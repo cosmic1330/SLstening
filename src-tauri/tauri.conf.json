@@ -18,12 +18,6 @@
         "transparent": true,
         "decorations": true, 
         "fullscreen": false
-      },
-      {
-        "label": "about",
-        "url": "/settings",
-        "title": "about",
-        "visible": false
       }
     ],
     "security": {

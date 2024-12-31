@@ -1,10 +1,20 @@
 import { Button } from "@mui/material";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 function About() {
+  const closeWindow = async () => {
+    const webview = getCurrentWindow();
+    console.log(webview);
+    webview.close();
+  };
+
   return (
-    <Button variant="contained" size="small">
+    <div>
+      <Button variant="contained" size="small" onClick={closeWindow}>
+        Close
+      </Button>
       About
-    </Button>
+    </div>
   );
 }
 export default About;

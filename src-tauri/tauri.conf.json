@@ -13,8 +13,17 @@
     "windows": [
       {
         "title": "slistening",
-        "width": 800,
-        "height": 600
+        "width": 300,
+        "height": 600,  
+        "transparent": true,
+        "decorations": true, 
+        "fullscreen": false
+      },
+      {
+        "label": "about",
+        "url": "/settings",
+        "title": "about",
+        "visible": false
       }
     ],
     "security": {

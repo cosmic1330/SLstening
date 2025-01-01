@@ -1,6 +1,6 @@
 import { Button } from "@mui/material";
-import { Outlet } from "react-router";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { Outlet } from "react-router";
 
 function Home() {
   const openSecondaryWindow = async () => {

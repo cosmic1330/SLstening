@@ -1,10 +1,10 @@
+import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router";
+import About from "./pages/About";
 import Home from "./pages/Home";
-import About from "./pages/about";
-import List from "./pages/Home/list";
-import Other from "./pages/Home/other";
-import Login from "./pages/login";
+import List from "./pages/Home/List";
+import Other from "./pages/Home/Other";
+import Login from "./pages/Login";
 
 function App() {
   return (

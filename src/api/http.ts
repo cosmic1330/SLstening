@@ -8,5 +8,5 @@ export const tauriFetcher = async (url: string) => {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
 
-  return response;
+  return response.text();
 };

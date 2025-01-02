@@ -15,7 +15,7 @@ function List() {
       >
         Go Other
       </Button>
-      <StockBox id="2330" />
+      {/* <StockBox id="2330" /> */}
     </div>
   );
 }

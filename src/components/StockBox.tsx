@@ -1,19 +1,57 @@
-import { useMemo } from "react";
-import useSWR from "swr";
-import { tauriFetcher } from "../api/http";
-// 排行: https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.rank;exchange=TWO;limit=100;offset=0;period=1D;sortBy=-price?bkt=&device=desktop&ecma=modern&feature=ecmaModern,useVersionSwitch,useNewQuoteTabColor&intl=tw&lang=zh-Hant-TW&partner=none&prid=604aak5gpc44b&region=TW&site=finance&tz=Asia/Taipei&ver=1.2.1189&returnMeta=true
-// 即時行情: https://tw.stock.yahoo.com/_td-stock/api/resource/StockServices.priceByTimes;allDay=true;offset=0;symbol=2603.TW;
+import useMa5Deduction from "../hooks/useMa5Deduction";
+import { styled, Box as MuiBox, Typography } from "@mui/material";
+import useDeals from "../hooks/useDeals";
+
+const Box = styled(MuiBox)`
+  background-color: #555;
+  color: #fff;
+  padding: 1rem;
+  border-radius: 0.5rem;
+`;
 export default function StockBox({ id }: { id: string }) {
-  const { data, error, isLoading } = useSWR(
-    `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
-    tauriFetcher
+  const deals = useDeals(id);
+  const { ma5_deduction_time, ma5_deduction_value, ma5 } =
+    useMa5Deduction(deals);
+  const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
+  return (
+    <Box>
+      <Typography variant="body2" gutterBottom>
+        [{id}] {lastPrice}
+      </Typography>
+      <Typography variant="body2" gutterBottom>
+        {"[ma5] "}
+        <Typography
+          variant="body2"
+          component="span"
+          color={lastPrice < ma5 ? "error" : "#fff"}
+        >
+          {ma5}
+        </Typography>
+      </Typography>
+      <Typography variant="body2" gutterBottom>
+        {"[ma5 deduction] "}
+        <Typography
+          variant="body2"
+          component="span"
+          color={lastPrice < ma5_deduction_value ? "error" : "#fff"}
+        >
+          {ma5_deduction_value} / {ma5_deduction_time}
+        </Typography>
+      </Typography>
+      <Typography variant="body2" gutterBottom>
+        {"[pre low] "}
+        <Typography
+          variant="body2"
+          component="span"
+          color={
+            deals.length > 0 && lastPrice < deals[deals.length - 2].l
+              ? "error"
+              : "#fff"
+          }
+        >
+          {deals.length > 0 && deals[deals.length - 2].l}
+        </Typography>
+      </Typography>
+    </Box>
   );
-  const deals = useMemo(() => {
-    if (!data) return [];
-    const ta_index = data.indexOf('"ta":');
-    const json_ta = "{" + data.slice(ta_index).replace(");", "");
-    const parse = JSON.parse(json_ta);
-    return parse.ta;
-  }, [data]);
-  return <div>{JSON.stringify(deals[0])}</div>;
 }

@@ -11,6 +11,7 @@
     "app": "tauri dev"
   },
   "dependencies": {
+    "@ch20026103/anysis": "0.0.16-beta2",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/material": "^6.3.0",

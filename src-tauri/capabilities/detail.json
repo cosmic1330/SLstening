@@ -3,5 +3,19 @@
   "identifier": "detail",
   "description": "Capability for the detail window",
   "windows": ["detail"],
-  "permissions": ["core:default", "opener:default"]
+  "permissions": [
+    "core:default",
+    "opener:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
+        }
+      ]
+    }
+  ]
 }

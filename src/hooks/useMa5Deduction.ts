@@ -11,7 +11,7 @@ export default function useMa5Deduction(deals: StockListType) {
       return ma.next(deals[deals.length - 1], maRef.current, 5);
     } else {
       let ma_data = ma.init(deals[0], 5);
-      for (let i = 1; i < deals.length - 2; i++) {
+      for (let i = 1; i < deals.length-1; i++) {
         const deal = deals[i];
         ma_data = ma.next(deal, ma_data, 5);
       }

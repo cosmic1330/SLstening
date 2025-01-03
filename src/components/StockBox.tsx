@@ -16,9 +16,9 @@ export default function StockBox({ id }: { id: string }) {
     useMa5Deduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
 
-  
   const openDetailWindow = async () => {
-    const webview = new WebviewWindow("about", {
+    const webview = new WebviewWindow("detail", {
+      title: id,
       url: `/detail/${id}`,
     });
     webview.once("tauri://created", function () {});

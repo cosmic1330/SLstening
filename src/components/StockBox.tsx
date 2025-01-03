@@ -1,20 +1,34 @@
 import useMa5Deduction from "../hooks/useMa5Deduction";
 import { styled, Box as MuiBox, Typography } from "@mui/material";
 import useDeals from "../hooks/useDeals";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 const Box = styled(MuiBox)`
   background-color: #555;
   color: #fff;
   padding: 1rem;
   border-radius: 0.5rem;
+  cursor: pointer;
 `;
 export default function StockBox({ id }: { id: string }) {
   const deals = useDeals(id);
   const { ma5_deduction_time, ma5_deduction_value, ma5 } =
     useMa5Deduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
+
+  
+  const openDetailWindow = async () => {
+    const webview = new WebviewWindow("about", {
+      url: `/detail/${id}`,
+    });
+    webview.once("tauri://created", function () {});
+    webview.once("tauri://error", function (e) {
+      console.log(e);
+    });
+  };
+
   return (
-    <Box>
+    <Box onClick={openDetailWindow}>
       <Typography variant="body2" gutterBottom>
         [{id}] {lastPrice}
       </Typography>

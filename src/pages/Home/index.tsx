@@ -1,4 +1,4 @@
-import { Button } from "@mui/material";
+import { Button, Container } from "@mui/material";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Outlet } from "react-router";
 
@@ -14,12 +14,12 @@ function Home() {
   };
 
   return (
-    <main>
+    <Container component="main" >
       <Button variant="contained" size="small" onClick={openSecondaryWindow}>
         Open About
       </Button>
       <Outlet />
-    </main>
+    </Container>
   );
 }
 export default Home;

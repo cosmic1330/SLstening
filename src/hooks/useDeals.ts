@@ -1,14 +1,14 @@
 import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { tauriFetcher } from "../api/http";
 import useSWR from "swr";
-import ma from "../cls_tools/ma";
+import useStockListStore from "../store/stockList";
 export default function useDeals(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(
+  const { increase } = useStockListStore();
+  const { data, mutate } = useSWR(
     `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
     tauriFetcher
   );
-  const [isInTimeRange, setIsInTimeRange] = useState(false);
 
   // 檢查當前時間是否在台灣時間 8:00 AM 到 1:30 PM 之間
   const checkTimeRange = () => {
@@ -24,8 +24,6 @@ export default function useDeals(id: string) {
   useEffect(() => {
     const interval = setInterval(() => {
       const isInTime = checkTimeRange();
-      setIsInTimeRange(isInTime);
-
       if (isInTime) {
         mutate(); // 自動重新請求
       }
@@ -39,7 +37,9 @@ export default function useDeals(id: string) {
     const ta_index = data.indexOf('"ta":');
     const json_ta = "{" + data.slice(ta_index).replace(");", "");
     const parse = JSON.parse(json_ta);
-    return parse.ta as StockListType;
+    const response = parse.ta as StockListType;
+    increase(id, response);
+    return response;
   }, [data]);
 
   return deals;

@@ -1,12 +1,13 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
 import About from "./pages/About";
+import Detail from "./pages/Detail";
+import Close from "./pages/Detail/Close";
+import Obv from "./pages/Detail/Obv";
 import Home from "./pages/Home";
 import List from "./pages/Home/List";
 import Other from "./pages/Home/Other";
 import Login from "./pages/Login";
-import Obv from "./pages/Detail/Obv";
-import Detail from "./pages/Detail";
 
 function App() {
   return (
@@ -19,7 +20,7 @@ function App() {
           <Route path="other" element={<Other />} />
         </Route>
         <Route path="detail/:id" element={<Detail />}>
-          <Route index element={<Obv />} />
+          <Route index element={<Close />} />
           <Route path="obv" element={<Obv />} />
         </Route>
       </Routes>

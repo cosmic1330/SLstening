@@ -1,12 +1,18 @@
-import { Outlet, useParams } from "react-router";
-import { tauriFetcher } from "../../api/http";
-import useSWR from "swr";
-import { useMemo } from "react";
 import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
+import { useMemo } from "react";
+import { useParams } from "react-router";
+import useSWR from "swr";
+import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
+import useScroll from "../../hooks/useScroll";
+import Close from "./Close";
+import Ma from "./Ma";
+import Obv from "./Obv";
 
+const components = [<Ma />, <Close />, <Obv />];
 function Detail() {
   const { id } = useParams();
+  const currentChart = useScroll(components.length);
 
   const { data } = useSWR(
     `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
@@ -21,12 +27,28 @@ function Detail() {
     const response = parse.ta as StockListType;
     return response;
   }, [data]);
-  
 
   return (
-    <main>
+    <main style={{ height: `${100 * components.length}vh` }}>
       <DealsContext.Provider value={deals}>
-        <Outlet />
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100vh",
+          }}
+        >
+          {components.map((Component, index) => (
+            <div
+              key={index}
+              style={{ display: index === currentChart ? "block" : "none" }}
+            >
+              {Component}
+            </div>
+          ))}
+        </div>
       </DealsContext.Provider>
     </main>
   );

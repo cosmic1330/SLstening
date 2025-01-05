@@ -20,7 +20,6 @@ export default function useMa5Deduction(deals: StockListType) {
   }, [deals]);
 
   const { time, value } = useMemo(() => {
-    console.log(maRef.current);
     if (!maRef.current) return { time: null, value: 0 };
     return {
       time: maRef.current.dataset[0].t,

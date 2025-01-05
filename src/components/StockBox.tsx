@@ -1,7 +1,8 @@
-import { Box as MuiBox, styled, Typography } from "@mui/material";
+import { Button, Box as MuiBox, styled, Typography } from "@mui/material";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import useDeals from "../hooks/useDeals";
 import useMa5Deduction from "../hooks/useMa5Deduction";
+import useStocksStore from "../store/Stock.store";
 
 const Box = styled(MuiBox)`
   background-color: #555;
@@ -11,6 +12,7 @@ const Box = styled(MuiBox)`
   cursor: pointer;
 `;
 export default function StockBox({ id }: { id: string }) {
+  const { remove } = useStocksStore();
   const { deals, name } = useDeals(id);
   const { ma5_deduction_time, ma5_deduction_value, ma5 } =
     useMa5Deduction(deals);
@@ -18,7 +20,7 @@ export default function StockBox({ id }: { id: string }) {
 
   const openDetailWindow = async () => {
     const webview = new WebviewWindow("detail", {
-      title: id+" "+name,
+      title: id + " " + name,
       url: `/detail/${id}`,
     });
     webview.once("tauri://created", function () {});
@@ -66,6 +68,9 @@ export default function StockBox({ id }: { id: string }) {
           {deals.length > 0 && deals[deals.length - 2].l}
         </Typography>
       </Typography>
+      <Button variant="contained" size="small" onClick={() => remove(id)}>
+        Remove
+      </Button>
     </Box>
   );
 }

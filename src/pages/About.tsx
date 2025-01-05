@@ -1,18 +1,14 @@
-import {
-  Box,
-  Button,
-  Container,
-  Stack,
-  TextField,
-} from "@mui/material";
+import { Box, Button, Container, Stack, TextField } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useForm, Controller } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
+import useStocksStore from "../store/Stock.store";
 
 type FormData = {
   stockNumber: string;
 };
 
 function About() {
+  const { increase } = useStocksStore();
   const closeWindow = async () => {
     const webview = getCurrentWindow();
     webview.close();
@@ -25,7 +21,11 @@ function About() {
 
   return (
     <Container>
-      <form onSubmit={handleSubmit((data) => console.log(data))}>
+      <form
+        onSubmit={handleSubmit(async (data) => {
+          increase(data.stockNumber);
+        })}
+      >
         <Box>
           <Controller
             name="stockNumber"
@@ -53,19 +53,10 @@ function About() {
           />
         </Box>
         <Stack direction="row" spacing={2}>
-          <Button
-            size="small"
-            onClick={closeWindow}
-            fullWidth
-          >
+          <Button size="small" onClick={closeWindow} fullWidth>
             Close
           </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            size="small"
-            fullWidth
-          >
+          <Button type="submit" variant="contained" size="small" fullWidth>
             Add
           </Button>
         </Stack>

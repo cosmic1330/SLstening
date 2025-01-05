@@ -2,9 +2,7 @@ import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import useStockListStore from "../store/stockList";
 export default function useDeals(id: string) {
-  const { increase } = useStockListStore();
   const { data, mutate } = useSWR(
     `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
     tauriFetcher
@@ -34,18 +32,10 @@ export default function useDeals(id: string) {
 
   const deals = useMemo(() => {
     if (!data) return [];
-    let name = "";
-    const match = data.match(/name="([^"]*\$[^"]*)"/);
-
-    if (match) {
-      name = match[1];
-    }
-
     const ta_index = data.indexOf('"ta":');
     const json_ta = "{" + data.slice(ta_index).replace(");", "");
     const parse = JSON.parse(json_ta);
     const response = parse.ta as StockListType;
-    increase(id, response);
     return response;
   }, [data]);
 

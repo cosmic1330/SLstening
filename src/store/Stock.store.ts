@@ -15,14 +15,12 @@ interface StocksState {
 
 // todo: 使用(async ()=>())() 無法馬上取得store
 let store:Store;
-let data:string[];
 (async () => {
   store = await load("store.dat");
-  data = (await store.get("stocks")) as string[];
 })();
 
 const useStocksStore = create<StocksState>((set) => ({
-  stocks: data || [],
+  stocks: [],
   increase: async (id: string) => {
     set((state) => {
       // 去除重複
@@ -50,7 +48,7 @@ const useStocksStore = create<StocksState>((set) => ({
     });
   },
   reload: async () => {
-    const data = (await store.get("stocks")) as string[];
+    const data = (await store.get("stocks")) as string[] || [];
     set({ stocks: data });
   }
 }));

@@ -1,15 +1,11 @@
-import {
-  Grid2,
-  Box as MuiBox,
-  styled,
-  Typography,
-} from "@mui/material";
+import { Grid2, Box as MuiBox, styled, Typography } from "@mui/material";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import useDeals from "../hooks/useDeals";
 import useMa5Deduction from "../hooks/useMa5Deduction";
 import useStocksStore from "../store/Stock.store";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 
 const Box = styled(MuiBox)`
   background-color: #555;
@@ -45,7 +41,14 @@ export default function StockBox({ id }: { id: string }) {
           </Typography>
         </Grid2>
         <Grid2 size={6}>
-          <Typography variant="h6" gutterBottom textAlign="right">
+          <Typography
+            variant="h6"
+            gutterBottom
+            justifyContent="flex-end"
+            alignItems="center"
+            display="flex"
+          >
+            <AttachMoneyIcon />
             {lastPrice}
           </Typography>
         </Grid2>

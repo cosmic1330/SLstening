@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build & tauri build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "app": "tauri dev"
+    "app": "tauri dev",
+    "build_app":"tauri build"
   },
   "dependencies": {
     "@ch20026103/anysis": "0.0.16-beta2",

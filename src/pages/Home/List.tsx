@@ -1,5 +1,4 @@
-import { Button } from "@mui/material";
-import { useNavigate } from "react-router";
+import { Box } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
 import StockBox from "../../components/StockBox";
@@ -7,7 +6,6 @@ import useStocksStore from "../../store/Stock.store";
 
 function List() {
   const { stocks, reload, increase } = useStocksStore();
-  let navigate = useNavigate();
 
   useEffect(() => {
     // 监听股票添加事件
@@ -23,23 +21,11 @@ function List() {
   }, [increase]);
 
   return (
-    <div>
-      <Button
-        variant="contained"
-        size="small"
-        onClick={async () => {
-          navigate("/dashboard/other");
-        }}
-      >
-        Go Other
-      </Button>
-      <Button variant="contained" size="small" onClick={reload}>
-        Reload
-      </Button>
+    <Box>
       {stocks.map((id) => (
         <StockBox key={id} id={id} />
       ))}
-    </div>
+    </Box>
   );
 }
 

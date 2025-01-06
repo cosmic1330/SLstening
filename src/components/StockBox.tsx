@@ -17,7 +17,7 @@ const Box = styled(MuiBox)`
 export default function StockBox({ id }: { id: string }) {
   const { remove } = useStocksStore();
   const { deals, name } = useDeals(id);
-  const { ma5_deduction_time, ma5_deduction_value, ma5 } =
+  const { ma5_deduction_time, ma5_deduction_value, ma5_tomorrow_deduction_value, ma5 } =
     useMa5Deduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
 
@@ -78,7 +78,7 @@ export default function StockBox({ id }: { id: string }) {
             component="div"
             color="#ddd"
           >
-            deduction
+            Ded
           </Typography>
           <Typography
             variant="body2"
@@ -94,8 +94,9 @@ export default function StockBox({ id }: { id: string }) {
             gutterBottom
             component="div"
             color="#ddd"
+            noWrap
           >
-            deduction_date
+            Ded Date
           </Typography>
           <Typography
             variant="body2"
@@ -113,8 +114,9 @@ export default function StockBox({ id }: { id: string }) {
             gutterBottom
             component="div"
             color="#ddd"
+            noWrap
           >
-            pre_low
+            Pre Low
           </Typography>
           <Typography
             variant="body2"
@@ -128,7 +130,23 @@ export default function StockBox({ id }: { id: string }) {
             {deals.length > 0 && deals[deals.length - 2].l}
           </Typography>
         </Grid2>
-        <Grid2 size={4}></Grid2>
+        <Grid2 size={4}>
+          <Typography
+            variant="caption"
+            gutterBottom
+            component="div"
+            color="#ddd"
+          >
+            Tmr Ded
+          </Typography>
+          <Typography
+            variant="body2"
+            color={lastPrice < ma5_tomorrow_deduction_value ? "error" : "#fff"}
+            fontWeight="bold"
+          >
+            {ma5_tomorrow_deduction_value}
+          </Typography>
+        </Grid2>
         <Grid2 size={4} textAlign="center">
           <IconButton
             size="small"

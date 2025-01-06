@@ -1,5 +1,4 @@
 import {
-  Box,
   Button,
   Typography,
   Grid2,
@@ -8,8 +7,10 @@ import {
   Stack,
 } from "@mui/material";
 import { useNavigate } from "react-router";
+import useStocksStore from "../store/Stock.store";
 
 const Login = () => {
+  const { reload } = useStocksStore();
   let navigate = useNavigate();
   return (
     <Container
@@ -21,7 +22,12 @@ const Login = () => {
         backgroundSize: "cover",
       }}
     >
-      <Stack justifyContent="center" alignItems="center" spacing={2} height="100%">
+      <Stack
+        justifyContent="center"
+        alignItems="center"
+        spacing={2}
+        height="100%"
+      >
         <Typography component="h1" variant="h5">
           SListening
         </Typography>
@@ -29,6 +35,7 @@ const Login = () => {
           fullWidth
           variant="contained"
           onClick={() => {
+            reload();
             navigate("/dashboard");
           }}
         >

@@ -13,12 +13,12 @@ function List() {
     // 监听股票添加事件
     const unlisten = listen("stock-added", (event: any) => {
       const { stockNumber } = event.payload;
-      console.log(`stock add ${stockNumber}`)
+      console.log(`stock add ${stockNumber}`);
       reload();
     });
 
     return () => {
-      unlisten.then(fn => fn()); // 清理监听器
+      unlisten.then((fn) => fn()); // 清理监听器
     };
   }, [increase]);
 

@@ -16,7 +16,7 @@ export default function useDeals(id: string) {
     const hours = new Date(taiwanTime).getHours();
     const minutes = new Date(taiwanTime).getMinutes();
     // 9:00 AM 至 1:30 PM 時間範圍
-    return hours >= 10 && (hours < 13 || (hours === 13 && minutes <= 30));
+    return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
   useEffect(() => {
@@ -24,6 +24,7 @@ export default function useDeals(id: string) {
       const isInTime = checkTimeRange();
       if (isInTime) {
         mutate(); // 自動重新請求
+        console.log("listening");
       }
     }, 10000); // 每 10 秒檢查一次
 

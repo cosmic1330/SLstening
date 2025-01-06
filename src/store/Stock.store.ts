@@ -1,4 +1,4 @@
-import { load } from "@tauri-apps/plugin-store";
+import { load, Store } from "@tauri-apps/plugin-store";
 import { create } from "zustand";
 
 /**
@@ -13,8 +13,13 @@ interface StocksState {
   reload: () => void;
 }
 
-const store = await load("store.dat");
-const data = (await store.get("stocks")) as string[];
+// todo: 使用(async ()=>())() 無法馬上取得store
+let store:Store;
+let data:string[];
+(async () => {
+  store = await load("store.dat");
+  data = (await store.get("stocks")) as string[];
+})();
 
 const useStocksStore = create<StocksState>((set) => ({
   stocks: data || [],

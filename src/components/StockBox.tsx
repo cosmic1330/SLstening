@@ -68,7 +68,14 @@ export default function StockBox({ id }: { id: string }) {
           {deals.length > 0 && deals[deals.length - 2].l}
         </Typography>
       </Typography>
-      <Button variant="contained" size="small" onClick={() => remove(id)}>
+      <Button
+        variant="contained"
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          remove(id);
+        }}
+      >
         Remove
       </Button>
     </Box>

@@ -4,8 +4,11 @@ import { Outlet } from "react-router";
 
 function Home() {
   const openSecondaryWindow = async () => {
-    const webview = new WebviewWindow("about", {
-      url: "/about",
+    const webview = new WebviewWindow("add", {
+      title:"Add Stock Id",
+      url: "/add",
+      width: 300,
+      height: 130,
     });
     webview.once("tauri://created", function () {});
     webview.once("tauri://error", function (e) {
@@ -16,7 +19,7 @@ function Home() {
   return (
     <Container component="main" >
       <Button variant="contained" size="small" onClick={openSecondaryWindow}>
-        Open About
+        Add
       </Button>
       <Outlet />
     </Container>

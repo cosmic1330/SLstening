@@ -1,0 +1,11 @@
+{
+  "identifier": "desktop-capability",
+  "platforms": ["macOS", "windows", "linux"],
+  "windows": ["main", "detail", "add"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "window-state:default",
+    "store:default"
+  ]
+}

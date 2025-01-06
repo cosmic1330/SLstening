@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router";
 import "./App.css";
-import About from "./pages/About";
+import Add from "./pages/Add";
 import Detail from "./pages/Detail";
 import Close from "./pages/Detail/Close";
 import Obv from "./pages/Detail/Obv";
@@ -14,7 +14,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route index element={<Login />} />
-        <Route path="about" element={<About />} />
+        <Route path="add" element={<Add />} />
         <Route path="dashboard" element={<Home />}>
           <Route index element={<List />} />
           <Route path="other" element={<Other />} />

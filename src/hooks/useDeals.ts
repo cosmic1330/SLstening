@@ -15,8 +15,8 @@ export default function useDeals(id: string) {
     });
     const hours = new Date(taiwanTime).getHours();
     const minutes = new Date(taiwanTime).getMinutes();
-    // 8:00 AM 至 1:30 PM 時間範圍
-    return hours >= 8 && (hours < 13 || (hours === 13 && minutes <= 30));
+    // 9:00 AM 至 1:30 PM 時間範圍
+    return hours >= 10 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
   useEffect(() => {

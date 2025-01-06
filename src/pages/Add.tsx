@@ -9,7 +9,7 @@ type FormData = {
 };
 
 function Add() {
-  const { increase } = useStocksStore();
+  const { increase, reload } = useStocksStore();
   const closeWindow = async () => {
     const webview = getCurrentWindow();
     webview.close();
@@ -18,14 +18,16 @@ function Add() {
   const {
     control,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormData>();
 
   const onSubmit = async (data: FormData) => {
+    await reload();
     increase(data.stockNumber);
     // 发送事件通知主窗口
     await emit("stock-added", { stockNumber: data.stockNumber });
-    closeWindow();
+    reset();
   };
 
   return (

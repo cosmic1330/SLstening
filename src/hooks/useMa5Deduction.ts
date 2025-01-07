@@ -1,11 +1,11 @@
 import { MaResType } from "@ch20026103/anysis/dist/esm/stockSkills/ma";
 import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ma from "../cls_tools/ma";
 
 export default function useMa5Deduction(deals: StockListType) {
-  const maRef = useRef<MaResType>();
-  const ma5 = useRef<number>(0);
+  const [maRef, setMaRed] = useState<MaResType>();
+  const [ma5, setMa5] = useState<number>(0);
   useEffect(() => {
     if (deals.length !== 0) {
       let temp = ma.init(deals[0], 5);
@@ -13,33 +13,33 @@ export default function useMa5Deduction(deals: StockListType) {
         const deal = deals[i];
         temp = ma.next(deal, temp, 5);
       }
-      maRef.current = JSON.parse(JSON.stringify(temp));
+      setMaRed(JSON.parse(JSON.stringify(temp)));
       temp = ma.next(deals[deals.length - 1], temp, 5);
-      ma5.current = temp.ma;
+      setMa5(temp.ma);
     }
   }, [deals]);
 
   const { time, value } = useMemo(() => {
-    if (!maRef.current) return { time: "null", value: 0 };
+    if (!maRef) return { time: "null", value: 0 };
     return {
-      time: maRef.current.dataset[0].t,
-      value: maRef.current.dataset[0].c,
+      time: maRef.dataset[0].t,
+      value: maRef.dataset[0].c,
     };
-  }, [maRef.current]);
+  }, [maRef]);
 
   const { tmr_time, tmr_value } = useMemo(() => {
-    if (!maRef.current) return { tmr_time: "null", tmr_value: 0 };
+    if (!maRef) return { tmr_time: "null", tmr_value: 0 };
     return {
-      tmr_time: maRef.current.dataset[1].t,
-      tmr_value: maRef.current.dataset[1].c,
+      tmr_time: maRef.dataset[1].t,
+      tmr_value: maRef.dataset[1].c,
     };
-  }, [maRef.current]);
+  }, [maRef]);
 
   return {
     ma5_deduction_time: time,
     ma5_deduction_value: value,
     ma5_tomorrow_deduction_value: tmr_value,
     ma5_tomorrow_deduction_time: tmr_time,
-    ma5: ma5.current,
+    ma5: ma5,
   };
 }

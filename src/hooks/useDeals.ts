@@ -41,10 +41,10 @@ export default function useDeals(id: string) {
   }, [data]);
 
   const name = useMemo(() => {
-    if (!data) return [];
     let name = "null";
+    if (!data) return name;
+   
     const match = data.match(/name":"([^"]*)"/);
-
     if (match) {
       name = match[1];
     }

@@ -8,9 +8,11 @@ import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import useStocksStore from "../store/Stock.store";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router";
+import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 export default function SpeedDial() {
-  const { reload } = useStocksStore();
+  const { reload, stocks } = useStocksStore();
   const navigate = useNavigate();
 
   const openAddWindow = async () => {
@@ -26,6 +28,15 @@ export default function SpeedDial() {
     });
   };
 
+  const handleCopy = async () => {
+    try {
+      const stocksText = stocks.join("\n");
+      await writeText(stocksText);
+    } catch (err) {
+      console.error("複製失敗:", err);
+    }
+  };
+
   return (
     <MuiSpeedDial
       ariaLabel="SpeedDial"
@@ -38,6 +49,13 @@ export default function SpeedDial() {
         icon={<AddCircleRoundedIcon />}
         tooltipTitle={"Add StockId"}
         onClick={openAddWindow}
+      />
+
+      <SpeedDialAction
+        key={"Add Clipboard"}
+        icon={<ContentPasteGoRoundedIcon />}
+        tooltipTitle={"Add Clipboard"}
+        onClick={handleCopy}
       />
 
       <SpeedDialAction

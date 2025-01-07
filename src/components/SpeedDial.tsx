@@ -10,6 +10,11 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import { useNavigate } from "react-router";
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 
 export default function SpeedDial() {
   const { reload, stocks } = useStocksStore();
@@ -32,6 +37,14 @@ export default function SpeedDial() {
     try {
       const stocksText = stocks.join("\n");
       await writeText(stocksText);
+      let permissionGranted = await isPermissionGranted();
+      if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === "granted";
+      }
+      if (permissionGranted) {
+        sendNotification({ title: "ClipBoard", body: "Copy Success!" });
+      }
     } catch (err) {
       console.error("複製失敗:", err);
     }

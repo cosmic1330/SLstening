@@ -7,6 +7,8 @@
     "opener:default",
     "window-state:default",
     "store:default",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    "notification:allow-request-permission",
+    "notification:default"
   ]
 }

@@ -3,6 +3,7 @@ import { Outlet } from "react-router";
 import SpeedDial from "../../components/SpeedDial";
 
 function Home() {
+
   return (
     <Container component="main">
       <Outlet />

@@ -21,7 +21,12 @@ export default function Ma() {
     let ma5_data = ma.init(deals[0], 5);
     let ma10_data = ma.init(deals[0], 10);
     let ma20_data = ma.init(deals[0], 20);
-    response.push({ t: deals[0].t, obv: ma5_data.ma });
+    response.push({
+      t: deals[0].t,
+      ma5: ma5_data.ma,
+      ma10: ma10_data.ma,
+      ma20: ma20_data.ma,
+    });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       ma5_data = ma.next(deal, ma5_data, 5);
@@ -40,7 +45,7 @@ export default function Ma() {
   return (
     <Container component="main">
       <Typography variant="h5" gutterBottom>
-        Ma
+        Ma (正向排列Good)
       </Typography>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>

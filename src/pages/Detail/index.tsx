@@ -8,8 +8,9 @@ import useScroll from "../../hooks/useScroll";
 import Close from "./Close";
 import Ma from "./Ma";
 import Obv from "./Obv";
+import EMAMA from "./EMAMA";
 
-const components = [<Ma />, <Close />, <Obv />];
+const components = [<Ma />, <Close />, <EMAMA />, <Obv />];
 function Detail() {
   const { id } = useParams();
   const currentChart = useScroll(components.length);

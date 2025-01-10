@@ -1,4 +1,10 @@
-import { Grid2, Box as MuiBox, styled, Typography } from "@mui/material";
+import {
+  Grid2,
+  Box as MuiBox,
+  styled,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import useDeals from "../hooks/useDeals";
 import useMa5Deduction from "../hooks/useMa5Deduction";
@@ -17,9 +23,15 @@ const Box = styled(MuiBox)`
 export default function StockBox({ id }: { id: string }) {
   const { remove } = useStocksStore();
   const { deals, name } = useDeals(id);
-  const { ma5_deduction_time, ma5_deduction_value, ma5_tomorrow_deduction_value, ma5 } =
-    useMa5Deduction(deals);
+  const {
+    ma5_deduction_time,
+    ma5_deduction_value,
+    ma5_tomorrow_deduction_value,
+    ma5_tomorrow_deduction_time,
+    ma5,
+  } = useMa5Deduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
+  const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
 
   const openDetailWindow = async () => {
     const webview = new WebviewWindow("detail", {
@@ -65,7 +77,7 @@ export default function StockBox({ id }: { id: string }) {
           </Typography>
           <Typography
             variant="body2"
-            color={lastPrice < ma5 ? "error" : "#fff"}
+            color={lastPrice < ma5 ? "#e58282" : "#fff"}
             fontWeight="bold"
           >
             {ma5}
@@ -80,13 +92,15 @@ export default function StockBox({ id }: { id: string }) {
           >
             Ded
           </Typography>
-          <Typography
-            variant="body2"
-            color={lastPrice < ma5_deduction_value ? "error" : "#fff"}
-            fontWeight="bold"
-          >
-            {ma5_deduction_value}
-          </Typography>
+          <Tooltip title={ma5_deduction_time}>
+            <Typography
+              variant="body2"
+              color={lastPrice < ma5_deduction_value ? "#e58282" : "#fff"}
+              fontWeight="bold"
+            >
+              {ma5_deduction_value}
+            </Typography>
+          </Tooltip>
         </Grid2>
         <Grid2 size={4}>
           <Typography
@@ -94,17 +108,20 @@ export default function StockBox({ id }: { id: string }) {
             gutterBottom
             component="div"
             color="#ddd"
-            noWrap
           >
-            Ded Date
+            Tmr Ded
           </Typography>
-          <Typography
-            variant="body2"
-            color={lastPrice < ma5_deduction_value ? "error" : "#fff"}
-            fontWeight="bold"
-          >
-            {ma5_deduction_time}
-          </Typography>
+          <Tooltip title={ma5_tomorrow_deduction_time}>
+            <Typography
+              variant="body2"
+              color={
+                lastPrice < ma5_tomorrow_deduction_value ? "#e58282" : "#fff"
+              }
+              fontWeight="bold"
+            >
+              {ma5_tomorrow_deduction_value}
+            </Typography>
+          </Tooltip>
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center">
@@ -122,7 +139,7 @@ export default function StockBox({ id }: { id: string }) {
             variant="body2"
             color={
               deals.length > 0 && lastPrice < deals[deals.length - 2].l
-                ? "error"
+                ? "#e58282"
                 : "#fff"
             }
             fontWeight="bold"
@@ -136,15 +153,21 @@ export default function StockBox({ id }: { id: string }) {
             gutterBottom
             component="div"
             color="#ddd"
+            noWrap
           >
-            Tmr Ded
+            Persent
           </Typography>
           <Typography
             variant="body2"
-            color={lastPrice < ma5_tomorrow_deduction_value ? "error" : "#fff"}
             fontWeight="bold"
+            color={
+              deals.length > 0 &&
+              Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100 < 0
+                ? "#e58282"
+                : "#fff"
+            }
           >
-            {ma5_tomorrow_deduction_value}
+            {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%
           </Typography>
         </Grid2>
         <Grid2 size={4} textAlign="center">
@@ -156,7 +179,7 @@ export default function StockBox({ id }: { id: string }) {
             }}
             sx={{ border: "1px solid #fff", color: "#fff" }}
           >
-            <DeleteIcon />
+            <DeleteIcon fontSize="small" />
           </IconButton>
         </Grid2>
       </Grid2>

@@ -3,7 +3,6 @@ import SpeedDialAction from "@mui/material/SpeedDialAction";
 import BuildIcon from "@mui/icons-material/Build";
 import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import CachedRoundedIcon from "@mui/icons-material/CachedRounded";
 import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import useStocksStore from "../store/Stock.store";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
@@ -15,9 +14,10 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
+import RestorePageIcon from "@mui/icons-material/RestorePage";
 
 export default function SpeedDial() {
-  const { reload, stocks } = useStocksStore();
+  const { clear, stocks } = useStocksStore();
   const navigate = useNavigate();
 
   const openAddWindow = async () => {
@@ -72,10 +72,10 @@ export default function SpeedDial() {
       />
 
       <SpeedDialAction
-        key={"Reload Store"}
-        icon={<CachedRoundedIcon />}
-        tooltipTitle={"Reload Store"}
-        onClick={reload}
+        key={"Clear Store"}
+        icon={<RestorePageIcon />}
+        tooltipTitle={"Clear Store"}
+        onClick={clear}
       />
 
       <SpeedDialAction

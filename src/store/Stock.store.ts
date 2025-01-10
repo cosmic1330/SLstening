@@ -11,10 +11,11 @@ interface StocksState {
   increase: (id: string) => void;
   remove: (id: string) => void;
   reload: () => void;
+  clear: () => void;
 }
 
 // todo: 使用(async ()=>())() 無法馬上取得store
-let store:Store;
+let store: Store;
 (async () => {
   store = await load("store.dat");
 })();
@@ -48,9 +49,17 @@ const useStocksStore = create<StocksState>((set) => ({
     });
   },
   reload: async () => {
-    const data = (await store.get("stocks")) as string[] || [];
+    const data = ((await store.get("stocks")) as string[]) || [];
     set({ stocks: data });
-  }
+  },
+  clear: async () => {
+    try {
+      await store.clear();
+      set({ stocks: [] });
+    } catch (error) {
+      console.log(error);
+    }
+  },
 }));
 
 export default useStocksStore;

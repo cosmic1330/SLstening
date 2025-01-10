@@ -57,8 +57,8 @@ export default function Ma() {
             <Area
               type="monotone"
               dataKey="ma5"
-              stroke="#fbf582"
-              fill="#fbf582"
+              stroke="#f8d807"
+              fill="#f8d807"
             />
             <Area
               type="monotone"

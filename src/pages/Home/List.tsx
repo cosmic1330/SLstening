@@ -6,7 +6,7 @@ import useStocksStore from "../../store/Stock.store";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 function List() {
-  const { stocks, reload, increase } = useStocksStore();
+  const { stocks, reload } = useStocksStore();
 
   useEffect(() => {
     // 监听股票添加事件
@@ -19,7 +19,7 @@ function List() {
     return () => {
       unlisten.then((fn) => fn()); // 清理监听器
     };
-  }, [increase]);
+  }, []);
 
   const openAddWindow = async () => {
     const webview = new WebviewWindow("add", {

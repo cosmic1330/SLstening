@@ -1,3 +1,5 @@
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Grid2,
   Box as MuiBox,
@@ -5,13 +7,12 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import useDeals from "../hooks/useDeals";
-import useMa5Deduction from "../hooks/useMa5Deduction";
+import useMaDeduction from "../hooks/useMaDeduction";
 import useStocksStore from "../store/Stock.store";
-import IconButton from "@mui/material/IconButton";
-import DeleteIcon from "@mui/icons-material/Delete";
-import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import { emit } from "@tauri-apps/api/event";
 
 const Box = styled(MuiBox)`
   background-color: #555;
@@ -29,19 +30,36 @@ export default function StockBox({ id }: { id: string }) {
     ma5_tomorrow_deduction_value,
     ma5_tomorrow_deduction_time,
     ma5,
-  } = useMa5Deduction(deals);
+    ma10,
+  } = useMaDeduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
   const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
 
   const openDetailWindow = async () => {
-    const webview = new WebviewWindow("detail", {
-      title: id + " " + name,
-      url: `/detail/${id}`,
-    });
-    webview.once("tauri://created", function () {});
-    webview.once("tauri://error", function (e) {
-      console.log(e);
-    });
+    // 检查是否已有相同标识的窗口
+    let existingWindow = await WebviewWindow.getByLabel("detail");
+
+    if (existingWindow) {
+      try {
+        // 如果窗口已存在，聚焦窗口并更新内容（如果需要）
+        await existingWindow.setTitle(`${id} ${name}`);
+        // 动态更新 URL
+        await emit("stock-added", { url: `/detail/${id}` });
+        existingWindow.setFocus();
+      } catch (error) {
+        console.error("Error interacting with existing window:", error);
+      }
+      return;
+    } else {
+      const webview = new WebviewWindow("detail", {
+        title: id + " " + name,
+        url: `/detail/${id}`,
+      });
+      webview.once("tauri://created", function () {});
+      webview.once("tauri://error", function (e) {
+        console.log(e);
+      });
+    }
   };
 
   return (
@@ -153,31 +171,39 @@ export default function StockBox({ id }: { id: string }) {
             gutterBottom
             component="div"
             color="#ddd"
+          >
+            ma10
+          </Typography>
+          <Typography
+            variant="body2"
+            color={ma5 > ma10 && lastPrice < ma10 ? "#e58282" : "#fff"}
+            fontWeight="bold"
+          >
+            {ma10}
+          </Typography>
+        </Grid2>
+        <Grid2 size={2.5}>
+          <Typography
+            variant="caption"
+            gutterBottom
+            component="div"
+            color="#ddd"
             noWrap
           >
             Persent
           </Typography>
-          <Typography
-            variant="body2"
-            fontWeight="bold"
-            color={
-              deals.length > 0 &&
-              Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100 < 0
-                ? "#e58282"
-                : "#fff"
-            }
-          >
+          <Typography variant="body2" fontWeight="bold">
             {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%
           </Typography>
         </Grid2>
-        <Grid2 size={4} textAlign="center">
+        <Grid2 size={1.5} textAlign={"center"}>
           <IconButton
             size="small"
             onClick={(e) => {
               e.stopPropagation();
               remove(id);
             }}
-            sx={{ border: "1px solid #fff", color: "#fff" }}
+            sx={{ border: "1px solid #fff", color: "#fff", marginLeft: 1 }}
           >
             <DeleteIcon fontSize="small" />
           </IconButton>

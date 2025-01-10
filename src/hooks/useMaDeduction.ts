@@ -3,19 +3,24 @@ import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { useEffect, useMemo, useState } from "react";
 import ma from "../cls_tools/ma";
 
-export default function useMa5Deduction(deals: StockListType) {
+export default function useMaDeduction(deals: StockListType) {
   const [maRef, setMaRed] = useState<MaResType>();
   const [ma5, setMa5] = useState<number>(0);
+  const [ma10, setMa10] = useState<number>(0);
   useEffect(() => {
     if (deals.length !== 0) {
       let temp = ma.init(deals[0], 5);
+      let temp2 = ma.init(deals[0], 10);
       for (let i = 1; i < deals.length - 1; i++) {
         const deal = deals[i];
         temp = ma.next(deal, temp, 5);
+        temp2 = ma.next(deal, temp2, 10);
       }
       setMaRed(JSON.parse(JSON.stringify(temp)));
       temp = ma.next(deals[deals.length - 1], temp, 5);
+      temp2 = ma.next(deals[deals.length - 1], temp2, 10);
       setMa5(temp.ma);
+      setMa10(temp2.ma);
     }
   }, [deals]);
 
@@ -40,6 +45,7 @@ export default function useMa5Deduction(deals: StockListType) {
     ma5_deduction_value: value,
     ma5_tomorrow_deduction_value: tmr_value,
     ma5_tomorrow_deduction_time: tmr_time,
-    ma5: ma5,
+    ma5,
+    ma10,
   };
 }

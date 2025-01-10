@@ -1,6 +1,6 @@
 import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
-import { useMemo } from "react";
-import { useParams } from "react-router";
+import { useEffect, useMemo } from "react";
+import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
@@ -9,9 +9,24 @@ import Close from "./Close";
 import Ma from "./Ma";
 import Obv from "./Obv";
 import EMAMA from "./EMAMA";
+import { listen } from "@tauri-apps/api/event";
 
 const components = [<Ma />, <Close />, <EMAMA />, <Obv />];
 function Detail() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // 监听股票添加事件
+    const unlisten = listen("stock-added", (event: any) => {
+      const { url } = event.payload;
+      navigate(url);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn()); // 清理监听器
+    };
+  }, []);
+
   const { id } = useParams();
   const currentChart = useScroll(components.length);
 

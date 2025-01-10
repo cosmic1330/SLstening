@@ -5,7 +5,6 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "window-state:default",
     "store:default",
     "clipboard-manager:allow-write-text",
     "notification:allow-request-permission",

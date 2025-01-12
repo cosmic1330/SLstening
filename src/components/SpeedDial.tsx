@@ -1,36 +1,47 @@
+import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
+import BuildIcon from "@mui/icons-material/Build";
+import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
+import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
+import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
-import BuildIcon from "@mui/icons-material/Build";
-import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
-import useStocksStore from "../store/Stock.store";
-import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import { useNavigate } from "react-router";
-import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   isPermissionGranted,
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import RestorePageIcon from "@mui/icons-material/RestorePage";
+import { useNavigate } from "react-router";
+import useStocksStore from "../store/Stock.store";
 
 export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();
   const navigate = useNavigate();
 
   const openAddWindow = async () => {
-    const webview = new WebviewWindow("add", {
-      title: "Add Stock Id",
-      url: "/add",
-      width: 300,
-      height: 130,
-    });
-    webview.once("tauri://created", function () {});
-    webview.once("tauri://error", function (e) {
-      console.log(e);
-    });
+    let existingWindow = await WebviewWindow.getByLabel("add");
+    console.log(existingWindow);
+    if (existingWindow) {
+      try {
+        existingWindow.setFocus();
+      } catch (error) {
+        console.error("Error interacting with existing window:", error);
+      }
+      return;
+    } else {
+      const webview = new WebviewWindow("add", {
+        title: "Add Stock Id",
+        url: "/add",
+        width: 300,
+        height: 130,
+      });
+      webview.once("tauri://created", function () {});
+      webview.once("tauri://error", function (e) {
+        console.log(e);
+      });
+    }
   };
 
   const handleCopy = async () => {

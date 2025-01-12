@@ -10,6 +10,9 @@ import {
   XAxis,
   YAxis,
   ZAxis,
+  Line,
+  LineChart,
+  ComposedChart,
 } from "recharts";
 import ema from "../../cls_tools/ema";
 import ma from "../../cls_tools/ma";
@@ -21,26 +24,25 @@ export default function EMAMA() {
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let ma10_data = ema.init(deals[0], 10);
-    let ma5_data = ma.init(deals[0], 5);
+    let ema_data = ema.init(deals[0], 5);
+    let ma_data = ma.init(deals[0], 10);
     response.push({
       x: deals[0].t,
       y: deals[0].c,
-      ema: ma10_data.ema,
-      ma: ma5_data.ma,
-      up: false,
+      ema: ema_data.ema,
+      ma: ma_data.ma,
+      c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      ma10_data = ema.next(deal, ma10_data, 10);
-      const pre = ma5_data.ma;
-      ma5_data = ma.next(deal, ma5_data, 5);
+      ema_data = ema.next(deal, ema_data, 5);
+      ma_data = ma.next(deal, ma_data, 10);
       response.push({
         x: deal.t,
-        ema: ma10_data.ema,
-        ma: ma5_data.ma,
-        y: deal.c,
-        up: ma5_data.ma > pre,
+        ema: ema_data.ema,
+        ma: ma_data.ma,
+        y: (deal.h + deal.l) / 2,
+        c: deal.c,
       });
     }
     return response;
@@ -53,23 +55,29 @@ export default function EMAMA() {
       </Typography>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
-          <ScatterChart>
+          <ComposedChart data={chartData}>
             <XAxis dataKey="x" />
             <YAxis dataKey="y" />
             <ZAxis type="number" range={[10]} />
             <Tooltip />
             <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-            <Scatter name="A school" data={chartData} shape="cross">
+            <Scatter name="power" shape="cross">
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={
-                    entry.ema < entry.y && entry.ma < entry.y && entry.up? "green" : "red"
+                    entry.ema < entry.c &&
+                    entry.ma < entry.c &&
+                    entry.c > entry.y
+                      ? "green"
+                      : "red"
                   }
                 />
               ))}
             </Scatter>
-          </ScatterChart>
+            <Line dataKey="c" stroke="blue" dot={false} activeDot={false} legendType="none" />
+            <Line dataKey="ma" stroke="red" dot={false} activeDot={false} legendType="none" />
+          </ComposedChart>
         </ResponsiveContainer>
       </Box>
     </Container>

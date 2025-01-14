@@ -64,7 +64,7 @@ export default function SpeedDial() {
   return (
     <MuiSpeedDial
       ariaLabel="SpeedDial"
-      sx={{ position: "fixed", bottom: 8, right: 8 }}
+      sx={{ position: "fixed", bottom: 8, left: 8 }}
       icon={<BuildIcon />}
       FabProps={{ sx: { width: 42, height: 42 } }}
     >

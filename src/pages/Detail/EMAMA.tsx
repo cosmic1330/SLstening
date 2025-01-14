@@ -5,13 +5,11 @@ import {
   Cell,
   ResponsiveContainer,
   Scatter,
-  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
   ZAxis,
   Line,
-  LineChart,
   ComposedChart,
 } from "recharts";
 import ema from "../../cls_tools/ema";
@@ -75,8 +73,20 @@ export default function EMAMA() {
                 />
               ))}
             </Scatter>
-            <Line dataKey="c" stroke="blue" dot={false} activeDot={false} legendType="none" />
-            <Line dataKey="ma" stroke="red" dot={false} activeDot={false} legendType="none" />
+            <Line
+              dataKey="c"
+              stroke="blue"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="ma"
+              stroke="red"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

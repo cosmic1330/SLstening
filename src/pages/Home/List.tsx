@@ -35,7 +35,7 @@ function List() {
   };
 
   return (
-    <Box mt={2} mb={5}>
+    <Box mt={2} mb={6}>
       {stocks.length === 0 ? (
         <Button fullWidth variant="contained" onClick={openAddWindow}>
           Add First Stock

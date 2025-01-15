@@ -22,26 +22,37 @@ function List() {
   }, []);
 
   const openAddWindow = async () => {
-    const webview = new WebviewWindow("add", {
-      title: "Add Stock Id",
-      url: "/add",
-      width: 300,
-      height: 130,
-    });
-    webview.once("tauri://created", function () {});
-    webview.once("tauri://error", function (e) {
-      console.log(e);
-    });
+    let existingWindow = await WebviewWindow.getByLabel("add");
+    console.log(existingWindow);
+    if (existingWindow) {
+      try {
+        existingWindow.setFocus();
+      } catch (error) {
+        console.error("Error interacting with existing window:", error);
+      }
+      return;
+    } else {
+      const webview = new WebviewWindow("add", {
+        title: "Add Stock Id",
+        url: "/add",
+        width: 300,
+        height: 300,
+      });
+      webview.once("tauri://created", function () {});
+      webview.once("tauri://error", function (e) {
+        console.log(e);
+      });
+    }
   };
 
   return (
-    <Box mt={2} mb={6}>
+    <Box mt={2} mb={7}>
       {stocks.length === 0 ? (
         <Button fullWidth variant="contained" onClick={openAddWindow}>
           Add First Stock
         </Button>
       ) : (
-        stocks.map((id) => <StockBox key={id} id={id} />)
+        stocks.map(({ id }, index) => <StockBox key={index} id={id} />)
       )}
     </Box>
   );

@@ -3,6 +3,7 @@ import BuildIcon from "@mui/icons-material/Build";
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
 import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import DownloadIcon from "@mui/icons-material/Download";
 import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
@@ -14,10 +15,17 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
-import useStocksStore from "../store/Stock.store";
+import useStocksStore, { StockField } from "../store/Stock.store";
+import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
+import { load } from "cheerio";
+
+enum QueryStockType {
+  TWSE = 2,
+  OTC = 4,
+}
 
 export default function SpeedDial() {
-  const { clear, stocks } = useStocksStore();
+  const { clear, stocks, update_menu } = useStocksStore();
   const navigate = useNavigate();
 
   const openAddWindow = async () => {
@@ -35,7 +43,7 @@ export default function SpeedDial() {
         title: "Add Stock Id",
         url: "/add",
         width: 300,
-        height: 130,
+        height: 300,
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
@@ -58,6 +66,52 @@ export default function SpeedDial() {
       }
     } catch (err) {
       console.error("複製失敗:", err);
+    }
+  };
+
+  const queryStocks = async (type: QueryStockType) => {
+    const data:StockField[] = [];
+    try {
+      const url = `https://isin.twse.com.tw/isin/C_public.jsp?strMode=${type}`;
+      const arrayBuffer = (await tauriFetcher(
+        url,
+        TauriFetcherType.ArrayBuffer
+      )) as ArrayBuffer;
+
+      // 使用 TextDecoder轉換編碼big5->utf-8
+      const decoder = new TextDecoder("big5");
+      const decodedText = decoder.decode(arrayBuffer);
+      const $ = load(decodedText);
+
+      const rows = $("tbody tr").toArray();
+      const thirdRowToEnd = rows.slice(2);
+
+      for (let i = 0; i < thirdRowToEnd.length; i++) {
+        const row = thirdRowToEnd[i];
+        const firstTd = $(row).find("td").eq(0).text(); // 第一個<td>
+        const [id, name] = firstTd.split("　");
+        const type = $(row).find("td").eq(4).text(); // 第五個<td>
+        if (id.length === 4) {
+          data.push({ id, name, type });
+        } else {
+          console.log("Skip id:", id, name);
+        }
+      }
+    } catch (error) {
+      console.error("Error scraping website:", error);
+    }
+    return data;
+  };
+
+  const handleDownloadMenu = async () => {
+    try {
+      const TWSE_data = await queryStocks(QueryStockType.TWSE);
+      const OTC_data = await queryStocks(QueryStockType.OTC);
+      TWSE_data.push(...OTC_data);
+      await update_menu(TWSE_data);
+      sendNotification({ title: "Menu", body: "Update Success!" });
+    } catch (error) {
+      console.error("Error scraping website:", error);
     }
   };
 
@@ -87,6 +141,13 @@ export default function SpeedDial() {
         icon={<RestorePageIcon />}
         tooltipTitle={"Clear Store"}
         onClick={clear}
+      />
+
+      <SpeedDialAction
+        key={"Update Stock Menu"}
+        icon={<DownloadIcon />}
+        tooltipTitle={"Update Stock Menu"}
+        onClick={handleDownloadMenu}
       />
 
       <SpeedDialAction

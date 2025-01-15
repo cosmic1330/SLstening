@@ -37,8 +37,8 @@ function Detail() {
 
   const deals = useMemo(() => {
     if (!data) return [];
-    const ta_index = data.indexOf('"ta":');
-    const json_ta = "{" + data.slice(ta_index).replace(");", "");
+    const ta_index = (data as string).indexOf('"ta":');
+    const json_ta = "{" + (data as string).slice(ta_index).replace(");", "");
     const parse = JSON.parse(json_ta);
     const response = parse.ta as StockListType;
     return response;

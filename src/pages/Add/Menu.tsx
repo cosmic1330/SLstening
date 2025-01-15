@@ -44,7 +44,7 @@ export default function Menu({
               field.onChange(newValue);
             }}
             fullWidth
-            renderInput={(params) => <TextField {...params} label="Stock" />}
+            renderInput={(params) => <TextField {...params} label="選擇加入股票" />}
           />
         )}
       />

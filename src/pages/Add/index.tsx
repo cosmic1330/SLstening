@@ -46,10 +46,10 @@ function Add() {
         </Box>
         <Stack direction="row" spacing={2}>
           <Button size="small" onClick={closeWindow} fullWidth>
-            Close
+            關閉
           </Button>
           <Button type="submit" variant="contained" size="small" fullWidth>
-            Add
+            加入
           </Button>
         </Stack>
       </form>

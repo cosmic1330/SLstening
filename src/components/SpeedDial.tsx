@@ -128,35 +128,35 @@ export default function SpeedDial() {
       <SpeedDialAction
         key={"Add StockId"}
         icon={<AddCircleRoundedIcon />}
-        tooltipTitle={"Add StockId"}
+        tooltipTitle={"加入股票"}
         onClick={openAddWindow}
       />
 
       <SpeedDialAction
         key={"Add Clipboard"}
         icon={<ContentPasteGoRoundedIcon />}
-        tooltipTitle={"Add Clipboard"}
+        tooltipTitle={"複製追蹤清單"}
         onClick={handleCopy}
       />
 
       <SpeedDialAction
         key={"Clear Store"}
         icon={<RestorePageIcon />}
-        tooltipTitle={"Clear Store"}
+        tooltipTitle={"清除所有追蹤"}
         onClick={clear}
       />
 
       <SpeedDialAction
         key={"Update Stock Menu"}
         icon={<DownloadIcon />}
-        tooltipTitle={"Update Stock Menu"}
+        tooltipTitle={"更新選股清單"}
         onClick={handleDownloadMenu}
       />
 
       <SpeedDialAction
         key={"Go Other Page"}
         icon={<HexagonRoundedIcon />}
-        tooltipTitle={"Go Other Page"}
+        tooltipTitle={"設定"}
         onClick={() => {
           navigate("/dashboard/other");
         }}
@@ -165,7 +165,7 @@ export default function SpeedDial() {
       <SpeedDialAction
         key={"Logout"}
         icon={<LogoutRoundedIcon />}
-        tooltipTitle={"Logout"}
+        tooltipTitle={"登出"}
         onClick={() => {
           navigate("/");
         }}

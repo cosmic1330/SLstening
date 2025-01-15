@@ -124,7 +124,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             component="div"
             color="#fff"
           >
-            Ded
+            扣抵
           </Typography>
           <Tooltip title={ma5_deduction_time}>
             <Typography
@@ -143,7 +143,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             component="div"
             color="#fff"
           >
-            Tmr Ded
+            明日扣抵
           </Typography>
           <Tooltip title={ma5_tomorrow_deduction_time}>
             <Typography
@@ -167,7 +167,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             color="#fff"
             noWrap
           >
-            Pre Low
+            前低
           </Typography>
           <Typography
             variant="body2"
@@ -206,7 +206,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             color="#fff"
             noWrap
           >
-            Persent
+            漲跌
           </Typography>
           <Typography variant="body2" fontWeight="bold">
             {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%

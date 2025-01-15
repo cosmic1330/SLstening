@@ -1,8 +1,6 @@
 import {
   Button,
   Typography,
-  Grid2,
-  Link,
   Container,
   Stack,
 } from "@mui/material";
@@ -39,20 +37,8 @@ const Login = () => {
             navigate("/dashboard");
           }}
         >
-          登入
+          進入
         </Button>
-        <Grid2 container>
-          <Grid2 size={6}>
-            <Link href="#" variant="body2">
-              忘記密碼？
-            </Link>
-          </Grid2>
-          <Grid2 size={6}>
-            <Link href="#" variant="body2">
-              {"還沒有帳號？\n 立即註冊"}
-            </Link>
-          </Grid2>
-        </Grid2>
       </Stack>
     </Container>
   );

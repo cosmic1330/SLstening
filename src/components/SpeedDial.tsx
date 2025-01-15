@@ -54,7 +54,9 @@ export default function SpeedDial() {
 
   const handleCopy = async () => {
     try {
-      const stocksText = stocks.join("\n");
+      const stocksText = stocks
+        .map(({ id, name }) => `${id} ${name}`)
+        .join("\n");
       await writeText(stocksText);
       let permissionGranted = await isPermissionGranted();
       if (!permissionGranted) {
@@ -70,7 +72,7 @@ export default function SpeedDial() {
   };
 
   const queryStocks = async (type: QueryStockType) => {
-    const data:StockField[] = [];
+    const data: StockField[] = [];
     try {
       const url = `https://isin.twse.com.tw/isin/C_public.jsp?strMode=${type}`;
       const arrayBuffer = (await tauriFetcher(

@@ -17,13 +17,12 @@ import useMaDeduction from "../hooks/useMaDeduction";
 import useStocksStore, { StockField } from "../store/Stock.store";
 
 const Box = styled(MuiBox)`
-  background-color: rgba(100, 100, 100, 0.2);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  backdrop-filter: blur(15px); /* Gaussian blur effect */
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 1);
   padding: 1rem;
   border-radius: 0.8rem;
+  color:#fff;
+  /* backdrop-filter: blur(5px); Gaussian blur effect */
   cursor: pointer;
 `;
 export default function StockBox({ stock }: { stock: StockField }) {
@@ -103,10 +102,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
       <Grid2 container alignItems="center" mb={1}>
         <Grid2 size={3.5}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
           >
             ma5
           </Typography>
@@ -120,10 +119,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
         <Grid2 size={3.5}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
           >
             Ded
           </Typography>
@@ -139,10 +138,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
         <Grid2 size={3.5}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
           >
             Tmr Ded
           </Typography>
@@ -162,10 +161,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
       <Grid2 container alignItems="center">
         <Grid2 size={3.5}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
             noWrap
           >
             Pre Low
@@ -184,10 +183,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
         <Grid2 size={3.5}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
           >
             ma10
           </Typography>
@@ -201,10 +200,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
         <Grid2 size={3}>
           <Typography
-            variant="caption"
+            variant="body2"
             gutterBottom
             component="div"
-            color="#ddd"
+            color="#fff"
             noWrap
           >
             Persent

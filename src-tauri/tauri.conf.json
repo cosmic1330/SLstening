@@ -14,7 +14,7 @@
     "windows": [
       {
         "title": "slistening",
-        "width": 300,
+        "width": 330,
         "height": 600,  
         "transparent": true,
         "decorations": true, 

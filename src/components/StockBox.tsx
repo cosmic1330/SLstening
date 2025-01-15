@@ -17,8 +17,11 @@ import useMaDeduction from "../hooks/useMaDeduction";
 import useStocksStore, { StockField } from "../store/Stock.store";
 
 const Box = styled(MuiBox)`
-  background-color: #555;
+  background-color: rgba(100, 100, 100, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: #fff;
+  backdrop-filter: blur(15px); /* Gaussian blur effect */
   padding: 1rem;
   border-radius: 0.8rem;
   cursor: pointer;
@@ -98,7 +101,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={4}>
+        <Grid2 size={3.5}>
           <Typography
             variant="caption"
             gutterBottom
@@ -115,7 +118,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             {ma5}
           </Typography>
         </Grid2>
-        <Grid2 size={4}>
+        <Grid2 size={3.5}>
           <Typography
             variant="caption"
             gutterBottom
@@ -134,7 +137,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             </Typography>
           </Tooltip>
         </Grid2>
-        <Grid2 size={4}>
+        <Grid2 size={3.5}>
           <Typography
             variant="caption"
             gutterBottom
@@ -157,7 +160,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center">
-        <Grid2 size={4}>
+        <Grid2 size={3.5}>
           <Typography
             variant="caption"
             gutterBottom
@@ -179,7 +182,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             {deals.length > 0 && deals[deals.length - 2].l}
           </Typography>
         </Grid2>
-        <Grid2 size={4}>
+        <Grid2 size={3.5}>
           <Typography
             variant="caption"
             gutterBottom
@@ -196,7 +199,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             {ma10}
           </Typography>
         </Grid2>
-        <Grid2 size={2.5}>
+        <Grid2 size={3}>
           <Typography
             variant="caption"
             gutterBottom
@@ -210,7 +213,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%
           </Typography>
         </Grid2>
-        <Grid2 size={1.5} textAlign={"center"}>
+        <Grid2 size={2} textAlign={"center"}>
           <IconButton
             size="small"
             onClick={(e) => {

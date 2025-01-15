@@ -6,6 +6,7 @@
     "core:default",
     "opener:default",
     "store:default",
+    "shell:default",
     "clipboard-manager:allow-write-text",
     "notification:allow-request-permission",
     "notification:default"

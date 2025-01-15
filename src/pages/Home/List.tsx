@@ -1,9 +1,9 @@
 import { Box, Button } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect } from "react";
 import StockBox from "../../components/StockBox";
 import useStocksStore from "../../store/Stock.store";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -52,7 +52,7 @@ function List() {
           Add First Stock
         </Button>
       ) : (
-        stocks.map(({ id }, index) => <StockBox key={index} id={id} />)
+        stocks.map((stock, index) => <StockBox key={index} stock={stock} />)
       )}
     </Box>
   );

@@ -1,6 +1,7 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DeleteIcon from "@mui/icons-material/Delete";
 import {
+  Button,
   Grid2,
   Box as MuiBox,
   styled,
@@ -8,11 +9,12 @@ import {
   Typography,
 } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
+import { emit } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { open } from "@tauri-apps/plugin-shell";
 import useDeals from "../hooks/useDeals";
 import useMaDeduction from "../hooks/useMaDeduction";
-import useStocksStore from "../store/Stock.store";
-import { emit } from "@tauri-apps/api/event";
+import useStocksStore, { StockField } from "../store/Stock.store";
 
 const Box = styled(MuiBox)`
   background-color: #555;
@@ -21,9 +23,9 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   cursor: pointer;
 `;
-export default function StockBox({ id }: { id: string }) {
+export default function StockBox({ stock }: { stock: StockField }) {
   const { remove } = useStocksStore();
-  const { deals, name } = useDeals(id);
+  const { deals, name } = useDeals(stock.id);
   const {
     ma5_deduction_time,
     ma5_deduction_value,
@@ -34,6 +36,10 @@ export default function StockBox({ id }: { id: string }) {
   } = useMaDeduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
   const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
+  const url =
+    stock.type === "上市"
+      ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
+      : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
 
   const openDetailWindow = async () => {
     // 检查是否已有相同标识的窗口
@@ -42,9 +48,9 @@ export default function StockBox({ id }: { id: string }) {
     if (existingWindow) {
       try {
         // 如果窗口已存在，聚焦窗口并更新内容（如果需要）
-        await existingWindow.setTitle(`${id} ${name}`);
+        await existingWindow.setTitle(`${stock.id} ${name}`);
         // 动态更新 URL
-        await emit("stock-added", { url: `/detail/${id}` });
+        await emit("stock-added", { url: `/detail/${stock.id}` });
         existingWindow.setFocus();
       } catch (error) {
         console.error("Error interacting with existing window:", error);
@@ -52,8 +58,8 @@ export default function StockBox({ id }: { id: string }) {
       return;
     } else {
       const webview = new WebviewWindow("detail", {
-        title: id + " " + name,
-        url: `/detail/${id}`,
+        title: stock.id + " " + name,
+        url: `/detail/${stock.id}`,
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
@@ -65,10 +71,18 @@ export default function StockBox({ id }: { id: string }) {
   return (
     <Box onClick={openDetailWindow} mt={2}>
       <Grid2 container alignItems="center">
-        <Grid2 size={6}>
-          <Typography variant="body1" gutterBottom>
-            [{id} {name}]
-          </Typography>
+        <Grid2 size={6} mb={1}>
+          <Button
+            variant="contained"
+            size="small"
+            color="info"
+            onClick={async (e) => {
+              e.stopPropagation();
+              await open(url);
+            }}
+          >
+            {stock.id} {name}
+          </Button>
         </Grid2>
         <Grid2 size={6}>
           <Typography
@@ -201,7 +215,7 @@ export default function StockBox({ id }: { id: string }) {
             size="small"
             onClick={(e) => {
               e.stopPropagation();
-              remove(id);
+              remove(stock.id);
             }}
             sx={{ border: "1px solid #fff", color: "#fff", marginLeft: 1 }}
           >

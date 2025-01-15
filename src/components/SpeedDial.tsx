@@ -1,9 +1,9 @@
 import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import BuildIcon from "@mui/icons-material/Build";
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
+import DownloadIcon from "@mui/icons-material/Download";
 import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import DownloadIcon from "@mui/icons-material/Download";
 import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
@@ -14,10 +14,10 @@ import {
   requestPermission,
   sendNotification,
 } from "@tauri-apps/plugin-notification";
-import { useNavigate } from "react-router";
-import useStocksStore, { StockField } from "../store/Stock.store";
-import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
 import { load } from "cheerio";
+import { useNavigate } from "react-router";
+import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
+import useStocksStore, { StockField } from "../store/Stock.store";
 
 enum QueryStockType {
   TWSE = 2,
@@ -92,9 +92,10 @@ export default function SpeedDial() {
         const row = thirdRowToEnd[i];
         const firstTd = $(row).find("td").eq(0).text(); // 第一個<td>
         const [id, name] = firstTd.split("　");
-        const type = $(row).find("td").eq(4).text(); // 第五個<td>
+        const type = $(row).find("td").eq(3).text(); // 第四個<td>
+        const group = $(row).find("td").eq(4).text(); // 第五個<td>
         if (id.length === 4) {
-          data.push({ id, name, type });
+          data.push({ id, name, type, group });
         } else {
           console.log("Skip id:", id, name);
         }

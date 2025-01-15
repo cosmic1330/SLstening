@@ -28,7 +28,7 @@ export default function EMAMA() {
       x: deals[0].t,
       y: deals[0].c,
       ema: ema_data.ema,
-      ma: ma_data.ma,
+      ma10: ma_data.ma,
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
@@ -38,7 +38,7 @@ export default function EMAMA() {
       response.push({
         x: deal.t,
         ema: ema_data.ema,
-        ma: ma_data.ma,
+        ma10: ma_data.ma,
         y: (deal.h + deal.l) / 2,
         c: deal.c,
       });
@@ -65,7 +65,7 @@ export default function EMAMA() {
                   key={`cell-${index}`}
                   fill={
                     entry.ema < entry.c &&
-                    entry.ma < entry.c &&
+                    entry.ma10 < entry.c &&
                     entry.c > entry.y
                       ? "green"
                       : "red"
@@ -81,7 +81,7 @@ export default function EMAMA() {
               legendType="none"
             />
             <Line
-              dataKey="ma"
+              dataKey="ma10"
               stroke="red"
               dot={false}
               activeDot={false}

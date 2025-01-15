@@ -6,7 +6,7 @@ import { create } from "zustand";
  * 僅能在同一個thread中進行
  **/
 
-export type StockField = { id: string; name: string; type: string };
+export type StockField = { id: string; name: string; type: string; group: string };
 
 interface StocksState {
   stocks: StockField[];

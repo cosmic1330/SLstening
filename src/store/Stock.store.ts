@@ -57,7 +57,7 @@ const useStocksStore = create<StocksState>((set) => ({
   clear: async () => {
     try {
       const store = await load("store.dat");
-      await store.clear();
+      await store.delete('stocks');
       set({ stocks: [] });
     } catch (error) {
       console.log(error);

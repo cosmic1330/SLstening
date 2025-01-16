@@ -1,19 +1,21 @@
-import { Box, Button, Container, Stack } from "@mui/material";
+import { Box, Button, Container, Stack, Typography } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import { useForm } from "react-hook-form";
 import useStocksStore from "../../store/Stock.store";
 import type FormData from "./type";
 import Menu from "./Menu";
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import useDownloadStocks from "../../hooks/useDownloadStocks";
 
+enum StateType {
+  Default = "default",
+  Downloading = "downloading",
+}
 function Add() {
   const { increase, reload } = useStocksStore();
-
-  const closeWindow = async () => {
-    const webview = getCurrentWindow();
-    webview.close();
-  };
+  const [state, setState] = useState(StateType.Default);
+  const handleDownloadMenu = useDownloadStocks();
 
   const {
     control,
@@ -22,7 +24,12 @@ function Add() {
     formState: { errors },
   } = useForm<FormData>();
 
-  const onSubmit = async (data: FormData) => {
+  const closeWindow = useCallback(async () => {
+    const webview = getCurrentWindow();
+    webview.close();
+  }, []);
+
+  const onSubmit = useCallback(async (data: FormData) => {
     if (data.stock) {
       await reload();
       increase(data.stock);
@@ -31,7 +38,14 @@ function Add() {
     } else {
       console.log("未选择股票");
     }
-  };
+  }, []);
+
+  const handleDownload = useCallback(async () => {
+    setState(StateType.Downloading);
+    await handleDownloadMenu();
+    await reload();
+    setState(StateType.Default);
+  }, []);
 
   useEffect(() => {
     reload();
@@ -53,6 +67,19 @@ function Add() {
           </Button>
         </Stack>
       </form>
+      <Box mt={2} textAlign="center">
+        {state === StateType.Default ? (
+          <Button
+            onClick={handleDownload}
+            color="primary"
+            sx={{ cursor: "pointer", textDecoration: "underline" }}
+          >
+            沒有選項嗎? 點我載入
+          </Button>
+        ) : (
+          <Typography variant="caption">下載中...</Typography>
+        )}
+      </Box>
     </Container>
   );
 }

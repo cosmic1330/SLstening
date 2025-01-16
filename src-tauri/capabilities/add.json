@@ -3,5 +3,18 @@
   "identifier": "add",
   "description": "Capability for the add window",
   "windows": ["add"],
-  "permissions": ["core:window:allow-close"]
+  "permissions": [
+    "core:window:allow-close",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
+        }
+      ]
+    }
+  ]
 }

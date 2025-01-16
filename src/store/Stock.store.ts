@@ -6,7 +6,12 @@ import { create } from "zustand";
  * 僅能在同一個thread中進行
  **/
 
-export type StockField = { id: string; name: string; type: string; group: string };
+export type StockField = {
+  id: string;
+  name: string;
+  type: string;
+  group: string;
+};
 
 interface StocksState {
   stocks: StockField[];
@@ -52,7 +57,7 @@ const useStocksStore = create<StocksState>((set) => ({
     const store = await load("store.dat");
     const stocks = ((await store.get("stocks")) as StockField[]) || [];
     const menu = ((await store.get("menu")) as StockField[]) || [];
-    set({ stocks, menu });
+    set(() => ({ stocks, menu }));
   },
   clear: async () => {
     try {
@@ -64,16 +69,12 @@ const useStocksStore = create<StocksState>((set) => ({
     }
   },
   update_menu: async (stocks: StockField[]) => {
-    set(() => {
-      (async () => {
-        const store = await load("store.dat");
-        await store.set("menu", stocks);
-        await store.save();
-      })();
-      return {
-        menu: stocks,
-      };
-    });
+    const store = await load("store.dat");
+    await store.set("menu", stocks);
+    await store.save();
+    set(() => ({
+      menu: stocks,
+    }));
   },
 }));
 

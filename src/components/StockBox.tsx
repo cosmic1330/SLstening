@@ -21,7 +21,7 @@ const Box = styled(MuiBox)`
   border: 1px solid rgba(255, 255, 255, 1);
   padding: 1rem;
   border-radius: 0.8rem;
-  color:#fff;
+  color: #fff;
   /* backdrop-filter: blur(5px); Gaussian blur effect */
   cursor: pointer;
 `;
@@ -29,12 +29,14 @@ export default function StockBox({ stock }: { stock: StockField }) {
   const { remove } = useStocksStore();
   const { deals, name } = useDeals(stock.id);
   const {
+    ma5,
     ma5_deduction_time,
     ma5_deduction_value,
     ma5_tomorrow_deduction_value,
     ma5_tomorrow_deduction_time,
-    ma5,
     ma10,
+    ma10_deduction_time,
+    ma10_deduction_value,
   } = useMaDeduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
   const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
@@ -100,12 +102,13 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={3.5}>
+        <Grid2 size={3}>
           <Typography
             variant="body2"
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
           >
             ma5
           </Typography>
@@ -113,24 +116,27 @@ export default function StockBox({ stock }: { stock: StockField }) {
             variant="body2"
             color={lastPrice < ma5 ? "#e58282" : "#fff"}
             fontWeight="bold"
+            textAlign="center"
           >
             {ma5}
           </Typography>
         </Grid2>
-        <Grid2 size={3.5}>
+        <Grid2 size={3}>
           <Typography
             variant="body2"
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
           >
-            扣抵
+            5扣抵
           </Typography>
           <Tooltip title={ma5_deduction_time}>
             <Typography
               variant="body2"
               color={lastPrice < ma5_deduction_value ? "#e58282" : "#fff"}
               fontWeight="bold"
+              textAlign="center"
             >
               {ma5_deduction_value}
             </Typography>
@@ -142,8 +148,9 @@ export default function StockBox({ stock }: { stock: StockField }) {
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
           >
-            明日扣抵
+            明日5扣抵
           </Typography>
           <Tooltip title={ma5_tomorrow_deduction_time}>
             <Typography
@@ -152,19 +159,19 @@ export default function StockBox({ stock }: { stock: StockField }) {
                 lastPrice < ma5_tomorrow_deduction_value ? "#e58282" : "#fff"
               }
               fontWeight="bold"
+              textAlign="center"
             >
               {ma5_tomorrow_deduction_value}
             </Typography>
           </Tooltip>
         </Grid2>
-      </Grid2>
-      <Grid2 container alignItems="center">
-        <Grid2 size={3.5}>
+        <Grid2 size={2.5}>
           <Typography
             variant="body2"
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
             noWrap
           >
             前低
@@ -177,16 +184,20 @@ export default function StockBox({ stock }: { stock: StockField }) {
                 : "#fff"
             }
             fontWeight="bold"
+            textAlign="center"
           >
             {deals.length > 0 && deals[deals.length - 2].l}
           </Typography>
         </Grid2>
-        <Grid2 size={3.5}>
+      </Grid2>
+      <Grid2 container alignItems="center">
+        <Grid2 size={3}>
           <Typography
             variant="body2"
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
           >
             ma10
           </Typography>
@@ -194,6 +205,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             variant="body2"
             color={ma5 > ma10 && lastPrice < ma10 ? "#e58282" : "#fff"}
             fontWeight="bold"
+            textAlign="center"
           >
             {ma10}
           </Typography>
@@ -204,22 +216,44 @@ export default function StockBox({ stock }: { stock: StockField }) {
             gutterBottom
             component="div"
             color="#fff"
+            textAlign="center"
+          >
+            10扣抵
+          </Typography>
+          <Tooltip title={ma10_deduction_time}>
+            <Typography
+              variant="body2"
+              color={lastPrice < ma10_deduction_value ? "#e58282" : "#fff"}
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {ma10_deduction_value}
+            </Typography>
+          </Tooltip>
+        </Grid2>
+        <Grid2 size={3.5}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
             noWrap
           >
             漲跌
           </Typography>
-          <Typography variant="body2" fontWeight="bold">
+          <Typography variant="body2" fontWeight="bold" textAlign="center">
             {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%
           </Typography>
         </Grid2>
-        <Grid2 size={2} textAlign={"center"}>
+        <Grid2 size={2.5} textAlign="center">
           <IconButton
             size="small"
             onClick={(e) => {
               e.stopPropagation();
               remove(stock.id);
             }}
-            sx={{ border: "1px solid #fff", color: "#fff", marginLeft: 1 }}
+            sx={{ border: "1px solid #fff", color: "#fff" }}
           >
             <DeleteIcon fontSize="small" />
           </IconButton>

@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import ma from "../cls_tools/ma";
 
 export default function useMaDeduction(deals: StockListType) {
-  const [maRef, setMaRed] = useState<MaResType>();
+  const [ma5Ref, setMa5Red] = useState<MaResType>();
+  const [ma10Ref, setMa10Red] = useState<MaResType>();
   const [ma5, setMa5] = useState<number>(0);
   const [ma10, setMa10] = useState<number>(0);
   useEffect(() => {
@@ -16,7 +17,8 @@ export default function useMaDeduction(deals: StockListType) {
         temp = ma.next(deal, temp, 5);
         temp2 = ma.next(deal, temp2, 10);
       }
-      setMaRed(JSON.parse(JSON.stringify(temp)));
+      setMa5Red(JSON.parse(JSON.stringify(temp)));
+      setMa10Red(JSON.parse(JSON.stringify(temp2)));
       temp = ma.next(deals[deals.length - 1], temp, 5);
       temp2 = ma.next(deals[deals.length - 1], temp2, 10);
       setMa5(temp.ma);
@@ -24,28 +26,38 @@ export default function useMaDeduction(deals: StockListType) {
     }
   }, [deals]);
 
-  const { time, value } = useMemo(() => {
-    if (!maRef) return { time: "null", value: 0 };
+  const { ma5_time, ma5_value } = useMemo(() => {
+    if (!ma5Ref) return { ma5_time: "null", ma5_value: 0 };
     return {
-      time: maRef.dataset[0].t,
-      value: maRef.dataset[0].c,
+      ma5_time: ma5Ref.dataset[0].t,
+      ma5_value: ma5Ref.dataset[0].c,
     };
-  }, [maRef]);
+  }, [ma5Ref]);
 
-  const { tmr_time, tmr_value } = useMemo(() => {
-    if (!maRef) return { tmr_time: "null", tmr_value: 0 };
+  const { ma10_time, ma10_value } = useMemo(() => {
+    if (!ma10Ref) return { ma10_time: "null", ma10_value: 0 };
     return {
-      tmr_time: maRef.dataset[1].t,
-      tmr_value: maRef.dataset[1].c,
+      ma10_time: ma10Ref.dataset[0].t,
+      ma10_value: ma10Ref.dataset[0].c,
     };
-  }, [maRef]);
+  }, [ma10Ref]);
+
+  const { tmr_ma5_time, tmr_ma5_value } = useMemo(() => {
+    if (!ma5Ref) return { tmr_ma5_time: "null", tmr_ma5_value: 0 };
+    return {
+      tmr_ma5_time: ma5Ref.dataset[1].t,
+      tmr_ma5_value: ma5Ref.dataset[1].c,
+    };
+  }, [ma5Ref]);
 
   return {
-    ma5_deduction_time: time,
-    ma5_deduction_value: value,
-    ma5_tomorrow_deduction_value: tmr_value,
-    ma5_tomorrow_deduction_time: tmr_time,
     ma5,
+    ma5_deduction_time: ma5_time,
+    ma5_deduction_value: ma5_value,
+    ma5_tomorrow_deduction_value: tmr_ma5_value,
+    ma5_tomorrow_deduction_time: tmr_ma5_time,
     ma10,
+    ma10_deduction_time: ma10_time,
+    ma10_deduction_value: ma10_value,
   };
 }

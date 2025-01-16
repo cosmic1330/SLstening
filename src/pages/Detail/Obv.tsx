@@ -3,7 +3,7 @@ import { Box, Container, Stack, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
   Area,
-  AreaChart,
+  ComposedChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -25,11 +25,21 @@ export default function Obv() {
       deals[0] as Required<Pick<StockType, "v">> & StockType,
       10
     );
-    response.push({ t: deals[0].t, obv: pre.obv, obv10: pre.obvMa });
+    response.push({
+      t: deals[0].t,
+      obv: pre.obv,
+      obv10: pre.obvMa,
+      c: deals[0].c,
+    });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i] as Required<Pick<StockType, "v">> & StockType;
       pre = obv.next(deal, pre, 10);
-      response.push({ t: deal.t, obv: pre.obv, obv10: pre.obvMa });
+      response.push({
+        t: deal.t,
+        obv: pre.obv,
+        obv10: pre.obvMa,
+        c: deal.c,
+      });
     }
     return response;
   }, [deals]);
@@ -54,9 +64,11 @@ export default function Obv() {
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
-          <AreaChart data={chartData}>
+          <ComposedChart data={chartData}>
             <XAxis dataKey="t" />
             <YAxis />
+            {/* 右側 Y 軸 */}
+            <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
             <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
             <Area
@@ -71,7 +83,15 @@ export default function Obv() {
               stroke="#8884d8"
               fill="#8884d8"
             />
-          </AreaChart>
+            {/* <Line
+              yAxisId="right"
+              dataKey="c"
+              stroke="green"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            /> */}
+          </ComposedChart>
         </ResponsiveContainer>
       </Box>
     </Container>

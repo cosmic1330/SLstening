@@ -75,10 +75,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
   };
 
   return (
-    <Box
-      mt={2}
-      sx={{ border: "1px solid #fff", color: "#fff" }}
-    >
+    <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
       <Grid2 container alignItems="center" mb={1}>
         <Grid2 size={6}>
           <Button
@@ -95,26 +92,24 @@ export default function StockBox({ stock }: { stock: StockField }) {
         </Grid2>
         <Grid2 size={6}>
           <Stack spacing={0.5} direction="row" justifyContent="flex-end">
-
-          <Button
-            size="small"
-            onClick={openDetailWindow}
-            startIcon={<AttachMoneyIcon />}
-            sx={{ color: "#fff", lineHeight:1 }}
-          >
-            {lastPrice}
-          </Button>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              remove(stock.id);
-            }}
-            sx={{ color: "#fff" }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-          </Stack >
+            <Button
+              onClick={openDetailWindow}
+              sx={{ color: "#fff", lineHeight: 1, fontSize: 21 }}
+            >
+              <AttachMoneyIcon />
+              {lastPrice}
+            </Button>
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                remove(stock.id);
+              }}
+              sx={{ color: "#fff" }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Stack>
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center" mb={1}>

@@ -50,6 +50,14 @@ export default function useMaDeduction(deals: StockListType) {
     };
   }, [ma5Ref]);
 
+  const { tmr_ma10_time, tmr_ma10_value } = useMemo(() => {
+    if (!ma10Ref) return { tmr_ma10_time: "null", tmr_ma10_value: 0 };
+    return {
+      tmr_ma10_time: ma10Ref.dataset[1].t,
+      tmr_ma10_value: ma10Ref.dataset[1].c,
+    };
+  }, [ma10Ref]);
+
   return {
     ma5,
     ma5_deduction_time: ma5_time,
@@ -59,5 +67,7 @@ export default function useMaDeduction(deals: StockListType) {
     ma10,
     ma10_deduction_time: ma10_time,
     ma10_deduction_value: ma10_value,
+    ma10_tomorrow_deduction_value: tmr_ma10_value,
+    ma10_tomorrow_deduction_time: tmr_ma10_time,
   };
 }

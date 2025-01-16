@@ -4,6 +4,7 @@ import {
   Button,
   Grid2,
   Box as MuiBox,
+  Stack,
   styled,
   Tooltip,
   Typography,
@@ -23,7 +24,6 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
   /* backdrop-filter: blur(5px); Gaussian blur effect */
-  cursor: pointer;
 `;
 export default function StockBox({ stock }: { stock: StockField }) {
   const { remove } = useStocksStore();
@@ -37,6 +37,8 @@ export default function StockBox({ stock }: { stock: StockField }) {
     ma10,
     ma10_deduction_time,
     ma10_deduction_value,
+    ma10_tomorrow_deduction_value,
+    ma10_tomorrow_deduction_time,
   } = useMaDeduction(deals);
   const lastPrice = deals.length > 0 ? deals[deals.length - 1].c : 0;
   const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
@@ -73,9 +75,12 @@ export default function StockBox({ stock }: { stock: StockField }) {
   };
 
   return (
-    <Box onClick={openDetailWindow} mt={2}>
-      <Grid2 container alignItems="center">
-        <Grid2 size={6} mb={1}>
+    <Box
+      mt={2}
+      sx={{ border: "1px solid #fff", color: "#fff" }}
+    >
+      <Grid2 container alignItems="center" mb={1}>
+        <Grid2 size={6}>
           <Button
             variant="contained"
             size="small"
@@ -89,16 +94,27 @@ export default function StockBox({ stock }: { stock: StockField }) {
           </Button>
         </Grid2>
         <Grid2 size={6}>
-          <Typography
-            variant="h6"
-            gutterBottom
-            justifyContent="flex-end"
-            alignItems="center"
-            display="flex"
+          <Stack spacing={0.5} direction="row" justifyContent="flex-end">
+
+          <Button
+            size="small"
+            onClick={openDetailWindow}
+            startIcon={<AttachMoneyIcon />}
+            sx={{ color: "#fff", lineHeight:1 }}
           >
-            <AttachMoneyIcon />
             {lastPrice}
-          </Typography>
+          </Button>
+          <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              remove(stock.id);
+            }}
+            sx={{ color: "#fff" }}
+          >
+            <DeleteIcon fontSize="small" />
+          </IconButton>
+          </Stack >
         </Grid2>
       </Grid2>
       <Grid2 container alignItems="center" mb={1}>
@@ -238,6 +254,29 @@ export default function StockBox({ stock }: { stock: StockField }) {
             component="div"
             color="#fff"
             textAlign="center"
+          >
+            明日10扣抵
+          </Typography>
+          <Tooltip title={ma10_tomorrow_deduction_time}>
+            <Typography
+              variant="body2"
+              color={
+                lastPrice < ma10_tomorrow_deduction_value ? "#e58282" : "#fff"
+              }
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {ma10_tomorrow_deduction_value}
+            </Typography>
+          </Tooltip>
+        </Grid2>
+        <Grid2 size={2.5} textAlign="center">
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
             noWrap
           >
             漲跌
@@ -245,18 +284,6 @@ export default function StockBox({ stock }: { stock: StockField }) {
           <Typography variant="body2" fontWeight="bold" textAlign="center">
             {Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100}%
           </Typography>
-        </Grid2>
-        <Grid2 size={2.5} textAlign="center">
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              remove(stock.id);
-            }}
-            sx={{ border: "1px solid #fff", color: "#fff" }}
-          >
-            <DeleteIcon fontSize="small" />
-          </IconButton>
         </Grid2>
       </Grid2>
     </Box>

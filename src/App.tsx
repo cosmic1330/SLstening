@@ -8,8 +8,17 @@ import Home from "./pages/Home";
 import List from "./pages/Home/List";
 import Other from "./pages/Home/Other";
 import Login from "./pages/Login";
+import useStocksStore from "./store/Stock.store";
+import { useEffect } from "react";
 
 function App() {
+  const { reload } = useStocksStore();
+
+  useEffect(() => {
+    reload();
+    console.log("reload");
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>

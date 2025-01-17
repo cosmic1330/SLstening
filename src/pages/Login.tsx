@@ -1,15 +1,18 @@
-import {
-  Button,
-  Typography,
-  Container,
-  Stack,
-} from "@mui/material";
+import { Button, Typography, Container, Stack } from "@mui/material";
 import { useNavigate } from "react-router";
 import useStocksStore from "../store/Stock.store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useCallback } from "react";
 
 const Login = () => {
-  const { reload } = useStocksStore();
+  const { alwaysOnTop } = useStocksStore();
   let navigate = useNavigate();
+
+  const handleLogin = useCallback(() => {
+    getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
+    navigate("/dashboard");
+  }, [alwaysOnTop]);
+
   return (
     <Container
       component="main"
@@ -29,14 +32,7 @@ const Login = () => {
         <Typography component="h1" variant="h5">
           SListening
         </Typography>
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={() => {
-            reload();
-            navigate("/dashboard");
-          }}
-        >
+        <Button fullWidth variant="contained" onClick={handleLogin}>
           進入
         </Button>
       </Stack>

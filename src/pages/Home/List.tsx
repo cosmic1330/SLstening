@@ -1,9 +1,10 @@
-import { Box, Button } from "@mui/material";
+import { Box, Button, Container } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect } from "react";
 import StockBox from "../../components/StockBox";
 import useStocksStore from "../../store/Stock.store";
+import SpeedDial from "../../components/SpeedDial";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -23,7 +24,6 @@ function List() {
 
   const openAddWindow = async () => {
     let existingWindow = await WebviewWindow.getByLabel("add");
-    console.log(existingWindow);
     if (existingWindow) {
       try {
         existingWindow.setFocus();
@@ -46,15 +46,18 @@ function List() {
   };
 
   return (
-    <Box mt={2} mb={7}>
-      {stocks.length === 0 ? (
-        <Button fullWidth variant="contained" onClick={openAddWindow}>
-          Add First Stock
-        </Button>
-      ) : (
-        stocks.map((stock, index) => <StockBox key={index} stock={stock} />)
-      )}
-    </Box>
+    <Container component="main">
+      <Box mt={2} mb={7}>
+        {stocks.length === 0 ? (
+          <Button fullWidth variant="contained" onClick={openAddWindow}>
+            新增第一筆追蹤
+          </Button>
+        ) : (
+          stocks.map((stock, index) => <StockBox key={index} stock={stock} />)
+        )}
+        <SpeedDial />
+      </Box>
+    </Container>
   );
 }
 

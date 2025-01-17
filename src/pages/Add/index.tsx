@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import useStocksStore from "../../store/Stock.store";
 import type FormData from "./type";
 import Menu from "./Menu";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import useDownloadStocks from "../../hooks/useDownloadStocks";
 
 enum StateType {
@@ -45,11 +45,6 @@ function Add() {
     await handleDownloadMenu();
     await reload();
     setState(StateType.Default);
-  }, []);
-
-  useEffect(() => {
-    reload();
-    console.log("reload");
   }, []);
 
   return (

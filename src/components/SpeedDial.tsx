@@ -25,7 +25,6 @@ export default function SpeedDial() {
 
   const openAddWindow = async () => {
     let existingWindow = await WebviewWindow.getByLabel("add");
-    console.log(existingWindow);
     if (existingWindow) {
       try {
         existingWindow.setFocus();

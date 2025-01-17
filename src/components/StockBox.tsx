@@ -16,6 +16,7 @@ import { open } from "@tauri-apps/plugin-shell";
 import useDeals from "../hooks/useDeals";
 import useMaDeduction from "../hooks/useMaDeduction";
 import useStocksStore, { StockField } from "../store/Stock.store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -48,7 +49,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
       : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
 
   const openDetailWindow = async () => {
-    // 检查是否已有相同标识的窗口
+    const appWindow = getCurrentWindow();
     let existingWindow = await WebviewWindow.getByLabel("detail");
 
     if (existingWindow) {
@@ -64,8 +65,9 @@ export default function StockBox({ stock }: { stock: StockField }) {
       return;
     } else {
       const webview = new WebviewWindow("detail", {
-        title: stock.id + " " + name,
+        title: `${stock.id} ${name} (${stock.group})`,
         url: `/detail/${stock.id}`,
+        parent: appWindow,
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {

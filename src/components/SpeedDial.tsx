@@ -7,7 +7,6 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import {
   isPermissionGranted,
@@ -17,34 +16,13 @@ import {
 import { useNavigate } from "react-router";
 import useStocksStore from "../store/Stock.store";
 import useDownloadStocks from "../hooks/useDownloadStocks";
+import useOpenWebviewWindow from "../hooks/useOpenWebviewWindow";
 
 export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();
   const handleDownloadMenu = useDownloadStocks();
   const navigate = useNavigate();
-
-  const openAddWindow = async () => {
-    let existingWindow = await WebviewWindow.getByLabel("add");
-    if (existingWindow) {
-      try {
-        existingWindow.setFocus();
-      } catch (error) {
-        console.error("Error interacting with existing window:", error);
-      }
-      return;
-    } else {
-      const webview = new WebviewWindow("add", {
-        title: "Add Stock Id",
-        url: "/add",
-        width: 300,
-        height: 300,
-      });
-      webview.once("tauri://created", function () {});
-      webview.once("tauri://error", function (e) {
-        console.log(e);
-      });
-    }
-  };
+  const { openAddWindow } = useOpenWebviewWindow();
 
   const handleCopy = async () => {
     try {

@@ -1,11 +1,12 @@
-import Database from "@tauri-apps/plugin-sql";
-const db = await Database.load("sqlite:schoice.db");
+import { DatabaseContext } from "../../context/DatabaseContext";
+import useDatabase from "../../hooks/useDatabase";
 
 const SChoice = () => {
+  const db = useDatabase();
   return (
-    <div>
+    <DatabaseContext.Provider value={{ db }}>
       <h1>Stock Choice</h1>
-    </div>
+    </DatabaseContext.Provider>
   );
 };
 export default SChoice;

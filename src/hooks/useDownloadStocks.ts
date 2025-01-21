@@ -2,7 +2,7 @@ import { load } from "cheerio";
 import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
 import useStocksStore, { StockField } from "../store/Stock.store";
 import { sendNotification } from "@tauri-apps/plugin-notification";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 enum QueryStockType {
   TWSE = 2,
@@ -11,6 +11,7 @@ enum QueryStockType {
 
 export default function useDownloadStocks() {
   const { update_menu } = useStocksStore();
+  const [disable, setDisable] = useState(false);
 
   const queryStocks = useCallback(async (type: QueryStockType) => {
     const data: StockField[] = [];
@@ -49,15 +50,17 @@ export default function useDownloadStocks() {
 
   const handleDownloadMenu = useCallback(async () => {
     try {
+      setDisable(true);
       const TWSE_data = await queryStocks(QueryStockType.TWSE);
       const OTC_data = await queryStocks(QueryStockType.OTC);
       TWSE_data.push(...OTC_data);
       await update_menu(TWSE_data);
+      setDisable(false);
       sendNotification({ title: "Menu", body: "Update Success!" });
     } catch (error) {
       console.error("Error scraping website:", error);
     }
   }, []);
 
-  return handleDownloadMenu;
+  return {handleDownloadMenu, disable};
 }

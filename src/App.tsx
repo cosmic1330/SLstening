@@ -10,6 +10,7 @@ import Other from "./pages/Home/Other";
 import Login from "./pages/Login";
 import useStocksStore from "./store/Stock.store";
 import { useEffect } from "react";
+import Schoice from "./pages/Schoice";
 
 function App() {
   const { reload } = useStocksStore();
@@ -24,13 +25,11 @@ function App() {
       <Routes>
         <Route index element={<Login />} />
         <Route path="add" element={<Add />} />
+        <Route path="schoice" element={<Schoice />} />
+        <Route path="detail/:id" element={<Detail />} />
         <Route path="dashboard" element={<Home />}>
           <Route index element={<List />} />
           <Route path="other" element={<Other />} />
-        </Route>
-        <Route path="detail/:id" element={<Detail />}>
-          <Route index element={<Close />} />
-          <Route path="obv" element={<Obv />} />
         </Route>
       </Routes>
     </BrowserRouter>

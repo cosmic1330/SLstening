@@ -1,0 +1,23 @@
+{
+  "identifier": "desktops",
+  "platforms": ["macOS", "windows", "linux"],
+  "windows": ["main", "detail", "add", "schoice"],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "store:default",
+    "notification:allow-request-permission",
+    "notification:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://**"
+        },
+        {
+          "url": "http://**"
+        }
+      ]
+    }
+  ]
+}

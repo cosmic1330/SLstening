@@ -5,17 +5,12 @@ import { useForm } from "react-hook-form";
 import useStocksStore from "../../store/Stock.store";
 import type FormData from "./type";
 import Menu from "./Menu";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import useDownloadStocks from "../../hooks/useDownloadStocks";
 
-enum StateType {
-  Default = "default",
-  Downloading = "downloading",
-}
 function Add() {
   const { increase, reload } = useStocksStore();
-  const [state, setState] = useState(StateType.Default);
-  const handleDownloadMenu = useDownloadStocks();
+  const {handleDownloadMenu, disable} = useDownloadStocks();
 
   const {
     control,
@@ -41,10 +36,8 @@ function Add() {
   }, []);
 
   const handleDownload = useCallback(async () => {
-    setState(StateType.Downloading);
     await handleDownloadMenu();
     await reload();
-    setState(StateType.Default);
   }, []);
 
   return (
@@ -63,7 +56,9 @@ function Add() {
         </Stack>
       </form>
       <Box mt={2} textAlign="center">
-        {state === StateType.Default ? (
+        {disable ? (
+          <Typography variant="caption">下載中...</Typography>
+        ) : (
           <Button
             onClick={handleDownload}
             color="primary"
@@ -71,8 +66,6 @@ function Add() {
           >
             沒有選項嗎? 點我載入
           </Button>
-        ) : (
-          <Typography variant="caption">下載中...</Typography>
         )}
       </Box>
     </Container>

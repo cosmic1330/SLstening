@@ -1,21 +1,24 @@
+import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import DownloadIcon from "@mui/icons-material/Download";
+import EmojiNatureIcon from "@mui/icons-material/EmojiNature";
 import {
-  Container,
   Button,
+  Container,
   Grid2,
   Stack,
-  Typography,
   Switch,
+  Typography,
 } from "@mui/material";
-import { useNavigate } from "react-router";
-import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
-import EmojiNatureIcon from "@mui/icons-material/EmojiNature";
-import useStocksStore from "../../store/Stock.store";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback } from "react";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import { useCallback } from "react";
+import { useNavigate } from "react-router";
+import useDownloadStocks from "../../hooks/useDownloadStocks";
+import useStocksStore from "../../store/Stock.store";
 
 function Other() {
   const { alwaysOnTop, set_always_on_top, factory_reset } = useStocksStore();
+  const { handleDownloadMenu, disable } = useDownloadStocks();
   let navigate = useNavigate();
 
   const handleAlwaysOnTopChange = useCallback(
@@ -32,9 +35,38 @@ function Other() {
   }, []);
 
   return (
-    <Container sx={{ background: "rgba(255,255,255,.6)", height: "100vh" }}>
+    <Container
+      sx={{
+        background: "rgba(100,100,100,.5)",
+        height: "100vh",
+        color: "white",
+      }}
+    >
       <Stack height="100%" justifyContent="center" spacing={4}>
         <Grid2 container spacing={1}>
+          <Grid2 size={6} display="flex" alignItems="center">
+            <DownloadIcon />
+            <Typography variant="body1" fontWeight="bold" ml={1}>
+              更新選股清單
+            </Typography>
+          </Grid2>
+          <Grid2
+            size={6}
+            justifyContent="flex-end"
+            display="flex"
+            alignItems="center"
+          >
+            <Button
+              color="success"
+              variant="contained"
+              size="small"
+              onClick={handleDownloadMenu}
+              disabled={disable}
+            >
+              {disable?"執行中...":"更新"}
+            </Button>
+          </Grid2>
+
           <Grid2 size={6} display="flex" alignItems="center">
             <EmojiNatureIcon />
             <Typography variant="body1" fontWeight="bold" ml={1}>

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "schoice",
+  "description": "Capability for the schoice window",
+  "windows": ["schoice"],
+  "permissions": ["sql:default", "sql:allow-execute"]
+}

@@ -1,7 +1,7 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback } from "react";
-export default function useOpenWebviewWindow() {
+export default function useAddWebviewWindow() {
   const openAddWindow = useCallback(async () => {
     const appWindow = getCurrentWindow();
     let existingWindow = await WebviewWindow.getByLabel("add");
@@ -27,5 +27,5 @@ export default function useOpenWebviewWindow() {
     }
   }, []);
 
-  return {openAddWindow};
+  return { openAddWindow };
 }

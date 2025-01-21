@@ -10,7 +10,7 @@ import Other from "./pages/Home/Other";
 import Login from "./pages/Login";
 import useStocksStore from "./store/Stock.store";
 import { useEffect } from "react";
-import SChoice from "./pages/SChoice";
+import Schoice from "./pages/Schoice";
 
 function App() {
   const { reload } = useStocksStore();
@@ -25,7 +25,7 @@ function App() {
       <Routes>
         <Route index element={<Login />} />
         <Route path="add" element={<Add />} />
-        <Route path="schoice" element={<SChoice />} />
+        <Route path="schoice" element={<Schoice />} />
         <Route path="detail/:id" element={<Detail />} />
         <Route path="dashboard" element={<Home />}>
           <Route index element={<List />} />

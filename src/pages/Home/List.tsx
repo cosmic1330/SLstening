@@ -1,14 +1,14 @@
 import { Box, Button, Container } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { useEffect } from "react";
-import StockBox from "../../components/StockBox";
-import useStocksStore from "../../store/Stock.store";
 import SpeedDial from "../../components/SpeedDial";
-import useOpenWebviewWindow from "../../hooks/useOpenWebviewWindow";
+import StockBox from "../../components/StockBox";
+import useAddWebviewWindow from "../../hooks/useAddWebviewWindow";
+import useStocksStore from "../../store/Stock.store";
 
 function List() {
   const { stocks, reload } = useStocksStore();
-  const { openAddWindow } = useOpenWebviewWindow();
+  const { openAddWindow } = useAddWebviewWindow();
 
   useEffect(() => {
     // 监听股票添加事件

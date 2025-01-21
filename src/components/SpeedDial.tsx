@@ -1,9 +1,9 @@
 import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import BuildIcon from "@mui/icons-material/Build";
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
-import DownloadIcon from "@mui/icons-material/Download";
 import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
@@ -14,15 +14,15 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
+import useAddWebviewWindow from "../hooks/useAddWebviewWindow";
 import useStocksStore from "../store/Stock.store";
-import useDownloadStocks from "../hooks/useDownloadStocks";
-import useOpenWebviewWindow from "../hooks/useOpenWebviewWindow";
+import useSchoiceWebviewWindow from "../hooks/useSchoiceWebviewWindow";
 
 export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();
-  const handleDownloadMenu = useDownloadStocks();
   const navigate = useNavigate();
-  const { openAddWindow } = useOpenWebviewWindow();
+  const { openAddWindow } = useAddWebviewWindow();
+  const { openSchoiceWindow } = useSchoiceWebviewWindow();
 
   const handleCopy = async () => {
     try {
@@ -73,9 +73,9 @@ export default function SpeedDial() {
 
       <SpeedDialAction
         key={"Update Stock Menu"}
-        icon={<DownloadIcon />}
-        tooltipTitle={"更新選股清單"}
-        onClick={handleDownloadMenu}
+        icon={<QueryStatsIcon />}
+        tooltipTitle={"即時選股"}
+        onClick={openSchoiceWindow}
       />
 
       <SpeedDialAction

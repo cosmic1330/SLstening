@@ -10,7 +10,7 @@ const Login = () => {
 
   const handleLogin = useCallback(() => {
     getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
-    navigate("/schoice");
+    navigate("/dashboard");
   }, [alwaysOnTop]);
 
   return (

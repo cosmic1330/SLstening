@@ -1,11 +1,13 @@
 import { DatabaseContext } from "../../context/DatabaseContext";
 import useDatabase from "../../hooks/useDatabase";
+import LatestDate from "./parts/LatestDate";
 
 const Schoice = () => {
   const db = useDatabase();
+
   return (
     <DatabaseContext.Provider value={{ db }}>
-      <h1>Stock Choice</h1>
+      <LatestDate />
     </DatabaseContext.Provider>
   );
 };

@@ -45,6 +45,14 @@ pub fn value() -> Vec<Migration> {
                 );
                 ",
             kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "insert_initial_data",
+            sql: " 
+                    INSERT INTO daily_deal (stock_id, t, c, o, h, l, v) VALUES (2330, '2021-01-01', 500, 500, 500, 500, 500);
+                ",
+            kind: MigrationKind::Up,
         }
     ]
 }

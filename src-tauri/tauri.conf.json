@@ -14,11 +14,18 @@
     "windows": [
       {
         "title": "slistening",
+        "url": "index.html",
         "width": 330,
         "height": 600,
         "transparent": true,
         "decorations": true,
         "fullscreen": false
+      },
+      {
+        "label": "schoice",
+        "title": "Schoice 簡單選",
+        "url": "/schoice",
+        "maximized": true
       }
     ],
     "security": {

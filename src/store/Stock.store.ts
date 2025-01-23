@@ -17,11 +17,13 @@ interface StocksState {
   alwaysOnTop: boolean;
   stocks: StockField[];
   menu: StockField[];
+  sqliteUpdateDate: string;
   increase: ({ id, name }: StockField) => void;
   remove: (id: string) => void;
   reload: () => void;
   clear: () => void;
   update_menu: (stocks: StockField[]) => void;
+  update_sqlite_update_date: (date: string) => void;
   set_always_on_top: (status: boolean) => void;
   factory_reset: () => void;
 }
@@ -30,6 +32,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
   alwaysOnTop: true,
   stocks: [],
   menu: [],
+  sqliteUpdateDate: "",
   increase: async (stock: StockField) => {
     // 去除重複
     const uniqueData = Array.from(new Set([...get().stocks, stock]));
@@ -58,7 +61,8 @@ const useStocksStore = create<StocksState>((set, get) => ({
     const stocks = ((await store.get("stocks")) as StockField[]) || [];
     const menu = ((await store.get("menu")) as StockField[]) || [];
     const alwaysOnTop = ((await store.get("alwaysOnTop")) as boolean) || true;
-    set(() => ({ stocks, menu, alwaysOnTop }));
+    const sqliteUpdateDate = ((await store.get("sqliteUpdateDate")) as string) || "";
+    set(() => ({ stocks, menu, alwaysOnTop, sqliteUpdateDate }));
   },
   clear: async () => {
     const store = await Store.load("settings.json");
@@ -71,6 +75,14 @@ const useStocksStore = create<StocksState>((set, get) => ({
     await store.save();
     set(() => ({
       menu: stocks,
+    }));
+  },
+  update_sqlite_update_date: async (date: string) => {
+    const store = await Store.load("settings.json");
+    await store.set("sqliteUpdateDate", date);
+    await store.save();
+    set(() => ({
+      sqliteUpdateDate: date,
     }));
   },
   set_always_on_top: async (status: boolean) => {

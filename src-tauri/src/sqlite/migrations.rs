@@ -6,19 +6,26 @@ pub fn value() -> Vec<Migration> {
             version: 1,
             description: "create_initial_tables",
             sql: "
+                CREATE TABLE stock (
+                    id TEXT PRIMARY KEY, -- 股票代號
+                    name TEXT, -- 股票名稱
+                    industry_group TEXT, -- 產業別
+                    market_type TEXT -- 上市/上櫃
+                );
                 CREATE TABLE daily_deal (
-                    stock_id INTEGER, -- 股票代號
-                    t Date,  -- 日期
+                    stock_id TEXT, -- 股票代號
+                    t TEXT,  -- 日期
                     c REAL, -- 收盤價
                     o REAL, -- 開盤價
                     h REAL, -- 最高價
                     l REAL, -- 最低價
                     v INTEGER, -- 成交量
-                    PRIMARY KEY (stock_id, t)
+                    PRIMARY KEY (stock_id, t),
+                    FOREIGN KEY (stock_id) REFERENCES stock(id)
                 );
                 CREATE TABLE skills (
-                    stock_id INTEGER, -- 股票代號
-                    t Date,  -- 日期
+                    stock_id TEXT, -- 股票代號
+                    t TEXT,  -- 日期
                     ma5 REAL, -- 5日均線
                     ma5_ded REAL, -- 5日扣抵
                     ma10 REAL, -- 10日均線
@@ -41,18 +48,11 @@ pub fn value() -> Vec<Migration> {
                     bollLb REAL, -- Bollinger Lower Band
                     obv REAL, -- OBV
                     obv5 REAL, -- OBV5
-                    PRIMARY KEY (stock_id, t)
+                    PRIMARY KEY (stock_id, t),
+                    FOREIGN KEY (stock_id) REFERENCES stock(id)
                 );
                 ",
             kind: MigrationKind::Up,
         },
-        Migration {
-            version: 2,
-            description: "insert_initial_data",
-            sql: " 
-                    INSERT INTO daily_deal (stock_id, t, c, o, h, l, v) VALUES (2330, '2021-01-01', 500, 500, 500, 500, 500);
-                ",
-            kind: MigrationKind::Up,
-        }
     ]
 }

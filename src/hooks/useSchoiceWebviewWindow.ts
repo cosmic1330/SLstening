@@ -15,7 +15,6 @@ export default function useSchoiceWebviewWindow() {
       const webview = new WebviewWindow("schoice", {
         title: `Schoice 簡單選`,
         url: `/schoice`,
-        resizable: true,
         maximized: true,
       });
       webview.once("tauri://created", function () {});

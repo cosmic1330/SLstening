@@ -1,26 +1,52 @@
-import { useContext, useEffect, useState } from "react";
+import PetsIcon from "@mui/icons-material/Pets";
+import { Grid2, Stack, Typography } from "@mui/material";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { Box, Typography } from "@mui/material";
+import useStocksStore from "../../../store/Stock.store";
 
 export default function LatestDate() {
   const { db } = useContext(DatabaseContext);
-  const [date, setDate] = useState<string>("Loading...");
+  const { menu, sqliteUpdateDate } = useStocksStore();
+  const [count, setCount] = useState<string>("Loading...");
+
+  const fetchDate = useCallback(async () => {
+    try {
+      const result = (await db?.select(
+        `SELECT COUNT(*) AS counts FROM stock`
+      )) as { counts: string }[];
+      setCount(result?.length > 0 ? result[0].counts : "N/A");
+    } catch (error) {
+      console.error(error);
+    }
+  }, [db, sqliteUpdateDate]);
 
   useEffect(() => {
-    const fetchDate = async () => {
-      const result = await db?.select(
-        "SELECT MAX(t) AS latest_date FROM daily_deal GROUP BY t;"
-      ) as { latest_date: string }[];
-      setDate(result.length > 0 ? result[0].latest_date : "N/A");
-    };
-
     fetchDate();
-  }, [db]);
+  }, [fetchDate]);
 
   return (
-    <Box>
-      <Typography variant="h6">Latest Date</Typography>
-      <Typography variant="body1">{date}</Typography>
-    </Box>
+    <Stack>
+      <Grid2 container spacing={2}>
+        <Grid2 size={6}>
+          <Typography variant="body1">Date Date:</Typography>
+        </Grid2>
+        <Grid2 size={6}>
+          <Typography variant="body1" textAlign="right">
+            {sqliteUpdateDate || "N/A"}
+          </Typography>
+        </Grid2>
+      </Grid2>
+      <Grid2 container spacing={2}>
+        <Grid2>
+          <Typography variant="body1">Stock Counts:</Typography>
+        </Grid2>
+        <Grid2 display="flex" flexWrap="nowrap">
+          <PetsIcon fontSize="small" />
+          <Typography variant="body1" textAlign="right">
+            {menu.length} / {count}
+          </Typography>
+        </Grid2>
+      </Grid2>
+    </Stack>
   );
 }

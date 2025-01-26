@@ -1,12 +1,17 @@
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
-import { Box, styled } from "@mui/material";
+import SettingsIcon from "@mui/icons-material/Settings";
+import { Box, IconButton, styled } from "@mui/material";
+import { useNavigate } from "react-router";
+
 const GridItem = styled(Box)`
   grid-area: sidebar;
   height: 100%;
   width: 70px;
-  box-shadow: 2px 0px 4px rgba(0, 0, 0, 0.25);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
   padding: 1rem 0;
 
   // mobile
@@ -16,9 +21,17 @@ const GridItem = styled(Box)`
   }
 `;
 export default function SideBar() {
+  const navigate = useNavigate();
+
+  const toSetting = () => {
+    navigate("/schoice/setting");
+  };
   return (
     <GridItem>
-      <QueryStatsIcon sx={{ fontSize: "50px" }} color="primary"/>
+      <QueryStatsIcon sx={{ fontSize: "50px" }} color="primary" />
+      <IconButton onClick={toSetting}>
+        <SettingsIcon />
+      </IconButton>
     </GridItem>
   );
 }

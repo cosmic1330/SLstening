@@ -7,11 +7,11 @@ const GridItem = styled(Box)`
   grid-area: header;
   height: 70px;
   width: 100%;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
 
   // mobile
   @media screen and (max-width: 600px) {

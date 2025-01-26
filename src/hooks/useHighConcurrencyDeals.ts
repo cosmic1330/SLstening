@@ -1,63 +1,59 @@
 import { Boll, dateFormat, Kd, Ma, Macd, Obv, Rsi } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { fetch } from "@tauri-apps/plugin-http";
-import { Store } from "@tauri-apps/plugin-store";
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+} from "@tauri-apps/plugin-notification";
 import pLimit from "p-limit";
-import { useCallback, useContext, useRef, useState } from "react";
+import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useStocksStore, { StockField } from "../store/Stock.store";
-
-export default function useHighConcurrencyDeals(LIMIT: number = 20) {
+export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const [errorCount, setErrorCount] = useState(0);
   const [completed, setCompleted] = useState(0);
   const [loading, setLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db } = useContext(DatabaseContext);
-  const { update_sqlite_update_date } = useStocksStore();
+  const { update_sqlite_update_date, menu } = useStocksStore();
 
   const addData = useCallback(
-    async (stock:StockField, ta: any) => {
-      const boll = new Boll();
-      const ma = new Ma();
-      const macd = new Macd();
-      const kd = new Kd();
-      const rsi = new Rsi();
-      const obv = new Obv();
-      // 寫入第一筆資料
-      const init = ta[0];
-      let t = dateFormat(init.t, Mode.NumberToString);
-      let ma5_data = ma.init(init, 5);
-      let ma10_data = ma.init(init, 10);
-      let ma20_data = ma.init(init, 20);
-      let ma60_data = ma.init(init, 60);
-      let ma120_data = ma.init(init, 120);
-      let boll_data = boll.init(init);
-      let macd_data = macd.init(init);
-      let kd_data = kd.init(init, 9);
-      let rsi5_data = rsi.init(init, 5);
-      let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
+    async (stock: StockField, ta: any) => {
+      try {
+        const boll = new Boll();
+        const ma = new Ma();
+        const macd = new Macd();
+        const kd = new Kd();
+        const rsi = new Rsi();
+        const obv = new Obv();
+        // 寫入第一筆資料
+        const init = ta[0];
+        let t = dateFormat(init.t, Mode.NumberToString);
+        let ma5_data = ma.init(init, 5);
+        let ma10_data = ma.init(init, 10);
+        let ma20_data = ma.init(init, 20);
+        let ma60_data = ma.init(init, 60);
+        let ma120_data = ma.init(init, 120);
+        let boll_data = boll.init(init);
+        let macd_data = macd.init(init);
+        let kd_data = kd.init(init, 9);
+        let rsi5_data = rsi.init(init, 5);
+        let rsi10_data = rsi.init(init, 10);
+        let obv_data = obv.init(init, 5);
 
-      await db
-        ?.execute(
+        if (!db) {
+          throw new Error("Database not initialized");
+        }
+        await db.execute(
           "INSERT INTO stock (id, name, industry_group, market_type) VALUES ($1, $2, $3, $4)",
           [stock.id, stock.name, stock.group, stock.type]
-        )
-        .catch((e) => {
-          console.error(e);
-          throw e;
-        });
-      await db
-        ?.execute(
+        );
+        await db.execute(
           "INSERT INTO daily_deal (stock_id, t, c, o, h, l, v) VALUES ($1, $2, $3, $4, $5, $6, $7)",
           [stock.id, t, init.c, init.o, init.h, init.l, init.v]
-        )
-        .catch((e) => {
-          console.error(e);
-          throw e;
-        });
-      await db
-        ?.execute(
+        );
+        await db.execute(
           `INSERT INTO skills (stock_id,
           t,
           ma5,
@@ -108,40 +104,29 @@ export default function useHighConcurrencyDeals(LIMIT: number = 20) {
             obv_data.obv,
             obv_data.obvMa,
           ]
-        )
-        .catch((e) => {
-          console.error(e);
-          throw e;
-        });
-      // 逐筆寫入資料
-      for (let i = 1; i < ta.length; i++) {
-        const value = ta[i];
-        t = dateFormat(value.t, Mode.NumberToString);
-        ma5_data = ma.next(value, ma5_data, 5);
-        ma10_data = ma.next(value, ma10_data, 10);
-        ma20_data = ma.next(value, ma20_data, 20);
-        ma60_data = ma.next(value, ma60_data, 60);
-        ma120_data = ma.next(value, ma120_data, 120);
-        boll_data = boll.next(value, boll_data, 20);
-        macd_data = macd.next(value, macd_data);
-        kd_data = kd.next(value, kd_data, 9);
-        rsi5_data = rsi.next(value, rsi5_data, 5);
-        rsi10_data = rsi.next(value, rsi10_data, 10);
-        obv_data = obv.next(value, obv_data, 5);
+        );
+        // 逐筆寫入資料
+        for (let i = 1; i < ta.length; i++) {
+          const value = ta[i];
+          t = dateFormat(value.t, Mode.NumberToString);
+          ma5_data = ma.next(value, ma5_data, 5);
+          ma10_data = ma.next(value, ma10_data, 10);
+          ma20_data = ma.next(value, ma20_data, 20);
+          ma60_data = ma.next(value, ma60_data, 60);
+          ma120_data = ma.next(value, ma120_data, 120);
+          boll_data = boll.next(value, boll_data, 20);
+          macd_data = macd.next(value, macd_data);
+          kd_data = kd.next(value, kd_data, 9);
+          rsi5_data = rsi.next(value, rsi5_data, 5);
+          rsi10_data = rsi.next(value, rsi10_data, 10);
+          obv_data = obv.next(value, obv_data, 5);
 
-        // 將資料寫入資料庫
-        await db
-          ?.execute(
+          // 將資料寫入資料庫
+          await db.execute(
             "INSERT INTO daily_deal (stock_id, t, c, o, h, l, v) VALUES ($1, $2, $3, $4, $5, $6, $7)",
             [stock.id, t, value.c, value.o, value.h, value.l, value.v]
-          )
-          .catch((e) => {
-            console.error(e);
-            throw e;
-          });
-
-        await db
-          ?.execute(
+          );
+          await db.execute(
             `INSERT INTO skills (stock_id,
           t,
           ma5,
@@ -192,11 +177,11 @@ export default function useHighConcurrencyDeals(LIMIT: number = 20) {
               obv_data.obv,
               obv_data.obvMa,
             ]
-          )
-          .catch((e) => {
-            console.error(e);
-            throw e;
-          });
+          );
+        }
+      } catch (error) {
+        console.error(error);
+        throw error;
       }
     },
     [db]
@@ -204,12 +189,17 @@ export default function useHighConcurrencyDeals(LIMIT: number = 20) {
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
-    async (url: string, signal: AbortSignal, stock:StockField) => {
+    async (url: string, signal: AbortSignal, stock: StockField) => {
       try {
         const response = await fetch(url, { method: "GET", signal });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const text = await response.text();
-
         const ta_index = text.indexOf('"ta":');
+        if (ta_index === -1) {
+          throw new Error("Invalid response format");
+        }
         const json_ta = "{" + text.slice(ta_index).replace(");", "");
         const parse = JSON.parse(json_ta);
         const ta = parse.ta;
@@ -220,34 +210,37 @@ export default function useHighConcurrencyDeals(LIMIT: number = 20) {
         if (error?.message?.indexOf("Request canceled") == -1) {
           setErrorCount((prev) => prev + 1); // 記錄失敗數量
         }
-        return null;
+        throw error;
       }
     },
     [addData]
   );
 
   const fetchData = useCallback(async () => {
+    // 取消之前的請求
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setLoading(true);
     try {
-      await db?.execute("DELETE FROM skills;");
-      await db?.execute("DELETE FROM daily_deal;");
-      await db?.execute("DELETE FROM stock;");
-      // 取消之前的請求
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
+      if (!db) {
+        throw new Error("Database not initialized");
       }
-      setCompleted(0);
-      setErrorCount(0);
+      await db.execute("DELETE FROM skills;");
+      await db.execute("DELETE FROM daily_deal;");
+      await db.execute("DELETE FROM stock;");
+      setCompleted(() => 0);
+      setErrorCount(() => 0);
       // 為新的請求創建一個新的 AbortController
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       const { signal } = abortController;
       const limit = pLimit(LIMIT);
+      if (menu.length === 0) {
+        throw new Error("Menu is empty or not loaded correctly");
+      }
 
-      const store = await Store.load("settings.json");
-      const menu = ((await store.get("menu")) as StockField[]) || [];
-
-      await Promise.all(
+      const result = await Promise.all(
         menu.map((stock) =>
           limit(() =>
             wrappedFetch(
@@ -258,18 +251,38 @@ export default function useHighConcurrencyDeals(LIMIT: number = 20) {
           )
         )
       );
-      update_sqlite_update_date(
-        dateFormat(new Date().getTime(), Mode.TimeStampToString)
-      );
+      if (result.length === menu.length) {
+        let permissionGranted = await isPermissionGranted();
+        if (!permissionGranted) {
+          const permission = await requestPermission();
+          permissionGranted = permission === "granted";
+        }
+        if (permissionGranted) {
+          sendNotification({
+            title: "Update Deals & Skills",
+            body: `Completed: ${completed}, Error: ${errorCount}. Update Success ! 🎉 `,
+          });
+        }
+        update_sqlite_update_date(
+          dateFormat(new Date().getTime(), Mode.TimeStampToString)
+        );
+      }
     } catch (error) {
       console.error(error);
     }
     setLoading(false);
-  }, [db, update_sqlite_update_date, wrappedFetch]);
+  }, [db, update_sqlite_update_date, wrappedFetch, menu]);
 
   const update = useCallback(() => {
     fetchData();
   }, [fetchData]);
 
-  return { completed, errorCount, update, loading };
+  const persent = useMemo(() => {
+    if (completed === 0) {
+      return 0;
+    }
+    return Math.round(((completed + errorCount) / menu.length) * 100);
+  }, [completed, menu]);
+
+  return { update, loading, persent };
 }

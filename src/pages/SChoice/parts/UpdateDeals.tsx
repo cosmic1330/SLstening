@@ -2,7 +2,7 @@ import { Button } from "@mui/material";
 import useHighConcurrencyDeals from "../../../hooks/useHighConcurrencyDeals";
 
 export default function UpdateDeals() {
-  const { completed, errorCount, update, loading } = useHighConcurrencyDeals();
+  const { update, loading, persent } = useHighConcurrencyDeals();
 
   return (
     <Button
@@ -10,7 +10,7 @@ export default function UpdateDeals() {
       onClick={update}
       disabled={loading}
     >
-      {loading ? `${completed}/${errorCount}` : "Update"}
+      {loading ? `${persent}%` : "Update"}
     </Button>
   );
 }

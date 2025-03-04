@@ -203,8 +203,8 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         const json_ta = "{" + text.slice(ta_index).replace(");", "");
         const parse = JSON.parse(json_ta);
         const ta = parse.ta;
-        await addData(stock, ta);
         setCompleted((prev) => prev + 1);
+        return { ta, stock };
       } catch (error: any) {
         console.error(error);
         if (error?.message?.indexOf("Request canceled") == -1) {
@@ -213,7 +213,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         throw error;
       }
     },
-    [addData]
+    []
   );
 
   const fetchData = useCallback(async () => {
@@ -251,22 +251,27 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           )
         )
       );
-      if (result.length === menu.length) {
-        let permissionGranted = await isPermissionGranted();
-        if (!permissionGranted) {
-          const permission = await requestPermission();
-          permissionGranted = permission === "granted";
-        }
-        if (permissionGranted) {
-          sendNotification({
-            title: "Update Deals & Skills",
-            body: `Completed: ${completed}, Error: ${errorCount}. Update Success ! 🎉 `,
-          });
-        }
-        update_sqlite_update_date(
-          dateFormat(new Date().getTime(), Mode.TimeStampToString)
-        );
+      for (let i = 0; i < result.length; i++) {
+        const { ta, stock } = result[i];
+        await addData(stock, ta);
+        console.log(`Completed: ${i + 1}/${menu.length}`);
       }
+
+      // 通知使用者更新完成
+      let permissionGranted = await isPermissionGranted();
+      if (!permissionGranted) {
+        const permission = await requestPermission();
+        permissionGranted = permission === "granted";
+      }
+      if (permissionGranted) {
+        sendNotification({
+          title: "Update Deals & Skills",
+          body: `Completed: ${completed}, Error: ${errorCount}. Update Success ! 🎉 `,
+        });
+      }
+      update_sqlite_update_date(
+        dateFormat(new Date().getTime(), Mode.TimeStampToString)
+      );
     } catch (error) {
       console.error(error);
     }

@@ -1,5 +1,5 @@
 import { styled } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Outlet } from "react-router";
 import { DatabaseContext } from "../../context/DatabaseContext";
 import useDatabase from "../../hooks/useDatabase";
@@ -34,7 +34,7 @@ function Schoice() {
   const db = useDatabase();
   const { reload } = useSchoiceStore();
   const dates = useDatabaseDates(db);
-  
+
   useEffect(() => {
     reload();
   }, []);

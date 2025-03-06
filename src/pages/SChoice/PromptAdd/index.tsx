@@ -24,7 +24,11 @@ export default function PromptAdd() {
       prompts,
       promptType === "bulls" ? PromptType.BULLS : PromptType.BEAR
     );
-    if(id) selectObj(id, promptType === "bulls" ? PromptType.BULLS : PromptType.BEAR);
+    if (id)
+      selectObj(
+        id,
+        promptType === "bulls" ? PromptType.BULLS : PromptType.BEAR
+      );
     navigate("/schoice");
   };
 

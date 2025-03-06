@@ -10,10 +10,17 @@ import pLimit from "p-limit";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useStocksStore, { StockField } from "../store/Stock.store";
+
+export enum Status {
+  Download = "Download",
+  SaveDB = "SaveDB",
+  Idle = "Idle",
+}
 export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const [errorCount, setErrorCount] = useState(0);
   const [completed, setCompleted] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [count, setCount] = useState(0);
+  const [status, setStatus] = useState(Status.Idle);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db } = useContext(DatabaseContext);
   const { update_sqlite_update_date, menu } = useStocksStore();
@@ -221,7 +228,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    setLoading(true);
+    setStatus(Status.Download);
     try {
       if (!db) {
         throw new Error("Database not initialized");
@@ -251,10 +258,12 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           )
         )
       );
+
+      setStatus(Status.SaveDB);
       for (let i = 0; i < result.length; i++) {
         const { ta, stock } = result[i];
         await addData(stock, ta);
-        console.log(`Completed: ${i + 1}/${menu.length}`);
+        setCount((prev) => prev + 1);
       }
 
       // 通知使用者更新完成
@@ -275,7 +284,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     } catch (error) {
       console.error(error);
     }
-    setLoading(false);
+    setStatus(Status.Idle);
   }, [db, update_sqlite_update_date, wrappedFetch, menu]);
 
   const update = useCallback(() => {
@@ -289,5 +298,5 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     return Math.round(((completed + errorCount) / menu.length) * 100);
   }, [completed, menu]);
 
-  return { update, loading, persent };
+  return { update, persent, count, status };
 }

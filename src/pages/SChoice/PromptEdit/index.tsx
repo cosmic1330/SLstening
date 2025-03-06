@@ -79,7 +79,7 @@ export default function PromptEdit() {
             )}
             {prompts.map((prompt, index) => (
               <Typography key={index} variant="body2" gutterBottom>
-                {index + 1}. {Object.values(prompt).join("")}{" "}
+                {index + 1}. {prompt.day1+prompt.indicator1+prompt.operator+prompt.day2+prompt.indicator2}{" "}
                 <Button
                   size="small"
                   color="error"

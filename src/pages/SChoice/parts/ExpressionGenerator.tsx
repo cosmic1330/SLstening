@@ -51,9 +51,9 @@ function ExpressionGenerator({
   const [selects, setSelects] = useState<Prompt>({
     day1: "今天",
     indicator1: "收盤價",
-    operator: "小於",
-    day2: "昨天",
-    indicator2: "收盤價",
+    operator: "大於",
+    day2: "今天",
+    indicator2: "ma5",
   });
 
   const handleChange = (event: SelectChangeEvent<string>) => {

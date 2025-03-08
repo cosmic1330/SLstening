@@ -1,20 +1,32 @@
-import { Box, Button, Typography } from "@mui/material";
-import useSchoiceStore from "../../../store/Schoice.store";
+import { Box, Button, Container, Typography } from "@mui/material";
 import { useNavigate } from "react-router";
+import RollBackDay from "./RollBackDay";
 
 export default function Setting() {
-  const { todayDate, changeTodayDate } = useSchoiceStore();
-  const handleTodayDate = (e: React.ChangeEvent<HTMLInputElement>) => {
-    changeTodayDate(Number(e.target.value));
-  };
   const navigate = useNavigate();
 
-  
   return (
-    <Box>
-      <Typography>往回天數</Typography>
-      <input type="number" value={todayDate} onChange={handleTodayDate} />
-      <Button onClick={() => navigate("/schoice")}>確定</Button>
-    </Box>
+    <Container
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+      }}
+    >
+      <Box>
+        <Typography variant="h5">設定</Typography>
+      </Box>
+      <RollBackDay />
+
+      <Button
+        onClick={() => navigate("/schoice")}
+        variant="contained"
+        size="large"
+      >
+        確定
+      </Button>
+    </Container>
   );
 }

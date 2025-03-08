@@ -3,5 +3,12 @@
   "identifier": "schoice",
   "description": "Capability for the schoice window",
   "windows": ["schoice"],
-  "permissions": ["sql:default", "sql:allow-execute"]
+  "permissions": [
+    "sql:default",
+    "sql:allow-execute",
+    "shell:default",
+    "core:window:allow-set-title",
+    "core:window:allow-set-focus",
+    "core:webview:allow-create-webview-window"
+  ]
 }

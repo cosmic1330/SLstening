@@ -1,13 +1,12 @@
-import { Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { FixedSizeList as List } from "react-window";
-import { DatabaseContext } from "../../../../../context/DatabaseContext";
+import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore, {
   Prompts,
   PromptType,
-} from "../../../../../store/Schoice.store";
-import generateExpression from "../../../../../utils/generateExpression";
-import generateSqlQuery from "../../../../../utils/generateSqlQuery";
+} from "../../../../../../store/Schoice.store";
+import generateExpression from "../../../../../../utils/generateExpression";
+import generateSqlQuery from "../../../../../../utils/generateSqlQuery";
+import ResultTable from "./ResultTable";
 
 type DatabaseResult = {
   c: number;
@@ -18,6 +17,7 @@ type DatabaseResult = {
   name: string;
   stock_id: string;
   t: string;
+  type: string;
 };
 
 export default function Result({
@@ -63,20 +63,5 @@ export default function Result({
     query(sqlQuery);
   }, [dates, select, query, todayDate]);
 
-  return result ? (
-    <List
-      height={500} // 列表的高度
-      itemCount={result.length} // 總物件數
-      itemSize={50} // 單一項目的高度
-      width="100%"
-    >
-      {({ index, style }: { index: number; style: React.CSSProperties }) => (
-        <Typography style={style}>
-          {result[index].stock_id} {result[index].name} {result[index].t}
-        </Typography>
-      )}
-    </List>
-  ) : (
-    "讀取中..."
-  );
+  return result ? <ResultTable {...{ result }} /> : "讀取中...";
 }

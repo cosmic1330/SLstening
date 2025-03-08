@@ -23,10 +23,12 @@ type PromptsObjs = {
 };
 
 interface SchoiceState {
+  using: PromptType;
   todayDate: number;
   bulls: PromptsObjs;
   bears: PromptsObjs;
   select: { id: string; name: string; value: Prompts; type: PromptType } | null;
+  changeUsing: (type: PromptType) => void;
   increase: (
     name: string,
     prompt: Prompts,
@@ -41,10 +43,14 @@ interface SchoiceState {
 }
 
 const useSchoiceStore = create<SchoiceState>((set, get) => ({
+  using: PromptType.BULLS,
   todayDate: 0,
   bulls: {},
   bears: {},
   select: null,
+  changeUsing: (type: PromptType) => {
+    set({ using: type });
+  },
   increase: async (name: string, prompt: Prompts, type: PromptType) => {
     const store = await Store.load("schoice.json");
     const id = nanoid();

@@ -34,6 +34,11 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         const kd = new Kd();
         const rsi = new Rsi();
         const obv = new Obv();
+        // 檢查是否有資料
+        if (ta.length === 0) {
+          console.log(stock, ta);
+          return;
+        }
         // 寫入第一筆資料
         const init = ta[0];
         let t = dateFormat(init.t, Mode.NumberToString);
@@ -187,8 +192,8 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           );
         }
       } catch (error) {
+        console.log(stock, ta);
         console.error(error);
-        throw error;
       }
     },
     [db]

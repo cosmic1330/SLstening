@@ -28,7 +28,7 @@ export default function LatestDate() {
     <Stack>
       <Grid2 container spacing={2}>
         <Grid2 size={6}>
-          <Typography variant="body1">Date Date:</Typography>
+          <Typography variant="body1">Data Date:</Typography>
         </Grid2>
         <Grid2 size={6}>
           <Typography variant="body1" textAlign="right">

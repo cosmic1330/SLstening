@@ -56,15 +56,6 @@ const mapping: Record<string, MappingItem> = {
 export default function generateExpression(selects: Prompt) {
   const { day1, indicator1, operator, day2, indicator2 } = selects;
 
-  const day1Mapping = mapping[indicator1];
-  const day2Mapping = mapping[indicator2];
-
-  const day1Key = `'${convertDayToNumber(day1)}${day1Mapping.group}'.${
-    day1Mapping.key
-  }`;
-  const day2Key = `'${convertDayToNumber(day2)}${day2Mapping.group}'.${
-    day2Mapping.key
-  }`;
   const operatorKey =
     operator === "小於"
       ? "<"
@@ -75,6 +66,18 @@ export default function generateExpression(selects: Prompt) {
       : operator === "小於等於"
       ? "<="
       : "=";
+
+  const day1Mapping = mapping[indicator1];
+  const day1Key = `'${convertDayToNumber(day1)}${day1Mapping.group}'.${
+    day1Mapping.key
+  }`;
+  if(day2==="自定義數值"){
+    return [day1Key, operatorKey, indicator2];
+  }
+  const day2Mapping = mapping[indicator2];
+  const day2Key = `'${convertDayToNumber(day2)}${day2Mapping.group}'.${
+    day2Mapping.key
+  }`;
 
   return [day1Key, operatorKey, day2Key];
 }

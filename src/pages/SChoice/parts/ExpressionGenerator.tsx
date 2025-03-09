@@ -1,16 +1,17 @@
 import {
-  Button,
   Box,
+  Button,
   MenuItem,
   Select,
   SelectChangeEvent,
   Stack,
+  TextField,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
 import { Prompt, Prompts } from "../../../store/Schoice.store";
 
 const options = {
-  days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前"],
+  days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前", "自定義數值"],
   indicators: [
     "收盤價",
     "開盤價",
@@ -64,6 +65,13 @@ function ExpressionGenerator({
     }));
   };
 
+  const handleCustomChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = event.target;
+    setSelects((prev) => ({
+      ...prev,
+      indicator2: value,
+    }));
+  };
   return (
     <Box>
       <Stack spacing={2} direction="row" my={2}>
@@ -121,18 +129,22 @@ function ExpressionGenerator({
           ))}
         </Select>
 
-        <Select
-          value={selects.indicator2}
-          onChange={handleChange}
-          name="indicator2"
-          fullWidth
-        >
-          {options.indicators.map((indicator) => (
-            <MenuItem key={indicator} value={indicator}>
-              {indicator}
-            </MenuItem>
-          ))}
-        </Select>
+        {selects.day2 === "自定義數值" ? (
+          <TextField name="indicator2" type="number" onChange={handleCustomChange} value={selects.indicator2}/>
+        ) : (
+          <Select
+            value={selects.indicator2}
+            onChange={handleChange}
+            name="indicator2"
+            fullWidth
+          >
+            {options.indicators.map((indicator) => (
+              <MenuItem key={indicator} value={indicator}>
+                {indicator}
+              </MenuItem>
+            ))}
+          </Select>
+        )}
       </Stack>
 
       <Button

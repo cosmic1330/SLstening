@@ -4,6 +4,7 @@ import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import { open } from "@tauri-apps/plugin-shell";
 import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
+import UltraTinyLineChart from "./Chart";
 
 export default function ResultTableRow({ row }: { row: any }) {
   const { openDetailWindow } = useDetailWebviewWindow({
@@ -17,6 +18,9 @@ export default function ResultTableRow({ row }: { row: any }) {
       <TableCell key={row + row.stock_id}>{row.stock_id}</TableCell>
       <TableCell key={row + row.name}>{row.name}</TableCell>
       <TableCell key={row + row.c}>{row.c}</TableCell>
+      <TableCell>
+        <UltraTinyLineChart stock_id={row.stock_id} />
+      </TableCell>
       <TableCell key={row + row.k}>
         <IconButton
           onClick={() =>

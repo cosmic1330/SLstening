@@ -7,7 +7,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import ResultTableRow from "./ResultTableRow";
 
-const columns = ["日期", "代碼", "名稱", "收盤價", "Action"];
+const columns = ["日期", "代碼", "名稱", "收盤價", "趨勢圖", "Action"];
 
 export default function ResultTable({ result }: { result: any[] }) {
   return (

@@ -62,6 +62,7 @@ export default function ListItem({
       alignItems="center"
       onClick={handleSelect}
       select={(select?.id === id).toString() || "false"}
+      mb={0.5}
     >
       <IconArea
         onMouseEnter={() => setHover(true)}

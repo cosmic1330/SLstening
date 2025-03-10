@@ -31,11 +31,9 @@ export default function ResultTableRow({ row }: { row: any }) {
             )
           }
         >
-          <img
-            src="/tradingview.png" // 本地圖片
-            alt="自訂圖示"
-            style={{ width: 24, height: 24 }}
-          />
+          <Typography fontSize={16} variant="body2">
+            TV
+          </Typography>
         </IconButton>
         <IconButton
           onClick={() =>

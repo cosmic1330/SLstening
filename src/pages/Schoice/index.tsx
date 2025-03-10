@@ -1,14 +1,21 @@
-import { styled } from "@mui/material";
-import { useEffect } from "react";
+import {
+  Box,
+  createTheme,
+  styled,
+  ThemeProvider,
+  useMediaQuery,
+} from "@mui/material";
+import { useEffect, useMemo } from "react";
 import { Outlet } from "react-router";
 import { DatabaseContext } from "../../context/DatabaseContext";
 import useDatabase from "../../hooks/useDatabase";
 import useSchoiceStore from "../../store/Schoice.store";
+import CssBaseline from "@mui/material/CssBaseline";
 import Header from "./layout/Header";
 import SideBar from "./layout/Sidebar";
 import useDatabaseDates from "../../hooks/useDatabaseDates";
 
-const Main = styled("main")`
+const Main = styled(Box)`
   width: 100%;
   height: 100vh;
   display: grid;
@@ -39,13 +46,30 @@ function Schoice() {
     reload();
   }, []);
 
+  // 監聽系統的深色模式設定
+  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+
+  // 動態設定主題
+  const theme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          mode: prefersDarkMode ? "dark" : "light",
+        },
+      }),
+    [prefersDarkMode]
+  );
+
   return (
     <DatabaseContext.Provider value={{ db, dates }}>
-      <Main>
-        <SideBar />
-        <Header />
-        <Outlet />
-      </Main>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Main>
+          <SideBar />
+          <Header />
+          <Outlet />
+        </Main>
+      </ThemeProvider>
     </DatabaseContext.Provider>
   );
 }

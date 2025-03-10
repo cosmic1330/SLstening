@@ -12,7 +12,7 @@
     "build_app": "tauri build"
   },
   "dependencies": {
-    "@ch20026103/anysis": "0.0.16-beta2",
+    "@ch20026103/anysis": "0.0.16",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.3.1",

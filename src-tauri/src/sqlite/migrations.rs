@@ -54,5 +54,51 @@ pub fn value() -> Vec<Migration> {
                 ",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 2,
+            description: "create_week_tables",
+            sql: "
+                CREATE TABLE weekly_deal (
+                    stock_id TEXT, -- 股票代號
+                    t TEXT,  -- 日期
+                    c REAL, -- 收盤價
+                    o REAL, -- 開盤價
+                    h REAL, -- 最高價
+                    l REAL, -- 最低價
+                    v INTEGER, -- 成交量
+                    PRIMARY KEY (stock_id, t),
+                    FOREIGN KEY (stock_id) REFERENCES stock(id)
+                );
+                CREATE TABLE weekly_skills (
+                    stock_id TEXT, -- 股票代號
+                    t TEXT,  -- 日期
+                    ma5 REAL, -- 5日均線
+                    ma5_ded REAL, -- 5日扣抵
+                    ma10 REAL, -- 10日均線
+                    ma10_ded REAL, -- 10日扣抵
+                    ma20 REAL, -- 20日均線
+                    ma20_ded REAL, -- 20日扣抵
+                    ma60 REAL, -- 60日均線
+                    ma60_ded REAL, -- 60日扣抵
+                    ma120 REAL, -- 120日均線
+                    ma120_ded REAL, -- 120日扣抵
+                    macd REAL, -- MACD
+                    dif REAL, -- DIF
+                    osc REAL, -- OSC
+                    k REAL, -- K
+                    d REAL, -- D
+                    rsi5 REAL, -- RSI5
+                    rsi10 REAL, -- RSI10
+                    bollUb REAL, -- Bollinger Upper Band
+                    bollMa REAL, -- Bollinger Middle Band
+                    bollLb REAL, -- Bollinger Lower Band
+                    obv REAL, -- OBV
+                    obv5 REAL, -- OBV5
+                    PRIMARY KEY (stock_id, t),
+                    FOREIGN KEY (stock_id) REFERENCES stock(id)
+                );
+                ",
+            kind: MigrationKind::Up,
+        },
     ]
 }

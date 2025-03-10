@@ -3,10 +3,13 @@ import useSchoiceStore from "../../../../../store/Schoice.store";
 import RuleContent from "../RuleContent";
 import Null from "./Null";
 import Result from "./Result";
+import UnSelect from "./UnSelect";
 
 export default function PromptContent() {
-  const { select } = useSchoiceStore();
-  return select ? (
+  const { select, dataCount } = useSchoiceStore();
+  return dataCount === 0 ? (
+    <Null />
+  ) : select ? (
     <Container>
       <Grid2 container spacing={2}>
         <RuleContent {...{ select }} />
@@ -14,6 +17,6 @@ export default function PromptContent() {
       </Grid2>
     </Container>
   ) : (
-    <Null />
+    <UnSelect />
   );
 }

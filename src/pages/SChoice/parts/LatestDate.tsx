@@ -3,10 +3,12 @@ import { Grid2, Stack, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useStocksStore from "../../../store/Stock.store";
+import useSchoiceStore from "../../../store/Schoice.store";
 
 export default function LatestDate() {
   const { db } = useContext(DatabaseContext);
   const { menu, sqliteUpdateDate } = useStocksStore();
+  const { changeDataCount } = useSchoiceStore();
   const [count, setCount] = useState<string>("Loading...");
 
   const fetchDate = useCallback(async () => {
@@ -15,6 +17,7 @@ export default function LatestDate() {
         `SELECT COUNT(*) AS counts FROM stock`
       )) as { counts: string }[];
       setCount(result?.length > 0 ? result[0].counts : "N/A");
+      changeDataCount(parseInt(result[0].counts) || 0);
     } catch (error) {
       console.error(error);
     }

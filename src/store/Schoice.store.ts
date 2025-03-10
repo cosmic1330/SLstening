@@ -23,11 +23,13 @@ type PromptsObjs = {
 };
 
 interface SchoiceState {
+  dataCount: number;
   using: PromptType;
   todayDate: number;
   bulls: PromptsObjs;
   bears: PromptsObjs;
   select: { id: string; name: string; value: Prompts; type: PromptType } | null;
+  changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
   increase: (
     name: string,
@@ -43,11 +45,15 @@ interface SchoiceState {
 }
 
 const useSchoiceStore = create<SchoiceState>((set, get) => ({
+  dataCount: 0,
   using: PromptType.BULLS,
   todayDate: 0,
   bulls: {},
   bears: {},
   select: null,
+  changeDataCount: (count: number) => {
+    set({ dataCount: count });
+  },
   changeUsing: (type: PromptType) => {
     set({ using: type });
   },

@@ -42,6 +42,41 @@ export class StockDailyQueryBuilder {
     obv5: { key: "obv5", group: "_day_ago_sk" },
   };
 
+  // 新增靜態選項
+  static readonly options = {
+    days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前", "自定義數值"],
+    indicators: [
+      "收盤價",
+      "開盤價",
+      "成交量",
+      "最低價",
+      "最高價",
+      "ma5",
+      "ma5扣抵",
+      "ma10",
+      "ma10扣抵",
+      "ma20",
+      "ma20扣抵",
+      "ma60",
+      "ma60扣抵",
+      "ma120",
+      "ma120扣抵",
+      "macd",
+      "dif",
+      "osc",
+      "k",
+      "d",
+      "rsi5",
+      "rsi10",
+      "布林上軌",
+      "布林中軌",
+      "布林下軌",
+      "obv",
+      "obv5",
+    ],
+    operators: ["小於", "大於", "等於", "大於等於", "小於等於"],
+  } as const;
+
   private convertDayToNumber(day: string): number {
     const dayMapping: Record<string, number> = {
       今天: 0,
@@ -91,11 +126,13 @@ export class StockDailyQueryBuilder {
     conditions,
     dates,
     daysRange = 4,
+    stockIds,
   }: {
     todayDate: number;
     conditions: string[];
     dates: string[];
     daysRange?: number;
+    stockIds?: string[];
   }): string {
     const dayJoins = Array.from({ length: daysRange }, (_, i) => i + 1)
       .map(
@@ -106,20 +143,18 @@ export class StockDailyQueryBuilder {
       )
       .join("");
 
-    const selectFields = Array.from({ length: daysRange }, (_, i) => i + 1)
-      .map(
-        (number) =>
-          `"${number}_day_ago_sk".k AS k${number}, "${number}_day_ago_sk".d AS d${number}`
-      )
-      .join(", ");
+
+    const stockIdCondition = stockIds 
+      ? ` AND "0_day_ago".stock_id IN ('${stockIds.join("','")}')`
+      : '';
 
     const query = `
-      SELECT "0_day_ago".stock_id, stock.market_type, stock.name, "0_day_ago".t, "0_day_ago".c, "0_day_ago_sk".k, "0_day_ago_sk".d, ${selectFields}
+      SELECT "0_day_ago".stock_id as stock_id
       FROM daily_deal "0_day_ago"
       JOIN stock ON "0_day_ago".stock_id = stock.id
       JOIN skills "0_day_ago_sk" ON "0_day_ago".stock_id = "0_day_ago_sk".stock_id AND "0_day_ago".t = "0_day_ago_sk".t
       ${dayJoins}
-      WHERE "0_day_ago".t = "${dates[todayDate]}" AND ${conditions.join(" AND ")}
+      WHERE "0_day_ago".t = "${dates[todayDate]}" ${stockIdCondition} AND ${conditions.join(" AND ")}
     `;
 
     return query.trim();

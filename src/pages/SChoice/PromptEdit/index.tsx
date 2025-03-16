@@ -15,13 +15,24 @@ import PromptName from "../parts/PromptName";
 export default function PromptEdit() {
   const { id } = useParams();
   const { edit, select, selectObj } = useSchoiceStore();
-  const [prompts, setPrompts] = useState<Prompts>(select?.value || []);
+  const [prompts, setPrompts] = useState<Prompts>(select?.value.daily || []);
+  const [weekPrompts, setWeekPrompts] = useState<Prompts>(
+    select?.value.weekly || []
+  );
   const [name, setName] = useState(select?.name || "");
   const navigate = useNavigate();
 
   const handleEdit = async () => {
     if (id && select) {
-      await edit(id, name, prompts, select.type);
+      await edit(
+        id,
+        name,
+        {
+          daily: prompts,
+          weekly: weekPrompts,
+        },
+        select.type
+      );
       selectObj(id, select.type);
       navigate("/schoice");
     }
@@ -29,6 +40,10 @@ export default function PromptEdit() {
 
   const handleRemove = (index: number) => {
     setPrompts(prompts.filter((_, i) => i !== index));
+  };
+
+  const handleWeekRemove = (index: number) => {
+    setWeekPrompts(weekPrompts.filter((_, i) => i !== index));
   };
 
   const handleCancel = () => {
@@ -57,13 +72,13 @@ export default function PromptEdit() {
           </Typography>
           <PromptName {...{ name, setName }} />
 
-          <ExpressionGenerator {...{ setPrompts }} />
+          <ExpressionGenerator {...{ setPrompts, setWeekPrompts }} />
         </Container>
       </Grid2>
       <Grid2 size={6}>
         <Container>
           <Typography variant="h5" gutterBottom my={2}>
-            已加入的條件
+            已加入的日線條件
           </Typography>
           <Box
             border="1px solid #000"
@@ -79,7 +94,12 @@ export default function PromptEdit() {
             )}
             {prompts.map((prompt, index) => (
               <Typography key={index} variant="body2" gutterBottom>
-                {index + 1}. {prompt.day1+prompt.indicator1+prompt.operator+prompt.day2+prompt.indicator2}{" "}
+                {index + 1}.{" "}
+                {prompt.day1 +
+                  prompt.indicator1 +
+                  prompt.operator +
+                  prompt.day2 +
+                  prompt.indicator2}{" "}
                 <Button
                   size="small"
                   color="error"
@@ -90,6 +110,41 @@ export default function PromptEdit() {
               </Typography>
             ))}
           </Box>
+
+          <Typography variant="h5" gutterBottom my={2}>
+            已加入的週線條件
+          </Typography>
+          <Box
+            border="1px solid #000"
+            borderRadius={1}
+            p={2}
+            minHeight={200}
+            mb={2}
+          >
+            {weekPrompts.length === 0 && (
+              <Typography variant="body2" gutterBottom>
+                空
+              </Typography>
+            )}
+            {weekPrompts.map((prompt, index) => (
+              <Typography key={index} variant="body2" gutterBottom>
+                {index + 1}.{" "}
+                {prompt.day1 +
+                  prompt.indicator1 +
+                  prompt.operator +
+                  prompt.day2 +
+                  prompt.indicator2}{" "}
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => handleWeekRemove(index)}
+                >
+                  Remove
+                </Button>
+              </Typography>
+            ))}
+          </Box>
+
           <Stack direction="row" spacing={2}>
             <Button
               onClick={handleCancel}
@@ -103,7 +158,10 @@ export default function PromptEdit() {
               onClick={handleEdit}
               fullWidth
               variant="contained"
-              disabled={prompts.length === 0 || name === ""}
+              disabled={
+                (prompts.length === 0 && weekPrompts.length === 0) ||
+                name === ""
+              }
               color="success"
             >
               修改

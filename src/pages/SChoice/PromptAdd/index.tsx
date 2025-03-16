@@ -12,6 +12,8 @@ import PromptName from "../parts/PromptName";
 export default function PromptAdd() {
   const { increase, selectObj } = useSchoiceStore();
   const [prompts, setPrompts] = useState<Prompts>([]);
+  const [weekPrompts, setWeekPrompts] = useState<Prompts>([]);
+
   const [name, setName] = useState(nanoid());
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -21,7 +23,10 @@ export default function PromptAdd() {
   const handleCreate = async () => {
     const id = await increase(
       name,
-      prompts,
+      {
+        daily: prompts,
+        weekly: weekPrompts,
+      },
       promptType === "bulls" ? PromptType.BULLS : PromptType.BEAR
     );
     if (id)
@@ -34,6 +39,10 @@ export default function PromptAdd() {
 
   const handleRemove = (index: number) => {
     setPrompts(prompts.filter((_, i) => i !== index));
+  };
+
+  const handleWeekRemove = (index: number) => {
+    setWeekPrompts(weekPrompts.filter((_, i) => i !== index));
   };
 
   return (
@@ -50,13 +59,15 @@ export default function PromptAdd() {
           </Typography>
           <PromptName {...{ name, setName }} />
 
-          <ExpressionGenerator {...{ promptType, setPrompts }} />
+          <ExpressionGenerator
+            {...{ promptType, setPrompts, setWeekPrompts }}
+          />
         </Container>
       </Grid2>
       <Grid2 size={6}>
         <Container>
           <Typography variant="h5" gutterBottom my={2}>
-            已加入的條件
+            已加入的日線條件
           </Typography>
           <Box
             border="1px solid #000"
@@ -83,11 +94,43 @@ export default function PromptAdd() {
               </Typography>
             ))}
           </Box>
+
+          <Typography variant="h5" gutterBottom my={2}>
+            已加入的週線條件
+          </Typography>
+          <Box
+            border="1px solid #000"
+            borderRadius={1}
+            p={2}
+            minHeight={200}
+            mb={2}
+          >
+            {weekPrompts.length === 0 && (
+              <Typography variant="body2" gutterBottom>
+                空
+              </Typography>
+            )}
+            {weekPrompts.map((prompt, index) => (
+              <Typography key={index} variant="body2" gutterBottom>
+                {index + 1}. {Object.values(prompt).join("")}{" "}
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => handleWeekRemove(index)}
+                >
+                  Remove
+                </Button>
+              </Typography>
+            ))}
+          </Box>
+
           <Button
             onClick={handleCreate}
             fullWidth
             variant="contained"
-            disabled={prompts.length === 0 || name === ""}
+            disabled={
+              (prompts.length === 0 && weekPrompts.length === 0) || name === ""
+            }
             color="success"
           >
             建立

@@ -1,25 +1,54 @@
 import InfoIcon from "@mui/icons-material/Info";
 import { IconButton, Typography } from "@mui/material";
+import PostAddIcon from "@mui/icons-material/PostAdd";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import { open } from "@tauri-apps/plugin-shell";
 import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
-import UltraTinyLineChart from "./Chart";
+import DailyUltraTinyLineChart from "./DailyUltraTinyLineChart";
+import WeeklyUltraTinyLineChart from "./WeeklyUltraTinyLineChart";
+import useStocksStore from "../../../../../../store/Stock.store";
+import { emit } from "@tauri-apps/api/event";
+import { sendNotification } from "@tauri-apps/plugin-notification";
 
-export default function ResultTableRow({ row }: { row: any }) {
+export default function ResultTableRow({
+  row,
+  index,
+}: {
+  row: any;
+  index: number;
+}) {
+  const { increase } = useStocksStore();
   const { openDetailWindow } = useDetailWebviewWindow({
     id: row.stock_id,
     name: row.name,
     group: row.market_type,
   });
+
+  const handleAddToWatchList = async () => {
+    console.log(row);
+    increase({
+      group: row.industry_group,
+      id: row.stock_id,
+      name: row.name,
+      type: row.market_type,
+    });
+    await emit("stock-added", { stockNumber: row.stock_id });
+    sendNotification({ title: "SListening List", body: `Add ${row.name} Success!` });
+  };
+
   return (
     <TableRow hover role="checkbox" tabIndex={-1}>
+      <TableCell key={row + index}>{index + 1}.</TableCell>
       <TableCell key={row + row.t}>{row.t}</TableCell>
       <TableCell key={row + row.stock_id}>{row.stock_id}</TableCell>
       <TableCell key={row + row.name}>{row.name}</TableCell>
       <TableCell key={row + row.c}>{row.c}</TableCell>
       <TableCell>
-        <UltraTinyLineChart stock_id={row.stock_id} />
+        <DailyUltraTinyLineChart stock_id={row.stock_id} />
+      </TableCell>
+      <TableCell>
+        <WeeklyUltraTinyLineChart stock_id={row.stock_id} />
       </TableCell>
       <TableCell key={row + row.k}>
         <IconButton
@@ -59,6 +88,9 @@ export default function ResultTableRow({ row }: { row: any }) {
         </IconButton>
         <IconButton onClick={openDetailWindow}>
           <InfoIcon />
+        </IconButton>
+        <IconButton onClick={handleAddToWatchList}>
+          <PostAddIcon />
         </IconButton>
       </TableCell>
     </TableRow>

@@ -9,7 +9,10 @@ export default function RuleContent({
   select: {
     id: string;
     name: string;
-    value: Prompts;
+    value: {
+      daily: Prompts;
+      weekly: Prompts;
+    };
     type: PromptType;
   };
 }) {
@@ -18,13 +21,10 @@ export default function RuleContent({
   return (
     <Stack spacing={2} alignItems="flex-start">
       <Typography variant="h4">{select && select.name}</Typography>
-      <Button
-        onClick={() => navigate("/schoice/edit/" + select?.id)}
-        
-      >
+      <Button onClick={() => navigate("/schoice/edit/" + select?.id)}>
         修改策略條件
       </Button>
-      <Summary select={select}/>
+      <Summary select={select} />
     </Stack>
   );
 }

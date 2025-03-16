@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from "react";
-import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
-import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import { Box, Tooltip } from "@mui/material";
-import { IndicatorColorType } from "./types";
+import { useContext, useEffect, useState } from "react";
+import { Line, LineChart, YAxis } from "recharts";
+import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
+import { IndicatorColorType } from "./types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
@@ -24,7 +24,7 @@ const IndicatorColor: IndicatorColorType[] = [
   },
 ];
 
-const UltraTinyLineChart = ({ stock_id }: { stock_id: string }) => {
+const DailyUltraTinyLineChart = ({ stock_id }: { stock_id: string }) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
@@ -36,30 +36,30 @@ const UltraTinyLineChart = ({ stock_id }: { stock_id: string }) => {
 
     db?.select(sqlQuery).then((res: any) => {
       const formatData = res.reverse();
-      console.log(formatData);
       setData(formatData);
     });
   }, [stock_id]);
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
-        <ResponsiveContainer width={80} height={40}>
-          <LineChart data={data}>
-            <YAxis domain={["dataMin", "dataMax"]} hide />
-            {IndicatorColor.map((item) => (
-              <Line
-                type="monotone"
-                dataKey={item.key}
-                stroke={item.color}
-                strokeWidth={1.5}
-                dot={false}
-              />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+        {/* <ResponsiveContainer > */}
+        <LineChart data={data} width={80} height={40}>
+          <YAxis domain={["dataMin", "dataMax"]} hide />
+          {IndicatorColor.map((item, index) => (
+            <Line
+              key={index}
+              type="monotone"
+              dataKey={item.key}
+              stroke={item.color}
+              strokeWidth={1.5}
+              dot={false}
+            />
+          ))}
+        </LineChart>
+        {/* </ResponsiveContainer> */}
       </Box>
     </Tooltip>
   );
 };
 
-export default UltraTinyLineChart;
+export default DailyUltraTinyLineChart;

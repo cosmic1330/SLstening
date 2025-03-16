@@ -16,7 +16,10 @@ export enum PromptType {
 export type Prompts = Prompt[];
 export type PromptsObj = {
   name: string;
-  value: Prompts;
+  value: {
+    daily: Prompts;
+    weekly: Prompts;
+  };
 };
 type PromptsObjs = {
   [key: string]: PromptsObj;
@@ -28,15 +31,28 @@ interface SchoiceState {
   todayDate: number;
   bulls: PromptsObjs;
   bears: PromptsObjs;
-  select: { id: string; name: string; value: Prompts; type: PromptType } | null;
+  select: {
+    id: string;
+    name: string;
+    value: {
+      daily: Prompts;
+      weekly: Prompts;
+    };
+    type: PromptType;
+  } | null;
   changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
   increase: (
     name: string,
-    prompt: Prompts,
+    prompts: { daily: Prompts; weekly: Prompts },
     type: PromptType
   ) => Promise<string | undefined>;
-  edit: (id: string, name: string, prompt: Prompts, type: PromptType) => void;
+  edit: (
+    id: string,
+    name: string,
+    prompts: { daily: Prompts; weekly: Prompts },
+    type: PromptType
+  ) => void;
   remove: (name: string, type: PromptType) => void;
   reload: () => void;
   clear: () => void;
@@ -57,7 +73,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   changeUsing: (type: PromptType) => {
     set({ using: type });
   },
-  increase: async (name: string, prompt: Prompts, type: PromptType) => {
+  increase: async (name: string, prompts: { daily: Prompts; weekly: Prompts }, type: PromptType) => {
     const store = await Store.load("schoice.json");
     const id = nanoid();
     switch (type) {
@@ -66,7 +82,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
           ...get().bulls,
           [id]: {
             name,
-            value: prompt,
+            value: prompts,
           },
         };
         await store.set("bulls", uniqueDataBulls);
@@ -80,7 +96,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
           ...get().bears,
           [id]: {
             name,
-            value: prompt,
+            value: prompts,
           },
         };
         await store.set("bears", uniqueDataBears);
@@ -93,7 +109,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
         return undefined;
     }
   },
-  edit: async (id: string, name: string, prompt: Prompts, type: PromptType) => {
+  edit: async (id: string, name: string, prompts: { daily: Prompts; weekly: Prompts }, type: PromptType) => {
     const store = await Store.load("schoice.json");
     switch (type) {
       case PromptType.BULLS:
@@ -101,7 +117,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
           ...get().bulls,
           [id]: {
             name,
-            value: prompt,
+            value: prompts,
           },
         };
         await store.set("bulls", uniqueDataBulls);
@@ -117,7 +133,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
           ...get().bears,
           [id]: {
             name,
-            value: prompt,
+            value: prompts,
           },
         };
         await store.set("bears", uniqueDataBears);

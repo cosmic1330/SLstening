@@ -6,56 +6,45 @@ import {
   SelectChangeEvent,
   Stack,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
 import { Prompt, Prompts } from "../../../store/Schoice.store";
+import { StockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
+import { StockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
 
-const options = {
-  days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前", "自定義數值"],
-  indicators: [
-    "收盤價",
-    "開盤價",
-    "成交量",
-    "最低價",
-    "最高價",
-    "ma5",
-    "ma5扣抵",
-    "ma10",
-    "ma10扣抵",
-    "ma20",
-    "ma20扣抵",
-    "ma60",
-    "ma60扣抵",
-    "ma120",
-    "ma120扣抵",
-    "macd",
-    "dif",
-    "osc",
-    "k",
-    "d",
-    "rsi5",
-    "rsi10",
-    "布林上軌",
-    "布林中軌",
-    "布林下軌",
-    "obv",
-    "obv5",
-  ],
-  operators: ["小於", "大於", "等於", "大於等於", "小於等於"],
-};
+type TimeFrame = "day" | "week";
 
 function ExpressionGenerator({
   setPrompts,
+  setWeekPrompts,
 }: {
   setPrompts: Dispatch<SetStateAction<Prompts>>;
+  setWeekPrompts: Dispatch<SetStateAction<Prompts>>;
 }) {
+  const [timeFrame, setTimeFrame] = useState<TimeFrame>("day");
   const [selects, setSelects] = useState<Prompt>({
-    day1: "今天",
-    indicator1: "收盤價",
-    operator: "大於",
-    day2: "今天",
-    indicator2: "ma5",
+    day1: timeFrame === "day" ? StockDailyQueryBuilder.options.days[0] : StockWeeklyQueryBuilder.options.weeks[0],
+    indicator1: StockDailyQueryBuilder.options.indicators[0],
+    operator: StockDailyQueryBuilder.options.operators[0],
+    day2: timeFrame === "day" ? StockDailyQueryBuilder.options.days[0] : StockWeeklyQueryBuilder.options.weeks[0],
+    indicator2: StockDailyQueryBuilder.options.indicators[0],
   });
+
+  const handleTimeFrameChange = (
+    _event: React.MouseEvent<HTMLElement>,
+    newTimeFrame: TimeFrame,
+  ) => {
+    if (newTimeFrame !== null) {
+      setTimeFrame(newTimeFrame);
+      setSelects(prev => ({
+        ...prev,
+        day1: newTimeFrame === "day" ? StockDailyQueryBuilder.options.days[0] : StockWeeklyQueryBuilder.options.weeks[0],
+        day2: newTimeFrame === "day" ? StockDailyQueryBuilder.options.days[0] : StockWeeklyQueryBuilder.options.weeks[0],
+      }));
+    }
+  };
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const { value, name } = event.target;
@@ -72,8 +61,35 @@ function ExpressionGenerator({
       indicator2: value,
     }));
   };
+
+  const timeOptions = timeFrame === "day" 
+    ? StockDailyQueryBuilder.options.days 
+    : StockWeeklyQueryBuilder.options.weeks;
+
+  const indicators = timeFrame === "day"
+    ? StockDailyQueryBuilder.options.indicators
+    : StockWeeklyQueryBuilder.options.indicators;
+
+  const operators = StockDailyQueryBuilder.options.operators;
+
   return (
     <Box>
+      <Stack spacing={2} direction="row" alignItems="center" mb={2}>
+        <ToggleButtonGroup
+          value={timeFrame}
+          exclusive
+          onChange={handleTimeFrameChange}
+          aria-label="時間週期"
+        >
+          <ToggleButton value="day" aria-label="日線">
+            日線
+          </ToggleButton>
+          <ToggleButton value="week" aria-label="週線">
+            週線
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </Stack>
+
       <Stack spacing={2} direction="row" my={2}>
         <Select
           value={selects.day1}
@@ -81,7 +97,7 @@ function ExpressionGenerator({
           name="day1"
           fullWidth
         >
-          {options.days.map((day) => (
+          {timeOptions.map((day) => (
             <MenuItem key={day} value={day}>
               {day}
             </MenuItem>
@@ -94,7 +110,7 @@ function ExpressionGenerator({
           name="indicator1"
           fullWidth
         >
-          {options.indicators.map((indicator) => (
+          {indicators.map((indicator) => (
             <MenuItem key={indicator} value={indicator}>
               {indicator}
             </MenuItem>
@@ -108,7 +124,7 @@ function ExpressionGenerator({
           name="operator"
           fullWidth
         >
-          {options.operators.map((op) => (
+          {operators.map((op) => (
             <MenuItem key={op} value={op}>
               {op}
             </MenuItem>
@@ -122,7 +138,7 @@ function ExpressionGenerator({
           name="day2"
           fullWidth
         >
-          {options.days.map((day) => (
+          {timeOptions.map((day) => (
             <MenuItem key={day} value={day}>
               {day}
             </MenuItem>
@@ -138,7 +154,7 @@ function ExpressionGenerator({
             name="indicator2"
             fullWidth
           >
-            {options.indicators.map((indicator) => (
+            {indicators.map((indicator) => (
               <MenuItem key={indicator} value={indicator}>
                 {indicator}
               </MenuItem>
@@ -151,7 +167,11 @@ function ExpressionGenerator({
         variant="contained"
         fullWidth
         onClick={() => {
-          setPrompts((prev) => [...prev, selects]);
+          if (timeFrame === "day") {
+            setPrompts((prev) => [...prev, selects]);
+          } else {
+            setWeekPrompts((prev) => [...prev, selects]);
+          }
         }}
       >
         加入規則

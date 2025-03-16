@@ -7,7 +7,15 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import ResultTableRow from "./ResultTableRow";
 
-const columns = ["日期", "代碼", "名稱", "收盤價", "趨勢圖", "Action"];
+const columns = [
+  "日期",
+  "代碼",
+  "名稱",
+  "收盤價",
+  "日趨勢圖",
+  "周趨勢圖",
+  "Action",
+];
 
 export default function ResultTable({ result }: { result: any[] }) {
   return (
@@ -16,6 +24,7 @@ export default function ResultTable({ result }: { result: any[] }) {
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
+            <TableCell width={5}></TableCell>
               {columns.map((column) => (
                 <TableCell key={column}>{column}</TableCell>
               ))}
@@ -24,7 +33,7 @@ export default function ResultTable({ result }: { result: any[] }) {
           <TableBody>
             {result &&
               result.map((row, index) => {
-                return <ResultTableRow key={index} row={row} />;
+                return <ResultTableRow key={index} row={row} index={index}/>;
               })}
           </TableBody>
         </Table>

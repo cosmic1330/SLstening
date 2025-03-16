@@ -1,13 +1,4 @@
-import {
-  Boll,
-  dateFormat,
-  Kd,
-  Ma,
-  Macd,
-  Obv,
-  Rsi,
-  Week,
-} from "@ch20026103/anysis";
+import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { fetch } from "@tauri-apps/plugin-http";
 import {

@@ -1,11 +1,10 @@
 import { useCallback, useContext, useEffect, useState } from "react";
+import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore, {
   Prompts,
   PromptType,
 } from "../../../../../../store/Schoice.store";
-import generateExpression from "../../../../../../utils/generateExpression";
-import generateSqlQuery from "../../../../../../utils/generateSqlQuery";
 import ResultTable from "./ResultTable";
 
 type DatabaseResult = {
@@ -52,11 +51,11 @@ export default function Result({
     if (!select) return;
     // 客製化條件
     const customConditions = select.value.map((prompt) =>
-      generateExpression(prompt).join(" ")
+      stockDailyQueryBuilder.generateExpression(prompt).join(" ")
     );
     // 動態生成查詢語句
-    const sqlQuery = generateSqlQuery({
-      todayDate, // 可以動態設定今天日期
+    const sqlQuery = stockDailyQueryBuilder.generateSqlQuery({
+      todayDate,
       conditions: customConditions,
       dates,
     });

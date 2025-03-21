@@ -1,8 +1,9 @@
-import { Button, Typography, Container, Stack } from "@mui/material";
-import { useNavigate } from "react-router";
-import useStocksStore from "../store/Stock.store";
+import { Button, Container, Stack, Typography } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback } from "react";
+import { useNavigate } from "react-router";
+import Version from "../components/Version";
+import useStocksStore from "../store/Stock.store";
 
 const Login = () => {
   const { alwaysOnTop } = useStocksStore();
@@ -23,6 +24,7 @@ const Login = () => {
         backgroundSize: "cover",
       }}
     >
+      <Version />
       <Stack
         justifyContent="center"
         alignItems="center"

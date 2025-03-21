@@ -9,10 +9,10 @@ import Other from "./pages/Home/Other";
 import Login from "./pages/Login";
 import Schoice from "./pages/Schoice";
 import PromptAdd from "./pages/Schoice/PromptAdd";
-import PromptList from "./pages/Schoice/PromptList";
-import useStocksStore from "./store/Stock.store";
 import PromptEdit from "./pages/Schoice/PromptEdit";
+import PromptList from "./pages/Schoice/PromptList";
 import Setting from "./pages/Schoice/Setting";
+import useStocksStore from "./store/Stock.store";
 
 function App() {
   const { reload } = useStocksStore();

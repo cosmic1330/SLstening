@@ -9,6 +9,14 @@
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-always-on-top",
     "clipboard-manager:allow-write-text",
-    "shell:default"
+    "shell:default",
+    "updater:default",
+    "dialog:default",
+    "dialog:allow-ask",
+    "dialog:allow-message",
+    "updater:allow-check",
+    "updater:allow-download-and-install",
+    "process:default",
+    "process:allow-restart"
   ]
 }

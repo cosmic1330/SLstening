@@ -1,4 +1,4 @@
-use tauri_plugin_sql::{MigrationKind,Migration};
+use tauri_plugin_sql::{Migration, MigrationKind};
 
 pub fn value() -> Vec<Migration> {
     vec![

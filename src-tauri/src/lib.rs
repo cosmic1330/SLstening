@@ -1,40 +1,66 @@
 mod sqlite;
 
+use tauri_plugin_updater::UpdaterExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
-use tauri_plugin_updater::UpdaterExt;
 async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = app
-    .updater_builder()
-    .timeout(std::time::Duration::from_secs(30))
-    .build()?
-    .check()
-    .await? {
-      let mut downloaded = 0;
-  
-      // alternatively we could also call update.download() and update.install() separately
-      update
-        .download_and_install(
-          |chunk_length, content_length| {
+  if let Some(update) = app.updater_builder()
+  .timeout(std::time::Duration::from_secs(30))
+  .build()?
+  .check()
+  .await? {
+    let version = &update.version;
+
+    let ans = app
+      .dialog()
+      .message(&format!("Update available: v{}", version))
+      .kind(MessageDialogKind::Info)
+      .buttons(MessageDialogButtons::OkCancel) 
+      .blocking_show();
+
+    let mut downloaded = 0;
+    if ans {
+      update.download_and_install(|chunk_length, content_length| {
             downloaded += chunk_length;
-            println!("downloaded {downloaded} from {content_length:?}");
+            print!("下載中 ({} bytes)\r", downloaded);
+
+            // 修正進度顯示格式
+            let progress = match content_length {
+              Some(total) => format!("{:.2}%", (downloaded as f64 / total as f64) * 100.0),
+              None => format!("{} bytes", downloaded),
+            };
+            println!("{}", progress);
           },
           || {
             println!("download finished");
-          },
-        )
-        .await?;
-  
-      println!("update installed");
-      app.restart();
+            // 下載完成後，顯示訊息框詢問是否重新啟動應用程式
+            let restart_ans = app
+              .dialog()
+              .message("Update downloaded. Restart now?")
+              .kind(MessageDialogKind::Info)
+              .buttons(MessageDialogButtons::OkCancel) 
+              .blocking_show();
+
+            if restart_ans {
+              app.restart();
+            }
+          }).await?;
+    } else {
+      println!("User canceled the update.");
     }
-  
-    Ok(())
+  } else {
+    println!("No updates available.");
   }
+
+  Ok(())
+}
+
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

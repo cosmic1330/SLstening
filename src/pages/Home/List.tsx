@@ -12,10 +12,10 @@ function List() {
 
   useEffect(() => {
     // 监听股票添加事件
-    const unlisten = listen("stock-added", (event: any) => {
+    const unlisten = listen("stock-added", async (event: any) => {
       const { stockNumber } = event.payload;
+      await reload();
       console.log(`stock add ${stockNumber}`);
-      reload();
     });
 
     return () => {

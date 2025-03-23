@@ -1,15 +1,15 @@
 import InfoIcon from "@mui/icons-material/Info";
-import { IconButton, Typography } from "@mui/material";
 import PostAddIcon from "@mui/icons-material/PostAdd";
+import { IconButton, Typography } from "@mui/material";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
-import { open } from "@tauri-apps/plugin-shell";
-import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
-import DailyUltraTinyLineChart from "./DailyUltraTinyLineChart";
-import WeeklyUltraTinyLineChart from "./WeeklyUltraTinyLineChart";
-import useStocksStore from "../../../../../../store/Stock.store";
 import { emit } from "@tauri-apps/api/event";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import { open } from "@tauri-apps/plugin-shell";
+import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
+import useStocksStore from "../../../../../../store/Stock.store";
+import DailyUltraTinyLineChart from "./DailyUltraTinyLineChart";
+import WeeklyUltraTinyLineChart from "./WeeklyUltraTinyLineChart";
 
 export default function ResultTableRow({
   row,
@@ -18,7 +18,7 @@ export default function ResultTableRow({
   row: any;
   index: number;
 }) {
-  const { increase } = useStocksStore();
+  const { increase, reload } = useStocksStore();
   const { openDetailWindow } = useDetailWebviewWindow({
     id: row.stock_id,
     name: row.name,
@@ -26,15 +26,18 @@ export default function ResultTableRow({
   });
 
   const handleAddToWatchList = async () => {
-    console.log(row);
-    increase({
+    await reload();
+    await increase({
       group: row.industry_group,
       id: row.stock_id,
       name: row.name,
       type: row.market_type,
     });
     await emit("stock-added", { stockNumber: row.stock_id });
-    sendNotification({ title: "SListening List", body: `Add ${row.name} Success!` });
+    sendNotification({
+      title: "SListening List",
+      body: `Add ${row.name} Success!`,
+    });
   };
 
   return (

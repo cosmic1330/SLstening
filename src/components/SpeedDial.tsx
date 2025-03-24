@@ -17,6 +17,7 @@ import { useNavigate } from "react-router";
 import useAddWebviewWindow from "../hooks/useAddWebviewWindow";
 import useStocksStore from "../store/Stock.store";
 import useSchoiceWebviewWindow from "../hooks/useSchoiceWebviewWindow";
+import { supabase } from "../supabase";
 
 export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();
@@ -54,6 +55,7 @@ export default function SpeedDial() {
         key={"Add StockId"}
         icon={<AddCircleRoundedIcon />}
         tooltipTitle={"加入股票"}
+        
         onClick={openAddWindow}
       />
 
@@ -91,7 +93,8 @@ export default function SpeedDial() {
         key={"Logout"}
         icon={<LogoutRoundedIcon />}
         tooltipTitle={"登出"}
-        onClick={() => {
+        onClick={async () => {
+          await supabase.auth.signOut();
           navigate("/");
         }}
       />

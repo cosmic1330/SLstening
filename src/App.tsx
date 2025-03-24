@@ -13,6 +13,7 @@ import PromptEdit from "./pages/Schoice/PromptEdit";
 import PromptList from "./pages/Schoice/PromptList";
 import Setting from "./pages/Schoice/Setting";
 import useStocksStore from "./store/Stock.store";
+import Register from "./pages/Register";
 
 function App() {
   const { reload } = useStocksStore();
@@ -25,6 +26,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route index element={<Login />} />
+        <Route path="register" element={<Register />} />
         <Route path="add" element={<Add />} />
         <Route path="schoice" element={<Schoice />}>
           <Route index element={<PromptList />} />

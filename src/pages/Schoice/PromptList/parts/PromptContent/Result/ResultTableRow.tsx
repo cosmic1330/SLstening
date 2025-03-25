@@ -11,7 +11,6 @@ import useStocksStore from "../../../../../../store/Stock.store";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import WeekylKdLineChart from "./Charts/WeekylKdLineChart";
-import DailyKdLineChart from "./Charts/DailyKdLineChart";
 import DailyBollLineChart from "./Charts/DailyBollLineChart";
 
 export default function ResultTableRow({

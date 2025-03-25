@@ -4,6 +4,7 @@ import { Line, LineChart, YAxis } from "recharts";
 import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import { daily_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
@@ -31,7 +32,7 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
     if (!stock_id) return;
     const sqlQuery = `SELECT t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT 25`;
+    )} FROM skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT ${daily_count}`;
 
     if (!db) return;
 

@@ -4,6 +4,7 @@ import { Line, LineChart, YAxis } from "recharts";
 import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import { daily_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
@@ -37,7 +38,7 @@ const DailyBollLineChart = ({
     if (!stock_id) return;
     const sqlQuery = `SELECT skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT 25`;
+    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT ${daily_count}`;
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {

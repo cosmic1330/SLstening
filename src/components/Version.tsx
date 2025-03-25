@@ -13,7 +13,7 @@ export default function Version() {
     <Box
       sx={{ position: "fixed", bottom: "5px", right: "10px", color: "white" }}
     >
-      {tauriVersion}
+      v{tauriVersion}
     </Box>
   );
 }

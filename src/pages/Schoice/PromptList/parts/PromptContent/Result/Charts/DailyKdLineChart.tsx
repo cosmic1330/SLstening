@@ -1,6 +1,6 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Line, LineChart, YAxis } from "recharts";
+import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
@@ -16,15 +16,14 @@ const IndicatorColor: IndicatorColorType[] = [
   },
 ];
 
-const WeekylKfLineChart = ({ stock_id }: { stock_id: string }) => {
+const DailyKdLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} ORDER BY weekly_skills.t DESC LIMIT 17`;
-
+    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT 25`;
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {
@@ -36,7 +35,9 @@ const WeekylKfLineChart = ({ stock_id }: { stock_id: string }) => {
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={40}>
-          <YAxis domain={[0,100]} hide />
+          <YAxis domain={[0, 100]} hide />
+          <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
+          <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -53,4 +54,4 @@ const WeekylKfLineChart = ({ stock_id }: { stock_id: string }) => {
   );
 };
 
-export default WeekylKfLineChart;
+export default DailyKdLineChart;

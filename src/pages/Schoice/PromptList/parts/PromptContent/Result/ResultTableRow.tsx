@@ -10,8 +10,9 @@ import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWind
 import useStocksStore from "../../../../../../store/Stock.store";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
-import WeekylKfLineChart from "./Charts/WeekylKfLineChart";
-import DailyKdLineChart from "./Charts/DailyBollLineChart";
+import WeekylKdLineChart from "./Charts/WeekylKdLineChart";
+import DailyKdLineChart from "./Charts/DailyKdLineChart";
+import DailyBollLineChart from "./Charts/DailyBollLineChart";
 
 export default function ResultTableRow({
   row,
@@ -50,16 +51,16 @@ export default function ResultTableRow({
       <TableCell key={row + row.name}>{row.name}</TableCell>
       <TableCell key={row + row.c}>{row.c}</TableCell>
       <TableCell>
-        <DailyUltraTinyLineChart stock_id={row.stock_id} />
+        <DailyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell>
-        <WeeklyUltraTinyLineChart stock_id={row.stock_id} />
+        <WeeklyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell>
-        <DailyKdLineChart stock_id={row.stock_id} />
+        <DailyBollLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell>
-        <WeekylKfLineChart stock_id={row.stock_id} />
+        <WeekylKdLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell key={row + row.k}>
         <IconButton

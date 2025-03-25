@@ -48,7 +48,7 @@ export default function SpeedDial() {
     <MuiSpeedDial
       ariaLabel="SpeedDial"
       sx={{ position: "fixed", bottom: 8, left: 8 }}
-      icon={<BuildIcon />}
+      icon={<HexagonRoundedIcon />}
       FabProps={{ sx: { width: 42, height: 42 } }}
     >
       <SpeedDialAction
@@ -82,7 +82,7 @@ export default function SpeedDial() {
 
       <SpeedDialAction
         key={"Go Other Page"}
-        icon={<HexagonRoundedIcon />}
+        icon={<BuildIcon />}
         tooltipTitle={"設定"}
         onClick={() => {
           navigate("/dashboard/other");

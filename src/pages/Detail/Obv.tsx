@@ -9,6 +9,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Line,
 } from "recharts";
 import obv from "../../cls_tools/obv";
 import ArrowDown from "../../components/ArrowDown";
@@ -28,7 +29,7 @@ export default function Obv() {
     response.push({
       t: deals[0].t,
       obv: pre.obv,
-      obv10: pre.obvMa,
+      obv5: pre.obvMa,
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
@@ -37,7 +38,7 @@ export default function Obv() {
       response.push({
         t: deal.t,
         obv: pre.obv,
-        obv10: pre.obvMa,
+        obv5: pre.obvMa,
         c: deal.c,
       });
     }
@@ -52,11 +53,11 @@ export default function Obv() {
         </Typography>
         {chartData.length > 1 &&
         chartData[chartData.length - 1].obv >
-          chartData[chartData.length - 1].obv10 &&
+          chartData[chartData.length - 1].obv5 &&
         chartData[chartData.length - 1].obv -
-          chartData[chartData.length - 1].obv10 >
+          chartData[chartData.length - 1].obv5 >
           chartData[chartData.length - 2].obv -
-            chartData[chartData.length - 2].obv10 ? (
+            chartData[chartData.length - 2].obv5 ? (
           <ArrowUp color="#8884d8" />
         ) : (
           <ArrowDown color="#8884d8" />
@@ -73,7 +74,7 @@ export default function Obv() {
             <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
             <Area
               type="monotone"
-              dataKey="obv10"
+              dataKey="obv5"
               stroke="#f57878"
               fill="#f57878"
             />
@@ -83,14 +84,14 @@ export default function Obv() {
               stroke="#8884d8"
               fill="#8884d8"
             />
-            {/* <Line
+            <Line
               yAxisId="right"
               dataKey="c"
-              stroke="green"
+              stroke="red"
               dot={false}
               activeDot={false}
               legendType="none"
-            /> */}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

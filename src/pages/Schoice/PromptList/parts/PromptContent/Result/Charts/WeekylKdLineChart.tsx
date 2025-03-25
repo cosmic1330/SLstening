@@ -1,37 +1,29 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Line, LineChart, YAxis } from "recharts";
+import { Line, LineChart, YAxis, ReferenceLine } from "recharts";
 import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "ma5",
+    key: "k",
     color: "#589bf3",
   },
   {
-    key: "ma10",
-    color: "#9b58f3",
-  },
-  {
-    key: "ma20",
+    key: "d",
     color: "#ff7300",
-  },
-  {
-    key: "ma60",
-    color: "#63c762",
   },
 ];
 
-const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
+const WeekylKdLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT t, ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT 25`;
+    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT 10`;
 
     if (!db) return;
 
@@ -43,9 +35,10 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
-        {/* <ResponsiveContainer > */}
         <LineChart data={data} width={80} height={40}>
-          <YAxis domain={["dataMin", "dataMax"]} hide />
+          <YAxis domain={[0, 100]} hide />
+          <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
+          <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -57,10 +50,9 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
             />
           ))}
         </LineChart>
-        {/* </ResponsiveContainer> */}
       </Box>
     </Tooltip>
   );
 };
 
-export default DailyUltraTinyLineChart;
+export default WeekylKdLineChart;

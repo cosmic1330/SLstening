@@ -7,23 +7,23 @@ import { IndicatorColorType } from "../types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "obv",
+    key: "c",
     color: "#589bf3",
   },
   {
-    key: "obv5",
+    key: "obv",
     color: "#ff7300",
   },
 ];
 
-const WeekylObvLineChart = ({ stock_id }: { stock_id: string }) => {
+const WeekylObvLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} ORDER BY weekly_skills.t DESC LIMIT 20`;
+    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT 20`;
 
     if (!db) return;
 
@@ -36,7 +36,8 @@ const WeekylObvLineChart = ({ stock_id }: { stock_id: string }) => {
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={40}>
-          <YAxis domain={["dataMin", "dataMax"]} hide/>
+          <YAxis domain={["dataMin", "dataMax"]} yAxisId="left" hide />
+          <YAxis domain={["dataMin", "dataMax"]} yAxisId="right" hide />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -45,6 +46,7 @@ const WeekylObvLineChart = ({ stock_id }: { stock_id: string }) => {
               stroke={item.color}
               strokeWidth={1.5}
               dot={false}
+              yAxisId={item.key === "c" ? "left" : "right"}
             />
           ))}
         </LineChart>

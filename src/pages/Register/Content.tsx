@@ -39,6 +39,9 @@ function Content() {
 
   return (
     <Box component="form">
+      <Typography variant="h3" align="center" color="textPrimary" gutterBottom>
+        Register
+      </Typography>
       <Box component="form" onSubmit={handleSubmit} width="100%">
         <TextField
           fullWidth

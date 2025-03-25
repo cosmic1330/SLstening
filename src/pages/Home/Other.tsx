@@ -47,7 +47,7 @@ function Other() {
           <Grid2 size={6} display="flex" alignItems="center">
             <DownloadIcon />
             <Typography variant="body1" fontWeight="bold" ml={1}>
-              更新選股清單
+              更新股票列表
             </Typography>
           </Grid2>
           <Grid2
@@ -103,7 +103,7 @@ function Other() {
               size="small"
               onClick={handleFactoryReset}
             >
-              強制執行
+              清除資料
             </Button>
           </Grid2>
         </Grid2>

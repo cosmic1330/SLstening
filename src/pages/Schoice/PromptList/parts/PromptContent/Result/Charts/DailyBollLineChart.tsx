@@ -24,14 +24,20 @@ const IndicatorColor: IndicatorColorType[] = [
   },
 ];
 
-const DailyBollLineChart = ({ stock_id }: { stock_id: string }) => {
+const DailyBollLineChart = ({
+  stock_id,
+  t,
+}: {
+  stock_id: string;
+  t: string;
+}) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} ORDER BY skills.t DESC LIMIT 15`;
+    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT 25`;
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {

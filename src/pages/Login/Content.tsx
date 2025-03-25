@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  TextField,
-  Button,
-  Typography,
-  Box,
-  Stack,
-} from "@mui/material";
+import { TextField, Button, Typography, Box, Stack } from "@mui/material";
 import { supabase } from "../../supabase";
 import useStocksStore from "../../store/Stock.store";
 import { useNavigate } from "react-router";
@@ -41,7 +35,7 @@ const Content = () => {
   };
 
   return (
-    <Box>
+    <Box component="form">
       <Typography variant="h4" align="center" gutterBottom>
         <img src="tauri.svg" alt="logo" style={{ width: "33%" }} />
       </Typography>
@@ -81,6 +75,7 @@ const Content = () => {
             Register
           </Button>
           <Button
+            type="submit"
             onClick={signIn}
             disabled={loading || !email || !password}
             fullWidth

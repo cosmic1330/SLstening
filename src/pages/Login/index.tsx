@@ -18,7 +18,6 @@ const Login = () => {
      
       <Version />
       <Content />
-      {/* <Auth /> */}
     </Container>
   );
 };

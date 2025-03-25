@@ -11,6 +11,7 @@ import useStocksStore from "../../../../../../store/Stock.store";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import WeekylKfLineChart from "./Charts/WeekylKfLineChart";
+import DailyKdLineChart from "./Charts/DailyBollLineChart";
 
 export default function ResultTableRow({
   row,
@@ -53,6 +54,9 @@ export default function ResultTableRow({
       </TableCell>
       <TableCell>
         <WeeklyUltraTinyLineChart stock_id={row.stock_id} />
+      </TableCell>
+      <TableCell>
+        <DailyKdLineChart stock_id={row.stock_id} />
       </TableCell>
       <TableCell>
         <WeekylKfLineChart stock_id={row.stock_id} />

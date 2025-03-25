@@ -38,7 +38,7 @@ function Content() {
   };
 
   return (
-    <Box>
+    <Box component="form">
       <Box component="form" onSubmit={handleSubmit} width="100%">
         <TextField
           fullWidth

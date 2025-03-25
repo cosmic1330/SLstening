@@ -56,7 +56,6 @@ export default function ListItem({
   };
   return (
     <Stack
-      width={"687y"}
       direction="row"
       spacing={2}
       alignItems="center"

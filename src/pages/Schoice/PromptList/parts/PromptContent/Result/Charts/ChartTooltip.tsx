@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { IndicatorColorType } from "./types";
+import { IndicatorColorType } from "../types";
 
 export default function ChartTooltip({
   value,

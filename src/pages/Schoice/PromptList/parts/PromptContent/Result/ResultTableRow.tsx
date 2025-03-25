@@ -8,8 +8,9 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { open } from "@tauri-apps/plugin-shell";
 import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
 import useStocksStore from "../../../../../../store/Stock.store";
-import DailyUltraTinyLineChart from "./DailyUltraTinyLineChart";
-import WeeklyUltraTinyLineChart from "./WeeklyUltraTinyLineChart";
+import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
+import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
+import WeekylKfLineChart from "./Charts/WeekylKfLineChart";
 
 export default function ResultTableRow({
   row,
@@ -52,6 +53,9 @@ export default function ResultTableRow({
       </TableCell>
       <TableCell>
         <WeeklyUltraTinyLineChart stock_id={row.stock_id} />
+      </TableCell>
+      <TableCell>
+        <WeekylKfLineChart stock_id={row.stock_id} />
       </TableCell>
       <TableCell key={row + row.k}>
         <IconButton

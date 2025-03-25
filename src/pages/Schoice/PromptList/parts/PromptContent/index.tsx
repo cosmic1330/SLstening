@@ -10,7 +10,7 @@ export default function PromptContent() {
   return dataCount === 0 ? (
     <Null />
   ) : select ? (
-    <Container>
+    <Container maxWidth="lg">
       <Grid2 container spacing={2}>
         <RuleContent {...{ select }} />
         <Result {...{ select }} />

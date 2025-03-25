@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TextField, Button, Typography, Box, Grid2 } from "@mui/material";
+import { TextField, Button, Typography, Box } from "@mui/material";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
@@ -84,6 +84,9 @@ function Content() {
         >
           Register
         </Button>
+        <Typography color="error" align="center">
+          {errorMsg}
+        </Typography>
       </Box>
       <Typography
         textAlign="center"

@@ -28,9 +28,12 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
-    async (url: string, signal: AbortSignal, stock: StockField) => {
+    async (signal: AbortSignal, stock: StockField) => {
       try {
-        const response = await fetch(url, { method: "GET", signal });
+        const response = await fetch(
+          `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${stock.id}&v=1&callback=`,
+          { method: "GET", signal }
+        );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -65,11 +68,6 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       if (!db) {
         throw new Error("Database not initialized");
       }
-      await db.execute("DELETE FROM weekly_skills;");
-      await db.execute("DELETE FROM weekly_deal;");
-      await db.execute("DELETE FROM skills;");
-      await db.execute("DELETE FROM daily_deal;");
-      await db.execute("DELETE FROM stock;");
       setCompleted(() => 0);
       setErrorCount(() => 0);
       // 為新的請求創建一個新的 AbortController
@@ -82,16 +80,15 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       }
 
       const result = await Promise.all(
-        menu.map((stock) =>
-          limit(() =>
-            wrappedFetch(
-              `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${stock.id}&v=1&callback=`,
-              signal,
-              stock
-            )
-          )
-        )
+        menu.map((stock) => limit(() => wrappedFetch(signal, stock)))
       );
+
+      // 清空資料表
+      await db.execute("DELETE FROM weekly_skills;");
+      await db.execute("DELETE FROM weekly_deal;");
+      await db.execute("DELETE FROM skills;");
+      await db.execute("DELETE FROM daily_deal;");
+      await db.execute("DELETE FROM stock;");
 
       setStatus(Status.SaveDB);
       for (let i = 0; i < result.length; i++) {

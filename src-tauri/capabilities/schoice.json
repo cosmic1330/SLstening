@@ -9,6 +9,7 @@
     "shell:default",
     "core:window:allow-set-title",
     "core:window:allow-set-focus",
+    "clipboard-manager:allow-write-text",
     "core:webview:allow-create-webview-window"
   ]
 }

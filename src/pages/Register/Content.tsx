@@ -1,5 +1,5 @@
+import { Box, Button, TextField, Typography } from "@mui/material";
 import { useState } from "react";
-import { TextField, Button, Typography, Box } from "@mui/material";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
@@ -23,16 +23,21 @@ function Content() {
     }
     setErrorMsg("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) {
-      setErrorMsg(translateError(error.message));
-    } else {
-      console.log(data);
-      alert("Registration Successful!");
-      navigate("/");
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMsg(translateError(error.message));
+      } else {
+        console.log(data);
+        alert("Registration Successful!");
+        navigate("/");
+      }
+    } catch (e) {
+      console.error("Error signing up:", e);
     }
     setLoading(false);
   };

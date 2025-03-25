@@ -2,8 +2,8 @@ import PetsIcon from "@mui/icons-material/Pets";
 import { Grid2, Stack, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import useStocksStore from "../../../store/Stock.store";
 import useSchoiceStore from "../../../store/Schoice.store";
+import useStocksStore from "../../../store/Stock.store";
 
 export default function LatestDate() {
   const { db } = useContext(DatabaseContext);
@@ -16,8 +16,12 @@ export default function LatestDate() {
       const result = (await db?.select(
         `SELECT COUNT(*) AS counts FROM stock`
       )) as { counts: string }[];
-      setCount(result?.length > 0 ? result[0].counts : "N/A");
-      changeDataCount(parseInt(result[0].counts) || 0);
+      if (!result || result.length === 0) {
+        setCount("N/A");
+        return;
+      }
+      setCount(result[0].counts);
+      changeDataCount(parseInt(result[0].counts));
     } catch (error) {
       console.error(error);
     }

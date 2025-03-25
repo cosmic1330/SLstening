@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { TextField, Button, Typography, Box, Stack } from "@mui/material";
-import { supabase } from "../../supabase";
-import useStocksStore from "../../store/Stock.store";
-import { useNavigate } from "react-router";
+import { Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import useStocksStore from "../../store/Stock.store";
+import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
 
 const Content = () => {
@@ -17,15 +17,21 @@ const Content = () => {
   const signIn = async () => {
     setErrorMsg("");
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) setErrorMsg(translateError(error.message));
-    else {
-      console.log(data);
-      getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
-      navigate("/dashboard");
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMsg(translateError(error.message));
+      } else {
+        console.log(data);
+        getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
+        navigate("/dashboard");
+      }
+    } catch (e) {
+      console.error("Error signing in:", e);
     }
     setLoading(false);
   };

@@ -18,6 +18,9 @@ interface StocksState {
   stocks: StockField[];
   menu: StockField[];
   sqliteUpdateDate: string;
+  email: string;
+  password: string;
+  record: (email: string, password: string) => void;
   increase: ({ id, name }: StockField) => void;
   remove: (id: string) => void;
   reload: () => void;
@@ -32,7 +35,21 @@ const useStocksStore = create<StocksState>((set, get) => ({
   alwaysOnTop: true,
   stocks: [],
   menu: [],
+  email: "",
+  password: "",
   sqliteUpdateDate: "",
+  record: async (email: string, password: string) => {
+    const store = await Store.load("settings.json");
+    await store.set("email", email);
+    await store.set("password", password);
+    await store.save();
+    set(() => {
+      return {
+        email,
+        password,
+      };
+    });
+  },
   increase: async (stock: StockField) => {
     // 去除重複
     const uniqueData = Array.from(new Set([...get().stocks, stock]));
@@ -62,7 +79,9 @@ const useStocksStore = create<StocksState>((set, get) => ({
     const menu = ((await store.get("menu")) as StockField[]) || [];
     const alwaysOnTop = ((await store.get("alwaysOnTop")) as boolean) || true;
     const sqliteUpdateDate = ((await store.get("sqliteUpdateDate")) as string) || "";
-    set(() => ({ stocks, menu, alwaysOnTop, sqliteUpdateDate }));
+    const email = ((await store.get("email")) as string) || "";
+    const password = ((await store.get("password")) as string) || "";
+    set(() => ({ stocks, menu, alwaysOnTop, sqliteUpdateDate, email, password }));
   },
   clear: async () => {
     const store = await Store.load("settings.json");

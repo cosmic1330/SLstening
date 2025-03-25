@@ -1,4 +1,11 @@
-import { Box, Button, Stack, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Checkbox,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -7,11 +14,17 @@ import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
 
 const Content = () => {
+  const {
+    alwaysOnTop,
+    email: record_email,
+    password: record_password,
+    record,
+  } = useStocksStore();
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const { alwaysOnTop } = useStocksStore();
+  const [email, setEmail] = useState(record_email);
+  const [password, setPassword] = useState(record_password);
+  const [remember, setRemember] = useState(true);
   let navigate = useNavigate();
 
   const signIn = async () => {
@@ -27,6 +40,8 @@ const Content = () => {
         setErrorMsg(translateError(error.message));
       } else {
         console.log(data);
+        if (remember) record(email, password);
+        else record("", "");
         getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
         navigate("/dashboard");
       }
@@ -69,6 +84,15 @@ const Content = () => {
           margin="normal"
           required
         />
+        <Stack direction="row" alignItems={"center"}>
+          <Checkbox
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          <Typography variant="body2" color="textPrimary">
+            Remember me
+          </Typography>
+        </Stack>
         <Stack direction="row" spacing={2}>
           <Button
             onClick={register}

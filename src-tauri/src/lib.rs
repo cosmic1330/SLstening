@@ -41,17 +41,6 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
                     },
                     || {
                         println!("download finished");
-                        // 下載完成後，顯示訊息框詢問是否重新啟動應用程式
-                        let restart_ans = app
-                            .dialog()
-                            .message("Update downloaded. Restart now?")
-                            .kind(MessageDialogKind::Info)
-                            .buttons(MessageDialogButtons::OkCancel)
-                            .blocking_show();
-
-                        if restart_ans {
-                            app.restart();
-                        }
                     },
                 )
                 .await
@@ -62,6 +51,18 @@ async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
                     .kind(MessageDialogKind::Warning)
                     .buttons(MessageDialogButtons::Ok)
                     .blocking_show();
+            } else {
+              // 下載完成後，顯示訊息框詢問是否重新啟動應用程式
+              let restart_ans = app
+                  .dialog()
+                  .message("Update downloaded. Restart now?")
+                  .kind(MessageDialogKind::Info)
+                  .buttons(MessageDialogButtons::OkCancel)
+                  .blocking_show();
+
+              if restart_ans {
+                  app.restart();
+              }
             }
         } else {
             println!("User canceled the update.");

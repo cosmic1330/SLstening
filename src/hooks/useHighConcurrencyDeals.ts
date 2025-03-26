@@ -59,6 +59,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   );
 
   const fetchData = useCallback(async () => {
+    if(status !== Status.Idle) return;
     // 取消之前的請求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -119,7 +120,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       console.error(error);
     }
     setStatus(Status.Idle);
-  }, [db, update_sqlite_update_date, wrappedFetch, menu]);
+  }, [db, update_sqlite_update_date, wrappedFetch, menu, status]);
 
   const update = useCallback(() => {
     fetchData();

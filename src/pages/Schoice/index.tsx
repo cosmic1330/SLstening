@@ -39,7 +39,7 @@ const Main = styled(Box)`
 
 function Schoice() {
   const db = useDatabase();
-  const { reload } = useSchoiceStore();
+  const { reload, theme } = useSchoiceStore();
   const dates = useDatabaseDates(db);
 
   useEffect(() => {
@@ -50,19 +50,19 @@ function Schoice() {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
 
   // 動態設定主題
-  const theme = useMemo(
+  const themeConfig = useMemo(
     () =>
       createTheme({
         palette: {
-          mode: prefersDarkMode ? "dark" : "light",
+          mode: theme || (prefersDarkMode ? "dark" : "light"),
         },
       }),
-    [prefersDarkMode]
+    [theme, prefersDarkMode]
   );
 
   return (
     <DatabaseContext.Provider value={{ db, dates }}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={themeConfig}>
         <CssBaseline />
         <Main>
           <SideBar />

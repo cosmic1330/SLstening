@@ -31,6 +31,7 @@ interface SchoiceState {
   todayDate: number;
   bulls: PromptsObjs;
   bears: PromptsObjs;
+  theme: "light" | "dark";
   select: {
     id: string;
     name: string;
@@ -40,6 +41,7 @@ interface SchoiceState {
     };
     type: PromptType;
   } | null;
+  changeTheme: (theme: "light" | "dark") => void;
   changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
   increase: (
@@ -67,13 +69,21 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   bulls: {},
   bears: {},
   select: null,
+  theme: "dark",
+  changeTheme: (theme: "light" | "dark") => {
+    set({ theme });
+  },
   changeDataCount: (count: number) => {
     set({ dataCount: count });
   },
   changeUsing: (type: PromptType) => {
     set({ using: type });
   },
-  increase: async (name: string, prompts: { daily: Prompts; weekly: Prompts }, type: PromptType) => {
+  increase: async (
+    name: string,
+    prompts: { daily: Prompts; weekly: Prompts },
+    type: PromptType
+  ) => {
     const store = await Store.load("schoice.json");
     const id = nanoid();
     switch (type) {
@@ -109,7 +119,12 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
         return undefined;
     }
   },
-  edit: async (id: string, name: string, prompts: { daily: Prompts; weekly: Prompts }, type: PromptType) => {
+  edit: async (
+    id: string,
+    name: string,
+    prompts: { daily: Prompts; weekly: Prompts },
+    type: PromptType
+  ) => {
     const store = await Store.load("schoice.json");
     switch (type) {
       case PromptType.BULLS:

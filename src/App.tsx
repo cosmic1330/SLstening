@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { ToastContainer } from "react-toastify";
 import "./App.css";
 import Add from "./pages/Add";
 import Detail from "./pages/Detail";
@@ -41,6 +42,18 @@ function App() {
           <Route path="other" element={<Other />} />
         </Route>
       </Routes>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick={false}
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </BrowserRouter>
   );
 }

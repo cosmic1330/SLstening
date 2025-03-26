@@ -21,12 +21,10 @@ const GridItem = styled(Box)`
 export default function Header() {
   return (
     <GridItem>
-      <Stack><Breadcrumb/></Stack>
-      <Stack
-        direction="row"
-        spacing={3}
-        alignItems="center"
-      >
+      <Stack>
+        <Breadcrumb />
+      </Stack>
+      <Stack direction="row" spacing={3} alignItems="center">
         <LatestDate />
         <UpdateDeals />
       </Stack>

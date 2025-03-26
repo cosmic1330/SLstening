@@ -11,6 +11,7 @@ import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import StockDataManager from "../classes/StockDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useStocksStore, { StockField } from "../store/Stock.store";
+import DatabaseController from "../classes/DatabaseController";
 
 export enum Status {
   Download = "Download",
@@ -58,8 +59,14 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     []
   );
 
+  const stop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+  }, [abortControllerRef.current]);
+
   const fetchData = useCallback(async () => {
-    if(status !== Status.Idle) return;
+    if (status !== Status.Idle) return;
     // 取消之前的請求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -69,6 +76,11 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       if (!db) {
         throw new Error("Database not initialized");
       }
+
+      // 清空資料表
+      const databaseController = new DatabaseController(db);
+      await databaseController.clearTable();
+
       setCompleted(() => 0);
       setErrorCount(() => 0);
       // 為新的請求創建一個新的 AbortController
@@ -84,16 +96,13 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         menu.map((stock) => limit(() => wrappedFetch(signal, stock)))
       );
 
-      // 清空資料表
-      await db.execute("DELETE FROM weekly_skills;");
-      await db.execute("DELETE FROM weekly_deal;");
-      await db.execute("DELETE FROM skills;");
-      await db.execute("DELETE FROM daily_deal;");
-      await db.execute("DELETE FROM stock;");
-
       setStatus(Status.SaveDB);
       for (let i = 0; i < result.length; i++) {
         const { ta, stock } = result[i];
+        if (sessionStorage.getItem("stop") === "true") {
+          sessionStorage.removeItem("stop");
+          throw new Error("User stop");
+        }
         const stockDataManager = new StockDataManager(ta, db, stock);
         await stockDataManager.saveStockTable();
         await stockDataManager.dailyProcessor();
@@ -135,5 +144,5 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     return Math.round(((completed + errorCount) / menu.length) * 100);
   }, [completed, menu]);
 
-  return { update, persent, count, status };
+  return { update, persent, count, status, stop };
 }

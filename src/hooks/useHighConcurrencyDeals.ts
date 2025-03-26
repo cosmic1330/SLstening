@@ -24,7 +24,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const [status, setStatus] = useState(Status.Idle);
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db } = useContext(DatabaseContext);
-  const { update_sqlite_update_date, menu } = useStocksStore();
+  const { menu } = useStocksStore();
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
@@ -113,14 +113,16 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           body: `Completed: ${completed}, Error: ${errorCount}. Update Success ! 🎉 `,
         });
       }
-      update_sqlite_update_date(
+
+      localStorage.setItem(
+        "slitenting-sqliteUpdateDate",
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
     } catch (error) {
       console.error(error);
     }
     setStatus(Status.Idle);
-  }, [db, update_sqlite_update_date, wrappedFetch, menu, status]);
+  }, [db, wrappedFetch, menu, status]);
 
   const update = useCallback(() => {
     fetchData();

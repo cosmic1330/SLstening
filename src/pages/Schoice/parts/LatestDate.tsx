@@ -7,7 +7,7 @@ import useStocksStore from "../../../store/Stock.store";
 
 export default function LatestDate() {
   const { db } = useContext(DatabaseContext);
-  const { menu, sqliteUpdateDate } = useStocksStore();
+  const { menu } = useStocksStore();
   const { changeDataCount } = useSchoiceStore();
   const [count, setCount] = useState<string>("Loading...");
 
@@ -25,7 +25,7 @@ export default function LatestDate() {
     } catch (error) {
       console.error(error);
     }
-  }, [db, sqliteUpdateDate]);
+  }, [db]);
 
   useEffect(() => {
     fetchDate();
@@ -39,7 +39,7 @@ export default function LatestDate() {
         </Grid2>
         <Grid2 size={6}>
           <Typography variant="body1" textAlign="right">
-            {sqliteUpdateDate || "N/A"}
+            {localStorage.getItem("slitenting-sqliteUpdateDate") || "N/A"}
           </Typography>
         </Grid2>
       </Grid2>

@@ -9,21 +9,18 @@ import {
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import useStocksStore from "../../store/Stock.store";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
 
 const Content = () => {
-  const {
-    alwaysOnTop,
-    email: record_email,
-    password: record_password,
-    record,
-  } = useStocksStore();
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState(record_email);
-  const [password, setPassword] = useState(record_password);
+  const [email, setEmail] = useState(
+    localStorage.getItem("slitenting-email") || ""
+  );
+  const [password, setPassword] = useState(
+    localStorage.getItem("slitenting-password") || ""
+  );
   const [remember, setRemember] = useState(true);
   let navigate = useNavigate();
 
@@ -40,8 +37,14 @@ const Content = () => {
         setErrorMsg(translateError(error.message));
       } else {
         console.log(data);
-        if (remember) record(email, password);
-        else record("", "");
+        if (remember) {
+          localStorage.setItem("slitenting-email", email);
+          localStorage.setItem("slitenting-password", password);
+        } else {
+          localStorage.removeItem("slitenting-email");
+          localStorage.removeItem("slitenting-password");
+        }
+        const alwaysOnTop = localStorage.getItem("slitenting-alwaysOnTop") === "true";
         getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
         navigate("/dashboard");
       }

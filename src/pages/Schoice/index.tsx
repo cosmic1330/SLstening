@@ -39,7 +39,7 @@ const Main = styled(Box)`
 
 function Schoice() {
   const db = useDatabase();
-  const { reload, theme } = useSchoiceStore();
+  const { reload } = useSchoiceStore();
   const dates = useDatabaseDates(db);
 
   useEffect(() => {
@@ -54,10 +54,12 @@ function Schoice() {
     () =>
       createTheme({
         palette: {
-          mode: theme || (prefersDarkMode ? "dark" : "light"),
+          mode:
+            (localStorage.getItem("slitenting-theme") as any) ||
+            (prefersDarkMode ? "dark" : "light"),
         },
       }),
-    [theme, prefersDarkMode]
+    [prefersDarkMode]
   );
 
   return (

@@ -17,13 +17,16 @@ import useDownloadStocks from "../../hooks/useDownloadStocks";
 import useStocksStore from "../../store/Stock.store";
 
 function Other() {
-  const { alwaysOnTop, set_always_on_top, factory_reset } = useStocksStore();
+  const { factory_reset } = useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   let navigate = useNavigate();
 
   const handleAlwaysOnTopChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      set_always_on_top(event.target.checked);
+      localStorage.setItem(
+        "slitenting-alwaysOnTop",
+        event.target.checked.toString()
+      );
       getCurrentWindow().setAlwaysOnTop(event.target.checked);
     },
     []
@@ -63,7 +66,7 @@ function Other() {
               onClick={handleDownloadMenu}
               disabled={disable}
             >
-              {disable?"執行中...":"更新"}
+              {disable ? "執行中..." : "更新"}
             </Button>
           </Grid2>
 
@@ -80,7 +83,9 @@ function Other() {
             alignItems="center"
           >
             <Switch
-              defaultChecked={alwaysOnTop}
+              defaultChecked={
+                localStorage.getItem("slitenting-alwaysOnTop") === "true"
+              }
               onChange={handleAlwaysOnTopChange}
             />
           </Grid2>

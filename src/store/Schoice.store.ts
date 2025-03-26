@@ -40,6 +40,10 @@ interface SchoiceState {
     };
     type: PromptType;
   } | null;
+  theme: string;
+  sqliteUpdateDate: string;
+  changeSqliteUpdateDate: (date: string) => void;
+  changeTheme: (theme: string) => void
   changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
   increase: (
@@ -64,9 +68,19 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   dataCount: 0,
   using: PromptType.BULLS,
   todayDate: 0,
+  theme: localStorage.getItem("slitenting-theme") || "",
   bulls: {},
   bears: {},
   select: null,
+  sqliteUpdateDate: localStorage.getItem("slitenting-sqliteUpdateDate") || "N/A",
+  changeSqliteUpdateDate: (date: string) => {
+    localStorage.setItem("slitenting-sqliteUpdateDate", date);
+    set({ sqliteUpdateDate: date });
+  },
+  changeTheme: (theme: string) => {
+    localStorage.setItem("slitenting-theme", theme);
+    set({ theme });
+  },
   changeDataCount: (count: number) => {
     set({ dataCount: count });
   },

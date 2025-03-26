@@ -5,15 +5,15 @@ import {
   ThemeProvider,
   useMediaQuery,
 } from "@mui/material";
+import CssBaseline from "@mui/material/CssBaseline";
 import { useEffect, useMemo } from "react";
 import { Outlet } from "react-router";
 import { DatabaseContext } from "../../context/DatabaseContext";
 import useDatabase from "../../hooks/useDatabase";
+import useDatabaseDates from "../../hooks/useDatabaseDates";
 import useSchoiceStore from "../../store/Schoice.store";
-import CssBaseline from "@mui/material/CssBaseline";
 import Header from "./layout/Header";
 import SideBar from "./layout/Sidebar";
-import useDatabaseDates from "../../hooks/useDatabaseDates";
 
 const Main = styled(Box)`
   width: 100%;
@@ -39,7 +39,7 @@ const Main = styled(Box)`
 
 function Schoice() {
   const db = useDatabase();
-  const { reload } = useSchoiceStore();
+  const { reload, theme } = useSchoiceStore();
   const dates = useDatabaseDates(db);
 
   useEffect(() => {
@@ -54,12 +54,10 @@ function Schoice() {
     () =>
       createTheme({
         palette: {
-          mode:
-            (localStorage.getItem("slitenting-theme") as any) ||
-            (prefersDarkMode ? "dark" : "light"),
+          mode: (theme as any) || (prefersDarkMode ? "dark" : "light"),
         },
       }),
-    [prefersDarkMode]
+    [prefersDarkMode, theme]
   );
 
   return (

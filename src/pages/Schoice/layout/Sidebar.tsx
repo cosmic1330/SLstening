@@ -1,10 +1,11 @@
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { Box, IconButton, styled, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
+import useSchoiceStore from "../../../store/Schoice.store";
 
 const GridItem = styled(Box)`
   grid-area: sidebar;
@@ -25,15 +26,15 @@ const GridItem = styled(Box)`
 `;
 export default function SideBar() {
   const navigate = useNavigate();
+  const { theme, changeTheme } = useSchoiceStore();
 
   const toSetting = () => {
     navigate("/schoice/setting");
   };
 
   const onThemeChange = () => {
-    if (localStorage.getItem("slitenting-theme") === "light")
-      localStorage.setItem("slitenting-theme", "dark");
-    else localStorage.setItem("slitenting-theme", "light");
+    if (theme === "light") changeTheme("dark");
+    else changeTheme("light");
   };
 
   return (
@@ -42,11 +43,7 @@ export default function SideBar() {
       <Box>
         <Tooltip title="切換主題" arrow placement="right">
           <IconButton onClick={onThemeChange}>
-            {localStorage.getItem("slitenting-theme") === "light" ? (
-              <LightModeIcon />
-            ) : (
-              <DarkModeIcon />
-            )}
+            {theme === "light" ? <LightModeIcon /> : <DarkModeIcon />}
           </IconButton>
         </Tooltip>
         <InsertRuleButton />

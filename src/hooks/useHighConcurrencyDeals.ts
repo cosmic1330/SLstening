@@ -11,6 +11,7 @@ import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import DatabaseController from "../classes/DatabaseController";
 import StockDataManager from "../classes/StockDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
+import useSchoiceStore from "../store/Schoice.store";
 import useStocksStore, { StockField } from "../store/Stock.store";
 import useDownloadStocks from "./useDownloadStocks";
 
@@ -28,6 +29,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
+  const { changeSqliteUpdateDate } = useSchoiceStore();
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
@@ -125,8 +127,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         });
       }
 
-      localStorage.setItem(
-        "slitenting-sqliteUpdateDate",
+      changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
     } catch (error) {

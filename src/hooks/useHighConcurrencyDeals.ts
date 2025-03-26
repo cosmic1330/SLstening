@@ -8,10 +8,11 @@ import {
 } from "@tauri-apps/plugin-notification";
 import pLimit from "p-limit";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
+import DatabaseController from "../classes/DatabaseController";
 import StockDataManager from "../classes/StockDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useStocksStore, { StockField } from "../store/Stock.store";
-import DatabaseController from "../classes/DatabaseController";
+import useDownloadStocks from "./useDownloadStocks";
 
 export enum Status {
   Download = "Download",
@@ -19,6 +20,7 @@ export enum Status {
   Idle = "Idle",
 }
 export default function useHighConcurrencyDeals(LIMIT: number = 10) {
+  const { handleDownloadMenu } = useDownloadStocks();
   const [errorCount, setErrorCount] = useState(0);
   const [completed, setCompleted] = useState(0);
   const [count, setCount] = useState(0);
@@ -89,7 +91,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       const { signal } = abortController;
       const limit = pLimit(LIMIT);
       if (menu.length === 0) {
-        throw new Error("Menu is empty or not loaded correctly");
+        await handleDownloadMenu();
       }
 
       const result = await Promise.all(

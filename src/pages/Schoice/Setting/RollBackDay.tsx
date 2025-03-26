@@ -1,4 +1,4 @@
-import { Box, Slider, Typography } from "@mui/material";
+import { Box, Slider, Stack, Typography } from "@mui/material";
 import useSchoiceStore from "../../../store/Schoice.store";
 
 export default function RollBackDay() {
@@ -12,8 +12,11 @@ export default function RollBackDay() {
   };
 
   return (
-    <Box width={500}>
-      <Typography variant="h6">🔙 往回天數 {todayDate} 天</Typography>
+    <Box>
+      <Stack spacing={2} direction="row" alignItems="center">
+        <Box>🔙</Box>
+        <Typography variant="subtitle1"> 往回天數 {todayDate} 天</Typography>
+      </Stack>
       <Slider
         value={todayDate}
         onChange={handleTodayDate}

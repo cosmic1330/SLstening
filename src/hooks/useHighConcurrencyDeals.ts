@@ -29,7 +29,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
-  const { changeSqliteUpdateDate } = useSchoiceStore();
+  const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
@@ -53,11 +53,12 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         setCompleted((prev) => prev + 1);
         return { ta, stock };
       } catch (error: any) {
-        console.error(error);
         if (error?.message?.indexOf("Request canceled") == -1) {
           setErrorCount((prev) => prev + 1); // 記錄失敗數量
+          throw error;
+        } else {
+          throw new Error("User stop");
         }
-        throw error;
       }
     },
     []
@@ -70,6 +71,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   }, [abortControllerRef.current]);
 
   const fetchData = useCallback(async () => {
+    let record = 0;
     if (status !== Status.Idle) return;
     // 取消之前的請求
     if (abortControllerRef.current) {
@@ -98,10 +100,16 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
 
       const result = await Promise.all(
         menu.map((stock) => limit(() => wrappedFetch(signal, stock)))
-      );
+      ).catch((error) => {
+        if (error?.message === "User stop") {
+          throw new Error("User stop");
+        }
+      });
 
+      if (!result) return;
       setStatus(Status.SaveDB);
       for (let i = 0; i < result.length; i++) {
+        if (!result[i]) break;
         const { ta, stock } = result[i];
         if (sessionStorage.getItem("stop") === "true") {
           sessionStorage.removeItem("stop");
@@ -112,6 +120,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         await stockDataManager.dailyProcessor();
         await stockDataManager.weeklyProcessor();
         setCount((prev) => prev + 1);
+        record++;
       }
 
       // 通知使用者更新完成
@@ -123,7 +132,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       if (permissionGranted) {
         sendNotification({
           title: "Update Deals & Skills",
-          body: `Completed: ${completed}, Error: ${errorCount}. Update Success ! 🎉 `,
+          body: `Update Success ! 🎉 `,
         });
       }
 
@@ -131,8 +140,11 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
     } catch (error) {
-      console.error(error);
+      if ((error as Error)?.message !== "User stop") {
+        console.log("Failed:" + (error as Error)?.message);
+      }
     }
+    changeDataCount(record);
     setStatus(Status.Idle);
   }, [db, wrappedFetch, menu, status]);
 
@@ -147,5 +159,5 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     return Math.round(((completed + errorCount) / menu.length) * 100);
   }, [completed, menu]);
 
-  return { update, persent, count, status, stop };
+  return { update, persent, count, stop, status };
 }

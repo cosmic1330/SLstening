@@ -65,7 +65,7 @@ interface SchoiceState {
 }
 
 const useSchoiceStore = create<SchoiceState>((set, get) => ({
-  dataCount: 0,
+  dataCount: parseInt(localStorage.getItem("slitenting-dataCount") || "0"),
   using: PromptType.BULLS,
   todayDate: 0,
   theme: localStorage.getItem("slitenting-theme") || "",
@@ -82,6 +82,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     set({ theme });
   },
   changeDataCount: (count: number) => {
+    localStorage.setItem("slitenting-dataCount", count.toString());
     set({ dataCount: count });
   },
   changeUsing: (type: PromptType) => {

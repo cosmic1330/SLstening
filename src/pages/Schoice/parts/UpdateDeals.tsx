@@ -9,6 +9,7 @@ export default function UpdateDeals() {
 
   const handleClick = useCallback(async () => {
     if (status === Status.Idle) {
+      sessionStorage.removeItem("stop");
       update();
     } else if (status === Status.Download) {
       stop();

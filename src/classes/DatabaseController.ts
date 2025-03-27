@@ -20,4 +20,17 @@ export default class DatabaseController {
       return false;
     }
   }
+
+  async getLatestDailyDealCount() {
+    try {
+      const result: [{ latest_date: string; record_count: number }] =
+        await this.db.select(
+          "SELECT (SELECT MAX(t) FROM daily_deal) AS latest_date,COUNT(*) AS record_count FROM daily_deal WHERE t = (SELECT MAX(t) FROM daily_deal);"
+        );
+      return { date: result[0].latest_date, count: result[0].record_count };
+    } catch (error) {
+      console.error(error);
+      return { date: "N/A", count: 0 };
+    }
+  }
 }

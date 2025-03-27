@@ -108,6 +108,9 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
 
       if (!result) return;
       setStatus(Status.SaveDB);
+      changeSqliteUpdateDate(
+        dateFormat(new Date().getTime(), Mode.TimeStampToString)
+      );
       for (let i = 0; i < result.length; i++) {
         if (!result[i]) break;
         const { ta, stock } = result[i];
@@ -135,10 +138,6 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           body: `Update Success ! 🎉 `,
         });
       }
-
-      changeSqliteUpdateDate(
-        dateFormat(new Date().getTime(), Mode.TimeStampToString)
-      );
     } catch (error) {
       if ((error as Error)?.message !== "User stop") {
         console.log("Failed:" + (error as Error)?.message);

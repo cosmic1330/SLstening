@@ -12,14 +12,21 @@ function List() {
 
   useEffect(() => {
     // 监听股票添加事件
-    const unlisten = listen("stock-added", async (event: any) => {
+    const unlistenadd = listen("stock-added", async (event: any) => {
       const { stockNumber } = event.payload;
       await reload();
       console.log(`stock add ${stockNumber}`);
     });
+    const unlistenremoved = listen("stock-removed", async (event: any) => {
+      const { stockNumber } = event.payload;
+      await reload();
+      console.log(`stock removed ${stockNumber}`);
+    });
 
-    return () => {
-      unlisten.then((fn) => fn()); // 清理监听器
+    return () => { 
+      // 清理监听器
+      unlistenadd.then((fn) => fn());
+      unlistenremoved.then((fn) => fn());
     };
   }, []);
 

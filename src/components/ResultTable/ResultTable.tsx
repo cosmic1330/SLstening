@@ -6,6 +6,7 @@ import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import ResultTableRow from "./ResultTableRow";
+import { ActionButtonType } from "./types";
 
 const columns = [
   "日期",
@@ -19,14 +20,20 @@ const columns = [
   "Action",
 ];
 
-export default function ResultTable({ result }: { result: any[] }) {
+export default function ResultTable({
+  result,
+  type = ActionButtonType.Increase,
+}: {
+  result: any[];
+  type?: ActionButtonType;
+}) {
   return (
     <Paper sx={{ width: "100%", overflow: "hidden" }}>
       <TableContainer sx={{ maxHeight: 500 }}>
         <Table stickyHeader aria-label="sticky table">
           <TableHead>
             <TableRow>
-            <TableCell width={5}></TableCell>
+              <TableCell width={5}></TableCell>
               {columns.map((column) => (
                 <TableCell key={column}>{column}</TableCell>
               ))}
@@ -35,7 +42,14 @@ export default function ResultTable({ result }: { result: any[] }) {
           <TableBody>
             {result &&
               result.map((row, index) => {
-                return <ResultTableRow key={index} row={row} index={index}/>;
+                return (
+                  <ResultTableRow
+                    key={index}
+                    row={row}
+                    index={index}
+                    type={type}
+                  />
+                );
               })}
           </TableBody>
         </Table>

@@ -1,43 +1,48 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, YAxis } from "recharts";
-import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
+import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
-import { daily_count } from "./config";
+import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "ma5",
+    key: "c",
     color: "#589bf3",
   },
   {
-    key: "ma10",
+    key: "ma5",
     color: "#9b58f3",
   },
   {
-    key: "ma20",
+    key: "ma10",
     color: "#ff7300",
-  },
-  {
-    key: "ma60",
-    color: "#63c762",
   },
 ];
 
-const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
+const WeeklyUltraTinyLineChart = ({
+  stock_id,
+  t,
+}: {
+  stock_id: string;
+  t: string;
+}) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT t, ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
+      (item) => item.key
+    ).join(
       ","
-    )} FROM skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT ${daily_count}`;
+    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT ${weekly_count}`;
 
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {
       const formatData = res.reverse();
+
       setData(formatData);
     });
   }, [stock_id]);
@@ -64,4 +69,4 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
   );
 };
 
-export default DailyUltraTinyLineChart;
+export default WeeklyUltraTinyLineChart;

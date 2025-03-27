@@ -15,6 +15,7 @@ import PromptList from "./pages/Schoice/PromptList";
 import Setting from "./pages/Schoice/Setting";
 import useStocksStore from "./store/Stock.store";
 import Register from "./pages/Register";
+import Favorite from "./pages/Schoice/Favorite";
 
 function App() {
   const { reload } = useStocksStore();
@@ -31,6 +32,7 @@ function App() {
         <Route path="add" element={<Add />} />
         <Route path="schoice" element={<Schoice />}>
           <Route index element={<PromptList />} />
+          <Route path="favorite" element={<Favorite />} />
           <Route path="add" element={<PromptAdd />} />
           <Route path="edit/:id" element={<PromptEdit />} />
           <Route path="setting" element={<Setting />} />

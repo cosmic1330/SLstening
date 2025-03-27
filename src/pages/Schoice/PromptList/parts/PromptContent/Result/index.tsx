@@ -6,7 +6,7 @@ import useSchoiceStore, {
   Prompts,
   PromptType,
 } from "../../../../../../store/Schoice.store";
-import ResultTable from "./ResultTable";
+import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 
 export default function Result({
   select,

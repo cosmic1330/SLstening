@@ -2,11 +2,12 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { Box, IconButton, styled, Tooltip } from "@mui/material";
+import { Box, IconButton, Stack, styled, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
-
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 const GridItem = styled(Box)`
   grid-area: sidebar;
   height: 100%;
@@ -39,7 +40,20 @@ export default function SideBar() {
 
   return (
     <GridItem>
-      <QueryStatsIcon sx={{ fontSize: "50px" }} color="primary" />
+      <Stack spacing={2} alignItems="center">
+        <QueryStatsIcon sx={{ fontSize: "50px" }} color="primary" />
+        <Tooltip title="首頁" arrow placement="right">
+          <IconButton onClick={() => navigate("/schoice")}>
+            <HomeRoundedIcon />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="自選股" arrow placement="right">
+          <IconButton onClick={() => navigate("/schoice/favorite")}>
+            <StarRoundedIcon />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+
       <Box>
         <Tooltip title="切換主題" arrow placement="right">
           <IconButton onClick={onThemeChange}>

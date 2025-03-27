@@ -1,27 +1,23 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Line, LineChart, YAxis } from "recharts";
-import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
+import { Line, LineChart, YAxis, ReferenceLine } from "recharts";
+import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
 import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "c",
+    key: "k",
     color: "#589bf3",
   },
   {
-    key: "ma5",
-    color: "#9b58f3",
-  },
-  {
-    key: "ma10",
+    key: "d",
     color: "#ff7300",
   },
 ];
 
-const WeeklyUltraTinyLineChart = ({
+const WeekylKdLineChart = ({
   stock_id,
   t,
 }: {
@@ -42,16 +38,16 @@ const WeeklyUltraTinyLineChart = ({
 
     db?.select(sqlQuery).then((res: any) => {
       const formatData = res.reverse();
-
       setData(formatData);
     });
   }, [stock_id]);
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
-        {/* <ResponsiveContainer > */}
         <LineChart data={data} width={80} height={40}>
-          <YAxis domain={["dataMin", "dataMax"]} hide />
+          <YAxis domain={[0, 100]} hide />
+          <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
+          <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -63,10 +59,9 @@ const WeeklyUltraTinyLineChart = ({
             />
           ))}
         </LineChart>
-        {/* </ResponsiveContainer> */}
       </Box>
     </Tooltip>
   );
 };
 
-export default WeeklyUltraTinyLineChart;
+export default WeekylKdLineChart;

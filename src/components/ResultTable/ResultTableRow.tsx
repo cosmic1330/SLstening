@@ -6,21 +6,25 @@ import TableRow from "@mui/material/TableRow";
 import { emit } from "@tauri-apps/api/event";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { open } from "@tauri-apps/plugin-shell";
-import useDetailWebviewWindow from "../../../../../../hooks/useDetailWebviewWindow";
-import useStocksStore from "../../../../../../store/Stock.store";
+import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
+import useStocksStore from "../../store/Stock.store";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import WeekylKdLineChart from "./Charts/WeekylKdLineChart";
 import DailyBollLineChart from "./Charts/DailyBollLineChart";
+import { ActionButtonType } from "./types";
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 
 export default function ResultTableRow({
   row,
   index,
+  type,
 }: {
   row: any;
   index: number;
+  type: ActionButtonType;
 }) {
-  const { increase, reload } = useStocksStore();
+  const { increase, reload, remove } = useStocksStore();
   const { openDetailWindow } = useDetailWebviewWindow({
     id: row.stock_id,
     name: row.name,
@@ -41,6 +45,16 @@ export default function ResultTableRow({
       body: `Add ${row.name} Success!`,
     });
   };
+
+  const handleRemoveToWatchList = async () => {
+    await reload();
+    await remove(row.stock_id);
+    await emit("stock-removed", { stockNumber: row.stock_id });
+    await sendNotification({
+      title: "SListening List",
+      body: `Remove ${row.name} Success!`,
+    });
+  }
 
   return (
     <TableRow hover role="checkbox" tabIndex={-1}>
@@ -100,9 +114,16 @@ export default function ResultTableRow({
         <IconButton onClick={openDetailWindow}>
           <InfoIcon />
         </IconButton>
-        <IconButton onClick={handleAddToWatchList}>
-          <PostAddIcon />
-        </IconButton>
+        {type === ActionButtonType.Increase && (
+          <IconButton onClick={handleAddToWatchList}>
+            <PostAddIcon />
+          </IconButton>
+        )}
+        {type === ActionButtonType.Decrease && (
+          <IconButton onClick={handleRemoveToWatchList}>
+            <RemoveCircleOutlineIcon />
+          </IconButton>
+        )}
       </TableCell>
     </TableRow>
   );

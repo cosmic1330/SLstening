@@ -1,7 +1,7 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, YAxis } from "recharts";
-import { DatabaseContext } from "../../../../../../../context/DatabaseContext";
+import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
 import { daily_count } from "./config";

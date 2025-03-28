@@ -2,7 +2,6 @@ import { Box, Container, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
   Area,
-  CartesianGrid,
   ComposedChart,
   ResponsiveContainer,
   Tooltip,
@@ -45,7 +44,7 @@ export default function Ma() {
   return (
     <Container component="main">
       <Typography variant="h5" gutterBottom>
-        Ma (正向排列Good)
+        Ma 河流圖
       </Typography>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
@@ -53,11 +52,10 @@ export default function Ma() {
             <XAxis dataKey="t" />
             <YAxis />
             <Tooltip />
-            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
             <Area
               type="monotone"
               dataKey="ma5"
-              stroke="#f8d807"
+              stroke="#e3cc35"
               fill="#f8d807"
             />
             <Area

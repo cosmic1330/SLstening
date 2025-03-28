@@ -3,7 +3,6 @@ import { useContext } from "react";
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,7 +19,7 @@ export default function Close() {
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
         <Typography variant="h5" gutterBottom>
-          Close & Low (往上紅色區域變多Good)
+          價比熱力圖
         </Typography>
         {deals.length > 0 &&
         deals[deals.length - 1].c > deals[deals.length - 2].c &&
@@ -28,7 +27,7 @@ export default function Close() {
           deals[deals.length - 2].c - deals[deals.length - 2].l ? (
           <ArrowUp color="#e26d6d" />
         ) : (
-          <ArrowDown color="#e26d6d" />
+          <ArrowDown color="#79e26d" />
         )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
@@ -37,8 +36,7 @@ export default function Close() {
             <XAxis dataKey="t" />
             <YAxis />
             <Tooltip />
-            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
-            <Area type="monotone" dataKey="c" stroke="#e26d6d" fill="#e26d6d" />
+            <Area type="monotone" dataKey="c" stroke="#e58282" fill="#e58282" />
             <Area type="monotone" dataKey="l" stroke="#ccc" fill="#fff" />
           </AreaChart>
         </ResponsiveContainer>

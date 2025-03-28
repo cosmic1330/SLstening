@@ -4,12 +4,11 @@ import { useContext, useMemo } from "react";
 import {
   Area,
   ComposedChart,
-  CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Line,
 } from "recharts";
 import obv from "../../cls_tools/obv";
 import ArrowDown from "../../components/ArrowDown";
@@ -49,7 +48,7 @@ export default function Obv() {
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
         <Typography variant="h5" gutterBottom>
-          Obv (往上紫色區域凸出Good)
+          OBV 流線圖
         </Typography>
         {chartData.length > 1 &&
         chartData[chartData.length - 1].obv >
@@ -58,9 +57,9 @@ export default function Obv() {
           chartData[chartData.length - 1].obv5 >
           chartData[chartData.length - 2].obv -
             chartData[chartData.length - 2].obv5 ? (
-          <ArrowUp color="#8884d8" />
+          <ArrowUp color="#e26d6d" />
         ) : (
-          <ArrowDown color="#8884d8" />
+          <ArrowDown color="#79e26d" />
         )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
@@ -71,26 +70,25 @@ export default function Obv() {
             {/* 右側 Y 軸 */}
             <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
-            <CartesianGrid stroke="#eee" strokeDasharray="5 5" />
+            <Line
+              yAxisId="right"
+              dataKey="c"
+              stroke="#e58282"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
             <Area
               type="monotone"
               dataKey="obv5"
-              stroke="#f57878"
-              fill="#f57878"
+              stroke="#ff7300"
+              fill="#ff7300"
             />
             <Area
               type="monotone"
               dataKey="obv"
-              stroke="#8884d8"
-              fill="#8884d8"
-            />
-            <Line
-              yAxisId="right"
-              dataKey="c"
-              stroke="red"
-              dot={false}
-              activeDot={false}
-              legendType="none"
+              stroke="#589bf3"
+              fill="#589bf3"
             />
           </ComposedChart>
         </ResponsiveContainer>

@@ -1,4 +1,4 @@
-import { Box, Grid2, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Grid2, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 
 function TooltipConent({

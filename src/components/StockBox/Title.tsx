@@ -1,8 +1,8 @@
-import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
-import useStocksStore, { StockField } from "../../store/Stock.store";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { Stack, IconButton, Typography } from "@mui/material";
+import { IconButton, Stack, Typography } from "@mui/material";
+import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
+import useStocksStore, { StockField } from "../../store/Stock.store";
 
 export default function Title({
   stock,
@@ -30,12 +30,17 @@ export default function Title({
     >
       <Stack direction="row" justifyContent="flex-end" alignItems="center">
         <AttachMoneyIcon fontSize="small" />
-        <Typography variant="body2" color="#fff" onClick={openDetailWindow}>
+        <Typography
+          variant="subtitle1"
+          color="#fff"
+          onClick={openDetailWindow}
+          sx={{ cursor: "pointer" }}
+        >
           {lastPrice}
         </Typography>
       </Stack>
       <Typography
-        variant="body2"
+        variant="subtitle1"
         color={percent > 0 ? "#ff0000" : percent < 0 ? "#00ff00" : "#fff"}
       >
         {percent}%

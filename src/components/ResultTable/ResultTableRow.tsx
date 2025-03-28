@@ -1,5 +1,6 @@
 import InfoIcon from "@mui/icons-material/Info";
 import PostAddIcon from "@mui/icons-material/PostAdd";
+import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import { IconButton, Typography } from "@mui/material";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
@@ -8,13 +9,11 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { open } from "@tauri-apps/plugin-shell";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
+import DailyBollLineChart from "./Charts/DailyBollLineChart";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
-import WeekylKdLineChart from "./Charts/WeekylKdLineChart";
-import DailyBollLineChart from "./Charts/DailyBollLineChart";
-import { ActionButtonType } from "./types";
-import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import RowChart from "./RowChart";
+import { ActionButtonType } from "./types";
 
 export default function ResultTableRow({
   row,

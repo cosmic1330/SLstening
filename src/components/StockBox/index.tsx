@@ -57,7 +57,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={4}>
+        <Grid2 size={5}>
           <Button
             variant="contained"
             size="small"
@@ -70,7 +70,7 @@ export default function StockBox({ stock }: { stock: StockField }) {
             {stock.id} {name}
           </Button>
         </Grid2>
-        <Grid2 size={8}>
+        <Grid2 size={7}>
           <Title stock={stock} lastPrice={lastPrice} percent={percent} />
         </Grid2>
       </Grid2>

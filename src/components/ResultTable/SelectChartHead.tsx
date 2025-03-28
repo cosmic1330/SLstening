@@ -19,8 +19,8 @@ export default function SelectChartHead() {
   };
   return (
     <Box>
-      <Typography component="span" onClick={handleClick}>
-        {chartType}🔽
+      <Typography component="span" variant="button" onClick={handleClick} sx={{ cursor: "pointer" }}>
+        {chartType}{" "}🔽
       </Typography>
       <Menu
         anchorEl={anchorEl}
@@ -38,8 +38,8 @@ export default function SelectChartHead() {
         {Object.entries(ChartType).map(([key, value]) => (
           <MenuItem
             key={key}
-            disabled={chartType === key}
-            selected={chartType === key}
+            disabled={chartType === value}
+            selected={chartType === value}
             onClick={() => handlehandleMenuItemClick(value)}
           >
             {value}

@@ -4,7 +4,7 @@ import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
-import { weekly_count } from "./config";
+import { daily_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
@@ -17,23 +17,14 @@ const IndicatorColor: IndicatorColorType[] = [
   },
 ];
 
-const WeekylObvLineChart = ({
-  stock_id,
-  t,
-}: {
-  stock_id: string;
-  t: string;
-}) => {
+const DailyObvLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
-      (item) => item.key
-    ).join(
+    const sqlQuery = `SELECT skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT ${weekly_count}`;
-
+    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT ${daily_count}`;
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {
@@ -45,12 +36,8 @@ const WeekylObvLineChart = ({
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={40}>
-          <YAxis domain={["dataMin", "dataMax"]} hide />
-          <ReferenceLine
-            y={0}
-            stroke="#d89584"
-            strokeDasharray="3 3"
-          />
+          <YAxis domain={[0, 100]} hide />
+          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -67,4 +54,4 @@ const WeekylObvLineChart = ({
   );
 };
 
-export default WeekylObvLineChart;
+export default DailyObvLineChart;

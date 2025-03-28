@@ -7,6 +7,7 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import ResultTableRow from "./ResultTableRow";
 import { ActionButtonType } from "./types";
+import SelectChartHead from "./SelectChartHead";
 
 const columns = [
   "日期",
@@ -16,7 +17,7 @@ const columns = [
   "日趨勢圖",
   "週趨勢圖",
   "日布林軌道",
-  "週KD趨勢圖",
+  <SelectChartHead/>,
   "Action",
 ];
 
@@ -34,8 +35,8 @@ export default function ResultTable({
           <TableHead>
             <TableRow>
               <TableCell width={5}></TableCell>
-              {columns.map((column) => (
-                <TableCell key={column}>{column}</TableCell>
+              {columns.map((column, index) => (
+                <TableCell key={index}>{column}</TableCell>
               ))}
             </TableRow>
           </TableHead>

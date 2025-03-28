@@ -23,6 +23,10 @@ const IndicatorColor: IndicatorColorType[] = [
     key: "c",
     color: "#589bf3",
   },
+  {
+    key: "ma60",
+    color: "#63c762",
+  },
 ];
 
 const DailyBollLineChart = ({

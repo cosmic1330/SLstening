@@ -25,6 +25,13 @@ type PromptsObjs = {
   [key: string]: PromptsObj;
 };
 
+export enum ChartType {
+  DAILY_OBV = "日OBV趨勢圖",
+  DAILY_KD = "日KD趨勢圖",
+  WEEKLY_KD = "週KD趨勢圖",
+  WEEKLY_OBV = "週OBV趨勢圖",
+}
+
 interface SchoiceState {
   dataCount: number;
   using: PromptType;
@@ -42,6 +49,8 @@ interface SchoiceState {
   } | null;
   theme: string;
   sqliteUpdateDate: string;
+  chartType: ChartType;
+  changeChartType: (type: ChartType) => void;
   changeSqliteUpdateDate: (date: string) => void;
   changeTheme: (theme: string) => void
   changeDataCount: (count: number) => void;
@@ -73,6 +82,10 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   bears: {},
   select: null,
   sqliteUpdateDate: "N/A",
+  chartType: ChartType.WEEKLY_KD,
+  changeChartType: (type: ChartType) => {
+    set({ chartType: type });
+  },
   changeSqliteUpdateDate: (date: string) => {
     set({ sqliteUpdateDate: date });
   },

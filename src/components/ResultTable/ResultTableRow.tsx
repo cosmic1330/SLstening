@@ -13,7 +13,8 @@ import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import WeekylKdLineChart from "./Charts/WeekylKdLineChart";
 import DailyBollLineChart from "./Charts/DailyBollLineChart";
 import { ActionButtonType } from "./types";
-import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
+import RowChart from "./RowChart";
 
 export default function ResultTableRow({
   row,
@@ -54,7 +55,7 @@ export default function ResultTableRow({
       title: "SListening List",
       body: `Remove ${row.name} Success!`,
     });
-  }
+  };
 
   return (
     <TableRow hover role="checkbox" tabIndex={-1}>
@@ -73,7 +74,7 @@ export default function ResultTableRow({
         <DailyBollLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell>
-        <WeekylKdLineChart stock_id={row.stock_id} t={row.t} />
+        <RowChart row={row} />
       </TableCell>
       <TableCell key={row + row.k}>
         <IconButton

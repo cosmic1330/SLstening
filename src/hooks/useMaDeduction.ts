@@ -29,7 +29,7 @@ export default function useMaDeduction(deals: StockListType) {
   const { ma5_time, ma5_value } = useMemo(() => {
     if (!ma5Ref) return { ma5_time: "null", ma5_value: 0 };
     return {
-      ma5_time: ma5Ref.dataset[0].t,
+      ma5_time: ma5Ref.dataset[0].t.toString(),
       ma5_value: ma5Ref.dataset[0].c,
     };
   }, [ma5Ref]);
@@ -37,7 +37,7 @@ export default function useMaDeduction(deals: StockListType) {
   const { ma10_time, ma10_value } = useMemo(() => {
     if (!ma10Ref) return { ma10_time: "null", ma10_value: 0 };
     return {
-      ma10_time: ma10Ref.dataset[0].t,
+      ma10_time: ma10Ref.dataset[0].t.toString(),
       ma10_value: ma10Ref.dataset[0].c,
     };
   }, [ma10Ref]);
@@ -45,7 +45,7 @@ export default function useMaDeduction(deals: StockListType) {
   const { tmr_ma5_time, tmr_ma5_value } = useMemo(() => {
     if (!ma5Ref) return { tmr_ma5_time: "null", tmr_ma5_value: 0 };
     return {
-      tmr_ma5_time: ma5Ref.dataset[1].t,
+      tmr_ma5_time: ma5Ref.dataset[1].t.toString(),
       tmr_ma5_value: ma5Ref.dataset[1].c,
     };
   }, [ma5Ref]);
@@ -53,7 +53,7 @@ export default function useMaDeduction(deals: StockListType) {
   const { tmr_ma10_time, tmr_ma10_value } = useMemo(() => {
     if (!ma10Ref) return { tmr_ma10_time: "null", tmr_ma10_value: 0 };
     return {
-      tmr_ma10_time: ma10Ref.dataset[1].t,
+      tmr_ma10_time: ma10Ref.dataset[1].t.toString(),
       tmr_ma10_value: ma10Ref.dataset[1].c,
     };
   }, [ma10Ref]);

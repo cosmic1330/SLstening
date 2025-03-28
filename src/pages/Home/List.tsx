@@ -23,7 +23,7 @@ function List() {
       console.log(`stock removed ${stockNumber}`);
     });
 
-    return () => { 
+    return () => {
       // 清理监听器
       unlistenadd.then((fn) => fn());
       unlistenremoved.then((fn) => fn());

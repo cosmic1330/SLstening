@@ -1,4 +1,5 @@
 import { Box } from "@mui/material";
+import { useMemo } from "react";
 import {
   Line,
   LineChart,
@@ -6,32 +7,27 @@ import {
   ResponsiveContainer,
   YAxis,
 } from "recharts";
-import { useMemo } from "react";
-import { TodayDealsType } from "../../hooks/useDeals";
+import { TickDealsType } from "../../hooks/useDeals";
 import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
-export default function TodayChart({
-  todayDeals,
-}: {
-  todayDeals: TodayDealsType;
-}) {
+export default function TickChart({ tickDeals }: { tickDeals: TickDealsType }) {
   const data = useMemo(() => {
     const currentProgress = getTimeProgressPercent();
     const totalCount = Math.ceil(
-      todayDeals.closes.length / (currentProgress / 100)
+      tickDeals.closes.length / (currentProgress / 100)
     );
     const res = [];
     for (let i = 0; i < totalCount; i++) {
-      if (todayDeals.closes[i]) {
-        const close = todayDeals.closes[i];
-        const avgPrice = todayDeals.avgPrices[i];
+      if (tickDeals.closes[i]) {
+        const close = tickDeals.closes[i];
+        const avgPrice = tickDeals.avgPrices[i];
         res.push({ close, avgPrice });
       } else {
         res.push({ close: null, avgPrice: null });
       }
     }
     return res;
-  }, [todayDeals]);
+  }, [tickDeals]);
 
   return (
     <Box height={50}>
@@ -39,7 +35,7 @@ export default function TodayChart({
         <LineChart data={data}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           <ReferenceLine
-            y={todayDeals.previousClose}
+            y={tickDeals.previousClose}
             stroke="#63c762"
             strokeWidth={1.5}
             ifOverflow="extendDomain"

@@ -5,7 +5,7 @@ import { tauriFetcher } from "../api/http";
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 
-export type TodayDealsType = {
+export type TickDealsType = {
   id: string;
   t: string;
   price: number;
@@ -16,7 +16,7 @@ export type TodayDealsType = {
 };
 
 export default function useDeals(id: string) {
-  const { data: todayData, mutate: mutateTodayDeals } = useSWR(
+  const { data: tickData, mutate: mutateTickDeals } = useSWR(
     `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;autoRefresh=1743127325614;symbols=%5B%22${id}.TW%22%5D;type=tick?bkt=TW-Stock-Desktop-NewTechCharts-Rampup&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=2k1gakljuc07h&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511&returnMeta=true`,
     tauriFetcher
   );
@@ -44,18 +44,18 @@ export default function useDeals(id: string) {
       if (isInTime) {
         // 自動重新請求
         mutateDailyDeals();
-        mutateTodayDeals();
+        mutateTickDeals();
         console.log("listening");
       }
     }, 10000); // 每 10 秒檢查一次
 
     return () => clearInterval(interval); // 清除定時器
-  }, [mutateDailyDeals, mutateTodayDeals]);
+  }, [mutateDailyDeals, mutateTickDeals]);
 
-  const todayDeals = useMemo(() => {
+  const tickDeals = useMemo(() => {
     try {
-      if (!todayData) throw new Error("todayData is null");
-      const { data } = JSON.parse(todayData);
+      if (!tickData) throw new Error("tickData is null");
+      const { data } = JSON.parse(tickData);
       const closes = data[0].chart.indicators.quote[0].close.filter(
         (item: number | null) => item !== null
       );
@@ -73,7 +73,7 @@ export default function useDeals(id: string) {
 
       let t = data[0].chart.quote.refreshedTs;
       t = dateFormat(t, Mode.TimeStampToString);
-      const res: TodayDealsType = {
+      const res: TickDealsType = {
         id,
         t,
         price,
@@ -86,7 +86,7 @@ export default function useDeals(id: string) {
     } catch (e) {
       return null;
     }
-  }, [todayData]);
+  }, [tickData]);
 
   const deals = useMemo(() => {
     if (!dailyData) return [];
@@ -108,5 +108,5 @@ export default function useDeals(id: string) {
     return name;
   }, [dailyData]);
 
-  return { deals, name, todayDeals };
+  return { deals, name, tickDeals };
 }

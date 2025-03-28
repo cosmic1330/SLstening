@@ -1,19 +1,19 @@
 import { Box, Typography } from "@mui/material";
 import { useMemo } from "react";
-import { TodayDealsType } from "../../hooks/useDeals";
+import { TickDealsType } from "../../hooks/useDeals";
 
 export default function AvgPrice({
   lastPrice,
-  todayDeals,
+  tickDeals,
 }: {
   lastPrice: number;
-  todayDeals: TodayDealsType | null;
+  tickDeals: TickDealsType | null;
 }) {
   const { avgPrice, color } = useMemo(() => {
-    if (todayDeals) {
+    if (tickDeals) {
       const avgPrice =
         Math.round(
-          todayDeals.avgPrices[todayDeals.avgPrices.length - 1] * 100
+          tickDeals.avgPrices[tickDeals.avgPrices.length - 1] * 100
         ) / 100;
       const color = lastPrice > avgPrice ? "#fff" : "#e58282";
       return {
@@ -25,7 +25,7 @@ export default function AvgPrice({
       avgPrice: null,
       color: "#fff",
     };
-  }, [todayDeals, lastPrice]);
+  }, [tickDeals, lastPrice]);
   return (
     <Box>
       <Typography

@@ -6,15 +6,15 @@ import {
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
+import { useMemo } from "react";
 import useDeals from "../../hooks/useDeals";
 import useMaDeduction from "../../hooks/useMaDeduction";
 import { StockField } from "../../store/Stock.store";
-import Title from "./Title";
-import { useMemo } from "react";
-import Ma5 from "./Ma5";
-import Ma10 from "./Ma10";
 import AvgPrice from "./AvgPrice";
-import TodayChart from "./TodayChart";
+import Ma10 from "./Ma10";
+import Ma5 from "./Ma5";
+import TickChart from "./TickChart";
+import Title from "./Title";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -24,7 +24,7 @@ const Box = styled(MuiBox)`
   color: #fff;
 `;
 export default function StockBox({ stock }: { stock: StockField }) {
-  const { deals, name, todayDeals } = useDeals(stock.id);
+  const { deals, name, tickDeals } = useDeals(stock.id);
   const {
     ma5,
     ma5_deduction_time,
@@ -44,15 +44,15 @@ export default function StockBox({ stock }: { stock: StockField }) {
       : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
 
   const lastPrice = useMemo(() => {
-    if (todayDeals?.price) return todayDeals.price;
+    if (tickDeals?.price) return tickDeals.price;
     return deals.length > 0 ? deals[deals.length - 1].c : 0;
-  }, [deals, todayDeals]);
+  }, [deals, tickDeals]);
 
   const percent = useMemo(() => {
-    if (todayDeals?.changePercent) return todayDeals.changePercent;
+    if (tickDeals?.changePercent) return tickDeals.changePercent;
     const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
     return Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100;
-  }, [deals, todayDeals, lastPrice]);
+  }, [deals, tickDeals, lastPrice]);
 
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
@@ -124,10 +124,10 @@ export default function StockBox({ stock }: { stock: StockField }) {
           </Typography>
         </Grid2>
         <Grid2 size={3}>
-          <AvgPrice {...{ lastPrice, todayDeals }} />
+          <AvgPrice {...{ lastPrice, tickDeals }} />
         </Grid2>
       </Grid2>
-      {todayDeals && <TodayChart {...{ todayDeals }} />}
+      {tickDeals && <TickChart {...{ tickDeals }} />}
     </Box>
   );
 }

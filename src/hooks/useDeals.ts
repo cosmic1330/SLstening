@@ -1,19 +1,7 @@
-import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-
-export type TickDealsType = {
-  id: string;
-  t: string;
-  price: number;
-  avgPrices: number[];
-  changePercent: number;
-  closes: number[];
-  previousClose: number;
-};
+import { TaType, TickDealsType } from "../types";
 
 export default function useDeals(id: string) {
   const { data: tickData, mutate: mutateTickDeals } = useSWR(
@@ -38,7 +26,7 @@ export default function useDeals(id: string) {
 
   useEffect(() => {
     const isInTime = checkTimeRange();
-    if(!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
+    if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
     const interval = setInterval(() => {
       const isInTime = checkTimeRange();
       if (isInTime) {
@@ -71,11 +59,10 @@ export default function useDeals(id: string) {
         return pre / (index + 1);
       });
 
-      let t = data[0].chart.quote.refreshedTs;
-      t = dateFormat(t, Mode.TimeStampToString);
+      let ts = data[0].chart.quote.refreshedTs;
       const res: TickDealsType = {
         id,
-        t,
+        ts,
         price,
         avgPrices,
         changePercent,
@@ -93,7 +80,7 @@ export default function useDeals(id: string) {
     const ta_index = dailyData.indexOf('"ta":');
     const json_ta = "{" + dailyData.slice(ta_index).replace(");", "");
     const parse = JSON.parse(json_ta);
-    const response = parse.ta as StockListType;
+    const response = parse.ta as TaType;
     return response;
   }, [dailyData]);
 

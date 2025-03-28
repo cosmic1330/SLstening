@@ -3,8 +3,8 @@ import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import Typography from "@mui/material/Typography";
-import { Prompts, PromptType } from "../../../../../store/Schoice.store";
 import { Grid2 } from "@mui/material";
+import { Prompts, PromptType } from "../../../../../types";
 
 export default function Summary({
   select,

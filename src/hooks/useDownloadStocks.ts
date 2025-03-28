@@ -1,8 +1,9 @@
-import { load } from "cheerio";
-import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
-import useStocksStore, { StockField } from "../store/Stock.store";
 import { sendNotification } from "@tauri-apps/plugin-notification";
+import { load } from "cheerio";
 import { useCallback, useState } from "react";
+import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
+import useStocksStore from "../store/Stock.store";
+import { StockStoreType } from "../types";
 
 enum QueryStockType {
   TWSE = 2,
@@ -14,7 +15,7 @@ export default function useDownloadStocks() {
   const [disable, setDisable] = useState(false);
 
   const queryStocks = useCallback(async (type: QueryStockType) => {
-    const data: StockField[] = [];
+    const data: StockStoreType[] = [];
     try {
       const url = `https://isin.twse.com.tw/isin/C_public.jsp?strMode=${type}`;
       const arrayBuffer = (await tauriFetcher(
@@ -62,5 +63,5 @@ export default function useDownloadStocks() {
     }
   }, []);
 
-  return {handleDownloadMenu, disable};
+  return { handleDownloadMenu, disable };
 }

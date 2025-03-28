@@ -1,4 +1,4 @@
 import { createContext } from "react";
-import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
+import { TaType } from "../types";
 
-export const DealsContext = createContext<StockListType>([]);
+export const DealsContext = createContext<TaType>([]);

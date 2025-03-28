@@ -8,8 +8,8 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
-import { Prompts, PromptType } from "../../../../../store/Schoice.store";
 import Summary from "./Summary";
+import { Prompts, PromptType } from "../../../../../types";
 
 export default function RuleContent({
   select,

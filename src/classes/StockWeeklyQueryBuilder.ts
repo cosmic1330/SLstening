@@ -1,18 +1,8 @@
-type Prompt = {
-  day1: string;
-  indicator1: string;
-  operator: string;
-  day2: string;
-  indicator2: string;
-};
+import { QueryBuilderMappingItem, StorePrompt } from "../types";
 
-type MappingItem = {
-  key: string;
-  group: string;
-};
 
 export class StockWeeklyQueryBuilder {
-  private mapping: Record<string, MappingItem> = {
+  private mapping: Record<string, QueryBuilderMappingItem> = {
     收盤價: { key: "c", group: "_week_ago" },
     開盤價: { key: "o", group: "_week_ago" },
     成交量: { key: "v", group: "_week_ago" },
@@ -100,7 +90,7 @@ export class StockWeeklyQueryBuilder {
     return operatorMapping[operator] || "=";
   }
 
-  public generateExpression(prompt: Prompt): string[] {
+  public generateExpression(prompt: StorePrompt): string[] {
     const { day1, indicator1, operator, day2, indicator2 } = prompt;
     const operatorKey = this.convertOperator(operator);
 

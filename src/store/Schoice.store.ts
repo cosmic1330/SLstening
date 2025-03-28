@@ -1,29 +1,7 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-
-export type Prompt = {
-  day1: string;
-  indicator1: string;
-  operator: string;
-  day2: string;
-  indicator2: string;
-};
-export enum PromptType {
-  BULLS = "bulls",
-  BEAR = "bear",
-}
-export type Prompts = Prompt[];
-export type PromptsObj = {
-  name: string;
-  value: {
-    daily: Prompts;
-    weekly: Prompts;
-  };
-};
-type PromptsObjs = {
-  [key: string]: PromptsObj;
-};
+import { Prompts, PromptsMap, PromptType } from "../types";
 
 export enum ChartType {
   DAILY_OBV = "日OBV趨勢圖",
@@ -38,8 +16,8 @@ interface SchoiceState {
   dataCount: number;
   using: PromptType;
   todayDate: number;
-  bulls: PromptsObjs;
-  bears: PromptsObjs;
+  bulls: PromptsMap;
+  bears: PromptsMap;
   select: {
     id: string;
     name: string;
@@ -54,7 +32,7 @@ interface SchoiceState {
   chartType: ChartType;
   changeChartType: (type: ChartType) => void;
   changeSqliteUpdateDate: (date: string) => void;
-  changeTheme: (theme: string) => void
+  changeTheme: (theme: string) => void;
   changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
   increase: (
@@ -214,8 +192,8 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   },
   reload: async () => {
     const store = await Store.load("schoice.json");
-    const bulls = ((await store.get("bulls")) as PromptsObjs) || {};
-    const bears = ((await store.get("bears")) as PromptsObjs) || {};
+    const bulls = ((await store.get("bulls")) as PromptsMap) || {};
+    const bears = ((await store.get("bears")) as PromptsMap) || {};
     await store.save();
     set(() => ({ bulls, bears }));
   },

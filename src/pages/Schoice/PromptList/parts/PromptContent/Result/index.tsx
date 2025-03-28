@@ -2,11 +2,9 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../../../../classes/StockWeeklyQueryBuilder";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
-import useSchoiceStore, {
-  Prompts,
-  PromptType,
-} from "../../../../../../store/Schoice.store";
+import useSchoiceStore from "../../../../../../store/Schoice.store";
 import ResultTable from "../../../../../../components/ResultTable/ResultTable";
+import { Prompts, PromptType } from "../../../../../../types";
 
 export default function Result({
   select,

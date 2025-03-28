@@ -1,8 +1,8 @@
-export default function getTimeProgressPercent(): number {
-  const start = new Date();
+export default function getTimeProgressPercent(timestamp: number): number {
+  const start = new Date(timestamp);;
   start.setHours(9, 0, 0, 0); // 09:00:00
 
-  const end = new Date();
+  const end = new Date(timestamp);;
   end.setHours(13, 30, 0, 0); // 13:30:00
 
   const now = new Date();

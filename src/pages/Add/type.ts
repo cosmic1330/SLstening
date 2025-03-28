@@ -1,7 +1,7 @@
-import { StockField } from "../../store/Stock.store";
+import { StockStoreType } from "../../types";
 
 type FormData = {
-  stock: StockField | null;
+  stock: StockStoreType | null;
 };
 
 export default FormData;

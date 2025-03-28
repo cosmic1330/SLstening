@@ -1,4 +1,4 @@
-import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
@@ -6,10 +6,10 @@ import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
 import useScroll from "../../hooks/useScroll";
 import Close from "./Close";
+import EMAMA from "./EMAMA";
 import Ma from "./Ma";
 import Obv from "./Obv";
-import EMAMA from "./EMAMA";
-import { listen } from "@tauri-apps/api/event";
+import { TaType } from "../../types";
 
 const components = [<Ma />, <Close />, <EMAMA />, <Obv />];
 function Detail() {
@@ -40,7 +40,7 @@ function Detail() {
     const ta_index = (data as string).indexOf('"ta":');
     const json_ta = "{" + (data as string).slice(ta_index).replace(");", "");
     const parse = JSON.parse(json_ta);
-    const response = parse.ta as StockListType;
+    const response = parse.ta as TaType;
     return response;
   }, [data]);
 

@@ -2,7 +2,8 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import TourRoundedIcon from "@mui/icons-material/TourRounded";
 import { Box, Stack as MuiStack, Typography, styled } from "@mui/material";
 import { useState } from "react";
-import useSchoiceStore, { PromptType } from "../../../../store/Schoice.store";
+import useSchoiceStore from "../../../../store/Schoice.store";
+import { PromptType } from "../../../../types";
 const Stack = styled(MuiStack)<{ select: string }>`
   border: ${(props) =>
     props.select === "true"

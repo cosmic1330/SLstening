@@ -2,12 +2,10 @@ import { Box, Button, Container, Grid2, Typography } from "@mui/material";
 import { nanoid } from "nanoid";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import useSchoiceStore, {
-  Prompts,
-  PromptType,
-} from "../../../store/Schoice.store";
+import useSchoiceStore from "../../../store/Schoice.store";
 import ExpressionGenerator from "../parts/ExpressionGenerator";
 import PromptName from "../parts/PromptName";
+import { Prompts, PromptType } from "../../../types";
 
 export default function PromptAdd() {
   const { increase, selectObj } = useSchoiceStore();

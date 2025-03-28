@@ -1,4 +1,3 @@
-import { StockType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { Box, Container, Stack, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
@@ -21,10 +20,7 @@ export default function Obv() {
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let pre = obv.init(
-      deals[0] as Required<Pick<StockType, "v">> & StockType,
-      10
-    );
+    let pre = obv.init(deals[0], 10);
     response.push({
       t: deals[0].t,
       obv: pre.obv,
@@ -32,7 +28,7 @@ export default function Obv() {
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
-      const deal = deals[i] as Required<Pick<StockType, "v">> & StockType;
+      const deal = deals[i];
       pre = obv.next(deal, pre, 10);
       response.push({
         t: deal.t,

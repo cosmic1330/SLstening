@@ -2,14 +2,15 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { IconButton, Stack, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
-import useStocksStore, { StockField } from "../../store/Stock.store";
+import useStocksStore from "../../store/Stock.store";
+import { StockStoreType } from "../../types";
 
 export default function Title({
   stock,
   percent,
   lastPrice,
 }: {
-  stock: StockField;
+  stock: StockStoreType;
   percent: number;
   lastPrice: number;
 }) {

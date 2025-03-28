@@ -1,18 +1,8 @@
-type Prompt = {
-  day1: string;
-  indicator1: string;
-  operator: string;
-  day2: string;
-  indicator2: string;
-};
+import { QueryBuilderMappingItem, StorePrompt } from "../types";
 
-type MappingItem = {
-  key: string;
-  group: string;
-};
 
 export class StockDailyQueryBuilder {
-  private mapping: Record<string, MappingItem> = {
+  private mapping: Record<string, QueryBuilderMappingItem> = {
     收盤價: { key: "c", group: "_day_ago" },
     開盤價: { key: "o", group: "_day_ago" },
     成交量: { key: "v", group: "_day_ago" },
@@ -100,7 +90,7 @@ export class StockDailyQueryBuilder {
     return operatorMapping[operator] || "=";
   }
 
-  public generateExpression(prompt: Prompt): string[] {
+  public generateExpression(prompt: StorePrompt): string[] {
     const { day1, indicator1, operator, day2, indicator2 } = prompt;
     const operatorKey = this.convertOperator(operator);
 
@@ -138,7 +128,7 @@ export class StockDailyQueryBuilder {
       .map(
         (number) => `
           JOIN daily_deal "${number}_day_ago" ON "0_day_ago".stock_id = "${number}_day_ago".stock_id AND "${number}_day_ago".t = "${dates[number + todayDate]}"
-          JOIN skills "${number}_day_ago_sk" ON "0_day_ago".stock_id = "${number}_day_ago_sk".stock_id AND "${number}_day_ago_sk".t = "${dates[number + todayDate]}"
+          JOIN daily_skills "${number}_day_ago_sk" ON "0_day_ago".stock_id = "${number}_day_ago_sk".stock_id AND "${number}_day_ago_sk".t = "${dates[number + todayDate]}"
         `
       )
       .join("");
@@ -152,7 +142,7 @@ export class StockDailyQueryBuilder {
       SELECT "0_day_ago".stock_id as stock_id
       FROM daily_deal "0_day_ago"
       JOIN stock ON "0_day_ago".stock_id = stock.id
-      JOIN skills "0_day_ago_sk" ON "0_day_ago".stock_id = "0_day_ago_sk".stock_id AND "0_day_ago".t = "0_day_ago_sk".t
+      JOIN daily_skills "0_day_ago_sk" ON "0_day_ago".stock_id = "0_day_ago_sk".stock_id AND "0_day_ago".t = "0_day_ago_sk".t
       ${dayJoins}
       WHERE "0_day_ago".t = "${dates[todayDate]}" ${stockIdCondition} AND ${conditions.join(" AND ")}
     `;

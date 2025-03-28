@@ -7,12 +7,12 @@ import {
   ResponsiveContainer,
   YAxis,
 } from "recharts";
-import { TickDealsType } from "../../hooks/useDeals";
 import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
+import { TickDealsType } from "../../types";
 
 export default function TickChart({ tickDeals }: { tickDeals: TickDealsType }) {
   const data = useMemo(() => {
-    const currentProgress = getTimeProgressPercent();
+    const currentProgress = getTimeProgressPercent(tickDeals.ts);
     const totalCount = Math.ceil(
       tickDeals.closes.length / (currentProgress / 100)
     );

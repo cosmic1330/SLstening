@@ -8,9 +8,10 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import useSchoiceStore, { Prompts } from "../../../store/Schoice.store";
+import useSchoiceStore from "../../../store/Schoice.store";
 import ExpressionGenerator from "../parts/ExpressionGenerator";
 import PromptName from "../parts/PromptName";
+import { Prompts } from "../../../types";
 
 export default function PromptEdit() {
   const { id } = useParams();

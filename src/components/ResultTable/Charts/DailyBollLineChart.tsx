@@ -40,9 +40,9 @@ const DailyBollLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT skills.t, ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills JOIN daily_deal ON skills.t = daily_deal.t AND skills.stock_id = daily_deal.stock_id WHERE skills.stock_id = ${stock_id} AND skills.t <= '${t}' ORDER BY skills.t DESC LIMIT ${daily_count}`;
+    )} FROM daily_skills JOIN daily_deal ON daily_skills.t = daily_deal.t AND daily_skills.stock_id = daily_deal.stock_id WHERE daily_skills.stock_id = ${stock_id} AND daily_skills.t <= '${t}' ORDER BY daily_skills.t DESC LIMIT ${daily_count}`;
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {

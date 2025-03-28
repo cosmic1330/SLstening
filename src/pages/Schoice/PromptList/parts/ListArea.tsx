@@ -2,8 +2,9 @@ import TrendingDownRoundedIcon from "@mui/icons-material/TrendingDownRounded";
 import TrendingUpRoundedIcon from "@mui/icons-material/TrendingUpRounded";
 import { Box, Button, Stack, Tab, Tabs } from "@mui/material";
 import { useNavigate } from "react-router";
-import useSchoiceStore, { PromptType } from "../../../../store/Schoice.store";
+import useSchoiceStore from "../../../../store/Schoice.store";
 import ListItem from "./ListItem";
+import { PromptType } from "../../../../types";
 
 export default function ListArea() {
   const { bulls, bears, using, changeUsing } = useSchoiceStore();

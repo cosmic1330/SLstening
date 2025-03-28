@@ -10,9 +10,9 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
-import { Prompt, Prompts } from "../../../store/Schoice.store";
 import { StockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
 import { StockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
+import { Prompts, StorePrompt } from "../../../types";
 
 type TimeFrame = "day" | "week";
 
@@ -24,7 +24,7 @@ function ExpressionGenerator({
   setWeekPrompts: Dispatch<SetStateAction<Prompts>>;
 }) {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("day");
-  const [selects, setSelects] = useState<Prompt>({
+  const [selects, setSelects] = useState<StorePrompt>({
     day1: timeFrame === "day" ? StockDailyQueryBuilder.options.days[0] : StockWeeklyQueryBuilder.options.weeks[0],
     indicator1: StockDailyQueryBuilder.options.indicators[0],
     operator: StockDailyQueryBuilder.options.operators[0],

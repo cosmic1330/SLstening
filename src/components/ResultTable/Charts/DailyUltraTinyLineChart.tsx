@@ -32,7 +32,7 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
     if (!stock_id) return;
     const sqlQuery = `SELECT t, ${IndicatorColor.map((item) => item.key).join(
       ","
-    )} FROM skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT ${daily_count}`;
+    )} FROM daily_skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT ${daily_count}`;
 
     if (!db) return;
 

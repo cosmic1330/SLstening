@@ -11,7 +11,7 @@ export default class DatabaseController {
     try {
       await this.db.execute("DELETE FROM weekly_skills;");
       await this.db.execute("DELETE FROM weekly_deal;");
-      await this.db.execute("DELETE FROM skills;");
+      await this.db.execute("DELETE FROM daily_skills;");
       await this.db.execute("DELETE FROM daily_deal;");
       await this.db.execute("DELETE FROM stock;");
       return true;

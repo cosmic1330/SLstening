@@ -1,9 +1,9 @@
 import { MaResType } from "@ch20026103/anysis/dist/esm/stockSkills/ma";
-import { StockListType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { useEffect, useMemo, useState } from "react";
 import ma from "../cls_tools/ma";
+import { TaType } from "../types";
 
-export default function useMaDeduction(deals: StockListType) {
+export default function useMaDeduction(deals: TaType) {
   const [ma5Ref, setMa5Red] = useState<MaResType>();
   const [ma10Ref, setMa10Red] = useState<MaResType>();
   const [ma5, setMa5] = useState<number>(0);

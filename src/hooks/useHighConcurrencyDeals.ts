@@ -12,14 +12,16 @@ import DatabaseController from "../classes/DatabaseController";
 import StockDataManager from "../classes/StockDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useSchoiceStore from "../store/Schoice.store";
-import useStocksStore, { StockField } from "../store/Stock.store";
+import useStocksStore from "../store/Stock.store";
 import useDownloadStocks from "./useDownloadStocks";
+import { StockStoreType, TaType } from "../types";
 
 export enum Status {
   Download = "Download",
   SaveDB = "SaveDB",
   Idle = "Idle",
 }
+
 export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const { handleDownloadMenu } = useDownloadStocks();
   const [errorCount, setErrorCount] = useState(0);
@@ -33,7 +35,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
 
   // 包裝請求並追蹤進度
   const wrappedFetch = useCallback(
-    async (signal: AbortSignal, stock: StockField) => {
+    async (signal: AbortSignal, stock: StockStoreType) => {
       try {
         const response = await fetch(
           `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${stock.id}&v=1&callback=`,
@@ -49,7 +51,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         }
         const json_ta = "{" + text.slice(ta_index).replace(");", "");
         const parse = JSON.parse(json_ta);
-        const ta = parse.ta;
+        const ta = parse.ta as TaType;
         setCompleted((prev) => prev + 1);
         return { ta, stock };
       } catch (error: any) {

@@ -9,12 +9,12 @@ import { open } from "@tauri-apps/plugin-shell";
 import { useMemo } from "react";
 import useDeals from "../../hooks/useDeals";
 import useMaDeduction from "../../hooks/useMaDeduction";
-import { StockField } from "../../store/Stock.store";
 import AvgPrice from "./AvgPrice";
 import Ma10 from "./Ma10";
 import Ma5 from "./Ma5";
 import TickChart from "./TickChart";
 import Title from "./Title";
+import { StockStoreType } from "../../types";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -23,7 +23,7 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
 `;
-export default function StockBox({ stock }: { stock: StockField }) {
+export default function StockBox({ stock }: { stock: StockStoreType }) {
   const { deals, name, tickDeals } = useDeals(stock.id);
   const {
     ma5,

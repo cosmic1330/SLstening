@@ -8,6 +8,7 @@ import {
 } from "recharts";
 import { useMemo } from "react";
 import { TodayDealsType } from "../../hooks/useDeals";
+import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
 export default function TodayChart({
   todayDeals,
@@ -15,11 +16,19 @@ export default function TodayChart({
   todayDeals: TodayDealsType;
 }) {
   const data = useMemo(() => {
+    const currentProgress = getTimeProgressPercent();
+    const totalCount = Math.ceil(
+      todayDeals.closes.length / (currentProgress / 100)
+    );
     const res = [];
-    for (let i = 0; i < todayDeals.closes.length; i++) {
-      const close = todayDeals.closes[i];
-      const avgPrice = todayDeals.avgPrices[i];
-      res.push({ close, avgPrice });
+    for (let i = 0; i < totalCount; i++) {
+      if (todayDeals.closes[i]) {
+        const close = todayDeals.closes[i];
+        const avgPrice = todayDeals.avgPrices[i];
+        res.push({ close, avgPrice });
+      } else {
+        res.push({ close: null, avgPrice: null });
+      }
     }
     return res;
   }, [todayDeals]);

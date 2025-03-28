@@ -1,4 +1,4 @@
-import { Box } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { IndicatorColorType } from "../types";
 
 export default function ChartTooltip({
@@ -9,18 +9,20 @@ export default function ChartTooltip({
   return (
     <Box>
       {value.map((v) => (
-        <Box key={v.key} sx={{ display: "flex", alignItems: "center" }}>
+        <Stack key={v.key} direction="row" alignItems="center" spacing={2}>
           <Box
             sx={{
+              display: "inline-block",
               width: 10,
               height: 10,
               borderRadius: "50%",
               backgroundColor: v.color,
-              marginRight: 5,
             }}
           />
-          <Box>{v.key}</Box>
-        </Box>
+          <Typography variant="body2" component="span">
+            {v.key}
+          </Typography>
+        </Stack>
       ))}
     </Box>
   );

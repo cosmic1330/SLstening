@@ -8,8 +8,7 @@ import {
 } from "@tauri-apps/plugin-notification";
 import pLimit from "p-limit";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
-import DatabaseController from "../classes/DatabaseController";
-import StockDataManager from "../classes/StockDataManager";
+import SqliteDataManager from "../classes/SqliteDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useSchoiceStore from "../store/Schoice.store";
 import useStocksStore from "../store/Stock.store";
@@ -134,10 +133,21 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         }
       });
       if (!result) return;
+
+      //開始寫入資料庫
+      const promiseList = [];
       setStatus(Status.SaveDB);
       changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
+      changeDataCount(0);
+      // case 1-1: 直接寫入資料庫
+      const sqliteDataManager = new SqliteDataManager(db);
+      await sqliteDataManager.clearTable();
+
+      // case 2-1: 轉換為 CSV 資料
+      // const csvDataManager = new CsvDataManager();
+
       for (let i = 0; i < result.length; i++) {
         const data = result[i];
         if (!data) break;
@@ -147,24 +157,72 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           throw new Error("Cancel");
         }
 
-        // 清空資料表
-        const databaseController = new DatabaseController(db);
-        await databaseController.clearTable();
+        // case 1-2: 直接Insert Sqlite
+        await sqliteDataManager.saveStockTable(stock);
+        promiseList.push(
+          sqliteDataManager.processor(daily, stock, {
+            dealType: DealTableOptions.DailyDeal,
+            skillsType: SkillsTableOptions.DailySkills,
+          }),
+          sqliteDataManager.processor(weekly, stock, {
+            dealType: DealTableOptions.WeeklyDeal,
+            skillsType: SkillsTableOptions.WeeklySkills,
+          })
+          // 手動產生週資料
+          // stockDataManager.weeklyProcessorByDailyData(daily, stock)
+        );
 
-        const stockDataManager = new StockDataManager(db);
-        await stockDataManager.saveStockTable(stock);
-        await stockDataManager.processor(daily, stock, {
-          dealType: DealTableOptions.DailyDeal,
-          skillsType: SkillsTableOptions.DailySkills,
-        });
-        await stockDataManager.processor(weekly, stock, {
-          dealType: DealTableOptions.WeeklyDeal,
-          skillsType: SkillsTableOptions.WeeklySkills,
-        });
-        // await stockDataManager.weeklyProcessorByDailyData(daily, stock);
+
+        // case 2-2:  轉換為 CSV 資料
+        // promiseList.push(
+        //   csvDataManager.gererateDealCsvDataByTa(
+        //     daily,
+        //     stock,
+        //     DealTableOptions.DailyDeal
+        //   ),
+        //   csvDataManager.gererateDealCsvDataByTa(
+        //     weekly,
+        //     stock,
+        //     DealTableOptions.WeeklyDeal
+        //   ),
+        //   csvDataManager.gererateSkillsCsvDataByTa(
+        //     daily,
+        //     stock,
+        //     SkillsTableOptions.DailySkills
+        //   ),
+        //   csvDataManager.gererateSkillsCsvDataByTa(
+        //     weekly,
+        //     stock,
+        //     SkillsTableOptions.WeeklySkills
+        //   ),
+        // );
+
         record++;
         changeDataCount(record);
       }
+
+      await Promise.all(promiseList);
+      // case 2-3: 透過 Rust 產生 CSV 檔案
+      // invoke("create_csv_from_json", {
+      //   jsonData: JSON.stringify(csvDataManager.dailydeal),
+      //   csvName: DealTableOptions.DailyDeal + ".csv",
+      //   dataType: CsvDataType.Deal,
+      // });
+      // invoke("create_csv_from_json", {
+      //   jsonData: JSON.stringify(csvDataManager.weeklydeal),
+      //   csvName: DealTableOptions.WeeklyDeal + ".csv",
+      //   dataType: CsvDataType.Deal,
+      // });
+      // invoke("create_csv_from_json", {
+      //   jsonData: JSON.stringify(csvDataManager.dailyskills),
+      //   csvName: SkillsTableOptions.DailySkills + ".csv",
+      //   dataType: CsvDataType.Skills,
+      // });
+      // invoke("create_csv_fro－m_json", {
+      //   jsonData: JSON.stringify(csvDataManager.weeklyskills),
+      //   csvName: SkillsTableOptions.WeeklySkills + ".csv",
+      //   dataType: CsvDataType.Skills,
+      // });
 
       // 通知使用者更新完成
       let permissionGranted = await isPermissionGranted();

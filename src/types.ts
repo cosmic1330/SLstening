@@ -157,3 +157,18 @@ export enum TimeSharingDealTableOptions {
 export enum TimeSharingSkillsTableOptions {
   HourlySkills = "hourly_skills",
 }
+
+export enum CsvDataType {
+  Deal = "Deal",
+  Skills = "Skills",
+}
+
+// 繼承 SkillsTableType但是不要bollUb, bollMa, bollLb改成 boll_ub, boll_ma, boll_lb
+export type SkillsCsvDataType = Omit<
+  SkillsTableType,
+  "bollUb" | "bollMa" | "bollLb"
+> & {
+  boll_ub: number;
+  boll_ma: number;
+  boll_lb: number;
+};

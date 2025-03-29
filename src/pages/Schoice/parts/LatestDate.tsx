@@ -1,7 +1,7 @@
 import PetsIcon from "@mui/icons-material/Pets";
 import { Grid2, Stack, Typography } from "@mui/material";
 import { useContext, useEffect } from "react";
-import DatabaseController from "../../../classes/DatabaseController";
+import SqliteDataManager from "../../../classes/SqliteDataManager";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
@@ -18,8 +18,8 @@ export default function LatestDate() {
 
   useEffect(() => {
     if (!db) return;
-    const databaseController = new DatabaseController(db);
-    databaseController
+    const sqliteDataManager = new SqliteDataManager(db);
+    sqliteDataManager
       .getLatestDailyDealCount()
       .then((result) => {
         changeDataCount(result.count);

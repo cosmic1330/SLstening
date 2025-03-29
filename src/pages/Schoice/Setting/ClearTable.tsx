@@ -2,7 +2,8 @@ import CleaningServicesIcon from "@mui/icons-material/CleaningServices";
 import { Button, Stack, Typography } from "@mui/material";
 import { useContext } from "react";
 import { toast } from "react-toastify";
-import DatabaseController from "../../../classes/DatabaseController";
+
+import SqliteDataManager from "../../../classes/SqliteDataManager";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useSchoiceStore from "../../../store/Schoice.store";
 export default function ClearTable() {
@@ -12,8 +13,8 @@ export default function ClearTable() {
   const handleClearDB = async () => {
     if (!db) return;
     // 清空資料表
-    const databaseController = new DatabaseController(db);
-    await databaseController.clearTable();
+    const sqliteDataManager = new SqliteDataManager(db);
+    await sqliteDataManager.clearTable();
     changeDataCount(0);
     toast.success("資料庫已清空");
   };

@@ -2,22 +2,30 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import ChartTooltip from "./ChartTooltip";
 import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
     key: "c",
-    color: "#589bf3",
+    color: "#bfd915",
   },
   {
     key: "ma5",
-    color: "#9b58f3",
+    color: "#589bf3",
   },
   {
     key: "ma10",
+    color: "#9b58f3",
+  },
+  {
+    key: "ma20",
     color: "#ff7300",
+  },
+  {
+    key: "ma60",
+    color: "#63c762",
   },
 ];
 
@@ -50,7 +58,7 @@ const WeeklyUltraTinyLineChart = ({
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         {/* <ResponsiveContainer > */}
-        <LineChart data={data} width={80} height={40}>
+        <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           {IndicatorColor.map((item, index) => (
             <Line

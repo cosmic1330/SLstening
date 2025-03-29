@@ -1,7 +1,7 @@
 /****
  * Data Example: [{"t":20241007,"o":199.0,"h":199.0,"l":195.0,"c":197.5,"v":83451}]
  ****/
-export type TaType = { 
+export type TaType = {
   t: number; // 20241007
   o: number; // 199.0
   h: number; // 199.0
@@ -139,3 +139,21 @@ export type TimeSharingSkillsTableType = {
   obv: number;
   obv5: number;
 };
+
+export enum DealTableOptions {
+  DailyDeal = "daily_deal",
+  WeeklyDeal = "weekly_deal",
+}
+
+export enum SkillsTableOptions {
+  DailySkills = "daily_skills",
+  WeeklySkills = "weekly_skills",
+}
+
+export enum TimeSharingDealTableOptions {
+  HourlyDeal = "hourly_deal",
+}
+
+export enum TimeSharingSkillsTableOptions {
+  HourlySkills = "hourly_skills",
+}

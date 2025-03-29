@@ -4,48 +4,31 @@ import dateFormat, {
 } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import Database from "@tauri-apps/plugin-sql";
 import {
+  DealTableOptions,
   DealTableType,
+  SkillsTableOptions,
   SkillsTableType,
   StockStoreType,
   TaType,
+  TimeSharingDealTableOptions,
   TimeSharingDealTableType,
+  TimeSharingSkillsTableOptions,
   TimeSharingSkillsTableType,
 } from "../types";
 
-enum DealTableOptions {
-  DailyDeal = "daily_deal",
-  WeeklyDeal = "weekly_deal",
-}
-
-enum SkillsTableOptions {
-  DailySkills = "daily_skills",
-  WeeklySkills = "weekly_skills",
-}
-
-enum TimeSharingDealTableOptions {
-  HourlyDeal = "hourly_deal",
-}
-
-enum TimeSharingSkillsTableOptions {
-  HourlySkills = "hourly_skills",
-}
-
 export default class StockDataManager {
-  public ta: TaType;
-
   public db: Database;
 
-  public stock: StockStoreType;
-
-  constructor(ta: TaType, db: Database, stock: StockStoreType) {
-    this.ta = ta;
+  constructor(db: Database) {
     this.db = db;
-    this.stock = stock;
   }
 
-  async dailyProcessor() {
+  async processor(ta: TaType, stock: StockStoreType, options: {
+    dealType: DealTableOptions;
+    skillsType: SkillsTableOptions;
+  }) {
     try {
-      if (this.ta.length === 0) {
+      if (ta.length === 0) {
         return;
       }
 
@@ -56,11 +39,11 @@ export default class StockDataManager {
       const rsi = new Rsi();
       const obv = new Obv();
 
-      const init = this.ta[0];
+      const init = ta[0];
       let t = dateFormat(init.t, Mode.NumberToString);
       let dailyDealSaveStatus = await this.saveDealTable(
         {
-          stock_id: this.stock.id,
+          stock_id: stock.id,
           t,
           c: init.c,
           o: init.o,
@@ -68,7 +51,8 @@ export default class StockDataManager {
           l: init.l,
           v: init.v,
         },
-        DealTableOptions.DailyDeal
+        options.dealType,
+        stock
       );
 
       if (!dailyDealSaveStatus) {
@@ -89,7 +73,7 @@ export default class StockDataManager {
 
       let skillsSaveStatus = await this.saveSkillsTable(
         {
-          stock_id: this.stock.id,
+          stock_id: stock.id,
           t,
           ma5: ma5_data.ma,
           ma5_ded: ma5_data.exclusionValue["d-1"],
@@ -114,20 +98,21 @@ export default class StockDataManager {
           obv: obv_data.obv,
           obv5: obv_data.obvMa,
         },
-        SkillsTableOptions.DailySkills
+        options.skillsType,
+        stock
       );
 
       if (!skillsSaveStatus) {
         throw new Error("init skillsSaveStatus failed");
       }
 
-      for (let i = 1; i < this.ta.length; i++) {
-        const value = this.ta[i];
+      for (let i = 1; i < ta.length; i++) {
+        const value = ta[i];
         t = dateFormat(value.t, Mode.NumberToString);
 
         dailyDealSaveStatus = await this.saveDealTable(
           {
-            stock_id: this.stock.id,
+            stock_id: stock.id,
             t,
             c: value.c,
             o: value.o,
@@ -135,7 +120,8 @@ export default class StockDataManager {
             l: value.l,
             v: value.v,
           },
-          DealTableOptions.DailyDeal
+          options.dealType,
+          stock
         );
 
         if (!dailyDealSaveStatus) {
@@ -156,7 +142,7 @@ export default class StockDataManager {
 
         skillsSaveStatus = await this.saveSkillsTable(
           {
-            stock_id: this.stock.id,
+            stock_id: stock.id,
             t,
             ma5: ma5_data.ma,
             ma5_ded: ma5_data.exclusionValue["d-1"],
@@ -181,7 +167,8 @@ export default class StockDataManager {
             obv: obv_data.obv,
             obv5: obv_data.obvMa,
           },
-          SkillsTableOptions.DailySkills
+          options.skillsType,
+          stock
         );
 
         if (!skillsSaveStatus) {
@@ -189,13 +176,13 @@ export default class StockDataManager {
         }
       }
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
     }
   }
 
-  weeklyProcessor() {
+  weeklyProcessorByDailyData(ta: TaType, stock: StockStoreType) {
     try {
-      if (this.ta.length === 0) {
+      if (ta.length === 0) {
         return;
       }
       const boll = new Boll();
@@ -206,16 +193,16 @@ export default class StockDataManager {
       const obv = new Obv();
 
       const week = new Week();
-      let week_data = week.init(this.ta[0]);
-      for (let i = 1; i < this.ta.length; i++) {
-        week_data = week.next(this.ta[i], week_data);
+      let week_data = week.init(ta[0]);
+      for (let i = 1; i < ta.length; i++) {
+        week_data = week.next(ta[i], week_data);
       }
 
       const init = week_data.week[0];
       let t = dateFormat(init.t, Mode.NumberToString);
       let weeklyDealSaveStatus = this.saveDealTable(
         {
-          stock_id: this.stock.id,
+          stock_id: stock.id,
           t,
           c: init.c,
           o: init.o,
@@ -223,7 +210,8 @@ export default class StockDataManager {
           l: init.l,
           v: init.v,
         },
-        DealTableOptions.WeeklyDeal
+        DealTableOptions.WeeklyDeal,
+        stock
       );
 
       if (!weeklyDealSaveStatus) {
@@ -244,7 +232,7 @@ export default class StockDataManager {
 
       let weeklySkillsSaveStatus = this.saveSkillsTable(
         {
-          stock_id: this.stock.id,
+          stock_id: stock.id,
           t,
           ma5: ma5_data.ma,
           ma5_ded: ma5_data.exclusionValue["d-1"],
@@ -269,7 +257,8 @@ export default class StockDataManager {
           obv: obv_data.obv,
           obv5: obv_data.obvMa,
         },
-        SkillsTableOptions.WeeklySkills
+        SkillsTableOptions.WeeklySkills,
+        stock
       );
 
       if (!weeklySkillsSaveStatus) {
@@ -281,7 +270,7 @@ export default class StockDataManager {
 
         weeklyDealSaveStatus = this.saveDealTable(
           {
-            stock_id: this.stock.id,
+            stock_id: stock.id,
             t,
             c: week_data.week[i].c,
             o: week_data.week[i].o,
@@ -289,7 +278,8 @@ export default class StockDataManager {
             l: week_data.week[i].l,
             v: week_data.week[i].v,
           },
-          DealTableOptions.WeeklyDeal
+          DealTableOptions.WeeklyDeal,
+          stock
         );
 
         if (!weeklyDealSaveStatus) {
@@ -310,7 +300,7 @@ export default class StockDataManager {
 
         weeklySkillsSaveStatus = this.saveSkillsTable(
           {
-            stock_id: this.stock.id,
+            stock_id: stock.id,
             t,
             ma5: ma5_data.ma,
             ma5_ded: ma5_data.exclusionValue["d-1"],
@@ -335,7 +325,8 @@ export default class StockDataManager {
             obv: obv_data.obv,
             obv5: obv_data.obvMa,
           },
-          SkillsTableOptions.WeeklySkills
+          SkillsTableOptions.WeeklySkills,
+          stock
         );
 
         if (!weeklySkillsSaveStatus) {
@@ -343,25 +334,29 @@ export default class StockDataManager {
         }
       }
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
     }
   }
 
   // Base
-  async saveStockTable() {
+  async saveStockTable(stock: StockStoreType) {
     try {
       await this.db.execute(
         "INSERT INTO stock (id, name, industry_group, market_type) VALUES ($1, $2, $3, $4)",
-        [this.stock.id, this.stock.name, this.stock.group, this.stock.type]
+        [stock.id, stock.name, stock.group, stock.type]
       );
       return true;
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
       return false;
     }
   }
 
-  async saveDealTable(deal: DealTableType, type: DealTableOptions) {
+  async saveDealTable(
+    deal: DealTableType,
+    type: DealTableOptions,
+    stock: StockStoreType
+  ) {
     try {
       await this.db.execute(
         `INSERT INTO ${type} (stock_id, t, c, o, h, l, v) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -369,12 +364,16 @@ export default class StockDataManager {
       );
       return true;
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
       return false;
     }
   }
 
-  async saveSkillsTable(skills: SkillsTableType, type: SkillsTableOptions) {
+  async saveSkillsTable(
+    skills: SkillsTableType,
+    type: SkillsTableOptions,
+    stock: StockStoreType
+  ) {
     try {
       await this.db.execute(
         `INSERT INTO ${type} (stock_id,
@@ -430,7 +429,7 @@ export default class StockDataManager {
       );
       return true;
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
       return false;
     }
   }
@@ -438,7 +437,8 @@ export default class StockDataManager {
   // TimeSharing
   async saveTimeSharingDealTable(
     deal: TimeSharingDealTableType,
-    type: TimeSharingDealTableOptions
+    type: TimeSharingDealTableOptions,
+    stock: StockStoreType
   ) {
     try {
       await this.db.execute(
@@ -447,14 +447,15 @@ export default class StockDataManager {
       );
       return true;
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
       return false;
     }
   }
 
   async saveTimeSharingSkillsTable(
     skills: TimeSharingSkillsTableType,
-    type: TimeSharingSkillsTableOptions
+    type: TimeSharingSkillsTableOptions,
+    stock: StockStoreType
   ) {
     try {
       await this.db.execute(
@@ -511,7 +512,7 @@ export default class StockDataManager {
       );
       return true;
     } catch (e) {
-      console.error(this.stock, e);
+      console.error(stock, e);
       return false;
     }
   }

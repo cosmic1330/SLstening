@@ -1,9 +1,9 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Line, LineChart, YAxis, ReferenceLine } from "recharts";
+import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import ChartTooltip from "./ChartTooltip";
 import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
@@ -44,7 +44,7 @@ const WeeklyKdLineChart = ({
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
-        <LineChart data={data} width={80} height={40}>
+        <LineChart data={data} width={80} height={60}>
           <YAxis domain={[0, 100]} hide />
           <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
           <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />

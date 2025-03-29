@@ -8,16 +8,12 @@ import { daily_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "obv",
+    key: "osc",
     color: "#589bf3",
-  },
-  {
-    key: "obv5",
-    color: "#ff7300",
   },
 ];
 
-const DailyObvLineChart = ({
+const DailyOscLineChart = ({
   stock_id,
   t,
 }: {
@@ -44,8 +40,8 @@ const DailyObvLineChart = ({
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
-          <YAxis domain={[0, 100]} hide />
-          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" />
+          <YAxis domain={["dataMin", "dataMax"]} hide />
+          <ReferenceLine y={0} stroke="#ff7300" strokeDasharray="3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -62,4 +58,4 @@ const DailyObvLineChart = ({
   );
 };
 
-export default DailyObvLineChart;
+export default DailyOscLineChart;

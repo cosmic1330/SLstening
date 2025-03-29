@@ -5,7 +5,6 @@ import { useState } from "react";
 export default function SelectChartHead() {
   const { chartType, changeChartType } = useSchoiceStore();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -24,7 +23,7 @@ export default function SelectChartHead() {
       </Typography>
       <Menu
         anchorEl={anchorEl}
-        open={open}
+        open={Boolean(anchorEl)}
         onClose={handleClose}
         anchorOrigin={{
           vertical: "top",

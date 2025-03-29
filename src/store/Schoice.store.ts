@@ -4,12 +4,15 @@ import { create } from "zustand";
 import { Prompts, PromptsMap, PromptType } from "../types";
 
 export enum ChartType {
-  DAILY_OBV = "日OBV趨勢圖",
-  DAILY_KD = "日KD趨勢圖",
-  DAILY_RSI = "日RSI趨勢圖",
-  WEEKLY_KD = "週KD趨勢圖",
-  WEEKLY_OBV = "週OBV趨勢圖",
-  WEEKLY_RSI = "週RSI趨勢圖",
+  DAILY_OBV = "日OBV",
+  DAILY_KD = "日KD",
+  DAILY_RSI = "日RSI",
+  DAILY_OSC = "日OSC",
+  WEEKLY_KD = "週KD",
+  WEEKLY_OBV = "週OBV",
+  WEEKLY_RSI = "週RSI",
+  WEEKLY_BOLL = "週BOLL",
+  WEEKLY_OSC = "週OSC",
 }
 
 interface SchoiceState {
@@ -62,8 +65,11 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   bears: {},
   select: null,
   sqliteUpdateDate: "N/A",
-  chartType: ChartType.WEEKLY_KD,
+  chartType:
+    (localStorage.getItem("slitenting-chartType") as ChartType) ||
+    ChartType.WEEKLY_BOLL,
   changeChartType: (type: ChartType) => {
+    localStorage.setItem("slitenting-chartType", type);
     set({ chartType: type });
   },
   changeSqliteUpdateDate: (date: string) => {

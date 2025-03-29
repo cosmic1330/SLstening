@@ -4,20 +4,16 @@ import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { daily_count } from "./config";
+import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
-    key: "obv",
+    key: "osc",
     color: "#589bf3",
-  },
-  {
-    key: "obv5",
-    color: "#ff7300",
   },
 ];
 
-const DailyObvLineChart = ({
+const WeeklyOscLineChart = ({
   stock_id,
   t,
 }: {
@@ -28,11 +24,12 @@ const DailyObvLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
       (item) => item.key
     ).join(
       ","
-    )} FROM daily_skills JOIN daily_deal ON daily_skills.t = daily_deal.t AND daily_skills.stock_id = daily_deal.stock_id WHERE daily_skills.stock_id = ${stock_id} AND daily_skills.t <= '${t}' ORDER BY daily_skills.t DESC LIMIT ${daily_count}`;
+    )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT ${weekly_count}`;
+
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {
@@ -44,8 +41,8 @@ const DailyObvLineChart = ({
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
-          <YAxis domain={[0, 100]} hide />
-          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" />
+          <YAxis domain={["dataMin", "dataMax"]} hide />
+          <ReferenceLine y={0} stroke="#ff7300" strokeDasharray="3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -62,4 +59,4 @@ const DailyObvLineChart = ({
   );
 };
 
-export default DailyObvLineChart;
+export default WeeklyOscLineChart;

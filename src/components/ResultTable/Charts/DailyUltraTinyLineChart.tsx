@@ -2,11 +2,15 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import ChartTooltip from "./ChartTooltip";
 import { daily_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
+  {
+    key: "c",
+    color: "#bfd915",
+  },
   {
     key: "ma5",
     color: "#589bf3",
@@ -25,14 +29,22 @@ const IndicatorColor: IndicatorColorType[] = [
   },
 ];
 
-const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string }) => {
+const DailyUltraTinyLineChart = ({
+  stock_id,
+  t,
+}: {
+  stock_id: string;
+  t: string;
+}) => {
   const { db } = useContext(DatabaseContext);
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT t, ${IndicatorColor.map((item) => item.key).join(
+    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map(
+      (item) => item.key
+    ).join(
       ","
-    )} FROM daily_skills WHERE ${stock_id} = stock_id AND t <= '${t}' ORDER BY t DESC LIMIT ${daily_count}`;
+    )} FROM daily_skills JOIN daily_deal ON daily_skills.t = daily_deal.t AND daily_skills.stock_id = daily_deal.stock_id WHERE ${stock_id} = daily_skills.stock_id AND daily_skills.t <= '${t}' ORDER BY daily_skills.t DESC LIMIT ${daily_count}`;
 
     if (!db) return;
 
@@ -45,7 +57,7 @@ const DailyUltraTinyLineChart = ({ stock_id, t }: { stock_id: string; t: string 
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         {/* <ResponsiveContainer > */}
-        <LineChart data={data} width={80} height={40}>
+        <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           {IndicatorColor.map((item, index) => (
             <Line

@@ -2,8 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import ChartTooltip from "./ChartTooltip";
 import { IndicatorColorType } from "../types";
+import ChartTooltip from "./ChartTooltip";
 import { weekly_count } from "./config";
 
 const IndicatorColor: IndicatorColorType[] = [
@@ -44,13 +44,9 @@ const WeeklyObvLineChart = ({
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
-        <LineChart data={data} width={80} height={40}>
+        <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
-          <ReferenceLine
-            y={0}
-            stroke="#d89584"
-            strokeDasharray="3 3"
-          />
+          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}

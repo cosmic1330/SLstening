@@ -5,11 +5,15 @@ import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
 import useScroll from "../../hooks/useScroll";
+import { TaType } from "../../types";
+import generateDealDataDownloadUrl, {
+  UrlTaPerdOptions,
+  UrlType,
+} from "../../utils/generateDealDataDownloadUrl";
 import Close from "./Close";
 import EMAMA from "./EMAMA";
 import Ma from "./Ma";
 import Obv from "./Obv";
-import { TaType } from "../../types";
 
 const components = [<Ma />, <Close />, <EMAMA />, <Obv />];
 function Detail() {
@@ -31,7 +35,11 @@ function Detail() {
   const currentChart = useScroll(components.length);
 
   const { data } = useSWR(
-    `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
+    generateDealDataDownloadUrl({
+      type: UrlType.Ta,
+      id: id || "",
+      perd: UrlTaPerdOptions.Day,
+    }),
     tauriFetcher
   );
 

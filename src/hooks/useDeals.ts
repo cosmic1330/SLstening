@@ -2,14 +2,25 @@ import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import { TaType, TickDealsType } from "../types";
+import generateDealDataDownloadUrl, {
+  UrlTaPerdOptions,
+  UrlType,
+} from "../utils/generateDealDataDownloadUrl";
 
 export default function useDeals(id: string) {
   const { data: tickData, mutate: mutateTickDeals } = useSWR(
-    `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;autoRefresh=1743127325614;symbols=%5B%22${id}.TW%22%5D;type=tick?bkt=TW-Stock-Desktop-NewTechCharts-Rampup&device=desktop&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=2k1gakljuc07h&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511&returnMeta=true`,
+    generateDealDataDownloadUrl({
+      type: UrlType.Tick,
+      id,
+    }),
     tauriFetcher
   );
   const { data: dailyData, mutate: mutateDailyDeals } = useSWR(
-    `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${id}&v=1&callback=`,
+    generateDealDataDownloadUrl({
+      type: UrlType.Ta,
+      id,
+      perd: UrlTaPerdOptions.Day,
+    }),
     tauriFetcher
   );
 
@@ -43,7 +54,7 @@ export default function useDeals(id: string) {
   const tickDeals = useMemo(() => {
     try {
       if (!tickData) throw new Error("tickData is null");
-      const { data } = JSON.parse(tickData);
+      const data = JSON.parse(tickData);
       const closes = data[0].chart.indicators.quote[0].close.filter(
         (item: number | null) => item !== null
       );
@@ -71,6 +82,7 @@ export default function useDeals(id: string) {
       };
       return res;
     } catch (e) {
+      console.log("Error parsing tickData:", e);
       return null;
     }
   }, [tickData]);

@@ -9,12 +9,12 @@ export default function UpdateDeals() {
 
   const handleClick = useCallback(async () => {
     if (status === Status.Idle) {
-      sessionStorage.removeItem("stop");
+      sessionStorage.removeItem("schoice:update:stop");
       update();
     } else if (status === Status.Download) {
       stop();
     } else if (status === Status.SaveDB) {
-      sessionStorage.setItem("stop", "true");
+      sessionStorage.setItem("schoice:update:stop", "true");
     }
   }, [status, update, stop]);
 

@@ -34,7 +34,7 @@ export class StockHourlyQueryBuilder {
 
   // 新增靜態選項
   static readonly options = {
-    hours: ["最新", "1小時前", "2小時前", "3小時前", "4小時前", "5小時前", "自定義數值"],
+    hours: ["現在", "1小時前", "2小時前", "3小時前", "4小時前", "5小時前", "自定義數值"],
     indicators: [
       "收盤價",
       "開盤價",
@@ -69,12 +69,12 @@ export class StockHourlyQueryBuilder {
 
   private converthourToNumber(hour: string): number {
     const hourMapping: Record<string, number> = {
-      今天: 0,
-      昨天: 1,
-      前天: 2,
-      "3天前": 3,
-      "4天前": 4,
-      "5天前": 5,
+      現在: 0,
+      "1小時前": 1,
+      "2小時前": 2,
+      "3小時前": 3,
+      "4小時前": 4,
+      "5小時前": 5,
     };
     return hourMapping[hour] || 0;
   }

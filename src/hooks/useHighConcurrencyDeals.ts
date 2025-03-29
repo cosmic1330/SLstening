@@ -13,8 +13,12 @@ import StockDataManager from "../classes/StockDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useSchoiceStore from "../store/Schoice.store";
 import useStocksStore from "../store/Stock.store";
-import useDownloadStocks from "./useDownloadStocks";
 import { StockStoreType, TaType } from "../types";
+import generateDealDataDownloadUrl, {
+  UrlTaPerdOptions,
+  UrlType,
+} from "../utils/generateDealDataDownloadUrl";
+import useDownloadStocks from "./useDownloadStocks";
 
 export enum Status {
   Download = "Download",
@@ -38,7 +42,11 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     async (signal: AbortSignal, stock: StockStoreType) => {
       try {
         const response = await fetch(
-          `https://tw.quote.finance.yahoo.net/quote/q?type=ta&perd=d&mkt=10&sym=${stock.id}&v=1&callback=`,
+          generateDealDataDownloadUrl({
+            type: UrlType.Ta,
+            id: stock.id,
+            perd: UrlTaPerdOptions.Day,
+          }),
           { method: "GET", signal }
         );
         if (!response.ok) {
@@ -56,10 +64,9 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         return { ta, stock };
       } catch (error: any) {
         if (error?.message?.indexOf("Request canceled") == -1) {
-          setErrorCount((prev) => prev + 1); // 記錄失敗數量
           throw error;
         } else {
-          throw new Error("User stop");
+          throw new Error("Cancel");
         }
       }
     },
@@ -101,11 +108,16 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       }
 
       const result = await Promise.all(
-        menu.map((stock) => limit(() => wrappedFetch(signal, stock)))
+        menu.map((stock) => {
+          const res = limit(() => wrappedFetch(signal, stock));
+          setCount((prev) => prev + 1);
+          return res;
+        })
       ).catch((error) => {
-        if (error?.message === "User stop") {
-          throw new Error("User stop");
+        if (error?.message === "Cancel") {
+          throw new Error("Cancel");
         }
+        setErrorCount((prev) => prev + 1); // 記錄失敗數量
       });
 
       if (!result) return;
@@ -116,15 +128,14 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       for (let i = 0; i < result.length; i++) {
         if (!result[i]) break;
         const { ta, stock } = result[i];
-        if (sessionStorage.getItem("stop") === "true") {
-          sessionStorage.removeItem("stop");
-          throw new Error("User stop");
+        if (sessionStorage.getItem("schoice:update:stop") === "true") {
+          sessionStorage.removeItem("schoice:update:stop");
+          throw new Error("Cancel");
         }
         const stockDataManager = new StockDataManager(ta, db, stock);
         await stockDataManager.saveStockTable();
         await stockDataManager.dailyProcessor();
         await stockDataManager.weeklyProcessor();
-        setCount((prev) => prev + 1);
         record++;
       }
 
@@ -141,7 +152,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         });
       }
     } catch (error) {
-      if ((error as Error)?.message !== "User stop") {
+      if ((error as Error)?.message !== "Cancel") {
         console.log("Failed:" + (error as Error)?.message);
       }
     }

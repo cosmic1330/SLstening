@@ -1,4 +1,5 @@
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -8,8 +9,9 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
-import Summary from "./Summary";
+import useSchoiceStore from "../../../../../store/Schoice.store";
 import { Prompts, PromptType } from "../../../../../types";
+import Summary from "./Summary";
 
 export default function RuleContent({
   select,
@@ -24,6 +26,7 @@ export default function RuleContent({
     type: PromptType;
   };
 }) {
+  const { remove, reload, clearSeleted } = useSchoiceStore();
   const navigate = useNavigate();
 
   const handleCopy = async () => {
@@ -42,6 +45,12 @@ export default function RuleContent({
     }
   };
 
+  const handleDelete = () => {
+    clearSeleted();
+    remove(select.id, select.type);
+    reload();
+  };
+
   return (
     <Stack spacing={2} alignItems="flex-start">
       <Typography variant="h4">{select && select.name}</Typography>
@@ -56,8 +65,13 @@ export default function RuleContent({
             <ContentPasteGoRoundedIcon />
           </IconButton>
         </Tooltip>
+        <Tooltip title="刪除策略條件">
+          <IconButton onClick={handleDelete}>
+            <DeleteRoundedIcon fontSize="medium" />
+          </IconButton>
+        </Tooltip>
       </Stack>
-      
+
       <Summary select={select} />
     </Stack>
   );

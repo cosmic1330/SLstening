@@ -5,6 +5,7 @@ import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
 import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { Prompts, PromptType } from "../../../../../../types";
+import { Box, Typography } from "@mui/material";
 
 export default function Result({
   select,
@@ -117,5 +118,8 @@ export default function Result({
     run();
   }, [run]);
 
-  return result ? <ResultTable {...{ result }} /> : "讀取中...";
+  return result ? <Box>
+    <Typography variant="subtitle2" sx={{ mb: 2 }}>符合策略結果共 {result.length} 筆</Typography>
+    <ResultTable {...{ result }} />
+  </Box> : "讀取中...";
 }

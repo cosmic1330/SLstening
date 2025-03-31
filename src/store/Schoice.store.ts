@@ -52,6 +52,7 @@ interface SchoiceState {
   remove: (name: string, type: PromptType) => void;
   reload: () => void;
   clear: () => void;
+  clearSeleted: () => void;
   selectObj: (id: string, type: PromptType) => void;
   changeTodayDate: (date: number) => void;
 }
@@ -209,6 +210,9 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     await store.delete("bears");
     await store.save();
     set({ bulls: {}, bears: {} });
+  },
+  clearSeleted: () => {
+    set({ select: null });
   },
   selectObj: (id: string, type: PromptType) => {
     switch (type) {

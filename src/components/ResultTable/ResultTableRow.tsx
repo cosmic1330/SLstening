@@ -7,6 +7,7 @@ import TableRow from "@mui/material/TableRow";
 import { emit } from "@tauri-apps/api/event";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { open } from "@tauri-apps/plugin-shell";
+import { forwardRef } from "react";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
 import DailyBollLineChart from "./Charts/DailyBollLineChart";
@@ -15,15 +16,18 @@ import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import RowChart from "./RowChart";
 import { ActionButtonType } from "./types";
 
-export default function ResultTableRow({
-  row,
-  index,
-  type,
-}: {
-  row: any;
-  index: number;
-  type: ActionButtonType;
-}) {
+export default forwardRef(function ResultTableRow(
+  {
+    row,
+    index,
+    type,
+  }: {
+    row: any;
+    index: number;
+    type: ActionButtonType;
+  },
+  ref: React.Ref<HTMLTableRowElement>
+) {
   const { increase, reload, remove } = useStocksStore();
   const { openDetailWindow } = useDetailWebviewWindow({
     id: row.stock_id,
@@ -57,7 +61,7 @@ export default function ResultTableRow({
   };
 
   return (
-    <TableRow hover role="checkbox" tabIndex={-1}>
+    <TableRow hover role="checkbox" tabIndex={-1} ref={ref}>
       <TableCell key={row + index}>{index + 1}.</TableCell>
       <TableCell key={row + row.t}>{row.t}</TableCell>
       <TableCell key={row + row.stock_id}>{row.stock_id}</TableCell>
@@ -127,4 +131,4 @@ export default function ResultTableRow({
       </TableCell>
     </TableRow>
   );
-}
+});

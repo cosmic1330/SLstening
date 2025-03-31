@@ -187,6 +187,7 @@ function ExpressionGenerator({
           <TextField
             name="indicator2"
             type="number"
+            defaultValue={0}
             onChange={handleCustomChange}
             value={selects.indicator2}
           />

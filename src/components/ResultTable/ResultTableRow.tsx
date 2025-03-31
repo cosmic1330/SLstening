@@ -15,6 +15,7 @@ import HourlyUltraTinyLineChart from "./Charts/HourlyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import RowChart from "./RowChart";
 import { ActionButtonType } from "./types";
+import { toast } from "react-toastify";
 
 export default forwardRef(function ResultTableRow(
   {
@@ -44,20 +45,14 @@ export default forwardRef(function ResultTableRow(
       type: row.market_type,
     });
     await emit("stock-added", { stockNumber: row.stock_id });
-    sendNotification({
-      title: "SListening List",
-      body: `Add ${row.name} Success!`,
-    });
+    toast.success(`Add ${row.name} Success!`)
   };
 
   const handleRemoveToWatchList = async () => {
     await reload();
     await remove(row.stock_id);
     await emit("stock-removed", { stockNumber: row.stock_id });
-    await sendNotification({
-      title: "SListening List",
-      body: `Remove ${row.name} Success!`,
-    });
+    toast.success(`Remove ${row.name} Success!`)
   };
 
   return (

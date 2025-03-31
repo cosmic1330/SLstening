@@ -22,6 +22,12 @@ export default function Process({
         {`下載中 ${persent}%`}
       </Typography>
     );
+    else if (status === Status.Validating)
+      return (
+        <Typography variant="body1" color="text.secondary">
+          {`驗證中`}
+        </Typography>
+      );
   else
     return (
       <Typography variant="body2" color="text.secondary">

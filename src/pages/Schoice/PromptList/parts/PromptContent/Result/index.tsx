@@ -1,11 +1,14 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import { Box, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
+import { stockHourlyQueryBuilder } from "../../../../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../../../../classes/StockWeeklyQueryBuilder";
+import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
-import ResultTable from "../../../../../../components/ResultTable/ResultTable";
-import { Prompts, PromptType } from "../../../../../../types";
-import { Box, Typography } from "@mui/material";
+import { PromptType, PromptValue } from "../../../../../../types";
 
 export default function Result({
   select,
@@ -13,10 +16,7 @@ export default function Result({
   select: {
     id: string;
     name: string;
-    value: {
-      daily: Prompts;
-      weekly: Prompts;
-    };
+    value: PromptValue;
     type: PromptType;
   };
 }) {
@@ -63,9 +63,36 @@ export default function Result({
     [query]
   );
 
+  const getHourDates = useCallback(
+    async (date: string) => {
+      try {
+        const num = dateFormat(date, Mode.StringToNumber) * 10000 + 1400;
+        // 取得明天的timestamp
+        const queryHourDate = `
+        SELECT DISTINCT ts
+        FROM hourly_deal
+        WHERE ts <= ${num}
+        ORDER BY ts DESC
+        LIMIT 24;
+      `;
+        const hourlyDates: { ts: number }[] | undefined = await query(
+          queryHourDate
+        );
+        return hourlyDates || [];
+      } catch (error) {
+        return [];
+      }
+    },
+    [query]
+  );
+
   const run = useCallback(async () => {
     if (!select) return;
-    if (select.value.daily.length === 0 && select.value.weekly.length === 0) {
+    if (
+      select.value.daily.length === 0 &&
+      select.value.weekly.length === 0 &&
+      select.value.hourly.length === 0
+    ) {
       setResult([]);
       return;
     }
@@ -98,8 +125,24 @@ export default function Result({
         weeklySQL = sqlWeeklyQuery;
       }
     }
+
+    let hourlySQL = "";
+    if (select.value.hourly?.length > 0) {
+      const customHourlyConditions = select.value.hourly.map((prompt) =>
+        stockHourlyQueryBuilder.generateExpression(prompt).join(" ")
+      );
+      const hourlyDateResults = await getHourDates(dates[todayDate]);
+      if (hourlyDateResults) {
+        const sqlHourlyQuery = stockHourlyQueryBuilder.generateSqlQuery({
+          conditions: customHourlyConditions,
+          dates: hourlyDateResults.map((result) => result.ts),
+        });
+        hourlySQL = sqlHourlyQuery;
+      }
+    }
+
     // 合併查詢
-    const combinedSQL = [dailySQL, weeklySQL]
+    const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
       .filter((sql) => sql)
       .join("\nINTERSECT\n");
     query(combinedSQL).then((res: { stock_id: string }[] | undefined) => {
@@ -118,8 +161,14 @@ export default function Result({
     run();
   }, [run]);
 
-  return result ? <Box>
-    <Typography variant="subtitle2" sx={{ mb: 2 }}>符合策略結果共 {result.length} 筆</Typography>
-    <ResultTable {...{ result }} />
-  </Box> : "讀取中...";
+  return result ? (
+    <Box width="100%">
+      <Typography variant="subtitle2" sx={{ mb: 2 }}>
+        符合策略結果共 {result.length} 筆
+      </Typography>
+      <ResultTable {...{ result }} />
+    </Box>
+  ) : (
+    "讀取中..."
+  );
 }

@@ -10,8 +10,8 @@ import { open } from "@tauri-apps/plugin-shell";
 import { forwardRef } from "react";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
-import DailyBollLineChart from "./Charts/DailyBollLineChart";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
+import HourlyUltraTinyLineChart from "./Charts/HourlyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import RowChart from "./RowChart";
 import { ActionButtonType } from "./types";
@@ -62,20 +62,21 @@ export default forwardRef(function ResultTableRow(
 
   return (
     <TableRow hover role="checkbox" tabIndex={-1} ref={ref}>
-      <TableCell key={row + index}>{index + 1}.</TableCell>
-      <TableCell key={row + row.t}>{row.t}</TableCell>
-      <TableCell key={row + row.stock_id}>{row.stock_id}</TableCell>
-      <TableCell key={row + row.name}>{row.name}</TableCell>
-      <TableCell key={row + row.c}>{row.c}</TableCell>
+      <TableCell key={index}>{index + 1}.</TableCell>
+      <TableCell key={row.t}>{row.t}</TableCell>
+      <TableCell key={row.stock_id}>{row.stock_id}</TableCell>
+      <TableCell key={row.name}>{row.name}</TableCell>
+      <TableCell key={row.c}>{row.c}</TableCell>
+      <TableCell>
+        <HourlyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
+      </TableCell>
       <TableCell>
         <DailyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
       <TableCell>
         <WeeklyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
       </TableCell>
-      <TableCell>
-        <DailyBollLineChart stock_id={row.stock_id} t={row.t} />
-      </TableCell>
+
       <TableCell>
         <RowChart row={row} />
       </TableCell>

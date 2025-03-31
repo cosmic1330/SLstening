@@ -10,7 +10,7 @@ import {
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
 import useSchoiceStore from "../../../../../store/Schoice.store";
-import { Prompts, PromptType } from "../../../../../types";
+import { PromptType, PromptValue } from "../../../../../types";
 import Summary from "./Summary";
 
 export default function RuleContent({
@@ -19,10 +19,7 @@ export default function RuleContent({
   select: {
     id: string;
     name: string;
-    value: {
-      daily: Prompts;
-      weekly: Prompts;
-    };
+    value: PromptValue;
     type: PromptType;
   };
 }) {
@@ -52,7 +49,7 @@ export default function RuleContent({
   };
 
   return (
-    <Stack spacing={2} alignItems="flex-start">
+    <Stack spacing={2} alignItems="flex-start" width={"100%"}>
       <Typography variant="h4">{select && select.name}</Typography>
       <Stack direction="row" spacing={2}>
         <Tooltip title="修改策略條件">

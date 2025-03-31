@@ -17,6 +17,8 @@ import {
   SkillsTableOptions,
   StockStoreType,
   TaType,
+  TimeSharingDealTableOptions,
+  TimeSharingSkillsTableOptions,
 } from "../types";
 import generateDealDataDownloadUrl, {
   UrlTaPerdOptions,
@@ -27,6 +29,7 @@ import useDownloadStocks from "./useDownloadStocks";
 export enum Status {
   Download = "Download",
   SaveDB = "SaveDB",
+  Validating = "Validating",
   Idle = "Idle",
 }
 
@@ -83,8 +86,9 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       try {
         const daily = await getTaFetch(signal, stock, UrlTaPerdOptions.Day);
         const weekly = await getTaFetch(signal, stock, UrlTaPerdOptions.Week);
+        const hourly = await getTaFetch(signal, stock, UrlTaPerdOptions.Hour);
         setCompleted((prev) => prev + 1);
-        return { daily, weekly, stock };
+        return { daily, weekly, hourly, stock };
       } catch (error) {
         setCompleted((prev) => prev + 1);
         if ((error as Error)?.message === "Cancel") {
@@ -131,11 +135,12 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         if (error?.message === "Cancel") {
           throw new Error("Cancel");
         }
+        console.log(error);
       });
       if (!result) return;
 
       //開始寫入資料庫
-      const promiseList = [];
+      const promiseList: Promise<unknown>[] = [];
       setStatus(Status.SaveDB);
       changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
@@ -150,49 +155,51 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
 
       for (let i = 0; i < result.length; i++) {
         const data = result[i];
-        if (!data) break;
-        const { daily, weekly, stock } = data;
+        if (!data || data.daily.length === 0 || data.weekly.length === 0) break;
         if (sessionStorage.getItem("schoice:update:stop") === "true") {
           sessionStorage.removeItem("schoice:update:stop");
           throw new Error("Cancel");
         }
 
         // case 1-2: 直接Insert Sqlite
-        await sqliteDataManager.saveStockTable(stock);
+        await sqliteDataManager.saveStockTable(data.stock);
         promiseList.push(
-          sqliteDataManager.processor(daily, stock, {
+          sqliteDataManager.timeSharingProcessor(data.hourly, data.stock,{
+            dealType: TimeSharingDealTableOptions.HourlyDeal,
+            skillsType: TimeSharingSkillsTableOptions.HourlySkills,
+          }),
+          sqliteDataManager.processor(data.daily, data.stock, {
             dealType: DealTableOptions.DailyDeal,
             skillsType: SkillsTableOptions.DailySkills,
           }),
-          sqliteDataManager.processor(weekly, stock, {
+          sqliteDataManager.processor(data.weekly, data.stock, {
             dealType: DealTableOptions.WeeklyDeal,
             skillsType: SkillsTableOptions.WeeklySkills,
           })
           // 手動產生週資料
-          // stockDataManager.weeklyProcessorByDailyData(daily, stock)
+          // sqliteDataManager.weeklyProcessorByDailyData(data.daily, data.stock)
         );
-
 
         // case 2-2:  轉換為 CSV 資料
         // promiseList.push(
         //   csvDataManager.gererateDealCsvDataByTa(
-        //     daily,
-        //     stock,
+        //     data.daily,
+        //     data.stock,
         //     DealTableOptions.DailyDeal
         //   ),
         //   csvDataManager.gererateDealCsvDataByTa(
-        //     weekly,
-        //     stock,
+        //     data.weekly,
+        //     data.stock,
         //     DealTableOptions.WeeklyDeal
         //   ),
         //   csvDataManager.gererateSkillsCsvDataByTa(
-        //     daily,
-        //     stock,
+        //     data.daily,
+        //     data.stock,
         //     SkillsTableOptions.DailySkills
         //   ),
         //   csvDataManager.gererateSkillsCsvDataByTa(
-        //     weekly,
-        //     stock,
+        //     data.weekly,
+        //     data.stock,
         //     SkillsTableOptions.WeeklySkills
         //   ),
         // );
@@ -201,7 +208,8 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         changeDataCount(record);
       }
 
-      await Promise.all(promiseList);
+      setStatus(Status.Validating);
+      await Promise.allSettled(promiseList);
       // case 2-3: 透過 Rust 產生 CSV 檔案
       // invoke("create_csv_from_json", {
       //   jsonData: JSON.stringify(csvDataManager.dailydeal),

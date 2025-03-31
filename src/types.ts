@@ -25,12 +25,15 @@ export type StorePrompt = {
 
 export type Prompts = StorePrompt[];
 
+export type PromptValue = {
+  daily: Prompts;
+  weekly: Prompts;
+  hourly: Prompts;
+}
+
 export type PromptItem = {
   name: string;
-  value: {
-    daily: Prompts;
-    weekly: Prompts;
-  };
+  value: PromptValue;
 };
 
 export type PromptsMap = {

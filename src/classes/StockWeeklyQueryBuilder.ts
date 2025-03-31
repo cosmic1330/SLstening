@@ -64,7 +64,7 @@ export class StockWeeklyQueryBuilder {
       "obv",
       "obv5",
     ],
-    operators: ["小於", "大於", "等於", "大於等於", "小於等於"],
+    operators: ["大於", "小於", "等於", "大於等於", "小於等於"],
   } as const;
 
   private convertDayToNumber(day: string): number {

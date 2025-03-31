@@ -15,9 +15,9 @@ const columns = [
   "代碼",
   "名稱",
   "收盤價",
+  "小時趨勢圖",
   "日趨勢圖",
   "週趨勢圖",
-  "日布林軌道",
   <SelectChartHead />,
   "Action",
 ];
@@ -67,7 +67,6 @@ export default function ResultTable({
             {result.slice(0, visibleCount).map((row, index) => {
               const isLastItem = index === visibleCount - 1;
               return (
-                <>
                 <ResultTableRow
                   key={index}
                   row={row}
@@ -75,7 +74,6 @@ export default function ResultTable({
                   type={type}
                   ref={isLastItem ? lastItemRef : null} // 綁定最後一個 row
                 />
-                </>
               );
             })}
           </TableBody>

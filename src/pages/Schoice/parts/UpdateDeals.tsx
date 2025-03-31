@@ -22,16 +22,18 @@ export default function UpdateDeals() {
   return (
     <Stack alignItems="end">
       {status !== Status.Idle && <Process persent={persent} status={status} />}
-      <Button
-        fullWidth
-        variant="outlined"
-        onClick={handleClick}
-        color={status === Status.Idle ? "primary" : "error"}
-      >
-        {status === Status.Download || status === Status.SaveDB
-          ? ` 取消`
-          : "Update"}
-      </Button>
+      {status !== Status.Validating && (
+        <Button
+          fullWidth
+          variant="outlined"
+          onClick={handleClick}
+          color={status === Status.Idle ? "primary" : "error"}
+        >
+          {status === Status.Download || status === Status.SaveDB
+            ? ` 取消`
+            : "Update"}
+        </Button>
+      )}
     </Stack>
   );
 }

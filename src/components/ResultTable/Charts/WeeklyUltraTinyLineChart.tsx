@@ -9,11 +9,11 @@ import { weekly_count } from "./config";
 const IndicatorColor: IndicatorColorType[] = [
   {
     key: "c",
-    color: "#bfd915",
+    color: "#589bf3",
   },
   {
     key: "ma5",
-    color: "#589bf3",
+    color: "#f3586a",
   },
   {
     key: "ma10",

@@ -1,6 +1,5 @@
 import { QueryBuilderMappingItem, StorePrompt } from "../types";
 
-
 export class StockHourlyQueryBuilder {
   private mapping: Record<string, QueryBuilderMappingItem> = {
     收盤價: { key: "c", group: "_hour_ago" },
@@ -34,7 +33,15 @@ export class StockHourlyQueryBuilder {
 
   // 新增靜態選項
   static readonly options = {
-    hours: ["現在", "1小時前", "2小時前", "3小時前", "4小時前", "5小時前", "自定義數值"],
+    hours: [
+      "現在",
+      "1小時前",
+      "2小時前",
+      "3小時前",
+      "4小時前",
+      "5小時前",
+      "自定義數值",
+    ],
     indicators: [
       "收盤價",
       "開盤價",
@@ -64,7 +71,7 @@ export class StockHourlyQueryBuilder {
       "obv",
       "obv5",
     ],
-    operators: ["小於", "大於", "等於", "大於等於", "小於等於"],
+    operators: ["大於", "小於", "等於", "大於等於", "小於等於"],
   } as const;
 
   private converthourToNumber(hour: string): number {
@@ -112,43 +119,46 @@ export class StockHourlyQueryBuilder {
   }
 
   public generateSqlQuery({
-    tohourDate,
     conditions,
     dates,
     hoursRange = 4,
     stockIds,
   }: {
-    tohourDate: number;
     conditions: string[];
-    dates: string[];
+    dates: number[];
     hoursRange?: number;
     stockIds?: string[];
   }): string {
     const hourJoins = Array.from({ length: hoursRange }, (_, i) => i + 1)
       .map(
         (number) => `
-          JOIN hourly_deal "${number}_hour_ago" ON "0_hour_ago".stock_id = "${number}_hour_ago".stock_id AND "${number}_hour_ago".t = "${dates[number + tohourDate]}"
-          JOIN hourly_skills "${number}_hour_ago_sk" ON "0_hour_ago".stock_id = "${number}_hour_ago_sk".stock_id AND "${number}_hour_ago_sk".t = "${dates[number + tohourDate]}"
+          JOIN hourly_deal "${number}_hour_ago" ON "0_hour_ago".stock_id = "${number}_hour_ago".stock_id AND "${number}_hour_ago".ts = "${
+          dates[number]
+        }"
+          JOIN hourly_skills "${number}_hour_ago_sk" ON "0_hour_ago".stock_id = "${number}_hour_ago_sk".stock_id AND "${number}_hour_ago_sk".ts = "${
+          dates[number]
+        }"
         `
       )
       .join("");
 
-
-    const stockIdCondition = stockIds 
+    const stockIdCondition = stockIds
       ? ` AND "0_hour_ago".stock_id IN ('${stockIds.join("','")}')`
-      : '';
+      : "";
 
     const query = `
       SELECT "0_hour_ago".stock_id as stock_id
       FROM hourly_deal "0_hour_ago"
       JOIN stock ON "0_hour_ago".stock_id = stock.id
-      JOIN hourly_skills "0_hour_ago_sk" ON "0_hour_ago".stock_id = "0_hour_ago_sk".stock_id AND "0_hour_ago".t = "0_hour_ago_sk".t
+      JOIN hourly_skills "0_hour_ago_sk" ON "0_hour_ago".stock_id = "0_hour_ago_sk".stock_id AND "0_hour_ago".ts = "0_hour_ago_sk".ts
       ${hourJoins}
-      WHERE "0_hour_ago".t = "${dates[tohourDate]}" ${stockIdCondition} AND ${conditions.join(" AND ")}
+      WHERE "0_hour_ago".ts = "${
+        dates[0]
+      }" ${stockIdCondition} AND ${conditions.join(" AND ")}
     `;
 
     return query.trim();
   }
 }
 
-export const stockhourlyQueryBuilder = new StockHourlyQueryBuilder(); 
+export const stockHourlyQueryBuilder = new StockHourlyQueryBuilder();

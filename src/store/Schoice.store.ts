@@ -1,13 +1,15 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-import { Prompts, PromptsMap, PromptType } from "../types";
+import { PromptsMap, PromptType, PromptValue } from "../types";
 
 export enum ChartType {
+  HOURLY_KD = "小時KD",
   DAILY_OBV = "日OBV",
   DAILY_KD = "日KD",
   DAILY_RSI = "日RSI",
   DAILY_OSC = "日OSC",
+  DAILY_BOLL = "日BOLL",
   WEEKLY_KD = "週KD",
   WEEKLY_OBV = "週OBV",
   WEEKLY_RSI = "週RSI",
@@ -24,10 +26,7 @@ interface SchoiceState {
   select: {
     id: string;
     name: string;
-    value: {
-      daily: Prompts;
-      weekly: Prompts;
-    };
+    value: PromptValue;
     type: PromptType;
   } | null;
   theme: string;
@@ -40,13 +39,13 @@ interface SchoiceState {
   changeUsing: (type: PromptType) => void;
   increase: (
     name: string,
-    prompts: { daily: Prompts; weekly: Prompts },
+    prompts: PromptValue,
     type: PromptType
   ) => Promise<string | undefined>;
   edit: (
     id: string,
     name: string,
-    prompts: { daily: Prompts; weekly: Prompts },
+    prompts: PromptValue,
     type: PromptType
   ) => void;
   remove: (name: string, type: PromptType) => void;
@@ -86,11 +85,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   changeUsing: (type: PromptType) => {
     set({ using: type });
   },
-  increase: async (
-    name: string,
-    prompts: { daily: Prompts; weekly: Prompts },
-    type: PromptType
-  ) => {
+  increase: async (name: string, prompts: PromptValue, type: PromptType) => {
     const store = await Store.load("schoice.json");
     const id = nanoid();
     switch (type) {
@@ -129,7 +124,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   edit: async (
     id: string,
     name: string,
-    prompts: { daily: Prompts; weekly: Prompts },
+    prompts: PromptValue,
     type: PromptType
   ) => {
     const store = await Store.load("schoice.json");

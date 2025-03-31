@@ -43,7 +43,7 @@ const HourlyUltraTinyLineChart = ({
   useEffect(() => {
     if (!stock_id) return;
     const sqlQuery = `SELECT hourly_skills.ts, ${IndicatorColor.map(
-      (item) => item.key
+      (item) => `NULLIF(${item.key}, 0) AS ${item.key}`
     ).join(
       ","
     )} FROM hourly_skills JOIN hourly_deal ON hourly_skills.ts = hourly_deal.ts AND hourly_skills.stock_id = hourly_deal.stock_id WHERE ${stock_id} = hourly_skills.stock_id AND hourly_skills.ts <= '${
@@ -57,6 +57,7 @@ const HourlyUltraTinyLineChart = ({
       setData(formatData);
     });
   }, [stock_id]);
+
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>

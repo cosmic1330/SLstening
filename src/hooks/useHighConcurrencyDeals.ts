@@ -1,13 +1,9 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { fetch } from "@tauri-apps/plugin-http";
-import {
-  isPermissionGranted,
-  requestPermission,
-  sendNotification,
-} from "@tauri-apps/plugin-notification";
 import pLimit from "p-limit";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import SqliteDataManager from "../classes/SqliteDataManager";
 import { DatabaseContext } from "../context/DatabaseContext";
 import useSchoiceStore from "../store/Schoice.store";
@@ -87,14 +83,14 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         const daily = await getTaFetch(signal, stock, UrlTaPerdOptions.Day);
         const weekly = await getTaFetch(signal, stock, UrlTaPerdOptions.Week);
         const hourly = await getTaFetch(signal, stock, UrlTaPerdOptions.Hour);
-        setCompleted((prev) => prev + 1);
         return { daily, weekly, hourly, stock };
       } catch (error) {
-        setCompleted((prev) => prev + 1);
         if ((error as Error)?.message === "Cancel") {
           throw new Error("Cancel");
         }
         return null;
+      } finally {
+        setCompleted((prev) => prev + 1);
       }
     },
     [getTaFetch]
@@ -164,7 +160,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         // case 1-2: 直接Insert Sqlite
         await sqliteDataManager.saveStockTable(data.stock);
         promiseList.push(
-          sqliteDataManager.timeSharingProcessor(data.hourly, data.stock,{
+          sqliteDataManager.timeSharingProcessor(data.hourly, data.stock, {
             dealType: TimeSharingDealTableOptions.HourlyDeal,
             skillsType: TimeSharingSkillsTableOptions.HourlySkills,
           }),
@@ -205,7 +201,8 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         // );
 
         record++;
-        changeDataCount(record);
+        if (record % 10 === 0 || record === result.length)
+          changeDataCount(record);
       }
 
       setStatus(Status.Validating);
@@ -233,23 +230,14 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       // });
 
       // 通知使用者更新完成
-      let permissionGranted = await isPermissionGranted();
-      if (!permissionGranted) {
-        const permission = await requestPermission();
-        permissionGranted = permission === "granted";
-      }
-      if (permissionGranted) {
-        sendNotification({
-          title: "Update Deals & Skills",
-          body: `Update Success ! 🎉 `,
-        });
-      }
+      toast.success("Update Success ! 🎉");
     } catch (error) {
       if ((error as Error)?.message !== "Cancel") {
         console.log("Failed:" + (error as Error)?.message);
       }
+    } finally {
+      setStatus(Status.Idle);
     }
-    setStatus(Status.Idle);
   }, [db, wrappedFetch, menu, status]);
 
   const update = useCallback(() => {

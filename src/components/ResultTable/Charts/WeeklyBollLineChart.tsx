@@ -41,7 +41,7 @@ const WeeklyBollLineChart = ({
   useEffect(() => {
     if (!stock_id) return;
     const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
-      (item) => item.key
+      (item) => `NULLIF(${item.key}, 0) AS ${item.key}`
     ).join(
       ","
     )} FROM weekly_skills JOIN weekly_deal ON weekly_skills.t = weekly_deal.t AND weekly_skills.stock_id = weekly_deal.stock_id WHERE weekly_skills.stock_id = ${stock_id} AND weekly_skills.t <= '${t}' ORDER BY weekly_skills.t DESC LIMIT ${weekly_count}`;

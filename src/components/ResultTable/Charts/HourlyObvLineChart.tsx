@@ -5,9 +5,9 @@ import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
-import { hourly_count, KdIndicatorColor } from "./config";
+import { hourly_count, ObvIndicatorColor } from "./config";
 
-const HourlyKdLineChart = ({
+const HourlyObvLineChart = ({
   stock_id,
   t,
 }: {
@@ -18,7 +18,7 @@ const HourlyKdLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT hourly_skills.ts, ${KdIndicatorColor.map(
+    const sqlQuery = `SELECT hourly_skills.ts, ${ObvIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
@@ -34,13 +34,13 @@ const HourlyKdLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={KdIndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={ObvIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
-          <YAxis domain={[0, 100]} hide />
-          <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
-          <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />
-          {KdIndicatorColor.map((item, index) => (
+          <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="obv" />
+          <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="close" />
+          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" yAxisId="obv"/>
+          {ObvIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"
@@ -48,6 +48,7 @@ const HourlyKdLineChart = ({
               stroke={item.color}
               strokeWidth={1.5}
               dot={false}
+              yAxisId={item.key === "c" ? "close" : "obv"}
             />
           ))}
         </LineChart>
@@ -56,4 +57,4 @@ const HourlyKdLineChart = ({
   );
 };
 
-export default HourlyKdLineChart;
+export default HourlyObvLineChart;

@@ -1,11 +1,13 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
-import { daily_count, OscIndicatorColor } from "./config";
+import { hourly_count, OscIndicatorColor } from "./config";
 
-const DailyOscLineChart = ({
+const HourlyOscLineChart = ({
   stock_id,
   t,
 }: {
@@ -16,11 +18,14 @@ const DailyOscLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT daily_skills.t, ${OscIndicatorColor.map(
+    const sqlQuery = `SELECT hourly_skills.ts, ${OscIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
-    )} FROM daily_skills JOIN daily_deal ON daily_skills.t = daily_deal.t AND daily_skills.stock_id = daily_deal.stock_id WHERE daily_skills.stock_id = ${stock_id} AND daily_skills.t <= '${t}' ORDER BY daily_skills.t DESC LIMIT ${daily_count}`;
+    )} FROM hourly_skills JOIN hourly_deal ON hourly_skills.ts = hourly_deal.ts AND hourly_skills.stock_id = hourly_deal.stock_id WHERE ${stock_id} = hourly_skills.stock_id AND hourly_skills.ts <= '${
+      dateFormat(t, Mode.StringToNumber) * 10000 + 1400
+    }' ORDER BY hourly_skills.ts DESC LIMIT ${hourly_count}`;
+
     if (!db) return;
 
     db?.select(sqlQuery).then((res: any) => {
@@ -33,7 +38,12 @@ const DailyOscLineChart = ({
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
-          <ReferenceLine y={0} stroke="#ff7300" strokeDasharray="3" />
+          <ReferenceLine
+            y={0}
+            stroke="#ff7300"
+            strokeDasharray="3"
+            ifOverflow="extendDomain"
+          />
           {OscIndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -50,4 +60,4 @@ const DailyOscLineChart = ({
   );
 };
 
-export default DailyOscLineChart;
+export default HourlyOscLineChart;

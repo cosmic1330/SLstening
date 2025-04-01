@@ -6,20 +6,38 @@ import DailyObvLineChart from "./Charts/DailyObvLineChart";
 import DailyOscLineChart from "./Charts/DailyOscLineChart";
 import DailyRsiLineChart from "./Charts/DailyRsiLineChart";
 import HourlyKdLineChart from "./Charts/HourlyKdLineChart";
+import HourlyOscLineChart from "./Charts/HourlyOscLineChart";
+import HourlyRsiLineChart from "./Charts/HourlyRsiLineChart";
 import WeeklyBollLineChart from "./Charts/WeeklyBollLineChart";
 import WeeklyKdLineChart from "./Charts/WeeklyKdLineChart";
 import WeeklyObvLineChart from "./Charts/WeeklyObvLineChart";
 import WeeklyOscLineChart from "./Charts/WeeklyOscLineChart";
 import WeeklyRsiLineChart from "./Charts/WeeklyRsiLineChart";
+import HourlyBollLineChart from "./Charts/HourlyBollLineChart";
+import HourlyObvLineChart from "./Charts/HourlyObvLineChart";
 
 export default function RowChart({ row }: { row: any }) {
   const { chartType } = useSchoiceStore();
   return (
     <Box>
+      {/* Hourly */}
+      {chartType === ChartType.HOURLY_OBV && (
+        <HourlyObvLineChart stock_id={row.stock_id} t={row.t} />
+      )}
       {chartType === ChartType.HOURLY_KD && (
         <HourlyKdLineChart stock_id={row.stock_id} t={row.t} />
       )}
-      
+      {chartType === ChartType.HOURLY_RSI && (
+        <HourlyRsiLineChart stock_id={row.stock_id} t={row.t} />
+      )}
+      {chartType === ChartType.HOURLY_OSC && (
+        <HourlyOscLineChart stock_id={row.stock_id} t={row.t} />
+      )}
+      {chartType === ChartType.HOURLY_BOLL && (
+        <HourlyBollLineChart stock_id={row.stock_id} t={row.t} />
+      )}
+
+      {/* Daily */}
       {chartType === ChartType.DAILY_KD && (
         <DailyKdLineChart stock_id={row.stock_id} t={row.t} />
       )}
@@ -35,7 +53,7 @@ export default function RowChart({ row }: { row: any }) {
       {chartType === ChartType.DAILY_BOLL && (
         <DailyBollLineChart stock_id={row.stock_id} t={row.t} />
       )}
-
+      {/* Weekly */}
       {chartType === ChartType.WEEKLY_KD && (
         <WeeklyKdLineChart stock_id={row.stock_id} t={row.t} />
       )}

@@ -2,16 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { weekly_count } from "./config";
-
-const IndicatorColor: IndicatorColorType[] = [
-  {
-    key: "osc",
-    color: "#589bf3",
-  },
-];
+import { OscIndicatorColor, weekly_count } from "./config";
 
 const WeeklyOscLineChart = ({
   stock_id,
@@ -24,7 +16,7 @@ const WeeklyOscLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT weekly_skills.t, ${OscIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
@@ -38,12 +30,12 @@ const WeeklyOscLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={OscIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           <ReferenceLine y={0} stroke="#ff7300" strokeDasharray="3" />
-          {IndicatorColor.map((item, index) => (
+          {OscIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"

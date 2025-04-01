@@ -5,9 +5,9 @@ import { IconButton, Typography } from "@mui/material";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import { emit } from "@tauri-apps/api/event";
-import { sendNotification } from "@tauri-apps/plugin-notification";
 import { open } from "@tauri-apps/plugin-shell";
 import { forwardRef } from "react";
+import { toast } from "react-toastify";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
 import DailyUltraTinyLineChart from "./Charts/DailyUltraTinyLineChart";
@@ -15,7 +15,6 @@ import HourlyUltraTinyLineChart from "./Charts/HourlyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import RowChart from "./RowChart";
 import { ActionButtonType } from "./types";
-import { toast } from "react-toastify";
 
 export default forwardRef(function ResultTableRow(
   {
@@ -45,14 +44,14 @@ export default forwardRef(function ResultTableRow(
       type: row.market_type,
     });
     await emit("stock-added", { stockNumber: row.stock_id });
-    toast.success(`Add ${row.name} Success!`)
+    toast.success(`Add ${row.name} Success!`);
   };
 
   const handleRemoveToWatchList = async () => {
     await reload();
     await remove(row.stock_id);
     await emit("stock-removed", { stockNumber: row.stock_id });
-    toast.success(`Remove ${row.name} Success!`)
+    toast.success(`Remove ${row.name} Success!`);
   };
 
   return (

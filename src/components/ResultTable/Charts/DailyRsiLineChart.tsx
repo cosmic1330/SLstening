@@ -2,20 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { daily_count } from "./config";
-
-const IndicatorColor: IndicatorColorType[] = [
-  {
-    key: "rsi5",
-    color: "#589bf3",
-  },
-  {
-    key: "rsi10",
-    color: "#ff7300",
-  },
-];
+import { daily_count, RsiIndicatorColor } from "./config";
 
 const DailyRsiLineChart = ({
   stock_id,
@@ -28,7 +16,7 @@ const DailyRsiLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT daily_skills.t, ${RsiIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
@@ -41,12 +29,12 @@ const DailyRsiLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={RsiIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={[0, 100]} hide />
           <ReferenceLine y={50} stroke="#d89584" strokeDasharray="3 3" />
-          {IndicatorColor.map((item, index) => (
+          {RsiIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"

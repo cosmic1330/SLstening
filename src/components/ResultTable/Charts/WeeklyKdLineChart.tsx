@@ -2,20 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { weekly_count } from "./config";
-
-const IndicatorColor: IndicatorColorType[] = [
-  {
-    key: "k",
-    color: "#589bf3",
-  },
-  {
-    key: "d",
-    color: "#ff7300",
-  },
-];
+import { KdIndicatorColor, weekly_count } from "./config";
 
 const WeeklyKdLineChart = ({
   stock_id,
@@ -28,7 +16,7 @@ const WeeklyKdLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT weekly_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT weekly_skills.t, ${KdIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
@@ -42,13 +30,13 @@ const WeeklyKdLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={KdIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={[0, 100]} hide />
           <ReferenceLine y={80} stroke="#d89584" strokeDasharray="3 3" />
           <ReferenceLine y={20} stroke="#d89584" strokeDasharray="3 3" />
-          {IndicatorColor.map((item, index) => (
+          {KdIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"

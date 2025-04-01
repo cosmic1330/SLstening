@@ -2,24 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { daily_count } from "./config";
-
-const IndicatorColor: IndicatorColorType[] = [
-  {
-    key: "obv",
-    color: "#589bf3",
-  },
-  {
-    key: "obv5",
-    color: "#ff7300",
-  },
-  {
-    key: "c",
-    color: "#bfd915",
-  }
-];
+import { daily_count, ObvIndicatorColor } from "./config";
 
 const DailyObvLineChart = ({
   stock_id,
@@ -32,7 +16,7 @@ const DailyObvLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT daily_skills.t, ${ObvIndicatorColor.map(
       (item) => item.key
     ).join(
       ","
@@ -45,13 +29,18 @@ const DailyObvLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={ObvIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="obv" />
           <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="close" />
-          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" yAxisId="obv"/>
-          {IndicatorColor.map((item, index) => (
+          <ReferenceLine
+            y={0}
+            stroke="#d89584"
+            strokeDasharray="3 3"
+            yAxisId="obv"
+          />
+          {ObvIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"

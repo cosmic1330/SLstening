@@ -2,32 +2,8 @@ import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { Line, LineChart, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { IndicatorColorType } from "../types";
 import ChartTooltip from "./ChartTooltip";
-import { daily_count } from "./config";
-
-const IndicatorColor: IndicatorColorType[] = [
-  {
-    key: "bollUb",
-    color: "#9b58f3",
-  },
-  {
-    key: "bollMa",
-    color: "#ff7300",
-  },
-  {
-    key: "bollLb",
-    color: "#9b58f3",
-  },
-  {
-    key: "c",
-    color: "#589bf3",
-  },
-  {
-    key: "ma60",
-    color: "#63c762",
-  },
-];
+import { BollIndicatorColor, daily_count } from "./config";
 
 const DailyBollLineChart = ({
   stock_id,
@@ -40,7 +16,7 @@ const DailyBollLineChart = ({
   const [data, setData] = useState<any[]>([]);
   useEffect(() => {
     if (!stock_id) return;
-    const sqlQuery = `SELECT daily_skills.t, ${IndicatorColor.map(
+    const sqlQuery = `SELECT daily_skills.t, ${BollIndicatorColor.map(
       (item) => `NULLIF(${item.key}, 0) AS ${item.key}`
     ).join(
       ","
@@ -53,11 +29,11 @@ const DailyBollLineChart = ({
     });
   }, [stock_id]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={BollIndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
-          {IndicatorColor.map((item, index) => (
+          {BollIndicatorColor.map((item, index) => (
             <Line
               key={index}
               type="monotone"

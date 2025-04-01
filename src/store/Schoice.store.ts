@@ -4,7 +4,11 @@ import { create } from "zustand";
 import { PromptsMap, PromptType, PromptValue } from "../types";
 
 export enum ChartType {
+  HOURLY_OBV = "小時OBV",
   HOURLY_KD = "小時KD",
+  HOURLY_RSI = "小時RSI",
+  HOURLY_OSC = "小時OSC",
+  HOURLY_BOLL = "小時BOLL",
   DAILY_OBV = "日OBV",
   DAILY_KD = "日KD",
   DAILY_RSI = "日RSI",

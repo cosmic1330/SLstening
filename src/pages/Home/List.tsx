@@ -5,6 +5,7 @@ import SpeedDial from "../../components/SpeedDial";
 import StockBox from "../../components/StockBox";
 import useAddWebviewWindow from "../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
+import TwseBox from "./Twse";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -33,6 +34,7 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={7}>
+        <TwseBox />
         {stocks.length === 0 ? (
           <Button fullWidth variant="contained" onClick={openAddWindow}>
             新增第一筆追蹤

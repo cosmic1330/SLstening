@@ -21,7 +21,7 @@ const IndicatorColor: IndicatorColorType[] = [
   },
   {
     key: "c",
-    color: "#bfd915",
+    color: "#589bf3",
   },
   {
     key: "ma60",

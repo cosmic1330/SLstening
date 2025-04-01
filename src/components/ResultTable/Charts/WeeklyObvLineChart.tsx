@@ -15,6 +15,10 @@ const IndicatorColor: IndicatorColorType[] = [
     key: "obv5",
     color: "#ff7300",
   },
+  {
+    key: "c",
+    color: "#bfd915",
+  }
 ];
 
 const WeeklyObvLineChart = ({
@@ -45,8 +49,14 @@ const WeeklyObvLineChart = ({
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box>
         <LineChart data={data} width={80} height={60}>
-          <YAxis domain={["dataMin", "dataMax"]} hide />
-          <ReferenceLine y={0} stroke="#d89584" strokeDasharray="3 3" />
+          <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="obv" />
+          <YAxis domain={["dataMin", "dataMax"]} hide yAxisId="close" />
+          <ReferenceLine
+            y={0}
+            stroke="#d89584"
+            strokeDasharray="3 3"
+            yAxisId="obv"
+          />
           {IndicatorColor.map((item, index) => (
             <Line
               key={index}
@@ -55,6 +65,7 @@ const WeeklyObvLineChart = ({
               stroke={item.color}
               strokeWidth={1.5}
               dot={false}
+              yAxisId={item.key === "c" ? "close" : "obv"}
             />
           ))}
         </LineChart>

@@ -40,7 +40,7 @@ const Main = styled(Box)`
 function Schoice() {
   const db = useDatabase();
   const { reload, theme } = useSchoiceStore();
-  const dates = useDatabaseDates(db);
+  const { dates, fetchDates } = useDatabaseDates(db);
 
   useEffect(() => {
     reload();
@@ -61,7 +61,7 @@ function Schoice() {
   );
 
   return (
-    <DatabaseContext.Provider value={{ db, dates }}>
+    <DatabaseContext.Provider value={{ db, dates, fetchDates }}>
       <ThemeProvider theme={themeConfig}>
         <CssBaseline />
         <Main>

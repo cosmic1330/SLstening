@@ -34,7 +34,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const [completed, setCompleted] = useState(0);
   const [status, setStatus] = useState(Status.Idle);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { db } = useContext(DatabaseContext);
+  const { db, fetchDates } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
   const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
 
@@ -141,6 +141,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
+      if (fetchDates) fetchDates();
       changeDataCount(0);
       // case 1-1: 直接寫入資料庫
       const sqliteDataManager = new SqliteDataManager(db);

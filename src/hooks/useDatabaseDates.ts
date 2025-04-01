@@ -1,19 +1,19 @@
 import Database from "@tauri-apps/plugin-sql";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-export default function useDatabaseDates(db: Database| null) {
+export default function useDatabaseDates(db: Database | null) {
   const [dates, setDates] = useState<string[]>([]);
 
-  useEffect(() => {
-    const fetchDates = async () => {
-      let res = (await db?.select(
-        "SELECT DISTINCT t FROM daily_deal ORDER BY t DESC;"
-      )) as { t: string }[];
-      setDates(res?.map((item) => item.t) || []);
-    };
-
-    fetchDates();
+  const fetchDates = useCallback(async () => {
+    let res = (await db?.select(
+      "SELECT DISTINCT t FROM daily_deal ORDER BY t DESC;"
+    )) as { t: string }[];
+    setDates(res?.map((item) => item.t) || []);
   }, [db]);
 
-  return dates;
+  useEffect(() => {
+    fetchDates();
+  }, [fetchDates]);
+
+  return { dates, fetchDates };
 }

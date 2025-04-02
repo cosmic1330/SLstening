@@ -4,25 +4,21 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import boll from "../../../cls_tools/boll";
 import ma from "../../../cls_tools/ma";
 import ChartTooltip from "../../../components/ResultTable/Charts/ChartTooltip";
-import {
-  BollIndicatorColor,
-  UltraTinyIndicatorColor,
-} from "../../../components/ResultTable/Charts/config";
 import { DealTableType } from "../../../types";
 import { IndicatorColorType } from "../../../components/ResultTable/types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
     key: "bollUb",
-    color: "#c4ca04",
+    color: "#ca6404",
   },
   {
     key: "bollMa",
-    color: "#c4ca04",
+    color: "#ca0404",
   },
   {
     key: "bollLb",
-    color: "#c4ca04",
+    color: "#ca6404",
   },
   {
     key: "c",
@@ -40,7 +36,7 @@ const IndicatorColor: IndicatorColorType[] = [
     key: "ma60",
     color: "#63c762",
   },
-]
+];
 
 export default function HourlyChart({
   deals,
@@ -106,30 +102,21 @@ export default function HourlyChart({
     return res.splice(-30);
   }, [deals.data]);
   return (
-    <Tooltip
-      title={
-        <ChartTooltip
-          value={IndicatorColor}
-        />
-      }
-      arrow
-    >
+    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
       <Box height={60}>
         <ResponsiveContainer>
           <LineChart data={data}>
             <YAxis domain={["dataMin", "dataMax"]} hide />
-            {IndicatorColor.map(
-              (item, index) => (
-                <Line
-                  key={index}
-                  type="monotone"
-                  dataKey={item.key}
-                  stroke={item.color}
-                  strokeWidth={1.5}
-                  dot={false}
-                />
-              )
-            )}
+            {IndicatorColor.map((item, index) => (
+              <Line
+                key={index}
+                type="monotone"
+                dataKey={item.key}
+                stroke={item.color}
+                strokeWidth={1.5}
+                dot={false}
+              />
+            ))}
           </LineChart>
         </ResponsiveContainer>
       </Box>

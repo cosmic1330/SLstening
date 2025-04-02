@@ -16,9 +16,7 @@ export default function TwseBox() {
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={12}>
-          {tickDeals && <TickChart tickDeals={tickDeals} />}
-        </Grid2>
+        <Grid2 size={12}>{deals && <HourlyChart deals={deals} />}</Grid2>
         <Grid2 size={12}>
           <Stack
             direction="row"
@@ -46,7 +44,9 @@ export default function TwseBox() {
             </Typography>
           </Stack>
         </Grid2>
-        <Grid2 size={12}>{deals && <HourlyChart deals={deals} />}</Grid2>
+        <Grid2 size={12}>
+          {tickDeals && <TickChart tickDeals={tickDeals} />}
+        </Grid2>
       </Grid2>
     </Box>
   );

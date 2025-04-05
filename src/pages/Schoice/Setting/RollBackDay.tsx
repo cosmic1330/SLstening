@@ -20,13 +20,13 @@ export default function RollBackDay() {
       <Slider
         value={todayDate}
         onChange={handleTodayDate}
-        defaultValue={30}
+        defaultValue={0}
         getAriaValueText={valuetext}
         valueLabelDisplay="auto"
         step={1}
         marks
         min={0}
-        max={20}
+        max={60}
       />
     </Box>
   );

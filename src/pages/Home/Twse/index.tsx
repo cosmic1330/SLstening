@@ -1,5 +1,6 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useTwseDeals from "../../../hooks/useTwseDeals";
 import HourlyChart from "./HourlyChart";
 import TickChart from "./TickChart";
@@ -12,6 +13,11 @@ const Box = styled(MuiBox)`
   color: #fff;
 `;
 export default function TwseBox() {
+  const { openDetailWindow } = useDetailWebviewWindow({
+    id: "twse",
+    name: "加權指數",
+    group: "大盤",
+  });
   const { deals, tickDeals } = useTwseDeals();
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
@@ -24,7 +30,12 @@ export default function TwseBox() {
             justifyContent="space-between"
           >
             <Typography variant="button">TWSE 加權</Typography>
-            <Stack direction="row" alignItems="center">
+            <Stack
+              direction="row"
+              alignItems="center"
+              onClick={openDetailWindow}
+              sx={{ cursor: "pointer" }}
+            >
               <AttachMoneyIcon fontSize="small" />
               <Typography variant="subtitle1" color="#fff">
                 {deals && deals.price}

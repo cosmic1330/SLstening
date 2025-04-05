@@ -18,6 +18,7 @@ import SideBar from "./layout/Sidebar";
 const Main = styled(Box)`
   width: 100%;
   height: 100vh;
+  position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr;

@@ -83,7 +83,6 @@ export default function PromptAdd() {
             border="1px solid #000"
             borderRadius={1}
             p={2}
-            minHeight={200}
             mb={2}
           >
             {hourlyPrompts.length === 0 && (
@@ -112,7 +111,6 @@ export default function PromptAdd() {
             border="1px solid #000"
             borderRadius={1}
             p={2}
-            minHeight={200}
             mb={2}
           >
             {dailyPrompts.length === 0 && (
@@ -141,7 +139,6 @@ export default function PromptAdd() {
             border="1px solid #000"
             borderRadius={1}
             p={2}
-            minHeight={200}
             mb={2}
           >
             {weekPrompts.length === 0 && (

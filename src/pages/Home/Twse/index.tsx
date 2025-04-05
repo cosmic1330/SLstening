@@ -20,7 +20,7 @@ export default function TwseBox() {
   });
   const { deals, tickDeals } = useTwseDeals();
   return (
-    <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
+    <Box my={2} color="#fff" border="1px solid #fff">
       <Grid2 container alignItems="center" mb={1}>
         <Grid2 size={12}>{deals && <HourlyChart deals={deals} />}</Grid2>
         <Grid2 size={12}>

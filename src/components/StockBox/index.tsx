@@ -3,18 +3,20 @@ import {
   Grid2,
   Box as MuiBox,
   styled,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { useMemo } from "react";
 import useDeals from "../../hooks/useDeals";
 import useMaDeduction from "../../hooks/useMaDeduction";
-import AvgPrice from "./AvgPrice";
-import Ma10 from "./Ma10";
-import Ma5 from "./Ma5";
+import { StockStoreType } from "../../types";
+import estimateVolume from "../../utils/estimateVolume";
+import AvgPrice from "./Items/AvgPrice";
+import Ma10 from "./Items/Ma10";
+import Ma5 from "./Items/Ma5";
 import TickChart from "./TickChart";
 import Title from "./Title";
-import { StockStoreType } from "../../types";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -53,6 +55,26 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
     const prePirce = deals.length > 0 ? deals[deals.length - 2].c : 0;
     return Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100;
   }, [deals, tickDeals, lastPrice]);
+
+  const { estimatedVolume } = useMemo(() => {
+    if (deals.length > 0) {
+      return estimateVolume({
+        currentVolume: deals[deals.length - 1].v,
+        currentTime: new Date(),
+        previousDayVolume: deals[deals.length - 2].v,
+        avg5DaysVolume:
+          deals.slice(-6, -1).reduce((acc, deal) => acc + deal.v, 0) / 5,
+      });
+    }
+    return { estimatedVolume: 0 };
+  }, [deals]);
+
+  const pastAvgVolume = useMemo(() => {
+    // 過去五日成交量平均不算今天
+    const pastDeals = deals.slice(-6, -1);
+    const totalVolume = pastDeals.reduce((acc, deal) => acc + deal.v, 0);
+    return Math.round((totalVolume / pastDeals.length) * 100) / 100;
+  }, [deals]);
 
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
@@ -125,6 +147,90 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
         </Grid2>
         <Grid2 size={3}>
           <AvgPrice {...{ lastPrice, tickDeals }} />
+        </Grid2>
+
+        <Grid2 size={3}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            成交量
+          </Typography>
+          <Typography
+            variant="body2"
+            color={
+              deals.length > 0 &&
+              deals[deals.length - 1].v < deals[deals.length - 2].v
+                ? "#e58282"
+                : "#fff"
+            }
+            fontWeight="bold"
+            textAlign="center"
+          >
+            {deals.length > 0 && deals[deals.length - 1].v}
+          </Typography>
+        </Grid2>
+        <Grid2 size={3}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            估量
+          </Typography>
+          <Typography
+            variant="body2"
+            color={
+              deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                ? "#e58282"
+                : "#fff"
+            }
+            fontWeight="bold"
+            textAlign="center"
+          >
+            {deals.length > 0 && estimatedVolume}
+          </Typography>
+        </Grid2>
+
+        <Grid2 size={6}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            量能
+          </Typography>
+          <Tooltip title={`異常放量比 ${estimatedVolume / pastAvgVolume}`}>
+            <Typography
+              variant="body2"
+              color={
+                deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                  ? "#e58282"
+                  : "#fff"
+              }
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                ? "⭣"
+                : "⭡"}
+              {deals.length > 0 &&
+              (estimatedVolume / pastAvgVolume > 1.5 ||
+                estimatedVolume / pastAvgVolume < 0.5)
+                ? "異常放量"
+                : "正常"}
+            </Typography>
+          </Tooltip>
         </Grid2>
       </Grid2>
       {tickDeals && <TickChart {...{ tickDeals }} />}

@@ -1,6 +1,6 @@
 import { Box, Typography } from "@mui/material";
 import { useMemo } from "react";
-import { TickDealsType } from "../../types";
+import { TickDealsType } from "../../../types";
 
 export default function AvgPrice({
   lastPrice,

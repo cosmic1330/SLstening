@@ -53,6 +53,7 @@ export default function useTwseDeals() {
       const changePercent = data[0].chart.quote.changePercent;
       const price = data[0].chart.quote.price;
       const previousClose = data[0].chart.quote.previousClose;
+      const volume = data[0].chart.quote.volume;
       let pre = 0;
       const avgPrices = highs.map((item: number, index: number) => {
         pre += item;
@@ -60,13 +61,14 @@ export default function useTwseDeals() {
       });
 
       let ts = data[0].chart.quote.refreshedTs;
-      const res: Omit<TickDealsType, "id"> = {
+      const res: Omit<TickDealsType, "id"> & { volume: number } = {
         ts,
         price,
         avgPrices,
         changePercent,
         closes,
         previousClose,
+        volume,
       };
       return res;
     } catch (e) {

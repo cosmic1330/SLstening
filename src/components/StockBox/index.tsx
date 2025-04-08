@@ -161,12 +161,7 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           </Typography>
           <Typography
             variant="body2"
-            color={
-              deals.length > 0 &&
-              deals[deals.length - 1].v < deals[deals.length - 2].v
-                ? "#e58282"
-                : "#fff"
-            }
+            color={"#fff"}
             fontWeight="bold"
             textAlign="center"
           >
@@ -184,18 +179,20 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           >
             估量
           </Typography>
-          <Typography
-            variant="body2"
-            color={
-              deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
-                ? "#e58282"
-                : "#fff"
-            }
-            fontWeight="bold"
-            textAlign="center"
-          >
-            {deals.length > 0 && estimatedVolume}
-          </Typography>
+          <Tooltip title={`昨日量 ${deals.length > 0 && deals[deals.length - 2].v}`}>
+            <Typography
+              variant="body2"
+              color={
+                deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                  ? "#e58282"
+                  : "#fff"
+              }
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {deals.length > 0 && estimatedVolume}
+            </Typography>
+          </Tooltip>
         </Grid2>
 
         <Grid2 size={6}>
@@ -210,7 +207,9 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
             量能
           </Typography>
           <Tooltip
-            title={`異常放量比 ${
+            title={`估量${
+              estimatedVolume < avgDaysVolume ? "<" : ">"
+            }均量,異常放量比 ${
               Math.round((estimatedVolume / avgDaysVolume) * 100) / 100
             }`}
           >

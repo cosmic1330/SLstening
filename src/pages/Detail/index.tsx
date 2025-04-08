@@ -1,5 +1,3 @@
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import { Box, Button, IconButton } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
@@ -15,25 +13,25 @@ import generateDealDataDownloadUrl, {
   UrlType,
 } from "../../utils/generateDealDataDownloadUrl";
 import Close from "./Close";
-import EMAMA from "./EMAMA";
 import Ma from "./Ma";
+import MaKbar from "./MaKbar";
 import Obv from "./Obv";
 
 const slides = [
   {
     id: 1,
-    content: <Ma />,
+    content: <MaKbar />,
   },
   {
     id: 2,
+    content: <Ma />,
+  },
+  {
+    id: 3,
     content: <Close />,
   },
   {
-    id: 3,
-    content: <EMAMA />,
-  },
-  {
-    id: 3,
+    id: 4,
     content: <Obv />,
   },
 ];

@@ -34,7 +34,7 @@ export default function Close() {
         <ResponsiveContainer>
           <AreaChart data={deals}>
             <XAxis dataKey="t" />
-            <YAxis />
+            <YAxis domain={["dataMin", "dataMax"]} />
             <Tooltip />
             <Area type="monotone" dataKey="c" stroke="#e58282" fill="#e58282" />
             <Area type="monotone" dataKey="l" stroke="#ccc" fill="#fff" />

@@ -22,9 +22,9 @@ export default function Ma() {
     let ma20_data = ma.init(deals[0], 20);
     response.push({
       t: deals[0].t,
-      ma5: ma5_data.ma,
-      ma10: ma10_data.ma,
-      ma20: ma20_data.ma,
+      ma5: ma5_data.ma || null,
+      ma10: ma10_data.ma || null,
+      ma20: ma20_data.ma || null,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
@@ -33,9 +33,9 @@ export default function Ma() {
       ma20_data = ma.next(deal, ma20_data, 20);
       response.push({
         t: deal.t,
-        ma5: ma5_data.ma,
-        ma10: ma10_data.ma,
-        ma20: ma20_data.ma,
+        ma5: ma5_data.ma || null,
+        ma10: ma10_data.ma || null,
+        ma20: ma20_data.ma || null,
       });
     }
     return response;
@@ -50,7 +50,7 @@ export default function Ma() {
         <ResponsiveContainer>
           <ComposedChart data={chartData}>
             <XAxis dataKey="t" />
-            <YAxis />
+            <YAxis domain={["dataMin", "dataMax"]} />
             <Tooltip />
             <Area
               type="monotone"

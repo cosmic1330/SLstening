@@ -4,37 +4,37 @@ import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
 import boll from "../../../cls_tools/boll";
 import ma from "../../../cls_tools/ma";
 import ChartTooltip from "../../../components/ResultTable/Charts/ChartTooltip";
-import { DealTableType } from "../../../types";
 import { IndicatorColorType } from "../../../components/ResultTable/types";
+import { DealTableType } from "../../../types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
     key: "bollUb",
-    color: "#ca6404",
+    color: "#efe2a6",
   },
   {
     key: "bollMa",
-    color: "#ca0404",
+    color: "#ff7300",
   },
   {
     key: "bollLb",
-    color: "#ca6404",
+    color: "#efe2a6",
   },
   {
-    key: "c",
-    color: "#fff",
-  },
-  {
-    key: "ma5",
-    color: "#589bf3",
+    key: "ma60",
+    color: "#63c762",
   },
   {
     key: "ma10",
     color: "#9b58f3",
   },
   {
-    key: "ma60",
-    color: "#63c762",
+    key: "ma5",
+    color: "#589bf3",
+  },
+  {
+    key: "c",
+    color: "#fff",
   },
 ];
 

@@ -1,12 +1,14 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import { Box, Button, IconButton } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
-import { useEffect, useMemo } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
-import useScroll from "../../hooks/useScroll";
 import { TaType } from "../../types";
 import generateDealDataDownloadUrl, {
   UrlTaPerdOptions,
@@ -17,8 +19,77 @@ import EMAMA from "./EMAMA";
 import Ma from "./Ma";
 import Obv from "./Obv";
 
-const components = [<Ma />, <Close />, <EMAMA />, <Obv />];
-function Detail() {
+const slides = [
+  {
+    id: 1,
+    content: <Ma />,
+  },
+  {
+    id: 2,
+    content: <Close />,
+  },
+  {
+    id: 3,
+    content: <EMAMA />,
+  },
+  {
+    id: 3,
+    content: <Obv />,
+  },
+];
+
+const FullscreenVerticalCarousel: React.FC = () => {
+  const [current, setCurrent] = useState(0);
+  const [scrolling, setScrolling] = useState(false);
+  const [picture, setPicture] = useState("hourly");
+
+  const goToSlide = useCallback((index: number) => {
+    if (index >= 0 && index < slides.length) {
+      setCurrent(index);
+    }
+  }, []);
+
+  const handleWheel = useCallback(
+    (e: WheelEvent) => {
+      if (scrolling) return;
+      setScrolling(true);
+
+      if (e.deltaY > 0) {
+        goToSlide(current + 1);
+      } else if (e.deltaY < 0) {
+        goToSlide(current - 1);
+      }
+
+      setTimeout(() => setScrolling(false), 800);
+    },
+    [current, scrolling, goToSlide]
+  );
+
+  useEffect(() => {
+    window.addEventListener("wheel", handleWheel, { passive: true });
+    return () => window.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
+
+  const slideVariants = {
+    initial: (direction: number) => ({
+      y: direction > 0 ? "100%" : "-100%",
+      opacity: 0,
+    }),
+    animate: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.3, ease: "easeInOut" },
+    },
+    exit: (direction: number) => ({
+      y: direction > 0 ? "-100%" : "100%",
+      opacity: 0,
+      transition: { duration: 0.3, ease: "easeInOut" },
+    }),
+  };
+
+  const direction = (next: number) => next - current;
+
+  // data
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,11 +105,18 @@ function Detail() {
   }, []);
 
   const { id } = useParams();
-  const currentChart = useScroll(components.length);
 
   const { data } = useSWR(
-    id === "twse"
+    id === "twse" && picture === "hourly"
+      ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
+      : id === "twse" && picture === "daily"
       ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=d;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
+      : picture === "hourly"
+      ? generateDealDataDownloadUrl({
+          type: UrlType.Ta,
+          id: id || "",
+          perd: UrlTaPerdOptions.Hour,
+        })
       : generateDealDataDownloadUrl({
           type: UrlType.Ta,
           id: id || "",
@@ -62,7 +140,7 @@ function Detail() {
       for (let i = 0; i < opens.length; i++) {
         if (opens[i] !== null) {
           response.push({
-            t: dateFormat(ts[i] * 1000, Mode.TimeStampToNumber),
+            t: new Date(ts[i] * 1000) as unknown as number,
             o: opens[i],
             c: closes[i],
             h: highs[i],
@@ -79,31 +157,94 @@ function Detail() {
       const response = parse.ta as TaType;
       return response;
     }
-  }, [data, id]);
+  }, [data, id, picture]);
 
   return (
-    <main style={{ height: `${100 * components.length}vh` }}>
+    <Box position="relative" width="100vw" height="100vh" overflow="hidden">
       <DealsContext.Provider value={deals}>
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100vh",
-          }}
+        <AnimatePresence custom={direction(current)} mode="wait">
+          <motion.div
+            key={slides[current].id}
+            custom={direction(current)}
+            variants={slideVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {slides[current].content}
+          </motion.div>
+        </AnimatePresence>
+
+        <Box
+          position="absolute"
+          bottom={16}
+          left="50%"
+          sx={{ transform: "translateX(-50%)", display: "flex", gap: 2 }}
         >
-          {components.map((Component, index) => (
-            <div
-              key={index}
-              style={{ display: index === currentChart ? "block" : "none" }}
-            >
-              {Component}
-            </div>
-          ))}
-        </div>
+          <Button
+            color="primary"
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
+            }}
+            disabled={picture === "hourly"}
+            onClick={() => {
+              setPicture("hourly");
+              goToSlide(0);
+            }}
+          >
+            小時圖
+          </Button>
+          <Button
+            color="primary"
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
+            }}
+            disabled={picture === "daily"}
+            onClick={() => {
+              setPicture("daily");
+              goToSlide(0);
+            }}
+          >
+            日線圖
+          </Button>
+          <IconButton
+            onClick={() => goToSlide(current - 1)}
+            disabled={current === 0}
+            color="primary"
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
+            }}
+          >
+            <KeyboardArrowUp />
+          </IconButton>
+          <IconButton
+            onClick={() => goToSlide(current + 1)}
+            disabled={current === slides.length - 1}
+            color="primary"
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
+            }}
+          >
+            <KeyboardArrowDown />
+          </IconButton>
+        </Box>
       </DealsContext.Provider>
-    </main>
+    </Box>
   );
-}
-export default Detail;
+};
+
+export default FullscreenVerticalCarousel;

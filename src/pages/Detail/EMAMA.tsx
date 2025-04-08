@@ -24,21 +24,25 @@ export default function EMAMA() {
     if (deals?.length === 0) return [];
     const response = [];
     let ema_data = ema.init(deals[0], 5);
+    let ma5_data = ma.init(deals[0], 5);
     let ma10_data = ma.init(deals[0], 10);
     response.push({
       x: deals[0].t,
       y: deals[0].c,
       ema: ema_data.ema,
+      ma5: ma5_data.ma,
       ma10: ma10_data.ma,
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       ema_data = ema.next(deal, ema_data, 5);
+      ma5_data = ma.next(deal, ma5_data, 5);
       ma10_data = ma.next(deal, ma10_data, 10);
       response.push({
         x: deal.t,
         ema: ema_data.ema,
+        ma5: ma5_data.ma,
         ma10: ma10_data.ma,
         y: (deal.h + deal.l) / 2,
         c: deal.c,
@@ -94,8 +98,15 @@ export default function EMAMA() {
               legendType="none"
             />
             <Line
-              dataKey="ma10"
+              dataKey="ma5"
               stroke="#ff7300"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="ma10"
+              stroke="#63c762"
               dot={false}
               activeDot={false}
               legendType="none"

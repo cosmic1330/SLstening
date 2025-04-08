@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
 import "./App.css";
 import Add from "./pages/Add";
-import Detail from "./pages/Detail";
+import Detail from "./pages/Detail/index";
 import Home from "./pages/Home";
 import List from "./pages/Home/List";
 import Other from "./pages/Home/Other";

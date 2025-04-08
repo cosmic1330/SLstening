@@ -56,25 +56,24 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
     return Math.round(((lastPrice - prePirce) / prePirce) * 100 * 100) / 100;
   }, [deals, tickDeals, lastPrice]);
 
+  const avgDaysVolume = useMemo(() => {
+    // 過去10日成交量平均不算今天
+    const pastDeals = deals.slice(-11, -1);
+    const totalVolume = pastDeals.reduce((acc, deal) => acc + deal.v, 0);
+    return Math.round((totalVolume / pastDeals.length) * 100) / 100;
+  }, [deals]);
+
   const { estimatedVolume } = useMemo(() => {
     if (deals.length > 0) {
       return estimateVolume({
         currentVolume: deals[deals.length - 1].v,
         currentTime: new Date(),
         previousDayVolume: deals[deals.length - 2].v,
-        avg5DaysVolume:
-          deals.slice(-6, -1).reduce((acc, deal) => acc + deal.v, 0) / 5,
+        avg5DaysVolume: avgDaysVolume,
       });
     }
     return { estimatedVolume: 0 };
-  }, [deals]);
-
-  const pastAvgVolume = useMemo(() => {
-    // 過去五日成交量平均不算今天
-    const pastDeals = deals.slice(-6, -1);
-    const totalVolume = pastDeals.reduce((acc, deal) => acc + deal.v, 0);
-    return Math.round((totalVolume / pastDeals.length) * 100) / 100;
-  }, [deals]);
+  }, [deals, avgDaysVolume]);
 
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
@@ -210,23 +209,25 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           >
             量能
           </Typography>
-          <Tooltip title={`異常放量比 ${estimatedVolume / pastAvgVolume}`}>
+          <Tooltip
+            title={`異常放量比 ${
+              Math.round((estimatedVolume / avgDaysVolume) * 100) / 100
+            }`}
+          >
             <Typography
               variant="body2"
               color={
-                deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                deals.length > 0 && estimatedVolume < avgDaysVolume
                   ? "#e58282"
                   : "#fff"
               }
               fontWeight="bold"
               textAlign="center"
             >
-              {deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
-                ? "⭣"
-                : "⭡"}
+              {deals.length > 0 && estimatedVolume < avgDaysVolume ? "⭣" : "⭡"}
               {deals.length > 0 &&
-              (estimatedVolume / pastAvgVolume > 1.5 ||
-                estimatedVolume / pastAvgVolume < 0.5)
+              (estimatedVolume / avgDaysVolume > 1.5 ||
+                estimatedVolume / avgDaysVolume < 0.5)
                 ? "異常放量"
                 : "正常"}
             </Typography>

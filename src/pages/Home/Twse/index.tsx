@@ -2,8 +2,6 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useTwseDeals from "../../../hooks/useTwseDeals";
-import estimateTWSEVolume from "../../../utils/estimateTWSEVolume";
-import formatTWSEVolume from "../../../utils/formatTWSEVolume";
 import HourlyChart from "./HourlyChart";
 import TickChart from "./TickChart";
 
@@ -54,26 +52,6 @@ export default function TwseBox() {
               }
             >
               {deals && deals.change}
-            </Typography>
-          </Stack>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Typography variant="button">成交量</Typography>
-            <Typography variant="subtitle1" color="#fff">
-              {tickDeals && formatTWSEVolume(tickDeals.volume)}
-            </Typography>
-            <Typography variant="button">估量</Typography>
-            <Typography variant="subtitle1" color="#fff">
-              {tickDeals &&
-                formatTWSEVolume(
-                  estimateTWSEVolume({
-                    currentVolume: tickDeals.volume,
-                    currentTime: new Date(),
-                  })
-                )}
             </Typography>
           </Stack>
         </Grid2>

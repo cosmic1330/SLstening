@@ -179,7 +179,9 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           >
             估量
           </Typography>
-          <Tooltip title={`昨日量 ${deals.length > 0 && deals[deals.length - 2].v}`}>
+          <Tooltip
+            title={`昨日量 ${deals.length > 0 && deals[deals.length - 2].v}`}
+          >
             <Typography
               variant="body2"
               color={
@@ -208,26 +210,22 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           </Typography>
           <Tooltip
             title={`估量${
-              estimatedVolume < avgDaysVolume ? "<" : ">"
+              estimatedVolume < avgDaysVolume ? " < " : " > "
             }均量,異常放量比 ${
               Math.round((estimatedVolume / avgDaysVolume) * 100) / 100
             }`}
           >
             <Typography
               variant="body2"
-              color={
-                deals.length > 0 && estimatedVolume < avgDaysVolume
-                  ? "#e58282"
-                  : "#fff"
-              }
+              color={"#fff"}
               fontWeight="bold"
               textAlign="center"
             >
               {deals.length > 0 && estimatedVolume < avgDaysVolume ? "⭣" : "⭡"}
-              {deals.length > 0 &&
-              (estimatedVolume / avgDaysVolume > 1.5 ||
-                estimatedVolume / avgDaysVolume < 0.5)
+              {deals.length > 0 && estimatedVolume / avgDaysVolume > 1.5
                 ? "異常放量"
+                : estimatedVolume / avgDaysVolume < 0.5
+                ? "量縮"
                 : "正常"}
             </Typography>
           </Tooltip>

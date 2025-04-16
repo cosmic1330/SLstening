@@ -7,43 +7,44 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
+  Bar,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import kd from "../../cls_tools/kd";
-import ArrowDown from "../../components/ArrowDown";
-import ArrowUp from "../../components/ArrowUp";
+import macd from "../../cls_tools/macd";
 import { DealsContext } from "../../context/DealsContext";
 
-export default function Kd() {
+export default function MJ() {
   const deals = useContext(DealsContext);
 
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let pre = kd.init(deals[0], 9);
+    let kd_data = kd.init(deals[0], 9);
+    let macd_data = macd.init(deals[0]);
     response.push({
       t: deals[0].t,
-      k: pre.k,
-      d: pre.d,
-      c: deals[0].c,
-      l: deals[0].l,
-      h: deals[0].h,
+      j: kd_data.j || null,
+      osc: macd_data.osc || null,
+      positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
+      negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      pre = kd.next(deal, pre, 9);
+      kd_data = kd.next(deal, kd_data, 9);
+      macd_data = macd.next(deal, macd_data);
       response.push({
         t: deal.t,
-        k: pre.k,
-        d: pre.d,
-        c: deal.c,
-        l: deal.l,
-        h: deal.h,
+        j: kd_data.j || null,
+        osc: macd_data.osc || null,
+        positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
+        negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
       });
     }
     return response;
@@ -55,58 +56,57 @@ export default function Kd() {
         <MuiTooltip
           title={
             <Typography>
-              對照股價過高，KD是否同步過高
+              J線往上穿過中線(50)且Osc從下往上穿過0線(紅柱)，代表買進點
               <br />
-              股價過高，KD沒有過高，趨勢轉弱
-              <br />
-              股價破低，KD沒有破低，趨勢轉強
+              J線往下穿過中線(50)且Osc從上往下穿過0線(綠柱)，代表賣出點
             </Typography>
           }
           arrow
         >
           <Typography variant="h5" gutterBottom>
-            KD 背離指標
+            MJ 流線圖
           </Typography>
         </MuiTooltip>
-        {chartData.length > 1 &&
-        chartData[chartData.length - 1].k >
-          chartData[chartData.length - 1].d ? (
-          <ArrowUp color="#e26d6d" />
-        ) : (
-          <ArrowDown color="#79e26d" />
-        )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
           <ComposedChart data={chartData}>
             <XAxis dataKey="t" />
-            <YAxis yAxisId="left" domain={[0, 100]} />
+            <YAxis yAxisId="left" />
             {/* 右側 Y 軸 */}
             <YAxis
               yAxisId="right"
               orientation="right"
               domain={["dataMin", "dataMax"]}
+              ticks={[0, 25, 50, 75, 100]} 
+            />
+
+            <ReferenceLine
+              y={0}
+              stroke="#589bf3"
+              strokeDasharray="3"
+              yAxisId="left"
             />
             <Tooltip />
+            {/* Red bars for positive values */}
+            <Bar
+              dataKey="positiveOsc"
+              fill="#ff0000"
+              yAxisId="left"
+              barSize={6}
+              name="Oscillator"
+            />
+            {/* Green bars for negative values */}
+            <Bar
+              dataKey="negativeOsc"
+              fill="#00aa00"
+              yAxisId="left"
+              barSize={6}
+              name="Oscillator"
+            />
             <Line
-              dataKey="k"
+              dataKey="j"
               stroke="#589bf3"
-              dot={false}
-              activeDot={false}
-              legendType="none"
-              yAxisId="left"
-            />
-            <Line
-              dataKey="d"
-              stroke="#ff7300"
-              dot={false}
-              activeDot={false}
-              legendType="none"
-              yAxisId="left"
-            />
-            <Line
-              dataKey="c"
-              stroke="#000"
               dot={false}
               activeDot={false}
               legendType="none"

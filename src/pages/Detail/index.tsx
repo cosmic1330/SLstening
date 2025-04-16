@@ -12,12 +12,13 @@ import generateDealDataDownloadUrl, {
   UrlTaPerdOptions,
   UrlType,
 } from "../../utils/generateDealDataDownloadUrl";
+import AvgMaKbar from "./AvgMaKbar";
 import Close from "./Close";
+import Kd from "./Kd";
 import Ma from "./Ma";
 import MaKbar from "./MaKbar";
+import MJ from "./MJ";
 import Obv from "./Obv";
-import AvgMaKbar from "./AvgMaKbar";
-import Kd from "./Kd";
 
 const slides = [
   {
@@ -31,6 +32,10 @@ const slides = [
   {
     id: "ma_k",
     content: <MaKbar />,
+  },
+  {
+    id: "mj",
+    content: <MJ />,
   },
   {
     id: "avg_k",

@@ -1,4 +1,10 @@
-import { Box, Container, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Container,
+  Tooltip as MuiTooltip,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
   Area,
@@ -13,7 +19,6 @@ import obv from "../../cls_tools/obv";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import { Tooltip as MuiTooltip } from "@mui/material";
 
 export default function Obv() {
   const deals = useContext(DealsContext);
@@ -48,7 +53,7 @@ export default function Obv() {
           title={
             <Typography>
               對照股價上升，OBV是否同步上升
-              <br/>
+              <br />
               判斷價量先行和是否量增價漲
             </Typography>
           }
@@ -78,14 +83,6 @@ export default function Obv() {
             {/* 右側 Y 軸 */}
             <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
-            <Line
-              yAxisId="right"
-              dataKey="c"
-              stroke="#e58282"
-              dot={false}
-              activeDot={false}
-              legendType="none"
-            />
             <Area
               type="monotone"
               dataKey="obv5"
@@ -97,6 +94,14 @@ export default function Obv() {
               dataKey="obv"
               stroke="#589bf3"
               fill="#589bf3"
+            />{" "}
+            <Line
+              yAxisId="right"
+              dataKey="c"
+              stroke="#000"
+              dot={false}
+              activeDot={false}
+              legendType="none"
             />
           </ComposedChart>
         </ResponsiveContainer>

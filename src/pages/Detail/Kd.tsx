@@ -1,7 +1,6 @@
 import { Box, Container, Stack, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
-  Area,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -9,33 +8,37 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import obv from "../../cls_tools/obv";
+import { Tooltip as MuiTooltip } from "@mui/material";
+import kd from "../../cls_tools/kd";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import { Tooltip as MuiTooltip } from "@mui/material";
 
-export default function Obv() {
+export default function Kd() {
   const deals = useContext(DealsContext);
 
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let pre = obv.init(deals[0], 10);
+    let pre = kd.init(deals[0], 9);
     response.push({
       t: deals[0].t,
-      obv: pre.obv,
-      obv5: pre.obvMa,
+      k: pre.k,
+      d: pre.d,
       c: deals[0].c,
+      l: deals[0].l,
+      h: deals[0].h,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      pre = obv.next(deal, pre, 10);
+      pre = kd.next(deal, pre, 9);
       response.push({
         t: deal.t,
-        obv: pre.obv,
-        obv5: pre.obvMa,
+        k: pre.k,
+        d: pre.d,
         c: deal.c,
+        l: deal.l,
+        h: deal.h,
       });
     }
     return response;
@@ -47,24 +50,22 @@ export default function Obv() {
         <MuiTooltip
           title={
             <Typography>
-              對照股價上升，OBV是否同步上升
-              <br/>
-              判斷價量先行和是否量增價漲
+              對照股價過高，KD是否同步過高
+              <br />
+              股價過高，KD沒有過高，趨勢轉弱
+              <br />
+              股價破低，KD沒有破低，趨勢轉強
             </Typography>
           }
           arrow
         >
           <Typography variant="h5" gutterBottom>
-            OBV 流線圖
+            KD 流線圖
           </Typography>
         </MuiTooltip>
         {chartData.length > 1 &&
-        chartData[chartData.length - 1].obv >
-          chartData[chartData.length - 1].obv5 &&
-        chartData[chartData.length - 1].obv -
-          chartData[chartData.length - 1].obv5 >
-          chartData[chartData.length - 2].obv -
-            chartData[chartData.length - 2].obv5 ? (
+        chartData[chartData.length - 1].k >
+          chartData[chartData.length - 1].d ? (
           <ArrowUp color="#e26d6d" />
         ) : (
           <ArrowDown color="#79e26d" />
@@ -74,29 +75,37 @@ export default function Obv() {
         <ResponsiveContainer>
           <ComposedChart data={chartData}>
             <XAxis dataKey="t" />
-            <YAxis />
+            <YAxis yAxisId="left" domain={["dataMin", "dataMax"]} />
             {/* 右側 Y 軸 */}
-            <YAxis yAxisId="right" orientation="right" />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={["dataMin", "dataMax"]}
+            />
             <Tooltip />
             <Line
-              yAxisId="right"
-              dataKey="c"
-              stroke="#e58282"
+              dataKey="k"
+              stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
+              yAxisId="left"
             />
-            <Area
-              type="monotone"
-              dataKey="obv5"
+            <Line
+              dataKey="d"
               stroke="#ff7300"
-              fill="#ff7300"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              yAxisId="left"
             />
-            <Area
-              type="monotone"
-              dataKey="obv"
-              stroke="#589bf3"
-              fill="#589bf3"
+            <Line
+              dataKey="c"
+              stroke="#000"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              yAxisId="right"
             />
           </ComposedChart>
         </ResponsiveContainer>

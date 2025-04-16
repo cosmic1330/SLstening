@@ -15,6 +15,7 @@ import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
 import AvgRectangle from "./AvgRectangle";
+import { Tooltip as MuiTooltip } from "@mui/material";
 
 export default function AvgMaKbar() {
   const deals = useContext(DealsContext);
@@ -59,9 +60,24 @@ export default function AvgMaKbar() {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
-        <Typography variant="h5" gutterBottom>
-          均K指標
-        </Typography>
+        <MuiTooltip
+          title={
+            <Typography>
+              判斷上漲動能是否延續
+              <br />
+              紅色：多方動能
+              <br />
+              綠色：空方動能
+              <br />
+              柱體：越長越強
+            </Typography>
+          }
+          arrow
+        >
+          <Typography variant="h5" gutterBottom>
+            均K指標
+          </Typography>
+        </MuiTooltip>
         {chartData.length > 0 &&
         chartData[chartData.length - 1].ma5 !== null &&
         chartData[chartData.length - 1].l > chartData[chartData.length - 2].l &&
@@ -112,7 +128,7 @@ export default function AvgMaKbar() {
               legendType="none"
             />
             <Customized component={AvgRectangle} />
-            
+
             <Line
               dataKey="ma5"
               stroke="#589bf3"

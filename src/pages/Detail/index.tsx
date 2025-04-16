@@ -17,26 +17,31 @@ import Ma from "./Ma";
 import MaKbar from "./MaKbar";
 import Obv from "./Obv";
 import AvgMaKbar from "./AvgMaKbar";
+import Kd from "./Kd";
 
 const slides = [
   {
-    id: 1,
-    content: <MaKbar />,
-  },
-  {
-    id: 2,
-    content: <AvgMaKbar />,
-  },
-  {
-    id: 3,
+    id: "ma",
     content: <Ma />,
   },
   {
-    id: 4,
+    id: "kd",
+    content: <Kd />,
+  },
+  {
+    id: "ma_k",
+    content: <MaKbar />,
+  },
+  {
+    id: "avg_k",
+    content: <AvgMaKbar />,
+  },
+  {
+    id: "low_close",
     content: <Close />,
   },
   {
-    id: 5,
+    id: "obv",
     content: <Obv />,
   },
 ];

@@ -15,6 +15,7 @@ import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
 import Rectangle from "./Rectangle";
+import { Tooltip as MuiTooltip } from "@mui/material";
 
 export default function MaKbar() {
   const deals = useContext(DealsContext);
@@ -57,9 +58,22 @@ export default function MaKbar() {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
-        <Typography variant="h5" gutterBottom>
-          K線
-        </Typography>
+        <MuiTooltip
+          title={
+            <Typography>
+              對照K線是否在五日線上且不低於前低
+              <br />
+              紅色：K線在五日線上且不低於前低，趨勢轉強
+              <br />
+              綠色：K線在五日線下且持續破低，趨勢轉弱
+            </Typography>
+          }
+          arrow
+        >
+          <Typography variant="h5" gutterBottom>
+            K線
+          </Typography>
+        </MuiTooltip>
         {chartData.length > 0 &&
         chartData[chartData.length - 1].ma5 !== null &&
         chartData[chartData.length - 1].l > chartData[chartData.length - 2].l &&

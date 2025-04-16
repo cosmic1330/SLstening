@@ -13,14 +13,11 @@ type FormattedGraphicalItem = {
 // using Customized gives you access to all relevant chart props
 const CustomizedRectangle = (props: any) => {
   const { formattedGraphicalItems } = props;
-  console.log(formattedGraphicalItems);
   // get first and second series in chart
   const highSeries = formattedGraphicalItems[0] as FormattedGraphicalItem;
   const closeSeries = formattedGraphicalItems[1] as FormattedGraphicalItem;
   const lowSeries = formattedGraphicalItems[2] as FormattedGraphicalItem;
   const MaSeries = formattedGraphicalItems[3] as FormattedGraphicalItem;
-
-  console.log(lowSeries?.props?.points[lowSeries?.props?.points.length - 1]);
 
   // render custom content using points from the graph
   return highSeries?.props?.points.map((highSeriesPoint, index) => {

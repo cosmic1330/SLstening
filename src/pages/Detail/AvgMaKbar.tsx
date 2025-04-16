@@ -14,9 +14,9 @@ import ma from "../../cls_tools/ma";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import Rectangle from "./Rectangle";
+import AvgRectangle from "./AvgRectangle";
 
-export default function MaKbar() {
+export default function AvgMaKbar() {
   const deals = useContext(DealsContext);
 
   const chartData = useMemo(() => {
@@ -34,6 +34,7 @@ export default function MaKbar() {
       c: deals[0].c,
       l: deals[0].l,
       h: deals[0].h,
+      o: deals[0].o,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
@@ -49,6 +50,7 @@ export default function MaKbar() {
         c: deal.c,
         l: deal.l,
         h: deal.h,
+        o: deal.o,
       });
     }
     return response;
@@ -58,7 +60,7 @@ export default function MaKbar() {
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
         <Typography variant="h5" gutterBottom>
-          K線
+          均K指標
         </Typography>
         {chartData.length > 0 &&
         chartData[chartData.length - 1].ma5 !== null &&
@@ -102,14 +104,22 @@ export default function MaKbar() {
               legendType="none"
             />
             <Line
+              dataKey="o"
+              stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Customized component={AvgRectangle} />
+            
+            <Line
               dataKey="ma5"
               stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
             />
-            <Customized component={Rectangle} />
-
             <Line
               dataKey="ma10"
               stroke="#ff7300"

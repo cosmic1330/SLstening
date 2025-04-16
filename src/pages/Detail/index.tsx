@@ -16,6 +16,7 @@ import Close from "./Close";
 import Ma from "./Ma";
 import MaKbar from "./MaKbar";
 import Obv from "./Obv";
+import AvgMaKbar from "./AvgMaKbar";
 
 const slides = [
   {
@@ -24,14 +25,18 @@ const slides = [
   },
   {
     id: 2,
-    content: <Ma />,
+    content: <AvgMaKbar />,
   },
   {
     id: 3,
-    content: <Close />,
+    content: <Ma />,
   },
   {
     id: 4,
+    content: <Close />,
+  },
+  {
+    id: 5,
     content: <Obv />,
   },
 ];

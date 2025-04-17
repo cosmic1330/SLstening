@@ -147,5 +147,15 @@ pub fn value() -> Vec<Migration> {
                 ",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "add_j_column_to_daily_skills",
+            sql: "
+                ALTER TABLE daily_skills ADD COLUMN j REAL; -- J 指標
+                ALTER TABLE hourly_skills ADD COLUMN j REAL; -- J 指標
+                ALTER TABLE weekly_skills ADD COLUMN j REAL; -- J 指標
+            ",
+            kind: MigrationKind::Up,
+        },
     ]
 }

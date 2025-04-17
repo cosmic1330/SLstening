@@ -31,8 +31,7 @@ export default class CsvDataManager {
       stock_id: stock.id,
       t: dateFormat(item.t, Mode.NumberToString),
     }));
-    if (type === DealTableOptions.DailyDeal)
-      this.dailydeal.push(...data);
+    if (type === DealTableOptions.DailyDeal) this.dailydeal.push(...data);
     else if (type === DealTableOptions.WeeklyDeal)
       this.weeklydeal.push(...data);
   }
@@ -42,7 +41,7 @@ export default class CsvDataManager {
     stock: StockStoreType,
     type: SkillsTableOptions
   ) {
-    if(!ta || ta.length === 0) return;
+    if (!ta || ta.length === 0) return;
     const data: SkillsCsvDataType[] = [];
     const boll = new Boll();
     const ma = new Ma();
@@ -82,6 +81,7 @@ export default class CsvDataManager {
       osc: macd_data.osc,
       k: kd_data.k,
       d: kd_data.d,
+      j: kd_data.j,
       rsi5: rsi5_data.rsi,
       rsi10: rsi10_data.rsi,
       boll_ub: boll_data.bollUb,
@@ -124,6 +124,7 @@ export default class CsvDataManager {
         osc: macd_data.osc,
         k: kd_data.k,
         d: kd_data.d,
+        j: kd_data.j,
         rsi5: rsi5_data.rsi,
         rsi10: rsi10_data.rsi,
         boll_ub: boll_data.bollUb,
@@ -133,8 +134,7 @@ export default class CsvDataManager {
         obv5: obv_data.obvMa,
       });
     }
-    if (type === SkillsTableOptions.DailySkills)
-      this.dailyskills.push(...data);
+    if (type === SkillsTableOptions.DailySkills) this.dailyskills.push(...data);
     else if (type === SkillsTableOptions.WeeklySkills)
       this.weeklyskills.push(...data);
   }

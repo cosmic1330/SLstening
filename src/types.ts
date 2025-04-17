@@ -87,6 +87,7 @@ export type SkillsTableType = {
   osc: number;
   k: number;
   d: number;
+  j: number;
   rsi5: number;
   rsi10: number;
   bollUb: number;
@@ -134,6 +135,7 @@ export type TimeSharingSkillsTableType = {
   osc: number;
   k: number;
   d: number;
+  j: number;
   rsi5: number;
   rsi10: number;
   bollUb: number;

@@ -18,6 +18,7 @@ import Kd from "./Kd";
 import Ma from "./Ma";
 import MaKbar from "./MaKbar";
 import MJ from "./MJ";
+import MR from "./MR";
 import Obv from "./Obv";
 
 const slides = [
@@ -28,6 +29,14 @@ const slides = [
   {
     id: "mj",
     content: <MJ />,
+  },
+  {
+    id: "obv",
+    content: <Obv />,
+  },
+  {
+    id: "mr",
+    content: <MR />,
   },
   {
     id: "kd",
@@ -44,10 +53,6 @@ const slides = [
   {
     id: "low_close",
     content: <Close />,
-  },
-  {
-    id: "obv",
-    content: <Obv />,
   },
 ];
 

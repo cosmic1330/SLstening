@@ -14,7 +14,7 @@ import ma from "../../cls_tools/ma";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import AvgRectangle from "./AvgRectangle";
+import AvgCandlestickRectangle from "./AvgCandlestickRectangle";
 import { Tooltip as MuiTooltip } from "@mui/material";
 
 export default function AvgMaKbar() {
@@ -127,7 +127,7 @@ export default function AvgMaKbar() {
               activeDot={false}
               legendType="none"
             />
-            <Customized component={AvgRectangle} />
+            <Customized component={AvgCandlestickRectangle} />
 
             <Line
               dataKey="ma5"

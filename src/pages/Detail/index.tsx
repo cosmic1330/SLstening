@@ -26,16 +26,16 @@ const slides = [
     content: <Ma />,
   },
   {
+    id: "mj",
+    content: <MJ />,
+  },
+  {
     id: "kd",
     content: <Kd />,
   },
   {
     id: "ma_k",
     content: <MaKbar />,
-  },
-  {
-    id: "mj",
-    content: <MJ />,
   },
   {
     id: "avg_k",

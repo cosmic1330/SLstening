@@ -11,7 +11,7 @@ type FormattedGraphicalItem = {
 };
 
 // using Customized gives you access to all relevant chart props
-const CustomizedAvgRectangle = (props: any) => {
+const AvgCandlestickRectangle = (props: any) => {
   const { formattedGraphicalItems } = props;
   // get first and second series in chart
   const highSeries = formattedGraphicalItems[0] as FormattedGraphicalItem;
@@ -62,4 +62,4 @@ const CustomizedAvgRectangle = (props: any) => {
   // render custom content using points from the graph
   return Rectangles;
 };
-export default CustomizedAvgRectangle;
+export default AvgCandlestickRectangle;

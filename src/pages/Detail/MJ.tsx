@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
+  Area,
   Bar,
   ComposedChart,
   Line,
@@ -32,6 +33,8 @@ export default function MJ() {
       t: deals[0].t,
       j: kd_data.j || null,
       osc: macd_data.osc || null,
+      long: null,
+      short: null,
       positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
       negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
     });
@@ -43,10 +46,13 @@ export default function MJ() {
         t: deal.t,
         j: kd_data.j || null,
         osc: macd_data.osc || null,
+        long: kd_data.j > 50 && macd_data.osc > 0 ? kd_data.j : null,
+        short: kd_data.j < 50 && macd_data.osc < 0 ? kd_data.j : null,
         positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
         negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
       });
     }
+    console.log(response);
     return response;
   }, [deals]);
 
@@ -78,7 +84,7 @@ export default function MJ() {
               yAxisId="right"
               orientation="right"
               domain={["dataMin", "dataMax"]}
-              ticks={[0, 25, 50, 75, 100]} 
+              ticks={[0, 25, 50, 75, 100]}
             />
 
             <ReferenceLine
@@ -111,6 +117,22 @@ export default function MJ() {
               activeDot={false}
               legendType="none"
               yAxisId="right"
+            />
+            <Area
+              type="monotone"
+              dataKey="long"
+              fill="#faa"
+              stroke="#faa"
+              yAxisId="right"
+              baseValue={50}
+            />
+            <Area
+              type="monotone"
+              dataKey="short"
+              fill="#afa"
+              stroke="#afa"
+              yAxisId="right"
+              baseValue={50}
             />
           </ComposedChart>
         </ResponsiveContainer>

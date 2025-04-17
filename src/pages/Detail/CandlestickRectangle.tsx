@@ -11,7 +11,7 @@ type FormattedGraphicalItem = {
 };
 
 // using Customized gives you access to all relevant chart props
-const CustomizedRectangle = (props: any) => {
+const CandlestickRectangle = (props: any) => {
   const { formattedGraphicalItems } = props;
   // get first and second series in chart
   const highSeries = formattedGraphicalItems[0] as FormattedGraphicalItem;
@@ -43,4 +43,4 @@ const CustomizedRectangle = (props: any) => {
     );
   });
 };
-export default CustomizedRectangle;
+export default CandlestickRectangle;

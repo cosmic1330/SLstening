@@ -40,7 +40,7 @@ export default function MR() {
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      rsi_data = rsi.next(deal, rsi_data, 9);
+      rsi_data = rsi.next(deal, rsi_data, 5);
       macd_data = macd.next(deal, macd_data);
       response.push({
         t: deal.t,

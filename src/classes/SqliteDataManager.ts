@@ -60,158 +60,133 @@ export default class SqliteDataManager {
       skillsType: TimeSharingSkillsTableOptions;
     }
   ) {
-    try {
-      if (!ta || ta.length === 0) {
-        throw new Error("ta is empty");
-      }
+    if (!ta || ta.length === 0) {
+      return false;
+    }
 
-      const boll = new Boll();
-      const ma = new Ma();
-      const macd = new Macd();
-      const kd = new Kd();
-      const rsi = new Rsi();
-      const obv = new Obv();
+    const boll = new Boll();
+    const ma = new Ma();
+    const macd = new Macd();
+    const kd = new Kd();
+    const rsi = new Rsi();
+    const obv = new Obv();
 
-      const init = ta[0];
-      let dailyDealSaveStatus = await this.saveTimeSharingDealTable(
-        {
-          stock_id: stock.id,
-          ts: init.t,
-          c: init.c,
-          o: init.o,
-          h: init.h,
-          l: init.l,
-          v: init.v,
-        },
-        options.dealType,
-        stock
-      );
+    const init = ta[0];
 
-      if (!dailyDealSaveStatus) {
-        throw new Error("init dailyDealSaveStatus failed");
-      }
+    let ma5_data = ma.init(init, 5);
+    let ma10_data = ma.init(init, 10);
+    let ma20_data = ma.init(init, 20);
+    let ma60_data = ma.init(init, 60);
+    let ma120_data = ma.init(init, 120);
+    let boll_data = boll.init(init);
+    let macd_data = macd.init(init);
+    let kd_data = kd.init(init, 9);
+    let rsi5_data = rsi.init(init, 5);
+    let rsi10_data = rsi.init(init, 10);
+    let obv_data = obv.init(init, 5);
 
-      let ma5_data = ma.init(init, 5);
-      let ma10_data = ma.init(init, 10);
-      let ma20_data = ma.init(init, 20);
-      let ma60_data = ma.init(init, 60);
-      let ma120_data = ma.init(init, 120);
-      let boll_data = boll.init(init);
-      let macd_data = macd.init(init);
-      let kd_data = kd.init(init, 9);
-      let rsi5_data = rsi.init(init, 5);
-      let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
+    const skills_data = [
+      {
+        stock_id: stock.id,
+        ts: init.t,
+        ma5: ma5_data.ma,
+        ma5_ded: ma5_data.exclusionValue["d-1"],
+        ma10: ma10_data.ma,
+        ma10_ded: ma10_data.exclusionValue["d-1"],
+        ma20: ma20_data.ma,
+        ma20_ded: ma20_data.exclusionValue["d-1"],
+        ma60: ma60_data.ma,
+        ma60_ded: ma60_data.exclusionValue["d-1"],
+        ma120: ma120_data.ma,
+        ma120_ded: ma120_data.exclusionValue["d-1"],
+        macd: macd_data.macd,
+        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
+        osc: macd_data.osc,
+        k: kd_data.k,
+        d: kd_data.d,
+        j: kd_data.j,
+        rsi5: rsi5_data.rsi,
+        rsi10: rsi10_data.rsi,
+        bollUb: boll_data.bollUb,
+        bollMa: boll_data.bollMa,
+        bollLb: boll_data.bollLb,
+        obv: obv_data.obv,
+        obv5: obv_data.obvMa,
+      },
+    ];
 
-      let skillsSaveStatus = await this.saveTimeSharingSkillsTable(
-        {
-          stock_id: stock.id,
-          ts: init.t,
-          ma5: ma5_data.ma,
-          ma5_ded: ma5_data.exclusionValue["d-1"],
-          ma10: ma10_data.ma,
-          ma10_ded: ma10_data.exclusionValue["d-1"],
-          ma20: ma20_data.ma,
-          ma20_ded: ma20_data.exclusionValue["d-1"],
-          ma60: ma60_data.ma,
-          ma60_ded: ma60_data.exclusionValue["d-1"],
-          ma120: ma120_data.ma,
-          ma120_ded: ma120_data.exclusionValue["d-1"],
-          macd: macd_data.macd,
-          dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-          osc: macd_data.osc,
-          k: kd_data.k,
-          d: kd_data.d,
-          j: kd_data.j,
-          rsi5: rsi5_data.rsi,
-          rsi10: rsi10_data.rsi,
-          bollUb: boll_data.bollUb,
-          bollMa: boll_data.bollMa,
-          bollLb: boll_data.bollLb,
-          obv: obv_data.obv,
-          obv5: obv_data.obvMa,
-        },
-        options.skillsType,
-        stock
-      );
+    for (let i = 1; i < ta.length; i++) {
+      const value = ta[i];
 
-      if (!skillsSaveStatus) {
-        throw new Error("init skillsSaveStatus failed");
-      }
+      ma5_data = ma.next(value, ma5_data, 5);
+      ma10_data = ma.next(value, ma10_data, 10);
+      ma20_data = ma.next(value, ma20_data, 20);
+      ma60_data = ma.next(value, ma60_data, 60);
+      ma120_data = ma.next(value, ma120_data, 120);
+      boll_data = boll.next(value, boll_data, 20);
+      macd_data = macd.next(value, macd_data);
+      kd_data = kd.next(value, kd_data, 9);
+      rsi5_data = rsi.next(value, rsi5_data, 5);
+      rsi10_data = rsi.next(value, rsi10_data, 10);
+      obv_data = obv.next(value, obv_data, 5);
 
-      for (let i = 1; i < ta.length; i++) {
-        const value = ta[i];
-        dailyDealSaveStatus = await this.saveTimeSharingDealTable(
+      skills_data.push({
+        stock_id: stock.id,
+        ts: value.t,
+        ma5: ma5_data.ma,
+        ma5_ded: ma5_data.exclusionValue["d-1"],
+        ma10: ma10_data.ma,
+        ma10_ded: ma10_data.exclusionValue["d-1"],
+        ma20: ma20_data.ma,
+        ma20_ded: ma20_data.exclusionValue["d-1"],
+        ma60: ma60_data.ma,
+        ma60_ded: ma60_data.exclusionValue["d-1"],
+        ma120: ma120_data.ma,
+        ma120_ded: ma120_data.exclusionValue["d-1"],
+        macd: macd_data.macd,
+        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
+        osc: macd_data.osc,
+        k: kd_data.k,
+        d: kd_data.d,
+        j: kd_data.j,
+        rsi5: rsi5_data.rsi,
+        rsi10: rsi10_data.rsi,
+        bollUb: boll_data.bollUb,
+        bollMa: boll_data.bollMa,
+        bollLb: boll_data.bollLb,
+        obv: obv_data.obv,
+        obv5: obv_data.obvMa,
+      });
+    }
+
+    for (let i = ta.length - 1; i >= 0; i--) {
+      try {
+        const ta_value = ta[i];
+        const skills_value = skills_data[i];
+
+        await this.saveTimeSharingDealTable(
           {
             stock_id: stock.id,
-            ts: value.t,
-            c: value.c,
-            o: value.o,
-            h: value.h,
-            l: value.l,
-            v: value.v,
+            ts: ta_value.t,
+            c: ta_value.c,
+            o: ta_value.o,
+            h: ta_value.h,
+            l: ta_value.l,
+            v: ta_value.v,
           },
           options.dealType,
           stock
         );
-
-        if (!dailyDealSaveStatus) {
-          throw new Error("dailyDealSaveStatus failed");
-        }
-
-        ma5_data = ma.next(value, ma5_data, 5);
-        ma10_data = ma.next(value, ma10_data, 10);
-        ma20_data = ma.next(value, ma20_data, 20);
-        ma60_data = ma.next(value, ma60_data, 60);
-        ma120_data = ma.next(value, ma120_data, 120);
-        boll_data = boll.next(value, boll_data, 20);
-        macd_data = macd.next(value, macd_data);
-        kd_data = kd.next(value, kd_data, 9);
-        rsi5_data = rsi.next(value, rsi5_data, 5);
-        rsi10_data = rsi.next(value, rsi10_data, 10);
-        obv_data = obv.next(value, obv_data, 5);
-
-        skillsSaveStatus = await this.saveTimeSharingSkillsTable(
-          {
-            stock_id: stock.id,
-            ts: value.t,
-            ma5: ma5_data.ma,
-            ma5_ded: ma5_data.exclusionValue["d-1"],
-            ma10: ma10_data.ma,
-            ma10_ded: ma10_data.exclusionValue["d-1"],
-            ma20: ma20_data.ma,
-            ma20_ded: ma20_data.exclusionValue["d-1"],
-            ma60: ma60_data.ma,
-            ma60_ded: ma60_data.exclusionValue["d-1"],
-            ma120: ma120_data.ma,
-            ma120_ded: ma120_data.exclusionValue["d-1"],
-            macd: macd_data.macd,
-            dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-            osc: macd_data.osc,
-            k: kd_data.k,
-            d: kd_data.d,
-            j: kd_data.j,
-            rsi5: rsi5_data.rsi,
-            rsi10: rsi10_data.rsi,
-            bollUb: boll_data.bollUb,
-            bollMa: boll_data.bollMa,
-            bollLb: boll_data.bollLb,
-            obv: obv_data.obv,
-            obv5: obv_data.obvMa,
-          },
+        await this.saveTimeSharingSkillsTable(
+          skills_value,
           options.skillsType,
           stock
         );
-
-        if (!skillsSaveStatus) {
-          throw new Error("dailySkillsSaveStatus failed");
-        }
+      } catch (error) {
+        break;
       }
-      return true;
-    } catch (e) {
-      console.error(stock, e);
     }
-    return false;
+    return true;
   }
 
   async processor(
@@ -222,161 +197,128 @@ export default class SqliteDataManager {
       skillsType: SkillsTableOptions;
     }
   ) {
-    try {
-      if (!ta || ta.length === 0) {
-        throw new Error("ta is empty");
-      }
+    if (!ta || ta.length === 0) {
+      return false;
+    }
 
-      const boll = new Boll();
-      const ma = new Ma();
-      const macd = new Macd();
-      const kd = new Kd();
-      const rsi = new Rsi();
-      const obv = new Obv();
+    const boll = new Boll();
+    const ma = new Ma();
+    const macd = new Macd();
+    const kd = new Kd();
+    const rsi = new Rsi();
+    const obv = new Obv();
 
-      const init = ta[0];
-      let t = dateFormat(init.t, Mode.NumberToString);
-      let dailyDealSaveStatus = await this.saveDealTable(
-        {
-          stock_id: stock.id,
-          t,
-          c: init.c,
-          o: init.o,
-          h: init.h,
-          l: init.l,
-          v: init.v,
-        },
-        options.dealType,
-        stock
-      );
+    const init = ta[0];
 
-      if (!dailyDealSaveStatus) {
-        throw new Error("init dailyDealSaveStatus failed");
-      }
+    let ma5_data = ma.init(init, 5);
+    let ma10_data = ma.init(init, 10);
+    let ma20_data = ma.init(init, 20);
+    let ma60_data = ma.init(init, 60);
+    let ma120_data = ma.init(init, 120);
+    let boll_data = boll.init(init);
+    let macd_data = macd.init(init);
+    let kd_data = kd.init(init, 9);
+    let rsi5_data = rsi.init(init, 5);
+    let rsi10_data = rsi.init(init, 10);
+    let obv_data = obv.init(init, 5);
 
-      let ma5_data = ma.init(init, 5);
-      let ma10_data = ma.init(init, 10);
-      let ma20_data = ma.init(init, 20);
-      let ma60_data = ma.init(init, 60);
-      let ma120_data = ma.init(init, 120);
-      let boll_data = boll.init(init);
-      let macd_data = macd.init(init);
-      let kd_data = kd.init(init, 9);
-      let rsi5_data = rsi.init(init, 5);
-      let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
+    const skills_data = [
+      {
+        stock_id: stock.id,
+        t: dateFormat(init.t, Mode.NumberToString),
+        ma5: ma5_data.ma,
+        ma5_ded: ma5_data.exclusionValue["d-1"],
+        ma10: ma10_data.ma,
+        ma10_ded: ma10_data.exclusionValue["d-1"],
+        ma20: ma20_data.ma,
+        ma20_ded: ma20_data.exclusionValue["d-1"],
+        ma60: ma60_data.ma,
+        ma60_ded: ma60_data.exclusionValue["d-1"],
+        ma120: ma120_data.ma,
+        ma120_ded: ma120_data.exclusionValue["d-1"],
+        macd: macd_data.macd,
+        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
+        osc: macd_data.osc,
+        k: kd_data.k,
+        d: kd_data.d,
+        j: kd_data.j,
+        rsi5: rsi5_data.rsi,
+        rsi10: rsi10_data.rsi,
+        bollUb: boll_data.bollUb,
+        bollMa: boll_data.bollMa,
+        bollLb: boll_data.bollLb,
+        obv: obv_data.obv,
+        obv5: obv_data.obvMa,
+      },
+    ];
 
-      let skillsSaveStatus = await this.saveSkillsTable(
-        {
-          stock_id: stock.id,
-          t,
-          ma5: ma5_data.ma,
-          ma5_ded: ma5_data.exclusionValue["d-1"],
-          ma10: ma10_data.ma,
-          ma10_ded: ma10_data.exclusionValue["d-1"],
-          ma20: ma20_data.ma,
-          ma20_ded: ma20_data.exclusionValue["d-1"],
-          ma60: ma60_data.ma,
-          ma60_ded: ma60_data.exclusionValue["d-1"],
-          ma120: ma120_data.ma,
-          ma120_ded: ma120_data.exclusionValue["d-1"],
-          macd: macd_data.macd,
-          dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-          osc: macd_data.osc,
-          k: kd_data.k,
-          d: kd_data.d,
-          j: kd_data.j,
-          rsi5: rsi5_data.rsi,
-          rsi10: rsi10_data.rsi,
-          bollUb: boll_data.bollUb,
-          bollMa: boll_data.bollMa,
-          bollLb: boll_data.bollLb,
-          obv: obv_data.obv,
-          obv5: obv_data.obvMa,
-        },
-        options.skillsType,
-        stock
-      );
+    for (let i = 1; i < ta.length; i++) {
+      const value = ta[i];
+      ma5_data = ma.next(value, ma5_data, 5);
+      ma10_data = ma.next(value, ma10_data, 10);
+      ma20_data = ma.next(value, ma20_data, 20);
+      ma60_data = ma.next(value, ma60_data, 60);
+      ma120_data = ma.next(value, ma120_data, 120);
+      boll_data = boll.next(value, boll_data, 20);
+      macd_data = macd.next(value, macd_data);
+      kd_data = kd.next(value, kd_data, 9);
+      rsi5_data = rsi.next(value, rsi5_data, 5);
+      rsi10_data = rsi.next(value, rsi10_data, 10);
+      obv_data = obv.next(value, obv_data, 5);
 
-      if (!skillsSaveStatus) {
-        throw new Error("init skillsSaveStatus failed");
-      }
+      skills_data.push({
+        stock_id: stock.id,
+        t: dateFormat(value.t, Mode.NumberToString),
+        ma5: ma5_data.ma,
+        ma5_ded: ma5_data.exclusionValue["d-1"],
+        ma10: ma10_data.ma,
+        ma10_ded: ma10_data.exclusionValue["d-1"],
+        ma20: ma20_data.ma,
+        ma20_ded: ma20_data.exclusionValue["d-1"],
+        ma60: ma60_data.ma,
+        ma60_ded: ma60_data.exclusionValue["d-1"],
+        ma120: ma120_data.ma,
+        ma120_ded: ma120_data.exclusionValue["d-1"],
+        macd: macd_data.macd,
+        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
+        osc: macd_data.osc,
+        k: kd_data.k,
+        d: kd_data.d,
+        j: kd_data.j,
+        rsi5: rsi5_data.rsi,
+        rsi10: rsi10_data.rsi,
+        bollUb: boll_data.bollUb,
+        bollMa: boll_data.bollMa,
+        bollLb: boll_data.bollLb,
+        obv: obv_data.obv,
+        obv5: obv_data.obvMa,
+      });
+    }
 
-      for (let i = 1; i < ta.length; i++) {
-        const value = ta[i];
-        t = dateFormat(value.t, Mode.NumberToString);
+    for (let i = ta.length - 1; i >= 0; i--) {
+      try {
+        const ta_value = ta[i];
+        const skills_value = skills_data[i];
 
-        dailyDealSaveStatus = await this.saveDealTable(
+        await this.saveDealTable(
           {
             stock_id: stock.id,
-            t,
-            c: value.c,
-            o: value.o,
-            h: value.h,
-            l: value.l,
-            v: value.v,
+            t: dateFormat(ta_value.t, Mode.NumberToString),
+            c: ta_value.c,
+            o: ta_value.o,
+            h: ta_value.h,
+            l: ta_value.l,
+            v: ta_value.v,
           },
           options.dealType,
           stock
         );
-
-        if (!dailyDealSaveStatus) {
-          throw new Error("dailyDealSaveStatus failed");
-        }
-
-        ma5_data = ma.next(value, ma5_data, 5);
-        ma10_data = ma.next(value, ma10_data, 10);
-        ma20_data = ma.next(value, ma20_data, 20);
-        ma60_data = ma.next(value, ma60_data, 60);
-        ma120_data = ma.next(value, ma120_data, 120);
-        boll_data = boll.next(value, boll_data, 20);
-        macd_data = macd.next(value, macd_data);
-        kd_data = kd.next(value, kd_data, 9);
-        rsi5_data = rsi.next(value, rsi5_data, 5);
-        rsi10_data = rsi.next(value, rsi10_data, 10);
-        obv_data = obv.next(value, obv_data, 5);
-
-        skillsSaveStatus = await this.saveSkillsTable(
-          {
-            stock_id: stock.id,
-            t,
-            ma5: ma5_data.ma,
-            ma5_ded: ma5_data.exclusionValue["d-1"],
-            ma10: ma10_data.ma,
-            ma10_ded: ma10_data.exclusionValue["d-1"],
-            ma20: ma20_data.ma,
-            ma20_ded: ma20_data.exclusionValue["d-1"],
-            ma60: ma60_data.ma,
-            ma60_ded: ma60_data.exclusionValue["d-1"],
-            ma120: ma120_data.ma,
-            ma120_ded: ma120_data.exclusionValue["d-1"],
-            macd: macd_data.macd,
-            dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-            osc: macd_data.osc,
-            k: kd_data.k,
-            d: kd_data.d,
-            j: kd_data.j,
-            rsi5: rsi5_data.rsi,
-            rsi10: rsi10_data.rsi,
-            bollUb: boll_data.bollUb,
-            bollMa: boll_data.bollMa,
-            bollLb: boll_data.bollLb,
-            obv: obv_data.obv,
-            obv5: obv_data.obvMa,
-          },
-          options.skillsType,
-          stock
-        );
-
-        if (!skillsSaveStatus) {
-          throw new Error("dailySkillsSaveStatus failed");
-        }
+        await this.saveSkillsTable(skills_value, options.skillsType, stock);
+      } catch (error) {
+        break;
       }
-      return true;
-    } catch (e) {
-      console.error(stock, e);
     }
-    return false;
+    return true;
   }
 
   weeklyProcessorByDailyData(ta: TaType, stock: StockStoreType) {
@@ -535,9 +477,7 @@ export default class SqliteDataManager {
         }
       }
       return true;
-    } catch (e) {
-      console.error(stock, e);
-    }
+    } catch (e) {}
     return false;
   }
 
@@ -550,7 +490,6 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      console.error(stock, e);
       return false;
     }
   }
@@ -567,8 +506,7 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      console.error(stock, e);
-      return false;
+      throw new Error(`${stock.name}:${e}`);
     }
   }
 
@@ -634,8 +572,7 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      console.error(stock, e);
-      return false;
+      throw new Error(`${stock.name}:${e}`);
     }
   }
 
@@ -652,8 +589,7 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      console.error(stock, e);
-      return false;
+      throw new Error(`${stock.name}:${e}`);
     }
   }
 
@@ -719,8 +655,20 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      console.error(stock, e);
-      return false;
+      throw new Error(`${stock.name}:${e}`);
+    }
+  }
+
+  async getStockDates(stock: StockStoreType) {
+    try {
+      const result: [{ latest_date: string; record_count: number }] =
+        await this.db.select(
+          `SELECT t FROM daily_deal WHERE stock_id = ${stock.id};`
+        );
+      return result;
+    } catch (error) {
+      console.error(error);
+      return { date: "N/A", count: 0 };
     }
   }
 }

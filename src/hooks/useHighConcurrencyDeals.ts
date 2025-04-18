@@ -136,19 +136,30 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       if (!result) return;
 
       //開始寫入資料庫
-      const promiseList: Promise<unknown>[] = [];
       setStatus(Status.SaveDB);
       changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
-      if (fetchDates) fetchDates();
       changeDataCount(0);
       // case 1-1: 直接寫入資料庫
       const sqliteDataManager = new SqliteDataManager(db);
-      await sqliteDataManager.clearTable();
 
-      // case 2-1: 轉換為 CSV 資料
-      // const csvDataManager = new CsvDataManager();
+      // case 1-2: 直接寫入Stock
+
+      for (let i = 0; i < result.length; i++) {
+        try {
+          const data = result[i];
+          if (!data || data.daily.length === 0 || data.weekly.length === 0)
+            break;
+          if (sessionStorage.getItem("schoice:update:stop") === "true") {
+            sessionStorage.removeItem("schoice:update:stop");
+            throw new Error("Cancel");
+          }
+          await sqliteDataManager.saveStockTable(data.stock);
+        } catch (error) {
+          break;
+        }
+      }
 
       for (let i = 0; i < result.length; i++) {
         const data = result[i];
@@ -158,9 +169,8 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           throw new Error("Cancel");
         }
 
-        // case 1-2: 直接Insert Sqlite
-        await sqliteDataManager.saveStockTable(data.stock);
-        promiseList.push(
+        // case 1-2: 直接寫入交易資料
+        await Promise.all([
           sqliteDataManager.timeSharingProcessor(data.hourly, data.stock, {
             dealType: TimeSharingDealTableOptions.HourlyDeal,
             skillsType: TimeSharingSkillsTableOptions.HourlySkills,
@@ -172,64 +182,17 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           sqliteDataManager.processor(data.weekly, data.stock, {
             dealType: DealTableOptions.WeeklyDeal,
             skillsType: SkillsTableOptions.WeeklySkills,
-          })
+          }),
           // 手動產生週資料
           // sqliteDataManager.weeklyProcessorByDailyData(data.daily, data.stock)
-        );
-
-        // case 2-2:  轉換為 CSV 資料
-        // promiseList.push(
-        //   csvDataManager.gererateDealCsvDataByTa(
-        //     data.daily,
-        //     data.stock,
-        //     DealTableOptions.DailyDeal
-        //   ),
-        //   csvDataManager.gererateDealCsvDataByTa(
-        //     data.weekly,
-        //     data.stock,
-        //     DealTableOptions.WeeklyDeal
-        //   ),
-        //   csvDataManager.gererateSkillsCsvDataByTa(
-        //     data.daily,
-        //     data.stock,
-        //     SkillsTableOptions.DailySkills
-        //   ),
-        //   csvDataManager.gererateSkillsCsvDataByTa(
-        //     data.weekly,
-        //     data.stock,
-        //     SkillsTableOptions.WeeklySkills
-        //   ),
-        // );
-
-        record++;
-        if (record % 10 === 0 || record === result.length)
-          changeDataCount(record);
+        ]).finally(() => {
+          record++;
+          if (record % 5 === 0 || record === result.length)
+            changeDataCount(record);
+        });
       }
-
       setStatus(Status.Validating);
-      await Promise.allSettled(promiseList);
-      // case 2-3: 透過 Rust 產生 CSV 檔案
-      // invoke("create_csv_from_json", {
-      //   jsonData: JSON.stringify(csvDataManager.dailydeal),
-      //   csvName: DealTableOptions.DailyDeal + ".csv",
-      //   dataType: CsvDataType.Deal,
-      // });
-      // invoke("create_csv_from_json", {
-      //   jsonData: JSON.stringify(csvDataManager.weeklydeal),
-      //   csvName: DealTableOptions.WeeklyDeal + ".csv",
-      //   dataType: CsvDataType.Deal,
-      // });
-      // invoke("create_csv_from_json", {
-      //   jsonData: JSON.stringify(csvDataManager.dailyskills),
-      //   csvName: SkillsTableOptions.DailySkills + ".csv",
-      //   dataType: CsvDataType.Skills,
-      // });
-      // invoke("create_csv_fro－m_json", {
-      //   jsonData: JSON.stringify(csvDataManager.weeklyskills),
-      //   csvName: SkillsTableOptions.WeeklySkills + ".csv",
-      //   dataType: CsvDataType.Skills,
-      // });
-
+      if (fetchDates) fetchDates();
       // 通知使用者更新完成
       toast.success("Update Success ! 🎉");
     } catch (error) {

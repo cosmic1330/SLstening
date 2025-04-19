@@ -1,15 +1,13 @@
 import { Container, Grid2, Typography } from "@mui/material";
-import ResultTable from "../../../components/ResultTable/ResultTable";
-import useStocksStore from "../../../store/Stock.store";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { DatabaseContext } from "../../../context/DatabaseContext";
-import useSchoiceStore from "../../../store/Schoice.store";
+import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";
+import { DatabaseContext } from "../../../context/DatabaseContext";
+import useStocksStore from "../../../store/Stock.store";
 
 export default function Favorite() {
   const { stocks } = useStocksStore();
   const { db, dates } = useContext(DatabaseContext);
-  const { todayDate } = useSchoiceStore();
   const [result, setResult] = useState<any[]>([]);
 
   const query = useCallback(
@@ -28,12 +26,12 @@ export default function Favorite() {
 
   useEffect(() => {
     const sql = `SELECT * FROM daily_deal JOIN stock ON daily_deal.stock_id = stock.id WHERE t="${
-      dates[todayDate]
+      dates[0]
     }" AND stock_id IN ('${stocks.map((r) => r.id).join("','")}')`;
     query(sql).then((result) => {
       if (result) setResult(result);
     });
-  }, [stocks, todayDate, dates]);
+  }, [stocks, dates]);
 
   return (
     <Container>
@@ -42,7 +40,7 @@ export default function Favorite() {
           <Typography variant="h5" gutterBottom textTransform="uppercase">
             Favorite
           </Typography>
-          <ResultTable {...{ result }} type={ActionButtonType.Decrease}/>
+          <ResultTable {...{ result }} type={ActionButtonType.Decrease} />
         </Grid2>
       </Grid2>
     </Container>

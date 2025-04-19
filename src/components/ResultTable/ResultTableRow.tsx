@@ -1,7 +1,7 @@
 import InfoIcon from "@mui/icons-material/Info";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
-import { IconButton, Typography } from "@mui/material";
+import { IconButton } from "@mui/material";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import { emit } from "@tauri-apps/api/event";
@@ -84,18 +84,9 @@ export default forwardRef(function ResultTableRow(
             )
           }
         >
-          <Typography fontSize={16} variant="body2">
-            TV
-          </Typography>
-        </IconButton>
-        <IconButton
-          onClick={() =>
-            open(`https://tw.stock.yahoo.com/q/ta?s=${row.stock_id}`)
-          }
-        >
           <img
-            src="/yahoo.png" // 本地圖片
-            alt="自訂圖示"
+            src="/tradingview.svg" 
+            alt="tradingview"
             style={{ width: 24, height: 24 }}
           />
         </IconButton>
@@ -106,9 +97,22 @@ export default forwardRef(function ResultTableRow(
             )
           }
         >
-          <Typography fontSize={16} variant="body2">
-            Pc
-          </Typography>
+          <img
+            src="/pchome_stock.jpg" 
+            alt="pchome_stock"
+            style={{ width: 24, height: 24 }}
+          />
+        </IconButton>
+        <IconButton
+          onClick={() =>
+            open(`https://statementdog.com/analysis/${row.stock_id}/`)
+          }
+        >
+          <img
+            style={{ width: 24, height: 24 }}
+            alt="財報狗"
+            src="/naughty.svg"
+          />
         </IconButton>
         <IconButton onClick={openDetailWindow}>
           <InfoIcon />

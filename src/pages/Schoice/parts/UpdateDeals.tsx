@@ -19,7 +19,7 @@ export default function UpdateDeals() {
 
   return (
     <Stack alignItems="end">
-      {status !== Status.Idle && <Process persent={persent} status={status} />}
+      {status !== Status.Idle && <Process persent={persent} />}
       <Button
         fullWidth
         variant="outlined"

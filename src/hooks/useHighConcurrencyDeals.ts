@@ -31,10 +31,10 @@ export enum Status {
 
 export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const { handleDownloadMenu } = useDownloadStocks();
-  const [completed, setCompleted] = useState(0);
+  const [downloaded, setDownloaded] = useState(0);
   const [status, setStatus] = useState(Status.Idle);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const { db, fetchDates } = useContext(DatabaseContext);
+  const { db, fetchDates, dates } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
   const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
 
@@ -51,7 +51,10 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
             id: stock.id,
             perd,
           }),
-          { method: "GET", signal }
+          {
+            method: "GET",
+            signal,
+          }
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -90,7 +93,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         }
         return null;
       } finally {
-        setCompleted((prev) => prev + 1);
+        setDownloaded((prev) => prev + 1);
       }
     },
     [getTaFetch]
@@ -105,7 +108,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
   const fetchData = useCallback(async () => {
     let record = 0;
     if (status !== Status.Idle) return;
-    // 取消之前的請求
+    // case pre:取消之前的請求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -115,8 +118,13 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
         throw new Error("Database not initialized");
       }
 
-      setCompleted(() => 0);
-      // 為新的請求創建一個新的 AbortController
+      // case 1-1: 移除大於第二筆日期的資料(刪除最後一筆資料)
+      const sqliteDataManager = new SqliteDataManager(db);
+      sqliteDataManager.deleteLatestDailyDeal(dates[1]);
+
+      // case 1-2: 下載Ta資料
+      setDownloaded(() => 0);
+      // case 1-2: 為新的請求創建一個新的 AbortController
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
       const { signal } = abortController;
@@ -124,7 +132,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       if (menu.length === 0) {
         await handleDownloadMenu();
       }
-
+      
       const result = await Promise.all(
         menu.map((stock) => limit(() => wrappedFetch(signal, stock)))
       ).catch((error) => {
@@ -135,17 +143,13 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
       });
       if (!result) return;
 
-      //開始寫入資料庫
+      // case 1-3: 開始寫入資料庫
       setStatus(Status.SaveDB);
       changeSqliteUpdateDate(
         dateFormat(new Date().getTime(), Mode.TimeStampToString)
       );
       changeDataCount(0);
-      // case 1-1: 直接寫入資料庫
-      const sqliteDataManager = new SqliteDataManager(db);
-
-      // case 1-2: 直接寫入Stock
-
+      // case 1-3: 寫入股票代號資料
       for (let i = 0; i < result.length; i++) {
         try {
           const data = result[i];
@@ -160,7 +164,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           break;
         }
       }
-
+      // case 1-3: 寫入交易資料
       for (let i = 0; i < result.length; i++) {
         const data = result[i];
         if (!data || data.daily.length === 0 || data.weekly.length === 0) break;
@@ -168,9 +172,7 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
           sessionStorage.removeItem("schoice:update:stop");
           throw new Error("Cancel");
         }
-
-        // case 1-2: 直接寫入交易資料
-        await Promise.all([
+        await Promise.allSettled([
           sqliteDataManager.timeSharingProcessor(data.hourly, data.stock, {
             dealType: TimeSharingDealTableOptions.HourlyDeal,
             skillsType: TimeSharingSkillsTableOptions.HourlySkills,
@@ -202,16 +204,16 @@ export default function useHighConcurrencyDeals(LIMIT: number = 10) {
     } finally {
       setStatus(Status.Idle);
     }
-  }, [db, wrappedFetch, menu, status]);
+  }, [db, wrappedFetch, menu, status, dates]);
 
   const update = useCallback(() => {
     fetchData();
   }, [fetchData]);
 
   const persent = useMemo(() => {
-    if (completed === 0) return 0;
-    return Math.round((completed / menu.length) * 100);
-  }, [completed, menu]);
+    if (downloaded === 0) return 0;
+    return Math.round((downloaded / menu.length) * 100);
+  }, [downloaded, menu]);
 
   return { update, persent, stop, status };
 }

@@ -39,6 +39,22 @@ export default class SqliteDataManager {
     }
   }
 
+  async deleteLatestDailyDeal(t: string) {
+    try {
+      const num = dateFormat(t, Mode.StringToNumber) * 10000 + 1400;
+      console.log(`刪除 ${num} 和 ${t} 之後的資料`);
+      await this.db.execute(`DELETE FROM hourly_skills WHERE ts > '${num}';`);
+      await this.db.execute(`DELETE FROM hourly_deal WHERE ts > '${num}';`);
+      await this.db.execute(`DELETE FROM weekly_skills WHERE t > '${t}';`);
+      await this.db.execute(`DELETE FROM weekly_deal WHERE t > '${t}';`);
+      await this.db.execute(`DELETE FROM daily_skills WHERE t > '${t}';`);
+      await this.db.execute(`DELETE FROM daily_deal WHERE t > '${t}';`);
+      return true;
+    } catch (e) {
+      console.log(e);
+    }
+  }
+
   async getLatestDailyDealCount() {
     try {
       const result: [{ latest_date: string; record_count: number }] =
@@ -72,7 +88,6 @@ export default class SqliteDataManager {
     const obv = new Obv();
 
     const init = ta[0];
-
     let ma5_data = ma.init(init, 5);
     let ma10_data = ma.init(init, 10);
     let ma20_data = ma.init(init, 20);
@@ -85,50 +100,22 @@ export default class SqliteDataManager {
     let rsi10_data = rsi.init(init, 10);
     let obv_data = obv.init(init, 5);
 
-    const skills_data = [
-      {
-        stock_id: stock.id,
-        ts: init.t,
-        ma5: ma5_data.ma,
-        ma5_ded: ma5_data.exclusionValue["d-1"],
-        ma10: ma10_data.ma,
-        ma10_ded: ma10_data.exclusionValue["d-1"],
-        ma20: ma20_data.ma,
-        ma20_ded: ma20_data.exclusionValue["d-1"],
-        ma60: ma60_data.ma,
-        ma60_ded: ma60_data.exclusionValue["d-1"],
-        ma120: ma120_data.ma,
-        ma120_ded: ma120_data.exclusionValue["d-1"],
-        macd: macd_data.macd,
-        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-        osc: macd_data.osc,
-        k: kd_data.k,
-        d: kd_data.d,
-        j: kd_data.j,
-        rsi5: rsi5_data.rsi,
-        rsi10: rsi10_data.rsi,
-        bollUb: boll_data.bollUb,
-        bollMa: boll_data.bollMa,
-        bollLb: boll_data.bollLb,
-        obv: obv_data.obv,
-        obv5: obv_data.obvMa,
-      },
-    ];
-
-    for (let i = 1; i < ta.length; i++) {
+    const skills_data = [];
+    for (let i = 0; i < ta.length; i++) {
       const value = ta[i];
-
-      ma5_data = ma.next(value, ma5_data, 5);
-      ma10_data = ma.next(value, ma10_data, 10);
-      ma20_data = ma.next(value, ma20_data, 20);
-      ma60_data = ma.next(value, ma60_data, 60);
-      ma120_data = ma.next(value, ma120_data, 120);
-      boll_data = boll.next(value, boll_data, 20);
-      macd_data = macd.next(value, macd_data);
-      kd_data = kd.next(value, kd_data, 9);
-      rsi5_data = rsi.next(value, rsi5_data, 5);
-      rsi10_data = rsi.next(value, rsi10_data, 10);
-      obv_data = obv.next(value, obv_data, 5);
+      if (i > 0) {
+        ma5_data = ma.next(value, ma5_data, 5);
+        ma10_data = ma.next(value, ma10_data, 10);
+        ma20_data = ma.next(value, ma20_data, 20);
+        ma60_data = ma.next(value, ma60_data, 60);
+        ma120_data = ma.next(value, ma120_data, 120);
+        boll_data = boll.next(value, boll_data, 20);
+        macd_data = macd.next(value, macd_data);
+        kd_data = kd.next(value, kd_data, 9);
+        rsi5_data = rsi.next(value, rsi5_data, 5);
+        rsi10_data = rsi.next(value, rsi10_data, 10);
+        obv_data = obv.next(value, obv_data, 5);
+      }
 
       skills_data.push({
         stock_id: stock.id,
@@ -209,7 +196,6 @@ export default class SqliteDataManager {
     const obv = new Obv();
 
     const init = ta[0];
-
     let ma5_data = ma.init(init, 5);
     let ma10_data = ma.init(init, 10);
     let ma20_data = ma.init(init, 20);
@@ -222,49 +208,22 @@ export default class SqliteDataManager {
     let rsi10_data = rsi.init(init, 10);
     let obv_data = obv.init(init, 5);
 
-    const skills_data = [
-      {
-        stock_id: stock.id,
-        t: dateFormat(init.t, Mode.NumberToString),
-        ma5: ma5_data.ma,
-        ma5_ded: ma5_data.exclusionValue["d-1"],
-        ma10: ma10_data.ma,
-        ma10_ded: ma10_data.exclusionValue["d-1"],
-        ma20: ma20_data.ma,
-        ma20_ded: ma20_data.exclusionValue["d-1"],
-        ma60: ma60_data.ma,
-        ma60_ded: ma60_data.exclusionValue["d-1"],
-        ma120: ma120_data.ma,
-        ma120_ded: ma120_data.exclusionValue["d-1"],
-        macd: macd_data.macd,
-        dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-        osc: macd_data.osc,
-        k: kd_data.k,
-        d: kd_data.d,
-        j: kd_data.j,
-        rsi5: rsi5_data.rsi,
-        rsi10: rsi10_data.rsi,
-        bollUb: boll_data.bollUb,
-        bollMa: boll_data.bollMa,
-        bollLb: boll_data.bollLb,
-        obv: obv_data.obv,
-        obv5: obv_data.obvMa,
-      },
-    ];
-
-    for (let i = 1; i < ta.length; i++) {
+    const skills_data = [];
+    for (let i = 0; i < ta.length; i++) {
       const value = ta[i];
-      ma5_data = ma.next(value, ma5_data, 5);
-      ma10_data = ma.next(value, ma10_data, 10);
-      ma20_data = ma.next(value, ma20_data, 20);
-      ma60_data = ma.next(value, ma60_data, 60);
-      ma120_data = ma.next(value, ma120_data, 120);
-      boll_data = boll.next(value, boll_data, 20);
-      macd_data = macd.next(value, macd_data);
-      kd_data = kd.next(value, kd_data, 9);
-      rsi5_data = rsi.next(value, rsi5_data, 5);
-      rsi10_data = rsi.next(value, rsi10_data, 10);
-      obv_data = obv.next(value, obv_data, 5);
+      if (i > 0) {
+        ma5_data = ma.next(value, ma5_data, 5);
+        ma10_data = ma.next(value, ma10_data, 10);
+        ma20_data = ma.next(value, ma20_data, 20);
+        ma60_data = ma.next(value, ma60_data, 60);
+        ma120_data = ma.next(value, ma120_data, 120);
+        boll_data = boll.next(value, boll_data, 20);
+        macd_data = macd.next(value, macd_data);
+        kd_data = kd.next(value, kd_data, 9);
+        rsi5_data = rsi.next(value, rsi5_data, 5);
+        rsi10_data = rsi.next(value, rsi10_data, 10);
+        obv_data = obv.next(value, obv_data, 5);
+      }
 
       skills_data.push({
         stock_id: stock.id,
@@ -315,6 +274,7 @@ export default class SqliteDataManager {
         );
         await this.saveSkillsTable(skills_value, options.skillsType, stock);
       } catch (error) {
+        console.log(error)
         break;
       }
     }
@@ -477,7 +437,9 @@ export default class SqliteDataManager {
         }
       }
       return true;
-    } catch (e) {}
+    } catch (e) {
+      console.log(e)
+    }
     return false;
   }
 
@@ -490,7 +452,7 @@ export default class SqliteDataManager {
       );
       return true;
     } catch (e) {
-      return false;
+      throw new Error(`${stock.name}:${e}`);
     }
   }
 

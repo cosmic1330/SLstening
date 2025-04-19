@@ -6,34 +6,28 @@ import useHighConcurrencyDeals, {
 import Process from "./Process";
 
 export default function UpdateDeals() {
-  const { update, status, persent, stop } = useHighConcurrencyDeals();
+  const { run, status, persent, stop } = useHighConcurrencyDeals();
 
   const handleClick = useCallback(async () => {
     if (status === Status.Idle) {
       sessionStorage.removeItem("schoice:update:stop");
-      update();
-    } else if (status === Status.Download) {
+      run();
+    } else {
       stop();
-    } else if (status === Status.SaveDB) {
-      sessionStorage.setItem("schoice:update:stop", "true");
     }
-  }, [status, update, stop]);
+  }, [status, run, stop]);
 
   return (
     <Stack alignItems="end">
       {status !== Status.Idle && <Process persent={persent} status={status} />}
-      {status !== Status.Validating && (
-        <Button
-          fullWidth
-          variant="outlined"
-          onClick={handleClick}
-          color={status === Status.Idle ? "primary" : "error"}
-        >
-          {status === Status.Download || status === Status.SaveDB
-            ? ` 取消`
-            : "Update"}
-        </Button>
-      )}
+      <Button
+        fullWidth
+        variant="outlined"
+        onClick={handleClick}
+        color={status === Status.Idle ? "primary" : "error"}
+      >
+        {status === Status.Download ? ` 取消` : "Update"}
+      </Button>
     </Stack>
   );
 }

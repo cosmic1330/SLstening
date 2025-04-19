@@ -1,5 +1,6 @@
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PetsIcon from "@mui/icons-material/Pets";
-import { Grid2, Stack, Typography } from "@mui/material";
+import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useContext, useEffect } from "react";
 import SqliteDataManager from "../../../classes/SqliteDataManager";
 import { DatabaseContext } from "../../../context/DatabaseContext";
@@ -31,28 +32,24 @@ export default function LatestDate() {
   }, [db]);
 
   return (
-    <Stack>
-      <Grid2 container spacing={2}>
-        <Grid2 size={6}>
-          <Typography variant="body1">Data Date:</Typography>
-        </Grid2>
-        <Grid2 size={6}>
+    <Box>
+      <Tooltip title="Last update date">
+        <Stack direction="row" spacing={1} justifyContent="flexstart">
+          <CalendarMonthIcon fontSize="small" />
           <Typography variant="body1" textAlign="right">
             {sqliteUpdateDate}
           </Typography>
-        </Grid2>
-      </Grid2>
-      <Grid2 container spacing={2}>
-        <Grid2>
-          <Typography variant="body1">Stock Counts:</Typography>
-        </Grid2>
-        <Grid2 display="flex" flexWrap="nowrap">
+        </Stack>
+      </Tooltip>
+
+      <Tooltip title="Total data of stocks">
+        <Stack direction="row" spacing={1} justifyContent="flexstart">
           <PetsIcon fontSize="small" />
           <Typography variant="body1" textAlign="right">
             {menu.length} / {dataCount}
           </Typography>
-        </Grid2>
-      </Grid2>
-    </Stack>
+        </Stack>
+      </Tooltip>
+    </Box>
   );
 }

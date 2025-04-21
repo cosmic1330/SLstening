@@ -40,6 +40,8 @@ export type PromptsMap = {
   [key: string]: PromptItem;
 };
 
+export type TrashPrompt = { time: number; id: string; type: PromptType; value: PromptItem };
+
 export type QueryBuilderMappingItem = {
   key: string;
   group: string;

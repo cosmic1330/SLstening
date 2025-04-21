@@ -8,6 +8,8 @@ import { Box, IconButton, Stack, styled, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+
 const GridItem = styled(Box)`
   width: 70px;
   height: 100vh;
@@ -52,6 +54,11 @@ export default function SideBar() {
           <Tooltip title="自選股" arrow placement="right">
             <IconButton onClick={() => navigate("/schoice/favorite")}>
               <StarRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="垃圾桶" arrow placement="right">
+            <IconButton onClick={() => navigate("/schoice/trash")}>
+              <DeleteRoundedIcon />
             </IconButton>
           </Tooltip>
         </Stack>

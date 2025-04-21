@@ -1,7 +1,12 @@
 import { Store } from "@tauri-apps/plugin-store";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
-import { PromptsMap, PromptType, PromptValue } from "../types";
+import {
+  PromptsMap,
+  PromptType,
+  PromptValue,
+  TrashPrompt,
+} from "../types";
 
 export enum ChartType {
   HOURLY_OBV = "小時OBV",
@@ -36,6 +41,8 @@ interface SchoiceState {
   theme: string;
   sqliteUpdateDate: string;
   chartType: ChartType;
+  trash: TrashPrompt[];
+  recover: (id: string) => Promise<void>;
   changeChartType: (type: ChartType) => void;
   changeSqliteUpdateDate: (date: string) => void;
   changeTheme: (theme: string) => void;
@@ -53,6 +60,7 @@ interface SchoiceState {
     type: PromptType
   ) => void;
   remove: (name: string, type: PromptType) => void;
+  removeFromTrash: (id: string) => void;
   reload: () => void;
   clear: () => void;
   clearSeleted: () => void;
@@ -72,6 +80,41 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   chartType:
     (localStorage.getItem("slitenting-chartType") as ChartType) ||
     ChartType.WEEKLY_BOLL,
+  trash: [],
+  recover: async (id: string) => {
+    const store = await Store.load("schoice.json");
+    const trash = get().trash;
+    const index = trash.findIndex((item) => item.id === id);
+    if (index !== -1) {
+      const { id, type, value } = trash[index];
+      switch (type) {
+        case PromptType.BULLS:
+          set((state) => ({
+            bulls: {
+              ...state.bulls,
+              [id]: value,
+            },
+          }));
+          await store.set("bulls", get().bulls);
+          break;
+        case PromptType.BEAR:
+          set((state) => ({
+            bears: {
+              ...state.bears,
+              [id]: value,
+            },
+          }));
+          await store.set("bears", get().bears);
+          break;
+        default:
+          break;
+      }
+      trash.splice(index, 1);
+      set({ trash });
+      await store.set("trash", trash);
+      await store.save();
+    }
+  },
   changeChartType: (type: ChartType) => {
     localStorage.setItem("slitenting-chartType", type);
     set({ chartType: type });
@@ -94,32 +137,30 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     const id = nanoid();
     switch (type) {
       case PromptType.BULLS:
-        const uniqueDataBulls = {
-          ...get().bulls,
-          [id]: {
-            name,
-            value: prompts,
+        set((state) => ({
+          bulls: {
+            ...state.bulls,
+            [id]: {
+              name,
+              value: prompts,
+            },
           },
-        };
-        await store.set("bulls", uniqueDataBulls);
-        await store.save();
-        set(() => ({
-          bulls: uniqueDataBulls,
         }));
+        await store.set("bulls", get().bulls);
+        await store.save();
         return id;
       case PromptType.BEAR:
-        const uniqueDataBears = {
-          ...get().bears,
-          [id]: {
-            name,
-            value: prompts,
+        set((state) => ({
+          bears: {
+            ...state.bears,
+            [id]: {
+              name,
+              value: prompts,
+            },
           },
-        };
-        await store.set("bears", uniqueDataBears);
-        await store.save();
-        set(() => ({
-          bears: uniqueDataBears,
         }));
+        await store.set("bears", get().bears);
+        await store.save();
         return id;
       default:
         return undefined;
@@ -134,36 +175,34 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     const store = await Store.load("schoice.json");
     switch (type) {
       case PromptType.BULLS:
-        const uniqueDataBulls = {
-          ...get().bulls,
-          [id]: {
-            name,
-            value: prompts,
-          },
-        };
-        await store.set("bulls", uniqueDataBulls);
-        await store.save();
-        set(() => {
+        set((state) => {
           return {
-            bulls: uniqueDataBulls,
+            bulls: {
+              ...state.bulls,
+              [id]: {
+                name,
+                value: prompts,
+              },
+            },
           };
         });
+        await store.set("bulls", get().bulls);
+        await store.save();
         break;
       case PromptType.BEAR:
-        const uniqueDataBears = {
-          ...get().bears,
-          [id]: {
-            name,
-            value: prompts,
-          },
-        };
-        await store.set("bears", uniqueDataBears);
-        await store.save();
-        set(() => {
+        set((state) => {
           return {
-            bears: uniqueDataBears,
+            bears: {
+              ...state.bears,
+              [id]: {
+                name,
+                value: prompts,
+              },
+            },
           };
         });
+        await store.set("bears", get().bears);
+        await store.save();
         break;
       default:
         break;
@@ -173,42 +212,70 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     const store = await Store.load("schoice.json");
     switch (type) {
       case PromptType.BULLS:
-        const { [id]: _, ...dataBulls } = get().bulls;
-        await store.set("bulls", dataBulls);
-        await store.save();
-        set(() => {
+        const { [id]: bull_value, ...dataBulls } = get().bulls;
+        const removeBull = {
+          time: Date.now(),
+          id,
+          type,
+          value: bull_value,
+        };
+        set((state) => {
           return {
             bulls: dataBulls,
+            trash: [...state.trash, removeBull],
           };
         });
+        await store.set("bulls", get().bulls);
+        await store.set("trash", get().trash);
+        await store.save();
         break;
       case PromptType.BEAR:
-        const { [id]: __, ...dataBears } = get().bears;
-        await store.set("bears", dataBears);
-        await store.save();
-        set(() => {
+        const { [id]: bear_value, ...dataBears } = get().bears;
+        const removeBear = {
+          time: Date.now(),
+          id,
+          type,
+          value: bear_value,
+        };
+        set((state) => {
           return {
             bears: dataBears,
+            trash: [...state.trash, removeBear],
           };
         });
+        await store.set("bears", get().bears);
+        await store.set("trash", get().trash);
+        await store.save();
         break;
       default:
         break;
     }
   },
+  removeFromTrash: async (id: string) => {
+    const store = await Store.load("schoice.json");
+    set((state) => {
+      return {
+        trash: state.trash.filter((item) => item.id !== id),
+      };
+    });
+    await store.set("trash", get().trash);
+    await store.save();
+  },
   reload: async () => {
     const store = await Store.load("schoice.json");
     const bulls = ((await store.get("bulls")) as PromptsMap) || {};
     const bears = ((await store.get("bears")) as PromptsMap) || {};
+    const trash = ((await store.get("trash")) as TrashPrompt[]) || [];
     await store.save();
-    set(() => ({ bulls, bears }));
+    set(() => ({ bulls, bears, trash }));
   },
   clear: async () => {
     const store = await Store.load("schoice.json");
     await store.delete("bulls");
     await store.delete("bears");
+    await store.delete("trash");
     await store.save();
-    set({ bulls: {}, bears: {} });
+    set({ bulls: {}, bears: {}, trash: [] });
   },
   clearSeleted: () => {
     set({ select: null });

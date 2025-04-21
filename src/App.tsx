@@ -16,6 +16,7 @@ import Setting from "./pages/Schoice/Setting";
 import useStocksStore from "./store/Stock.store";
 import Register from "./pages/Register";
 import Favorite from "./pages/Schoice/Favorite";
+import Trash from "./pages/Schoice/Trash";
 
 function App() {
   const { reload } = useStocksStore();
@@ -36,6 +37,7 @@ function App() {
           <Route path="add" element={<PromptAdd />} />
           <Route path="edit/:id" element={<PromptEdit />} />
           <Route path="setting" element={<Setting />} />
+          <Route path="trash" element={<Trash />} />
           <Route path="*" element={<Navigate to="/schoice" />} />
         </Route>
         <Route path="detail/:id" element={<Detail />} />

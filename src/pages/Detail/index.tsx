@@ -56,10 +56,15 @@ const slides = [
   },
 ];
 
+enum PictoreType {
+  Daily = "daily",
+  Hourly = "hourly",
+}
+
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState("hourly");
+  const [picture, setPicture] = useState(PictoreType.Daily);
 
   const goToSlide = useCallback((index: number) => {
     if (index >= 0 && index < slides.length) {
@@ -125,11 +130,11 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const { id } = useParams();
 
   const { data } = useSWR(
-    id === "twse" && picture === "hourly"
+    id === "twse" && picture === PictoreType.Hourly
       ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
-      : id === "twse" && picture === "daily"
+      : id === "twse" && picture === PictoreType.Daily
       ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=d;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
-      : picture === "hourly"
+      : picture === PictoreType.Hourly
       ? generateDealDataDownloadUrl({
           type: UrlType.Ta,
           id: id || "",
@@ -215,9 +220,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
-            disabled={picture === "hourly"}
+            disabled={picture === PictoreType.Hourly}
             onClick={() => {
-              setPicture("hourly");
+              setPicture(PictoreType.Hourly);
               goToSlide(0);
             }}
           >
@@ -229,9 +234,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
-            disabled={picture === "daily"}
+            disabled={picture === PictoreType.Daily}
             onClick={() => {
-              setPicture("daily");
+              setPicture(PictoreType.Daily);
               goToSlide(0);
             }}
           >

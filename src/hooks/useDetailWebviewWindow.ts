@@ -1,5 +1,4 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
 import { useCallback } from "react";
 export default function useDetailWebviewWindow({
@@ -12,7 +11,6 @@ export default function useDetailWebviewWindow({
   group: string;
 }) {
   const openDetailWindow = useCallback(async () => {
-    const appWindow = getCurrentWindow();
     let existingWindow = await WebviewWindow.getByLabel("detail");
 
     if (existingWindow) {
@@ -21,6 +19,8 @@ export default function useDetailWebviewWindow({
         await existingWindow.setTitle(`${id} ${name}`);
         // 动态更新 URL
         await emit("detail", { url: `/detail/${id}` });
+        await existingWindow.unminimize();
+        await existingWindow.show();
         existingWindow.setFocus();
       } catch (error) {
         console.error("Error interacting with existing window:", error);
@@ -30,7 +30,6 @@ export default function useDetailWebviewWindow({
       const webview = new WebviewWindow("detail", {
         title: `${id} ${name} (${group})`,
         url: `/detail/${id}`,
-        parent: appWindow,
         width: 500,
         height: 400,
       });

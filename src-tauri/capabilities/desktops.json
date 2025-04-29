@@ -6,6 +6,8 @@
     "core:default",
     "opener:default",
     "store:default",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
     "notification:allow-request-permission",
     "notification:default",
     {

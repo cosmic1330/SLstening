@@ -26,6 +26,7 @@ export type StorePrompt = {
 export type Prompts = StorePrompt[];
 
 export type PromptValue = {
+  fundamental: Prompts;
   daily: Prompts;
   weekly: Prompts;
   hourly: Prompts;

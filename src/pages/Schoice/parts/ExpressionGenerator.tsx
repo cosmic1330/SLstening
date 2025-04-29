@@ -11,17 +11,20 @@ import {
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
 import { StockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
-import { StockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder"; // 新增引入
+import { StockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
 import { StockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
+import { StockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
 import { Prompts, StorePrompt } from "../../../types";
 
-type TimeFrame = "hour" | "day" | "week"; // 新增 "hour"
+type TimeFrame = "fundamental" | "hour" | "day" | "week";
 
 function ExpressionGenerator({
+  setFundamentalPrompts,
   setHourlyPrompts,
   setDailyPrompts,
   setWeekPrompts,
 }: {
+  setFundamentalPrompts: Dispatch<SetStateAction<Prompts>>;
   setHourlyPrompts: Dispatch<SetStateAction<Prompts>>;
   setDailyPrompts: Dispatch<SetStateAction<Prompts>>;
   setWeekPrompts: Dispatch<SetStateAction<Prompts>>;
@@ -29,24 +32,32 @@ function ExpressionGenerator({
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("day");
   const [selects, setSelects] = useState<StorePrompt>({
     day1:
-      timeFrame === "hour"
+      timeFrame === "fundamental"
+        ? StockFundamentalQueryBuilder.options.days[0]
+        : timeFrame === "hour"
         ? StockHourlyQueryBuilder.options.hours[0]
         : timeFrame === "day"
         ? StockDailyQueryBuilder.options.days[0]
         : StockWeeklyQueryBuilder.options.weeks[0],
     indicator1:
-      timeFrame === "hour"
+      timeFrame === "fundamental"
+        ? StockFundamentalQueryBuilder.options.indicators[0]
+        : timeFrame === "hour"
         ? StockHourlyQueryBuilder.options.indicators[0]
         : StockDailyQueryBuilder.options.indicators[0],
     operator: StockDailyQueryBuilder.options.operators[0],
     day2:
-      timeFrame === "hour"
+      timeFrame === "fundamental"
+        ? StockFundamentalQueryBuilder.options.days[1]
+        : timeFrame === "hour"
         ? StockHourlyQueryBuilder.options.hours[0]
         : timeFrame === "day"
         ? StockDailyQueryBuilder.options.days[0]
         : StockWeeklyQueryBuilder.options.weeks[0],
     indicator2:
-      timeFrame === "hour"
+      timeFrame === "fundamental"
+        ? StockFundamentalQueryBuilder.options.indicators[0]
+        : timeFrame === "hour"
         ? StockHourlyQueryBuilder.options.indicators[0]
         : StockDailyQueryBuilder.options.indicators[0],
   });
@@ -55,7 +66,16 @@ function ExpressionGenerator({
     _event: React.MouseEvent<HTMLElement>,
     newTimeFrame: TimeFrame
   ) => {
-    if (newTimeFrame !== null) {
+    if (newTimeFrame === "fundamental") {
+      setTimeFrame(newTimeFrame);
+      setSelects((prev) => ({
+        ...prev,
+        day1: StockFundamentalQueryBuilder.options.days[0],
+        day2: StockFundamentalQueryBuilder.options.days[1],
+        indicator1: StockFundamentalQueryBuilder.options.indicators[0],
+        indicator2: "0",
+      }));
+    } else if (newTimeFrame !== null) {
       setTimeFrame(newTimeFrame);
       setSelects((prev) => ({
         ...prev,
@@ -71,6 +91,18 @@ function ExpressionGenerator({
             : newTimeFrame === "day"
             ? StockDailyQueryBuilder.options.days[0]
             : StockWeeklyQueryBuilder.options.weeks[0],
+        indicator1:
+          newTimeFrame === "hour"
+            ? StockHourlyQueryBuilder.options.indicators[0]
+            : newTimeFrame === "day"
+            ? StockDailyQueryBuilder.options.indicators[0]
+            : StockWeeklyQueryBuilder.options.indicators[0],
+        indicator2:
+          newTimeFrame === "hour"
+            ? StockHourlyQueryBuilder.options.indicators[0]
+            : newTimeFrame === "day"
+            ? StockDailyQueryBuilder.options.indicators[0]
+            : StockWeeklyQueryBuilder.options.indicators[0],
       }));
     }
   };
@@ -92,14 +124,18 @@ function ExpressionGenerator({
   };
 
   const timeOptions =
-    timeFrame === "hour"
+    timeFrame === "fundamental"
+      ? StockFundamentalQueryBuilder.options.days
+      : timeFrame === "hour"
       ? StockHourlyQueryBuilder.options.hours
       : timeFrame === "day"
       ? StockDailyQueryBuilder.options.days
       : StockWeeklyQueryBuilder.options.weeks;
 
   const indicators =
-    timeFrame === "hour"
+    timeFrame === "fundamental"
+      ? StockFundamentalQueryBuilder.options.indicators
+      : timeFrame === "hour"
       ? StockHourlyQueryBuilder.options.indicators
       : timeFrame === "day"
       ? StockDailyQueryBuilder.options.indicators
@@ -116,6 +152,9 @@ function ExpressionGenerator({
           onChange={handleTimeFrameChange}
           aria-label="時間週期"
         >
+          <ToggleButton value="fundamental" aria-label="基本面">
+            基本面
+          </ToggleButton>
           <ToggleButton value="hour" aria-label="小時線">
             小時線
           </ToggleButton>
@@ -211,7 +250,9 @@ function ExpressionGenerator({
         variant="contained"
         fullWidth
         onClick={() => {
-          if (timeFrame === "hour") {
+          if (timeFrame === "fundamental") {
+            setFundamentalPrompts((prev) => [...prev, selects]);
+          } else if (timeFrame === "hour") {
             setHourlyPrompts((prev) => [...prev, selects]);
           } else if (timeFrame === "day") {
             setDailyPrompts((prev) => [...prev, selects]);

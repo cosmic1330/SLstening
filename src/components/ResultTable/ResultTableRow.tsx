@@ -1,7 +1,7 @@
 import InfoIcon from "@mui/icons-material/Info";
 import PostAddIcon from "@mui/icons-material/PostAdd";
 import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
-import { IconButton } from "@mui/material";
+import { Box, IconButton, Tooltip, Typography } from "@mui/material";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import { emit } from "@tauri-apps/api/event";
@@ -15,6 +15,29 @@ import HourlyUltraTinyLineChart from "./Charts/HourlyUltraTinyLineChart";
 import WeeklyUltraTinyLineChart from "./Charts/WeeklyUltraTinyLineChart";
 import RowChart from "./RowChart";
 import { ActionButtonType } from "./types";
+import { FundamentalTableType } from "../../types";
+
+function TooltipContent({ row }: { row: FundamentalTableType }) {
+  return (
+    <Box>
+      <Typography variant="body2" color="text.secondary">
+        本益比: {row.pe}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        殖利率: {row.dividend_yield}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        股價淨值比: {row.pb}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        EPS: {row.eps}
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        YOY: {row.yoy}
+      </Typography>
+    </Box>
+  );
+}
 
 export default forwardRef(function ResultTableRow(
   {
@@ -59,7 +82,9 @@ export default forwardRef(function ResultTableRow(
       <TableCell key={index}>{index + 1}.</TableCell>
       <TableCell key={row.t}>{row.t}</TableCell>
       <TableCell key={row.stock_id}>{row.stock_id}</TableCell>
-      <TableCell key={row.name}>{row.name}</TableCell>
+      <Tooltip title={<TooltipContent row={row} />}>
+        <TableCell key={row.name}>{row.name}</TableCell>
+      </Tooltip>
       <TableCell key={row.c}>{row.c}</TableCell>
       <TableCell>
         <HourlyUltraTinyLineChart stock_id={row.stock_id} t={row.t} />
@@ -85,7 +110,7 @@ export default forwardRef(function ResultTableRow(
           }
         >
           <img
-            src="/tradingview.svg" 
+            src="/tradingview.svg"
             alt="tradingview"
             style={{ width: 24, height: 24 }}
           />
@@ -98,7 +123,7 @@ export default forwardRef(function ResultTableRow(
           }
         >
           <img
-            src="/pchome_stock.jpg" 
+            src="/pchome_stock.jpg"
             alt="pchome_stock"
             style={{ width: 24, height: 24 }}
           />

@@ -23,7 +23,22 @@ export default function Summary({
       </AccordionSummary>
       <AccordionDetails>
         <Grid2 container spacing={2}>
-          <Grid2 size={4}>
+        <Grid2 size={3}>
+            <Typography variant="h6" gutterBottom>
+              基本面
+            </Typography>
+            {select.value.fundamental?.map((prompt, index) => (
+              <Typography key={index} variant="body1">
+                {index + 1}.
+                {prompt.day1 +
+                  prompt.indicator1 +
+                  prompt.operator +
+                  prompt.day2 +
+                  prompt.indicator2}
+              </Typography>
+            ))}
+          </Grid2>
+          <Grid2 size={3}>
             <Typography variant="h6" gutterBottom>
               小時線
             </Typography>
@@ -38,7 +53,7 @@ export default function Summary({
               </Typography>
             ))}
           </Grid2>
-          <Grid2 size={4}>
+          <Grid2 size={3}>
             <Typography variant="h6" gutterBottom>
               日線
             </Typography>
@@ -53,7 +68,7 @@ export default function Summary({
               </Typography>
             ))}
           </Grid2>
-          <Grid2 size={4}>
+          <Grid2 size={3}>
             <Typography variant="h6" gutterBottom>
               週線
             </Typography>

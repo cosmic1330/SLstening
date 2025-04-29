@@ -9,6 +9,7 @@ import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
 import { PromptType, PromptValue } from "../../../../../../types";
+import { stockFundamentalQueryBuilder } from "../../../../../../classes/StockFundamentalQueryBuilder";
 
 export default function Result({
   select,
@@ -91,7 +92,8 @@ export default function Result({
     if (
       select.value.daily.length === 0 &&
       select.value.weekly.length === 0 &&
-      select.value.hourly.length === 0
+      select.value.hourly.length === 0 &&
+      select.value.fundamental.length === 0
     ) {
       setResult([]);
       return;
@@ -141,15 +143,30 @@ export default function Result({
       }
     }
 
+    let fundamentalSQL = "";
+    if (select.value.fundamental?.length > 0) {
+      const customFundamentalConditions = select.value.fundamental.map(
+        (prompt) =>
+          stockFundamentalQueryBuilder.generateExpression(prompt).join(" ")
+      );
+      fundamentalSQL = stockFundamentalQueryBuilder.generateSqlQuery({
+        conditions: customFundamentalConditions,
+      });
+    }
+
     // 合併查詢
-    const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
+    const combinedSQL = [dailySQL, weeklySQL, hourlySQL, fundamentalSQL]
       .filter((sql) => sql)
       .join("\nINTERSECT\n");
     query(combinedSQL).then((res: { stock_id: string }[] | undefined) => {
       if (res) {
-        const sql = `SELECT * FROM daily_deal JOIN stock ON daily_deal.stock_id = stock.id WHERE t="${
-          dates[todayDate]
-        }" AND stock_id IN ('${res.map((r) => r.stock_id).join("','")}')`;
+        const sql = `SELECT * FROM daily_deal 
+        JOIN fundamental ON daily_deal.stock_id = fundamental.stock_id 
+        JOIN stock ON daily_deal.stock_id = stock.id 
+        WHERE t="${dates[todayDate]}" 
+        AND daily_deal.stock_id IN ('${res
+          .map((r) => r.stock_id)
+          .join("','")}')`;
         query(sql).then((result) => {
           if (result) setResult(result);
         });

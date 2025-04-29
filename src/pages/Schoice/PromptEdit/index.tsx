@@ -25,6 +25,9 @@ export default function PromptEdit() {
   const [hourlyPrompts, setHourlyPrompts] = useState<Prompts>(
     select?.value.hourly || []
   );
+  const [fundamentalPrompts, setFundamentalPrompts] = useState<Prompts>(
+    select?.value.fundamental || []
+  );
   const [name, setName] = useState(select?.name || "");
   const navigate = useNavigate();
 
@@ -34,6 +37,7 @@ export default function PromptEdit() {
         id,
         name,
         {
+          fundamental: fundamentalPrompts,
           daily: dailyPrompts,
           weekly: weekPrompts,
           hourly: hourlyPrompts,
@@ -45,16 +49,24 @@ export default function PromptEdit() {
     }
   };
 
-  const handleRemove = (index: number) => {
-    setDailyPrompts(dailyPrompts.filter((_, i) => i !== index));
-  };
-
-  const handleWeekRemove = (index: number) => {
-    setWeekPrompts(weekPrompts.filter((_, i) => i !== index));
-  };
-
-  const handleHourRemove = (index: number) => {
-    setHourlyPrompts(hourlyPrompts.filter((_, i) => i !== index));
+  const handleRemove = (
+    type: "fundamental" | "hourly" | "daily" | "weekly",
+    index: number
+  ) => {
+    switch (type) {
+      case "fundamental":
+        setFundamentalPrompts(fundamentalPrompts.filter((_, i) => i !== index));
+        break;
+      case "hourly":
+        setHourlyPrompts(hourlyPrompts.filter((_, i) => i !== index));
+        break;
+      case "daily":
+        setDailyPrompts(dailyPrompts.filter((_, i) => i !== index));
+        break;
+      case "weekly":
+        setWeekPrompts(weekPrompts.filter((_, i) => i !== index));
+        break;
+    }
   };
 
   const handleCancel = () => {
@@ -84,22 +96,44 @@ export default function PromptEdit() {
           <PromptName {...{ name, setName }} />
 
           <ExpressionGenerator
-            {...{ setHourlyPrompts, setDailyPrompts, setWeekPrompts }}
+            {...{
+              setFundamentalPrompts,
+              setHourlyPrompts,
+              setDailyPrompts,
+              setWeekPrompts,
+            }}
           />
         </Container>
       </Grid2>
       <Grid2 size={6}>
         <Container>
-
         <Typography variant="h5" gutterBottom my={2}>
+            已加入的基本面
+          </Typography>
+          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
+            {fundamentalPrompts.length === 0 && (
+              <Typography variant="body2" gutterBottom>
+                空
+              </Typography>
+            )}
+            {fundamentalPrompts.map((prompt, index) => (
+              <Typography key={index} variant="body2" gutterBottom>
+                {index + 1}. {Object.values(prompt).join("")}{" "}
+                <Button
+                  size="small"
+                  color="error"
+                  onClick={() => handleRemove("fundamental", index)}
+                >
+                  Remove
+                </Button>
+              </Typography>
+            ))}
+          </Box>
+          
+          <Typography variant="h5" gutterBottom my={2}>
             已加入的小時線條件
           </Typography>
-          <Box
-            border="1px solid #000"
-            borderRadius={1}
-            p={2}
-            mb={2}
-          >
+          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
             {hourlyPrompts.length === 0 && (
               <Typography variant="body2" gutterBottom>
                 空
@@ -116,7 +150,7 @@ export default function PromptEdit() {
                 <Button
                   size="small"
                   color="error"
-                  onClick={() => handleHourRemove(index)}
+                  onClick={() => handleRemove("hourly", index)}
                 >
                   Remove
                 </Button>
@@ -126,12 +160,7 @@ export default function PromptEdit() {
           <Typography variant="h5" gutterBottom my={2}>
             已加入的日線條件
           </Typography>
-          <Box
-            border="1px solid #000"
-            borderRadius={1}
-            p={2}
-            mb={2}
-          >
+          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
             {dailyPrompts.length === 0 && (
               <Typography variant="body2" gutterBottom>
                 空
@@ -148,7 +177,7 @@ export default function PromptEdit() {
                 <Button
                   size="small"
                   color="error"
-                  onClick={() => handleRemove(index)}
+                  onClick={() => handleRemove("daily", index)}
                 >
                   Remove
                 </Button>
@@ -159,12 +188,7 @@ export default function PromptEdit() {
           <Typography variant="h5" gutterBottom my={2}>
             已加入的週線條件
           </Typography>
-          <Box
-            border="1px solid #000"
-            borderRadius={1}
-            p={2}
-            mb={2}
-          >
+          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
             {weekPrompts.length === 0 && (
               <Typography variant="body2" gutterBottom>
                 空
@@ -181,13 +205,14 @@ export default function PromptEdit() {
                 <Button
                   size="small"
                   color="error"
-                  onClick={() => handleWeekRemove(index)}
+                  onClick={() => handleRemove("weekly", index)}
                 >
                   Remove
                 </Button>
               </Typography>
             ))}
           </Box>
+
 
           <Stack direction="row" spacing={2}>
             <Button
@@ -203,7 +228,8 @@ export default function PromptEdit() {
               fullWidth
               variant="contained"
               disabled={
-                (hourlyPrompts.length === 0 &&
+                (fundamentalPrompts.length === 0 &&
+                  hourlyPrompts.length === 0 &&
                   dailyPrompts.length === 0 &&
                   weekPrompts.length === 0) ||
                 name === ""

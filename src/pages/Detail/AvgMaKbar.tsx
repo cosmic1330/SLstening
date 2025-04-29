@@ -81,7 +81,7 @@ export default function AvgMaKbar() {
         {chartData.length > 0 &&
         chartData[chartData.length - 1].ma5 !== null &&
         chartData[chartData.length - 1].l > chartData[chartData.length - 2].l &&
-        chartData[chartData.length - 1].y >
+        chartData[chartData.length - 1].c >
           (chartData[chartData.length - 1].ma5 as number) ? (
           <ArrowUp color="#e26d6d" />
         ) : (
@@ -94,7 +94,7 @@ export default function AvgMaKbar() {
             <XAxis dataKey="x" />
             <YAxis domain={["dataMin", "dataMax"]} dataKey="y" />
             <ZAxis type="number" range={[10]} />
-            <Tooltip />
+            <Tooltip offset={50} />
             <Line
               dataKey="h"
               stroke="#000"

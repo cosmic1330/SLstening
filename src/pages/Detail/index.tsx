@@ -20,6 +20,7 @@ import MaKbar from "./MaKbar";
 import MJ from "./MJ";
 import MR from "./MR";
 import Obv from "./Obv";
+import formatDateTime from "../../utils/formatDateTime";
 
 const slides = [
   {
@@ -64,7 +65,7 @@ enum PictoreType {
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState(PictoreType.Daily);
+  const [picture, setPicture] = useState(PictoreType.Hourly);
 
   const goToSlide = useCallback((index: number) => {
     if (index >= 0 && index < slides.length) {
@@ -163,7 +164,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
       for (let i = 0; i < opens.length; i++) {
         if (opens[i] !== null) {
           response.push({
-            t: new Date(ts[i] * 1000) as unknown as number,
+            t: formatDateTime(
+              new Date(ts[i] * 1000).getTime()
+            ) as unknown as number,
             o: opens[i],
             c: closes[i],
             h: highs[i],
@@ -178,6 +181,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       const json_ta = "{" + (data as string).slice(ta_index).replace(");", "");
       const parse = JSON.parse(json_ta);
       const response = parse.ta as TaType;
+      console.log(response[100].t);
       return response;
     }
   }, [data, id, picture]);
@@ -208,12 +212,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
           </motion.div>
         </AnimatePresence>
 
-        <Box
-          position="absolute"
-          bottom={16}
-          left="50%"
-          sx={{ transform: "translateX(-50%)", display: "flex", gap: 2 }}
-        >
+        <Box position="absolute" right="0%">
           <Button
             color="primary"
             sx={{

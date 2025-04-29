@@ -7,8 +7,10 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
+  Brush,
   ComposedChart,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -77,24 +79,19 @@ export default function Kd() {
         )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
-        <ResponsiveContainer>
-          <ComposedChart data={chartData}>
+        <ResponsiveContainer width="100%" height="50%">
+          <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
-            <YAxis yAxisId="left" domain={[0, 100]} />
-            {/* 右側 Y 軸 */}
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              domain={["dataMin", "dataMax"]}
-            />
-            <Tooltip />
+            <YAxis domain={[0, 100]} />
+            <Tooltip offset={50} />
+            <ReferenceLine y={80} stroke="#ff0000" strokeDasharray="5 5" />
+            <ReferenceLine y={20} stroke="#ff0000" strokeDasharray="5 5" />
             <Line
               dataKey="k"
               stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
-              yAxisId="left"
             />
             <Line
               dataKey="d"
@@ -102,16 +99,23 @@ export default function Kd() {
               dot={false}
               activeDot={false}
               legendType="none"
-              yAxisId="left"
             />
+          </ComposedChart>
+        </ResponsiveContainer>
+
+        <ResponsiveContainer width="100%" height="50%">
+          <ComposedChart data={chartData} syncId="anySyncId">
+            <XAxis dataKey="t" />
+            <YAxis domain={["dataMin", "dataMax"]} />
+            <Tooltip offset={50} />
             <Line
               dataKey="c"
               stroke="#000"
               dot={false}
               activeDot={false}
               legendType="none"
-              yAxisId="right"
             />
+            <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

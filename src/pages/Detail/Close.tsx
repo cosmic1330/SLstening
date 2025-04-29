@@ -35,7 +35,7 @@ export default function Close() {
           <AreaChart data={deals}>
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
-            <Tooltip />
+            <Tooltip offset={50} />
             <Area type="monotone" dataKey="c" stroke="#e58282" fill="#e58282" />
             <Area type="monotone" dataKey="l" stroke="#ccc" fill="#fff" />
           </AreaChart>

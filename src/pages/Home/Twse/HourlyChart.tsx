@@ -102,7 +102,7 @@ export default function HourlyChart({
     return res.splice(-30);
   }, [deals.data]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow>
+    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow placement="bottom-start">
       <Box height={60}>
         <ResponsiveContainer>
           <LineChart data={data}>

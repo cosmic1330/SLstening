@@ -11,8 +11,7 @@ export default function useDetailWebviewWindow({
   name: string;
   group: string;
 }) {
-  
-  const openDetailWindow =  useCallback(async () => {
+  const openDetailWindow = useCallback(async () => {
     const appWindow = getCurrentWindow();
     let existingWindow = await WebviewWindow.getByLabel("detail");
 
@@ -32,13 +31,15 @@ export default function useDetailWebviewWindow({
         title: `${id} ${name} (${group})`,
         url: `/detail/${id}`,
         parent: appWindow,
+        width: 500,
+        height: 400,
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
         console.log(e);
       });
     }
-  },[id, name, group]);
+  }, [id, name, group]);
 
   return { openDetailWindow };
 }

@@ -8,6 +8,7 @@ import {
 import { useContext, useMemo } from "react";
 import {
   Area,
+  Brush,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -76,13 +77,25 @@ export default function Obv() {
         )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
-        <ResponsiveContainer>
-          <ComposedChart data={chartData}>
+        <ResponsiveContainer width="100%" height="50%">
+          <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
-            <YAxis />
-            {/* 右側 Y 軸 */}
-            <YAxis yAxisId="right" orientation="right" />
-            <Tooltip />
+            <YAxis domain={["dataMin", "dataMax"]} />
+            <Tooltip offset={50} />
+            <Line
+              dataKey="c"
+              stroke="#000"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="50%">
+          <ComposedChart data={chartData} syncId="anySyncId">
+            <XAxis dataKey="t" />
+            <YAxis domain={["dataMin", "dataMax"]} />
+            <Tooltip offset={50} />
             <Area
               type="monotone"
               dataKey="obv5"
@@ -94,15 +107,8 @@ export default function Obv() {
               dataKey="obv"
               stroke="#589bf3"
               fill="#589bf3"
-            />{" "}
-            <Line
-              yAxisId="right"
-              dataKey="c"
-              stroke="#000"
-              dot={false}
-              activeDot={false}
-              legendType="none"
             />
+            <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

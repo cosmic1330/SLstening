@@ -9,6 +9,7 @@ import { useContext, useMemo } from "react";
 import {
   Area,
   Bar,
+  Brush,
   ComposedChart,
   Line,
   ReferenceLine,
@@ -31,6 +32,7 @@ export default function MJ() {
     let macd_data = macd.init(deals[0]);
     response.push({
       t: deals[0].t,
+      c: deals[0].c,
       j: kd_data.j || null,
       osc: macd_data.osc || null,
       long: null,
@@ -44,6 +46,7 @@ export default function MJ() {
       macd_data = macd.next(deal, macd_data);
       response.push({
         t: deal.t,
+        c: deal.c,
         j: kd_data.j || null,
         osc: macd_data.osc || null,
         long: kd_data.j > 50 && macd_data.osc > 0 ? kd_data.j : null,
@@ -75,55 +78,42 @@ export default function MJ() {
         </MuiTooltip>
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
-        <ResponsiveContainer>
-          <ComposedChart data={chartData}>
+        <ResponsiveContainer width="100%" height="30%">
+          <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
-            <YAxis yAxisId="left" />
-            {/* 右側 Y 軸 */}
+            <YAxis domain={["dataMin", "dataMax"]} />
+            <Tooltip offset={50} />
+            <Line
+              dataKey="c"
+              stroke="#000"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="40%">
+          <ComposedChart data={chartData} syncId="anySyncId">
+            <XAxis dataKey="t" />
             <YAxis
-              yAxisId="right"
-              orientation="right"
               domain={["dataMin", "dataMax"]}
               ticks={[0, 25, 50, 75, 100]}
             />
+            <Tooltip offset={50} />
 
-            <ReferenceLine
-              y={0}
-              stroke="#589bf3"
-              strokeDasharray="3"
-              yAxisId="left"
-            />
-            <Tooltip />
-            {/* Red bars for positive values */}
-            <Bar
-              dataKey="positiveOsc"
-              fill="#ff0000"
-              yAxisId="left"
-              barSize={6}
-              name="Oscillator"
-            />
-            {/* Green bars for negative values */}
-            <Bar
-              dataKey="negativeOsc"
-              fill="#00aa00"
-              yAxisId="left"
-              barSize={6}
-              name="Oscillator"
-            />
+            <ReferenceLine y={50} stroke="#589bf3" strokeDasharray="3" />
             <Line
               dataKey="j"
               stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
-              yAxisId="right"
             />
             <Area
               type="monotone"
               dataKey="long"
               fill="#faa"
               stroke="#faa"
-              yAxisId="right"
               baseValue={50}
             />
             <Area
@@ -131,9 +121,31 @@ export default function MJ() {
               dataKey="short"
               fill="#afa"
               stroke="#afa"
-              yAxisId="right"
               baseValue={50}
             />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="30%">
+          <ComposedChart data={chartData} syncId="anySyncId">
+            <XAxis dataKey="t" />
+            <YAxis />
+            <ReferenceLine y={0} stroke="#589bf3" strokeDasharray="3" />
+            <Tooltip offset={50} />
+            {/* Red bars for positive values */}
+            <Bar
+              dataKey="positiveOsc"
+              fill="#ff0000"
+              barSize={6}
+              name="Oscillator"
+            />
+            {/* Green bars for negative values */}
+            <Bar
+              dataKey="negativeOsc"
+              fill="#00aa00"
+              barSize={6}
+              name="Oscillator"
+            />
+            <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

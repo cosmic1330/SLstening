@@ -51,7 +51,7 @@ export default function Ma() {
           <ComposedChart data={chartData}>
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
-            <Tooltip />
+            <Tooltip offset={50} />
             <Area
               type="monotone"
               dataKey="ma5"

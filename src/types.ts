@@ -29,7 +29,7 @@ export type PromptValue = {
   daily: Prompts;
   weekly: Prompts;
   hourly: Prompts;
-}
+};
 
 export type PromptItem = {
   name: string;
@@ -40,7 +40,12 @@ export type PromptsMap = {
   [key: string]: PromptItem;
 };
 
-export type TrashPrompt = { time: number; id: string; type: PromptType; value: PromptItem };
+export type TrashPrompt = {
+  time: number;
+  id: string;
+  type: PromptType;
+  value: PromptItem;
+};
 
 export type QueryBuilderMappingItem = {
   key: string;
@@ -178,4 +183,13 @@ export type SkillsCsvDataType = Omit<
   boll_ub: number;
   boll_ma: number;
   boll_lb: number;
+};
+
+export type FundamentalTableType = {
+  stock_id: string;
+  pe: number;
+  pb: number;
+  dividend_yield: number;
+  yoy: number;
+  eps: number;
 };

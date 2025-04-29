@@ -157,5 +157,22 @@ pub fn value() -> Vec<Migration> {
             ",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "create_fundamental_table",
+            sql: "
+               CREATE TABLE fundamental (
+                    stock_id TEXT, -- 股票代號
+                    pe REAL, -- 本益比
+                    pb REAL, -- 股價淨值比
+                    dividend_yield REAL, -- 殖利率
+                    yoy REAL, -- 當月營收年增率
+                    eps REAL, -- 前四季eps
+                    PRIMARY KEY (stock_id),
+                    FOREIGN KEY (stock_id) REFERENCES stock(id)
+                );
+            ",
+            kind: MigrationKind::Up,
+        },
     ]
 }

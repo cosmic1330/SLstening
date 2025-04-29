@@ -26,6 +26,40 @@ export enum Status {
   Idle = "Idle",
 }
 
+type StockFundamentals = {
+  PE: string; // 本益比 (Price to Earnings Ratio)
+  PB: string; // 股價淨值比 (Price to Book Ratio)
+  CashYield: string; // 現金殖利率（最新年度）
+  CashYield3Y: string; // 現金殖利率（近三年平均）
+  CashYield5Y: string; // 現金殖利率（近五年平均）
+};
+
+type StockProfile = {
+  ticker_name: string; // 股票代號與名稱（如 "1524 耿鼎"）
+  ticker: string; // 股票代號（如 "1524"）
+  name: string; // 公司名稱
+  local_lang_name: string; // 本地語系公司名稱
+  category: string; // 所屬產業類別（如 "汽車"）
+  subcategory: string; // 子類別（如 COMMON、ETF 等）
+  stock_exchange: string; // 交易所代號（如 "twse"）
+  listing_status: "listed" | "delisted"; // 上市狀態
+  latest_closing_price: string; // 含日期的收盤資訊（如 "2025-04-29 34.4"）
+  latest_close_price: number; // 最新收盤價
+  latest_close_price_date: string; // 最新收盤價日期（"YYYY-MM-DD"）
+  latest_close_price_diff: number; // 與前一日的價格差
+  latest_close_price_diff_pct: number; // 價格變動百分比
+  main_business: string; // 主要營業項目
+  acw: string; // 未知欄位（可能為內部代號或行業分類）
+  chairman: string; // 董事長
+  ceo: string; // 執行長
+  latest_yoy_monthly_revenue: string; // 最新單月營收年增率（%）
+  latest_eps4q: string; // 近四季 EPS（每股盈餘）
+  latest_roe4q: string; // 近四季 ROE（股東權益報酬率）
+  stock_id: number; // 系統內部用的股票 ID
+  country: string; // 國家代號（如 "tw"）
+  website_url: string; // 公司網站網址
+};
+
 export default function useHighConcurrencyDeals() {
   const { handleDownloadMenu } = useDownloadStocks();
   const [downloaded, setDownloaded] = useState(0);
@@ -34,6 +68,43 @@ export default function useHighConcurrencyDeals() {
   const { db, fetchDates, dates } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
   const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
+
+  const getFundamentalFetch = useCallback(
+    async (signal: AbortSignal, stock: StockStoreType) => {
+      try {
+        const year = new Date().getFullYear();
+        const response = await fetch(
+          `https://statementdog.com/api/v2/fundamentals/${stock.id}/${year}/${year}/cf`,
+          {
+            method: "GET",
+            signal,
+          }
+        );
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const json = await response.json();
+        const { LatestValuation, StockInfo } = json.common;
+        const LatestValuationData = LatestValuation.data as StockFundamentals;
+        const StockInfoData = StockInfo.data as StockProfile;
+        return {
+          stock_id: stock.id,
+          pe: parseFloat(LatestValuationData.PE),
+          pb: parseFloat(LatestValuationData.PB),
+          dividend_yield: parseFloat(LatestValuationData.CashYield),
+          yoy: parseFloat(StockInfoData.latest_yoy_monthly_revenue),
+          eps: parseFloat(StockInfoData.latest_eps4q),
+        };
+      } catch (error: any) {
+        if (error?.message?.indexOf("Request canceled") == -1) {
+          throw error;
+        } else {
+          throw new Error("Cancel");
+        }
+      }
+    },
+    []
+  );
 
   const getTaFetch = useCallback(
     async (
@@ -121,6 +192,13 @@ export default function useHighConcurrencyDeals() {
       try {
         await sqliteDataManager.saveStockTable(stock);
       } catch (error) {}
+      // case 1-3: 寫入基本面資料
+      try {
+        const fundamental = await getFundamentalFetch(signal, stock);
+        await sqliteDataManager.saveFundamentalTable(fundamental);
+      } catch (error) {
+        console.log(error);
+      }
       // case 1-3: 寫入交易資料
       try {
         // daily

@@ -6,6 +6,7 @@ import Database from "@tauri-apps/plugin-sql";
 import {
   DealTableOptions,
   DealTableType,
+  FundamentalTableType,
   SkillsTableOptions,
   SkillsTableType,
   StockStoreType,
@@ -25,6 +26,7 @@ export default class SqliteDataManager {
 
   async clearTable() {
     try {
+      await this.db.execute("DELETE FROM fundamental;");
       await this.db.execute("DELETE FROM hourly_skills;");
       await this.db.execute("DELETE FROM hourly_deal;");
       await this.db.execute("DELETE FROM weekly_skills;");
@@ -447,12 +449,32 @@ export default class SqliteDataManager {
   async saveStockTable(stock: StockStoreType) {
     try {
       await this.db.execute(
-        "INSERT INTO stock (id, name, industry_group, market_type) VALUES ($1, $2, $3, $4)",
+        "INSERT OR REPLACE INTO stock (id, name, industry_group, market_type) VALUES ($1, $2, $3, $4)",
         [stock.id, stock.name, stock.group, stock.type]
       );
       return true;
     } catch (e) {
       throw new Error(`${stock.name}:${e}`);
+    }
+  }
+
+  async saveFundamentalTable(data: FundamentalTableType) {
+    // update
+    try {
+      await this.db.execute(
+        `INSERT OR REPLACE INTO fundamental (stock_id, pe, pb, dividend_yield, yoy, eps) VALUES ($1, $2, $3, $4, $5, $6)`,
+        [
+          data.stock_id,
+          data.pe,
+          data.pb,
+          data.dividend_yield,
+          data.yoy,
+          data.eps,
+        ]
+      );
+      return true;
+    } catch (e) {
+      throw new Error(`${data.stock_id}:${e}`);
     }
   }
 

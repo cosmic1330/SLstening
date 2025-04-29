@@ -7,12 +7,22 @@ export class StockFundamentalQueryBuilder {
     股價淨值比: { key: "pb", group: "" },
     當月營收年增率: { key: "yoy", group: "" },
     EPS: { key: "eps", group: "" },
+    三年平均殖利率: { key: "dividend_yield_3y", group: "" },
+    五年平均殖利率: { key: "dividend_yield_5y", group: "" },
   };
 
   // 新增靜態選項
   static readonly options = {
     days: ["今天", "自定義數值"],
-    indicators: ["本益比", "殖利率", "股價淨值比", "當月營收年增率", "EPS"],
+    indicators: [
+      "本益比",
+      "殖利率",
+      "股價淨值比",
+      "當月營收年增率",
+      "EPS",
+      "三年平均殖利率",
+      "五年平均殖利率",
+    ],
     operators: ["大於", "小於", "等於", "大於等於", "小於等於"],
   } as const;
 

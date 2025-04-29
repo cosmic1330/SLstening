@@ -462,7 +462,7 @@ export default class SqliteDataManager {
     // update
     try {
       await this.db.execute(
-        `INSERT OR REPLACE INTO fundamental (stock_id, pe, pb, dividend_yield, yoy, eps) VALUES ($1, $2, $3, $4, $5, $6)`,
+        `INSERT OR REPLACE INTO fundamental (stock_id, pe, pb, dividend_yield, yoy, eps, dividend_yield_3y, dividend_yield_5y) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           data.stock_id,
           data.pe,
@@ -470,6 +470,8 @@ export default class SqliteDataManager {
           data.dividend_yield,
           data.yoy,
           data.eps,
+          data.dividend_yield_3y,
+          data.dividend_yield_5y,
         ]
       );
       return true;

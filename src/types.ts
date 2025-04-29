@@ -193,4 +193,6 @@ export type FundamentalTableType = {
   dividend_yield: number;
   yoy: number;
   eps: number;
+  dividend_yield_3y: number;
+  dividend_yield_5y: number;
 };

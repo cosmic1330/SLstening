@@ -70,7 +70,11 @@ export default function useHighConcurrencyDeals() {
   const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
 
   const getFundamentalFetch = useCallback(
-    async (signal: AbortSignal, stock: StockStoreType) => {
+    async (
+      signal: AbortSignal,
+      stock: StockStoreType,
+      sqliteDataManager: SqliteDataManager
+    ) => {
       try {
         const year = new Date().getFullYear();
         const response = await fetch(
@@ -87,14 +91,17 @@ export default function useHighConcurrencyDeals() {
         const { LatestValuation, StockInfo } = json.common;
         const LatestValuationData = LatestValuation.data as StockFundamentals;
         const StockInfoData = StockInfo.data as StockProfile;
-        return {
+        await sqliteDataManager.saveFundamentalTable({
           stock_id: stock.id,
           pe: parseFloat(LatestValuationData.PE),
           pb: parseFloat(LatestValuationData.PB),
           dividend_yield: parseFloat(LatestValuationData.CashYield),
           yoy: parseFloat(StockInfoData.latest_yoy_monthly_revenue),
           eps: parseFloat(StockInfoData.latest_eps4q),
-        };
+          dividend_yield_3y: parseFloat(LatestValuationData.CashYield3Y),
+          dividend_yield_5y: parseFloat(LatestValuationData.CashYield5Y),
+        });
+        return true;
       } catch (error: any) {
         if (error?.message?.indexOf("Request canceled") == -1) {
           throw error;
@@ -193,13 +200,7 @@ export default function useHighConcurrencyDeals() {
         await sqliteDataManager.saveStockTable(stock);
       } catch (error) {}
       // case 1-3: 寫入基本面資料
-      try {
-        const fundamental = await getFundamentalFetch(signal, stock);
-        await sqliteDataManager.saveFundamentalTable(fundamental);
-      } catch (error) {
-        console.log(error);
-      }
-      // case 1-3: 寫入交易資料
+      // case 1-3: 寫入交易資料+
       try {
         // daily
         const daily = await getTaFetch(signal, stock, UrlTaPerdOptions.Day);
@@ -313,6 +314,7 @@ export default function useHighConcurrencyDeals() {
               lose_skills_set: lose_hourly_skills_set,
             }
           ),
+          getFundamentalFetch(signal, stock, sqliteDataManager),
         ]);
         setDownloaded((prev) => prev + 1);
         changeDataCount(i + 1);

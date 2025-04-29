@@ -174,5 +174,15 @@ pub fn value() -> Vec<Migration> {
             ",
             kind: MigrationKind::Up,
         },
+
+        Migration {
+            version: 6,
+            description: "add_avg_year_dividend_yield_column_to_fundamental",
+            sql: "
+                ALTER TABLE fundamental ADD COLUMN dividend_yield_3y REAL; -- 3年平均殖利率
+                ALTER TABLE fundamental ADD COLUMN dividend_yield_5y REAL; -- 5年平均殖利率
+            ",
+            kind: MigrationKind::Up,
+        },
     ]
 }

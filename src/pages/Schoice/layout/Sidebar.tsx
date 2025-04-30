@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import useStocksStore from "../../../store/Stock.store";
 
 const GridItem = styled(Box)`
   width: 70px;
@@ -31,6 +32,7 @@ const GridItem = styled(Box)`
 export default function SideBar() {
   const navigate = useNavigate();
   const { theme, changeTheme } = useSchoiceStore();
+  const { reload } = useStocksStore();
 
   const toSetting = () => {
     navigate("/schoice/setting");
@@ -52,7 +54,12 @@ export default function SideBar() {
             </IconButton>
           </Tooltip>
           <Tooltip title="自選股" arrow placement="right">
-            <IconButton onClick={() => navigate("/schoice/favorite")}>
+            <IconButton
+              onClick={() => {
+                reload();
+                navigate("/schoice/favorite");
+              }}
+            >
               <StarRoundedIcon />
             </IconButton>
           </Tooltip>

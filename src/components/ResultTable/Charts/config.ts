@@ -55,12 +55,8 @@ export const ObvIndicatorColor: IndicatorColorType[] = [
 
 export const UltraTinyIndicatorColor: IndicatorColorType[] = [
   {
-    key: "c",
-    color: "#589bf3",
-  },
-  {
     key: "ma5",
-    color: "#f3586a",
+    color: "#589bf3",
   },
   {
     key: "ma10",

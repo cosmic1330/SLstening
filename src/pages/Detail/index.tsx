@@ -70,6 +70,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const goToSlide = useCallback((index: number) => {
     if (index >= 0 && index < slides.length) {
       setCurrent(index);
+    } else if (index < 0) {
+      setCurrent(slides.length - 1);
+    } else if (index >= slides.length) {
+      setCurrent(0);
     }
   }, []);
 
@@ -243,7 +247,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
           </Button>
           <IconButton
             onClick={() => goToSlide(current - 1)}
-            disabled={current === 0}
             color="primary"
             sx={{
               backgroundColor: "rgba(255,255,255,0.3)",
@@ -254,7 +257,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
           </IconButton>
           <IconButton
             onClick={() => goToSlide(current + 1)}
-            disabled={current === slides.length - 1}
             color="primary"
             sx={{
               backgroundColor: "rgba(255,255,255,0.3)",

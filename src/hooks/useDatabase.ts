@@ -1,3 +1,4 @@
+import { error, info } from "@tauri-apps/plugin-log";
 import Database from "@tauri-apps/plugin-sql";
 import { useEffect, useState } from "react";
 
@@ -10,9 +11,9 @@ export default function useDatabase() {
         // 載入 SQLite 資料庫
         const database = await Database.load("sqlite:schoice.db");
         setDb(database);
-        console.log("資料庫初始化成功");
-      } catch (error) {
-        console.error("資料庫初始化失敗:", error);
+        info("資料庫初始化成功");
+      } catch (e) {
+        error(`資料庫初始化失敗: ${e}`);
       }
     };
 

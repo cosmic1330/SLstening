@@ -99,7 +99,7 @@ jobs:
         with:
           tagName: slistening-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: "Slistening v__VERSION__"
-          releaseBody: ${{ needs.changelog.outputs.release_body }}
+          releaseBody: ${{ needs.changeconsole.outputs.release_body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

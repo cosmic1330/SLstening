@@ -1,16 +1,17 @@
 import { Box, Button, Container, Stack, Typography } from "@mui/material";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { emit } from "@tauri-apps/api/event";
-import { useForm } from "react-hook-form";
-import useStocksStore from "../../store/Stock.store";
-import type FormData from "./type";
-import Menu from "./Menu";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback } from "react";
+import { useForm } from "react-hook-form";
 import useDownloadStocks from "../../hooks/useDownloadStocks";
+import useStocksStore from "../../store/Stock.store";
+import Menu from "./Menu";
+import type FormData from "./type";
+import { info } from "@tauri-apps/plugin-log";
 
 function Add() {
   const { increase, reload } = useStocksStore();
-  const {handleDownloadMenu, disable} = useDownloadStocks();
+  const { handleDownloadMenu, disable } = useDownloadStocks();
 
   const {
     control,
@@ -31,7 +32,7 @@ function Add() {
       await emit("stock-added", { stockNumber: data.stock.id });
       reset();
     } else {
-      console.log("未选择股票");
+      info("請輸入股票代碼");
     }
   }, []);
 

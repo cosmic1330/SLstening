@@ -10,6 +10,7 @@
     "core:window:allow-unminimize",
     "notification:allow-request-permission",
     "notification:default",
+    "log:default",
     {
       "identifier": "http:default",
       "allow": [

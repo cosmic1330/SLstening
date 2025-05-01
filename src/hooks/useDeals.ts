@@ -1,3 +1,4 @@
+import { info } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
@@ -44,7 +45,7 @@ export default function useDeals(id: string) {
         // 自動重新請求
         mutateDailyDeals();
         mutateTickDeals();
-        console.log("listening");
+        info("listening");
       }
     }, 10000); // 每 10 秒檢查一次
 
@@ -82,7 +83,7 @@ export default function useDeals(id: string) {
       };
       return res;
     } catch (e) {
-      console.log("Error parsing tickData:", e);
+      info(`Error parsing tickData: ${e}`);
       return null;
     }
   }, [tickData]);

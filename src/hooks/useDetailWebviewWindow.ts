@@ -1,5 +1,6 @@
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { error, info } from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 export default function useDetailWebviewWindow({
   id,
@@ -22,8 +23,8 @@ export default function useDetailWebviewWindow({
         await existingWindow.unminimize();
         await existingWindow.show();
         existingWindow.setFocus();
-      } catch (error) {
-        console.error("Error interacting with existing window:", error);
+      } catch (e) {
+        error(`Error focusing window: ${e}`);
       }
       return;
     } else {
@@ -35,7 +36,7 @@ export default function useDetailWebviewWindow({
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
-        console.log(e);
+        info(`Error creating window: ${e}`);
       });
     }
   }, [id, name, group]);

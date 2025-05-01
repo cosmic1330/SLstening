@@ -1,6 +1,7 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { fetch } from "@tauri-apps/plugin-http";
+import { error, info } from "@tauri-apps/plugin-log";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import SqliteDataManager from "../classes/SqliteDataManager";
@@ -172,7 +173,7 @@ export default function useHighConcurrencyDeals() {
     }
     setStatus(Status.Download);
     if (!db) {
-      console.log("Database not initialized");
+      info("Database not initialized");
       return;
     }
 
@@ -318,8 +319,8 @@ export default function useHighConcurrencyDeals() {
         ]);
         setDownloaded((prev) => prev + 1);
         changeDataCount(i + 1);
-      } catch (error) {
-        console.log(error);
+      } catch (e) {
+        error(`Error fetching data for stock ${stock.id}: ${e}`);
       }
     }
 

@@ -18,7 +18,6 @@ export async function checkForAppUpdates() {
       okLabel: "Update",
       cancelLabel: "Cancel",
     });
-    console.log(yes);
     if (yes) {
       await update.downloadAndInstall();
       await relaunch();

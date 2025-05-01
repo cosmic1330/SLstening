@@ -3,6 +3,7 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { error } from "@tauri-apps/plugin-log";
 import {
   isPermissionGranted,
   requestPermission,
@@ -38,7 +39,7 @@ export default function RuleContent({
         sendNotification({ title: "ClipBoard", body: "Copy Success!" });
       }
     } catch (err) {
-      console.error("複製失敗:", err);
+      error(`複製失敗:${err}`);
     }
   };
 

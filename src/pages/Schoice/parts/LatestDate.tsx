@@ -1,6 +1,7 @@
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PetsIcon from "@mui/icons-material/Pets";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
+import { error } from "@tauri-apps/plugin-log";
 import { useContext, useEffect } from "react";
 import SqliteDataManager from "../../../classes/SqliteDataManager";
 import { DatabaseContext } from "../../../context/DatabaseContext";
@@ -26,8 +27,8 @@ export default function LatestDate() {
         changeDataCount(result.count);
         changeSqliteUpdateDate(result.date);
       })
-      .catch((error) => {
-        console.error(error);
+      .catch((e) => {
+        error(`Error getting latest daily deal count: ${e}`);
       });
   }, [db]);
 

@@ -1,4 +1,5 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { error } from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 export default function useSchoiceWebviewWindow() {
   const openSchoiceWindow = useCallback(async () => {
@@ -7,8 +8,8 @@ export default function useSchoiceWebviewWindow() {
     if (existingWindow) {
       try {
         existingWindow.setFocus();
-      } catch (error) {
-        console.error("Error interacting with existing window:", error);
+      } catch (e) {
+        error(`Error focusing window: ${e}`);
       }
       return;
     } else {
@@ -19,7 +20,7 @@ export default function useSchoiceWebviewWindow() {
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
-        console.log(e);
+        error(`Error creating window: ${e}`);
       });
     }
   }, []);

@@ -2,6 +2,7 @@ import { Boll, Kd, Ma, Macd, Obv, Rsi, Week } from "@ch20026103/anysis";
 import dateFormat, {
   Mode,
 } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import { error, info } from "@tauri-apps/plugin-log";
 import Database from "@tauri-apps/plugin-sql";
 import {
   DealTableOptions,
@@ -35,8 +36,8 @@ export default class SqliteDataManager {
       await this.db.execute("DELETE FROM daily_deal;");
       await this.db.execute("DELETE FROM stock;");
       return true;
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(`${e}`);
       return false;
     }
   }
@@ -44,7 +45,7 @@ export default class SqliteDataManager {
   async deleteLatestDailyDeal(t: string) {
     try {
       const num = dateFormat(t, Mode.StringToNumber) * 10000 + 1400;
-      console.log(`刪除 ${num} 和 ${t} 之後的資料`);
+      info(`刪除 ${num} 和 ${t} 之後的資料`);
       await this.db.execute(`DELETE FROM hourly_skills WHERE ts > '${num}';`);
       await this.db.execute(`DELETE FROM hourly_deal WHERE ts > '${num}';`);
       await this.db.execute(`DELETE FROM weekly_skills WHERE t > '${t}';`);
@@ -53,7 +54,7 @@ export default class SqliteDataManager {
       await this.db.execute(`DELETE FROM daily_deal WHERE t > '${t}';`);
       return true;
     } catch (e) {
-      console.log(e);
+      error(`${e}`);
     }
   }
 
@@ -64,8 +65,8 @@ export default class SqliteDataManager {
           "SELECT (SELECT MAX(t) FROM daily_deal) AS latest_date,COUNT(*) AS record_count FROM daily_deal WHERE t = (SELECT MAX(t) FROM daily_deal);"
         );
       return { date: result[0].latest_date, count: result[0].record_count };
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(`${e}`);
       return { date: "N/A", count: 0 };
     }
   }
@@ -440,7 +441,8 @@ export default class SqliteDataManager {
       }
       return true;
     } catch (e) {
-      console.log(e);
+      error(`${stock.name}:${e}`);
+      return false;
     }
     return false;
   }
@@ -654,8 +656,8 @@ export default class SqliteDataManager {
         `SELECT t FROM ${table} WHERE stock_id = ${stock.id};`
       );
       return result;
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(`${stock.name}:${e}`);
       return [];
     }
   }
@@ -669,8 +671,8 @@ export default class SqliteDataManager {
         `SELECT ts FROM ${table} WHERE stock_id = ${stock.id};`
       );
       return result;
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
+      error(`${stock.name}:${e}`);
       return [];
     }
   }

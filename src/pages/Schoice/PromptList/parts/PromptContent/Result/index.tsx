@@ -3,13 +3,14 @@ import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
+import { stockFundamentalQueryBuilder } from "../../../../../../classes/StockFundamentalQueryBuilder";
 import { stockHourlyQueryBuilder } from "../../../../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../../../../classes/StockWeeklyQueryBuilder";
 import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
 import { PromptType, PromptValue } from "../../../../../../types";
-import { stockFundamentalQueryBuilder } from "../../../../../../classes/StockFundamentalQueryBuilder";
+import { error } from "@tauri-apps/plugin-log";
 
 export default function Result({
   select,
@@ -32,8 +33,8 @@ export default function Result({
         if (!db) return;
         const res = (await db?.select(sqlQuery)) as any[];
         return res;
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        error(`Error executing query: ${e}`);
         return [];
       }
     },

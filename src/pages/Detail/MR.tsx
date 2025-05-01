@@ -18,8 +18,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import rsi from "../../cls_tools/rsi";
 import macd from "../../cls_tools/macd";
+import rsi from "../../cls_tools/rsi";
 import { DealsContext } from "../../context/DealsContext";
 
 export default function MR() {
@@ -55,7 +55,6 @@ export default function MR() {
         negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
       });
     }
-    console.log(response);
     return response;
   }, [deals]);
 

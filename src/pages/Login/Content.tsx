@@ -7,6 +7,7 @@ import {
   Typography,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { error } from "@tauri-apps/plugin-log";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
@@ -28,7 +29,7 @@ const Content = () => {
     setErrorMsg("");
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -36,7 +37,6 @@ const Content = () => {
       if (error) {
         setErrorMsg(translateError(error.message));
       } else {
-        console.log(data);
         if (remember) {
           localStorage.setItem("slitenting-email", email);
           localStorage.setItem("slitenting-password", password);
@@ -44,12 +44,13 @@ const Content = () => {
           localStorage.removeItem("slitenting-email");
           localStorage.removeItem("slitenting-password");
         }
-        const alwaysOnTop = localStorage.getItem("slitenting-alwaysOnTop") === "true";
+        const alwaysOnTop =
+          localStorage.getItem("slitenting-alwaysOnTop") === "true";
         getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
         navigate("/dashboard");
       }
     } catch (e) {
-      console.error("Error signing in:", e);
+      error(`Error signing in: ${e}`);
     }
     setLoading(false);
   };

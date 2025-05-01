@@ -8,6 +8,7 @@ import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { error } from "@tauri-apps/plugin-log";
 import {
   isPermissionGranted,
   requestPermission,
@@ -15,8 +16,8 @@ import {
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
 import useAddWebviewWindow from "../hooks/useAddWebviewWindow";
-import useStocksStore from "../store/Stock.store";
 import useSchoiceWebviewWindow from "../hooks/useSchoiceWebviewWindow";
+import useStocksStore from "../store/Stock.store";
 import { supabase } from "../supabase";
 
 export default function SpeedDial() {
@@ -40,7 +41,7 @@ export default function SpeedDial() {
         sendNotification({ title: "ClipBoard", body: "Copy Success!" });
       }
     } catch (err) {
-      console.error("複製失敗:", err);
+      error(`複製失敗:${err}`);
     }
   };
 
@@ -55,7 +56,6 @@ export default function SpeedDial() {
         key={"Add StockId"}
         icon={<AddCircleRoundedIcon />}
         tooltipTitle={"加入股票"}
-        
         onClick={openAddWindow}
       />
 

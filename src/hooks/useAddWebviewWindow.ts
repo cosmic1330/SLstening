@@ -1,5 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { error, info } from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
 export default function useAddWebviewWindow() {
   const openAddWindow = useCallback(async () => {
@@ -8,8 +9,8 @@ export default function useAddWebviewWindow() {
     if (existingWindow) {
       try {
         existingWindow.setFocus();
-      } catch (error) {
-        console.error("Error interacting with existing window:", error);
+      } catch (e) {
+        error(`Error focusing window: ${e}`);
       }
       return;
     } else {
@@ -22,7 +23,7 @@ export default function useAddWebviewWindow() {
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
-        console.log(e);
+        info(`Error creating window: ${e}`);
       });
     }
   }, []);

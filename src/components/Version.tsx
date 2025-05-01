@@ -1,12 +1,13 @@
 import { Box } from "@mui/material";
 import { getVersion } from "@tauri-apps/api/app";
+import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";
 
 export default function Version() {
   const [tauriVersion, setTauriVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    getVersion().then(setTauriVersion).catch(console.error);
+    getVersion().then(setTauriVersion).catch(error);
   }, []);
 
   return (

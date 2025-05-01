@@ -8,6 +8,7 @@ import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
 import { TaType } from "../../types";
+import formatDateTime from "../../utils/formatDateTime";
 import generateDealDataDownloadUrl, {
   UrlTaPerdOptions,
   UrlType,
@@ -20,7 +21,6 @@ import MaKbar from "./MaKbar";
 import MJ from "./MJ";
 import MR from "./MR";
 import Obv from "./Obv";
-import formatDateTime from "../../utils/formatDateTime";
 
 const slides = [
   {
@@ -185,7 +185,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
       const json_ta = "{" + (data as string).slice(ta_index).replace(");", "");
       const parse = JSON.parse(json_ta);
       const response = parse.ta as TaType;
-      console.log(response[100].t);
       return response;
     }
   }, [data, id, picture]);

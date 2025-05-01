@@ -6,6 +6,7 @@ import StockBox from "../../components/StockBox";
 import useAddWebviewWindow from "../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
 import TwseBox from "./Twse";
+import { info } from "@tauri-apps/plugin-log";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -16,12 +17,12 @@ function List() {
     const unlistenadd = listen("stock-added", async (event: any) => {
       const { stockNumber } = event.payload;
       await reload();
-      console.log(`stock add ${stockNumber}`);
+      info(`stock add ${stockNumber}`);
     });
     const unlistenremoved = listen("stock-removed", async (event: any) => {
       const { stockNumber } = event.payload;
       await reload();
-      console.log(`stock removed ${stockNumber}`);
+      info(`stock removed ${stockNumber}`);
     });
 
     return () => {

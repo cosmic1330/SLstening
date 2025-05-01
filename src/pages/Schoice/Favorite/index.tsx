@@ -4,6 +4,7 @@ import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useStocksStore from "../../../store/Stock.store";
+import { error } from "@tauri-apps/plugin-log";
 
 export default function Favorite() {
   const { stocks } = useStocksStore();
@@ -16,8 +17,8 @@ export default function Favorite() {
         if (!db) return;
         const res = (await db?.select(sqlQuery)) as any[];
         return res;
-      } catch (error) {
-        console.error(error);
+      } catch (e) {
+        error(`Error executing query: ${e}`);
         return [];
       }
     },

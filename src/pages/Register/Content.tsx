@@ -1,4 +1,5 @@
 import { Box, Button, TextField, Typography } from "@mui/material";
+import { error } from "@tauri-apps/plugin-log";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
@@ -37,7 +38,7 @@ function Content() {
         navigate("/");
       }
     } catch (e) {
-      console.error("Error signing up:", e);
+      error(`Error signing up: ${e}`);
     }
     setLoading(false);
   };

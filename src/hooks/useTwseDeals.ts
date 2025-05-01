@@ -1,3 +1,4 @@
+import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
@@ -33,7 +34,6 @@ export default function useTwseDeals() {
         // 自動重新請求
         mutateHourlyDeals();
         mutateTickDeals();
-        console.log("listening");
       }
     }, 10000); // 每 10 秒檢查一次
 
@@ -72,7 +72,7 @@ export default function useTwseDeals() {
       };
       return res;
     } catch (e) {
-      console.log("Error parsing tickData:", e);
+      error(`Error parsing tickData: ${e}`);
       return null;
     }
   }, [tickData]);
@@ -106,7 +106,7 @@ export default function useTwseDeals() {
 
       return { data: res, change, price };
     } catch (e) {
-      console.log("Error parsing hourlyData:", e);
+      error(`Error parsing hourlyData: ${e}`);
       return null;
     }
   }, [hourlyData]);

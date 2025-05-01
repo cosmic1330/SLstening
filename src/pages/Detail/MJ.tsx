@@ -55,7 +55,6 @@ export default function MJ() {
         negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
       });
     }
-    console.log(response);
     return response;
   }, [deals]);
 

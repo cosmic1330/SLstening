@@ -1,3 +1,4 @@
+import { error, info } from "@tauri-apps/plugin-log";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { load } from "cheerio";
 import { useCallback, useState } from "react";
@@ -40,11 +41,11 @@ export default function useDownloadStocks() {
         if (id.length === 4) {
           data.push({ id, name, type, group });
         } else {
-          console.log("Skip id:", id, name);
+          info(`Invalid ID length: ${id} ${name}`);
         }
       }
-    } catch (error) {
-      console.error("Error scraping website:", error);
+    } catch (e) {
+      error(`Error fetching data: ${e}`);
     }
     return data;
   }, []);
@@ -58,8 +59,8 @@ export default function useDownloadStocks() {
       await update_menu(TWSE_data);
       setDisable(false);
       sendNotification({ title: "Menu", body: "Update Success!" });
-    } catch (error) {
-      console.error("Error scraping website:", error);
+    } catch (e) {
+      error(`Error updating menu: ${e}`);
     }
   }, []);
 

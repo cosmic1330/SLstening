@@ -31,7 +31,7 @@ const AvgCandlestickRectangle = (props: any) => {
   let h = highSeries?.props?.points[0]?.y;
   let l = lowSeries?.props?.points[0]?.y;
   let prel = 0;
-  
+
   for (let i = 1; i < lowSeries?.props?.points.length; i++) {
     const lowSeriesPoint = lowSeries?.props?.points[i];
     const highSeriesPoint = highSeries?.props?.points[i];
@@ -47,7 +47,6 @@ const AvgCandlestickRectangle = (props: any) => {
     h = Math.max(highSeriesPoint.y, c, o);
     prel = l;
     l = Math.min(lowSeriesPoint.y, c, o);
-    console.log(l, prel);
     Rectangles.push(
       <Rectangle
         key={`avg-rectangle-${i}`}

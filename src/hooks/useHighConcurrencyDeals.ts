@@ -160,6 +160,8 @@ export default function useHighConcurrencyDeals() {
       abortControllerRef.current.abort();
     }
     sessionStorage.setItem("schoice:update:stop", "true");
+    setStatus(Status.Idle);
+    info("Update stopped");
   }, [abortControllerRef.current]);
 
   const run = useCallback(async () => {

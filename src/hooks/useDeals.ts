@@ -45,7 +45,6 @@ export default function useDeals(id: string) {
         // 自動重新請求
         mutateDailyDeals();
         mutateTickDeals();
-        info("listening");
       }
     }, 10000); // 每 10 秒檢查一次
 

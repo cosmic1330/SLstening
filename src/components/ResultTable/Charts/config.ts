@@ -19,7 +19,7 @@ export const BollIndicatorColor: IndicatorColorType[] = [
   },
   {
     key: "c",
-    color: "#589bf3",
+    color: "#999",
   },
   {
     key: "ma60",
@@ -47,20 +47,20 @@ export const ObvIndicatorColor: IndicatorColorType[] = [
     key: "obv5",
     color: "#ff7300",
   },
-  {
-    key: "c",
-    color: "#bfd915",
-  },
 ];
 
 export const UltraTinyIndicatorColor: IndicatorColorType[] = [
+  {
+    key: "c",
+    color: "#777",
+  },
   {
     key: "ma5",
     color: "#589bf3",
   },
   {
     key: "ma10",
-    color: "#9b58f3",
+    color: "#b277f2",
   },
   {
     key: "ma20",

@@ -1,6 +1,6 @@
 import { Box, Tooltip } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
-import { Line, LineChart, ReferenceLine, YAxis } from "recharts";
+import { Bar, Cell, ComposedChart, ReferenceLine, YAxis } from "recharts";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import ChartTooltip from "./ChartTooltip";
 import { daily_count, OscIndicatorColor } from "./config";
@@ -31,20 +31,21 @@ const DailyOscLineChart = ({
   return (
     <Tooltip title={<ChartTooltip value={OscIndicatorColor} />} arrow>
       <Box>
-        <LineChart data={data} width={80} height={60}>
+        <ComposedChart data={data} width={80} height={60}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           <ReferenceLine y={0} stroke="#ff7300" strokeDasharray="3" />
           {OscIndicatorColor.map((item, index) => (
-            <Line
-              key={index}
-              type="monotone"
-              dataKey={item.key}
-              stroke={item.color}
-              strokeWidth={1.5}
-              dot={false}
-            />
+            <Bar key={index} dataKey={item.key} barSize={6}>
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  cursor="pointer"
+                  fill={entry[item.key] > 0 ? "#f55" : "#5f5"}
+                />
+              ))}
+            </Bar>
           ))}
-        </LineChart>
+        </ComposedChart>
       </Box>
     </Tooltip>
   );

@@ -24,16 +24,16 @@ import Obv from "./Obv";
 
 const slides = [
   {
+    id: "obv",
+    content: <Obv />,
+  },
+  {
     id: "ma",
     content: <Ma />,
   },
   {
     id: "mj",
     content: <MJ />,
-  },
-  {
-    id: "obv",
-    content: <Obv />,
   },
   {
     id: "mr",
@@ -222,10 +222,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
+            variant={picture === PictoreType.Hourly ? "contained" : "text"}
             disabled={picture === PictoreType.Hourly}
             onClick={() => {
               setPicture(PictoreType.Hourly);
-              goToSlide(0);
             }}
           >
             小時圖
@@ -236,10 +236,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
+            variant={picture === PictoreType.Daily ? "contained" : "text"}
             disabled={picture === PictoreType.Daily}
             onClick={() => {
               setPicture(PictoreType.Daily);
-              goToSlide(0);
             }}
           >
             日線圖

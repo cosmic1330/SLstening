@@ -1,6 +1,7 @@
 import { Box, Container, Stack, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
+  Brush,
   ComposedChart,
   Customized,
   Line,
@@ -150,6 +151,7 @@ export default function AvgMaKbar() {
               activeDot={false}
               legendType="none"
             />
+            <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

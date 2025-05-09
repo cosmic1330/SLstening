@@ -74,7 +74,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
                 <TableBody>
                   <TableRow>
                     <TableCell align="center">
-                      {item.value.value.hourly.map((prompt, index) => (
+                      {item.value.value.hourly?.map((prompt, index) => (
                         <Typography
                           key={index}
                           variant="caption"

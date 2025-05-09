@@ -14,8 +14,8 @@ import ma from "../../cls_tools/ma";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import CandlestickRectangle from "./CandlestickRectangle";
 import { Tooltip as MuiTooltip } from "@mui/material";
+import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
 
 export default function MaKbar() {
   const deals = useContext(DealsContext);
@@ -35,6 +35,7 @@ export default function MaKbar() {
       c: deals[0].c,
       l: deals[0].l,
       h: deals[0].h,
+      o: deals[0].o,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
@@ -50,6 +51,7 @@ export default function MaKbar() {
         c: deal.c,
         l: deal.l,
         h: deal.h,
+        o: deal.o,
       });
     }
     return response;
@@ -116,13 +118,21 @@ export default function MaKbar() {
               legendType="none"
             />
             <Line
+              dataKey="o"
+              stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Customized component={BaseCandlestickRectangle} />
+            <Line
               dataKey="ma5"
               stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
             />
-            <Customized component={CandlestickRectangle} />
 
             <Line
               dataKey="ma10"

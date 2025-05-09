@@ -14,7 +14,7 @@ import ma from "../../cls_tools/ma";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
-import AvgCandlestickRectangle from "./AvgCandlestickRectangle";
+import AvgCandlestickRectangle from "../../components/RechartCustoms/AvgCandlestickRectangle";
 import { Tooltip as MuiTooltip } from "@mui/material";
 
 export default function AvgMaKbar() {

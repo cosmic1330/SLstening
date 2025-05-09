@@ -24,6 +24,14 @@ import Obv from "./Obv";
 
 const slides = [
   {
+    id: "ma_k",
+    content: <MaKbar />,
+  },
+  {
+    id: "avg_k",
+    content: <AvgMaKbar />,
+  },
+  {
     id: "obv",
     content: <Obv />,
   },
@@ -42,14 +50,6 @@ const slides = [
   {
     id: "kd",
     content: <Kd />,
-  },
-  {
-    id: "ma_k",
-    content: <MaKbar />,
-  },
-  {
-    id: "avg_k",
-    content: <AvgMaKbar />,
   },
   {
     id: "low_close",

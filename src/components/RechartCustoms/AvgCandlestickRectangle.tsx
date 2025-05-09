@@ -51,10 +51,10 @@ const AvgCandlestickRectangle = (props: any) => {
       <Rectangle
         key={`avg-rectangle-${i}`}
         width={3}
-        height={h - l || 1}
-        x={lowSeriesPoint.x}
-        y={l}
-        fill={l < prel ? "red" : "green"}
+        height={Math.abs(l - h) || 1}
+        x={lowSeriesPoint.x - 1.5}
+        y={Math.min(l, h)}
+        fill={l < prel ? "#ff4d4f" : "#52c41a"}
       />
     );
   }

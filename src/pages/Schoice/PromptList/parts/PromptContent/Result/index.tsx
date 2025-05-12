@@ -106,9 +106,8 @@ export default function Result({
         stockDailyQueryBuilder.generateExpression(prompt).join(" ")
       );
       const sqlDailyQuery = stockDailyQueryBuilder.generateSqlQuery({
-        todayDate,
         conditions: customDailyConditions,
-        dates: Object.values(dates),
+        dates: dates.filter((_, index) => index >= todayDate),
       });
       dailySQL = sqlDailyQuery;
     }

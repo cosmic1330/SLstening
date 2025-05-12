@@ -113,13 +113,11 @@ export class StockDailyQueryBuilder {
   }
 
   public generateSqlQuery({
-    todayDate,
     conditions,
     dates,
     daysRange = 4,
     stockIds,
   }: {
-    todayDate: number;
     conditions: string[];
     dates: string[];
     daysRange?: number;
@@ -129,10 +127,10 @@ export class StockDailyQueryBuilder {
       .map(
         (number) => `
           JOIN daily_deal "${number}_day_ago" ON "0_day_ago".stock_id = "${number}_day_ago".stock_id AND "${number}_day_ago".t = "${
-          dates[number + todayDate]
+          dates[number]
         }"
           JOIN daily_skills "${number}_day_ago_sk" ON "0_day_ago".stock_id = "${number}_day_ago_sk".stock_id AND "${number}_day_ago_sk".t = "${
-          dates[number + todayDate]
+          dates[number]
         }"
         `
       )
@@ -149,7 +147,7 @@ export class StockDailyQueryBuilder {
       JOIN daily_skills "0_day_ago_sk" ON "0_day_ago".stock_id = "0_day_ago_sk".stock_id AND "0_day_ago".t = "0_day_ago_sk".t
       ${dayJoins}
       WHERE "0_day_ago".t = "${
-        dates[todayDate]
+        dates[0]
       }" ${stockIdCondition} AND ${conditions.join(" AND ")}
     `;
 

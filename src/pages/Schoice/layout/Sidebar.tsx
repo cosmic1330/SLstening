@@ -1,4 +1,6 @@
 import DarkModeIcon from "@mui/icons-material/DarkMode";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
+import FastRewindIcon from "@mui/icons-material/FastRewind";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
@@ -8,7 +10,6 @@ import { Box, IconButton, Stack, styled, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
-import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import useStocksStore from "../../../store/Stock.store";
 
 const GridItem = styled(Box)`
@@ -66,6 +67,11 @@ export default function SideBar() {
           <Tooltip title="垃圾桶" arrow placement="right">
             <IconButton onClick={() => navigate("/schoice/trash")}>
               <DeleteRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="回測" arrow placement="right">
+            <IconButton onClick={() => navigate("/schoice/backtest")}>
+              <FastRewindIcon />
             </IconButton>
           </Tooltip>
         </Stack>

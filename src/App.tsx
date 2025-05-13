@@ -18,6 +18,7 @@ import Register from "./pages/Register";
 import Favorite from "./pages/Schoice/Favorite";
 import Trash from "./pages/Schoice/Trash";
 import Backtest from "./pages/Schoice/Backtest";
+import Fundamental from "./pages/Schoice/Fundamental";
 
 function App() {
   const { reload } = useStocksStore();
@@ -40,6 +41,7 @@ function App() {
           <Route path="setting" element={<Setting />} />
           <Route path="trash" element={<Trash />} />
           <Route path="backtest" element={<Backtest />} />
+          <Route path="fundamental" element={<Fundamental />} />
           <Route path="*" element={<Navigate to="/schoice" />} />
         </Route>
         <Route path="detail/:id" element={<Detail />} />

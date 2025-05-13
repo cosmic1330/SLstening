@@ -11,6 +11,7 @@ import { useNavigate } from "react-router";
 import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
+import SmartButtonIcon from "@mui/icons-material/SmartButton";
 
 const GridItem = styled(Box)`
   width: 70px;
@@ -52,6 +53,11 @@ export default function SideBar() {
           <Tooltip title="首頁" arrow placement="right">
             <IconButton onClick={() => navigate("/schoice")}>
               <HomeRoundedIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="基本面塞選" arrow placement="right">
+            <IconButton onClick={() => navigate("/schoice/fundamental")}>
+              <SmartButtonIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="自選股" arrow placement="right">

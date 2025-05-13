@@ -3,7 +3,6 @@ import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
 import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
-import { stockFundamentalQueryBuilder } from "../../../../../../classes/StockFundamentalQueryBuilder";
 import { stockHourlyQueryBuilder } from "../../../../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../../../../classes/StockWeeklyQueryBuilder";
 import ResultTable from "../../../../../../components/ResultTable/ResultTable";
@@ -93,8 +92,7 @@ export default function Result({
     if (
       select.value.daily.length === 0 &&
       select.value.weekly.length === 0 &&
-      select.value.hourly.length === 0 &&
-      select.value.fundamental.length === 0
+      select.value.hourly.length === 0
     ) {
       setResult([]);
       return;
@@ -143,19 +141,8 @@ export default function Result({
       }
     }
 
-    let fundamentalSQL = "";
-    if (select.value.fundamental?.length > 0) {
-      const customFundamentalConditions = select.value.fundamental.map(
-        (prompt) =>
-          stockFundamentalQueryBuilder.generateExpression(prompt).join(" ")
-      );
-      fundamentalSQL = stockFundamentalQueryBuilder.generateSqlQuery({
-        conditions: customFundamentalConditions,
-      });
-    }
-
     // 合併查詢
-    const combinedSQL = [dailySQL, weeklySQL, hourlySQL, fundamentalSQL]
+    const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
       .filter((sql) => sql)
       .join("\nINTERSECT\n");
     query(combinedSQL).then((res: { stock_id: string }[] | undefined) => {

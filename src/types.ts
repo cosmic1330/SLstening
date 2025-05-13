@@ -195,3 +195,5 @@ export type FundamentalTableType = {
   dividend_yield_3y: number;
   dividend_yield_5y: number;
 };
+
+export type FilterStock = { id: string; name: string }

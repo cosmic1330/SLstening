@@ -1,5 +1,4 @@
 import { Rectangle } from "recharts";
-import Ma from "../../pages/Detail/Ma";
 
 type FormattedGraphicalItem = {
   props: {
@@ -25,8 +24,6 @@ const BaseCandlestickRectangle = (props: any) => {
     const lowSeriesPoint = lowSeries?.props?.points[index];
     const closeSeriesPoint = closeSeries?.props?.points[index];
     const openSeriesPoint = openSeries?.props?.points[index];
-
-    console.log(highSeriesPoint);
 
     const isRising =
       closeSeriesPoint.value > openSeriesPoint.value ? true : false;

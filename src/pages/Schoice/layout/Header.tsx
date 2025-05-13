@@ -2,6 +2,7 @@ import { Box, Stack, styled } from "@mui/material";
 import LatestDate from "../parts/LatestDate";
 import UpdateDeals from "../parts/UpdateDeals";
 import Breadcrumb from "../parts/Breadcrumb";
+import FilterStocks from "../parts/FilterStocks";
 
 const GridItem = styled(Box)`
   grid-area: header;
@@ -25,6 +26,7 @@ export default function Header() {
         <Breadcrumb />
       </Stack>
       <Stack direction="row" spacing={3} alignItems="center">
+        <FilterStocks />
         <LatestDate />
         <UpdateDeals />
       </Stack>

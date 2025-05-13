@@ -1,28 +1,16 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { error } from "@tauri-apps/plugin-log";
 import { useCallback, useContext } from "react";
 import { stockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
 import { stockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import { PromptItem } from "../../../types";
+import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
 
 export default function useBacktestFunc() {
-  const { db, dates } = useContext(DatabaseContext);
-  const query = useCallback(
-    async (sqlQuery: string) => {
-      try {
-        if (!db) return;
-        const res = (await db?.select(sqlQuery)) as any[];
-        return res;
-      } catch (e) {
-        error(`Error executing query: ${e}`);
-        return [];
-      }
-    },
-    [db]
-  );
+  const { dates } = useContext(DatabaseContext);
+  const query = useDatabaseQuery();
 
   const getWeekDates = useCallback(
     async (date: string) => {

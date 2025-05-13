@@ -23,6 +23,7 @@ import {
 import type { Options as BacktestOptions } from "../../../../../../fiwo/backtest_v2/dist/esm";
 import useStocksStore from "../../../store/Stock.store";
 import Options from "./options";
+import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 
 enum Status {
   Running = "running",
@@ -31,18 +32,18 @@ enum Status {
 
 export default function Backtest() {
   const { stocks } = useStocksStore();
-  const { bulls, bears } = useSchoiceStore();
+  const { bulls, bears, filterStocks } = useSchoiceStore();
   const { dates } = useContext(DatabaseContext);
   const [ctx, setCtx] = useState<Context>();
   const [selectedBull, setSelectedBull] = useState("");
   const [selectedBear, setSelectedBear] = useState("");
+  const [selectedStocks, setSelectedStocks] = useState("stocks");
   const [status, setStatus] = useState<Status>(Status.Idle);
   const [options, setOptions] = useState<BacktestOptions>({
     capital: 300000,
     sellPrice: SellPrice.LOW,
     buyPrice: BuyPrice.OPEN,
   });
-  const [persent, setPercent] = useState(0);
 
   const handleBullChange = (
     event: SelectChangeEvent<SetStateAction<string>>
@@ -56,6 +57,12 @@ export default function Backtest() {
     setSelectedBear(event.target.value);
   };
 
+  const handleStocksChange = (
+    event: SelectChangeEvent<SetStateAction<string>>
+  ) => {
+    setSelectedStocks(event.target.value);
+  };
+
   const get = useBacktestFunc();
 
   return (
@@ -66,7 +73,7 @@ export default function Backtest() {
             <Typography variant="subtitle1" gutterBottom>
               Bull Strategy
             </Typography>
-            <Select value={selectedBull} onChange={handleBullChange}>
+            <Select value={selectedBull} onChange={handleBullChange}  size="small">
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
@@ -79,7 +86,11 @@ export default function Backtest() {
             <Typography variant="subtitle1" gutterBottom>
               Bears Strategy
             </Typography>
-            <Select value={selectedBear} onChange={handleBearChange}>
+            <Select
+              value={selectedBear}
+              onChange={handleBearChange}
+              size="small"
+            >
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
@@ -89,7 +100,27 @@ export default function Backtest() {
                 </MenuItem>
               ))}
             </Select>
+
+            <Typography variant="subtitle1" gutterBottom>
+              Stocks
+            </Typography>
+            <Select
+              value={selectedStocks}
+              onChange={handleStocksChange}
+              size="small"
+            >
+              <MenuItem value="stocks">
+                <em>My Favorite</em>
+              </MenuItem>
+              {filterStocks && (
+                <MenuItem value="filterStocks">
+                  <em>Fundamental Filter</em>
+                </MenuItem>
+              )}
+            </Select>
             <Button
+              startIcon={<PlayCircleFilledWhiteIcon />}
+              variant="contained"
               onClick={async () => {
                 if (!selectedBull || !selectedBear) return;
                 setStatus(Status.Running);
@@ -102,7 +133,8 @@ export default function Backtest() {
                   .map((date) => dateFormat(date, Mode.StringToNumber));
                 const ctx = new Context({
                   dates: contextDates,
-                  stocks,
+                  stocks:
+                    selectedStocks === "filterStocks" ? filterStocks : stocks,
                   buy,
                   sell,
                 });
@@ -117,7 +149,6 @@ export default function Backtest() {
             >
               Run Backtest
             </Button>
-            <Button onClick={() => console.log(options)}>Show</Button>
           </Stack>
           <Options setOptions={setOptions} options={options} />
 

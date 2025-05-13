@@ -2,6 +2,8 @@ import { Store } from "@tauri-apps/plugin-store";
 import { nanoid } from "nanoid";
 import { create } from "zustand";
 import {
+  FilterStock,
+  Prompts,
   PromptsMap,
   PromptType,
   PromptValue,
@@ -42,6 +44,14 @@ interface SchoiceState {
   sqliteUpdateDate: string;
   chartType: ChartType;
   trash: TrashPrompt[];
+  filterStocks?: FilterStock[];
+  filterConditions?: Prompts;
+  backtestPersent: number;
+  setBacktestPersent: (persent: number) => void;
+  setFilterStocks: (
+    stocks: FilterStock[] | undefined,
+    prompts: Prompts | undefined
+  ) => void;
   recover: (id: string) => Promise<void>;
   changeChartType: (type: ChartType) => void;
   changeSqliteUpdateDate: (date: string) => void;
@@ -81,6 +91,21 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     (localStorage.getItem("slitenting-chartType") as ChartType) ||
     ChartType.WEEKLY_BOLL,
   trash: [],
+  filterConditions: undefined,
+  filterStocks: undefined,
+  backtestPersent: 0,
+  setBacktestPersent: (persent: number) => {
+    set({ backtestPersent: persent });
+  },
+  setFilterStocks: async (stocks, prompts) => {
+    const store = await Store.load("schoice.json");
+    set(() => ({
+      filterStocks: stocks,
+      filterConditions: prompts,
+    }));
+    store.set("filterStocks", stocks);
+    store.set("filterConditions", prompts);
+  },
   recover: async (id: string) => {
     const store = await Store.load("schoice.json");
     const trash = get().trash;
@@ -266,8 +291,11 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     const bulls = ((await store.get("bulls")) as PromptsMap) || {};
     const bears = ((await store.get("bears")) as PromptsMap) || {};
     const trash = ((await store.get("trash")) as TrashPrompt[]) || [];
-    await store.save();
-    set(() => ({ bulls, bears, trash }));
+    const filterStocks =
+      ((await store.get("filterStocks")) as any) || undefined;
+    const filterConditions =
+      ((await store.get("filterConditions")) as any) || undefined;
+    set(() => ({ bulls, bears, trash, filterStocks, filterConditions }));
   },
   clear: async () => {
     const store = await Store.load("schoice.json");

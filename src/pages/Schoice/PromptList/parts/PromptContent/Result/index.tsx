@@ -9,7 +9,7 @@ import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
 import { PromptType, PromptValue } from "../../../../../../types";
-import { error } from "@tauri-apps/plugin-log";
+import useDatabaseQuery from "../../../../../../hooks/useDatabaseQuery";
 
 export default function Result({
   select,
@@ -21,24 +21,12 @@ export default function Result({
     type: PromptType;
   };
 }) {
-  const { db, dates } = useContext(DatabaseContext);
-  const { todayDate } = useSchoiceStore();
+  const { dates } = useContext(DatabaseContext);
+  const { todayDate, filterStocks } = useSchoiceStore();
 
   const [result, setResult] = useState<any[]>([]);
 
-  const query = useCallback(
-    async (sqlQuery: string) => {
-      try {
-        if (!db) return;
-        const res = (await db?.select(sqlQuery)) as any[];
-        return res;
-      } catch (e) {
-        error(`Error executing query: ${e}`);
-        return [];
-      }
-    },
-    [db]
-  );
+  const query = useDatabaseQuery();
 
   const getWeekDates = useCallback(
     async (date: string) => {
@@ -106,6 +94,7 @@ export default function Result({
       const sqlDailyQuery = stockDailyQueryBuilder.generateSqlQuery({
         conditions: customDailyConditions,
         dates: dates.filter((_, index) => index >= todayDate),
+        stockIds: filterStocks?.map((item) => item.id),
       });
       dailySQL = sqlDailyQuery;
     }
@@ -136,6 +125,7 @@ export default function Result({
         const sqlHourlyQuery = stockHourlyQueryBuilder.generateSqlQuery({
           conditions: customHourlyConditions,
           dates: hourlyDateResults.map((result) => result.ts),
+          stockIds: filterStocks?.map((item) => item.id),
         });
         hourlySQL = sqlHourlyQuery;
       }

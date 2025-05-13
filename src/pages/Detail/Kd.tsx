@@ -17,9 +17,8 @@ import {
   YAxis,
 } from "recharts";
 import kd from "../../cls_tools/kd";
-import ArrowDown from "../../components/ArrowDown";
-import ArrowUp from "../../components/ArrowUp";
 import { DealsContext } from "../../context/DealsContext";
+import detectKdDivergence from "../../utils/detectKdDivergence";
 
 export default function Kd() {
   const deals = useContext(DealsContext);
@@ -51,6 +50,11 @@ export default function Kd() {
     return response;
   }, [deals]);
 
+  const KdDivergence = useMemo(() => {
+    if (chartData.length === 0) return null;
+    return detectKdDivergence(chartData);
+  }, [chartData]);
+
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
@@ -70,13 +74,7 @@ export default function Kd() {
             KD 背離指標
           </Typography>
         </MuiTooltip>
-        {chartData.length > 1 &&
-        chartData[chartData.length - 1].k >
-          chartData[chartData.length - 1].d ? (
-          <ArrowUp color="#e26d6d" />
-        ) : (
-          <ArrowDown color="#79e26d" />
-        )}
+        {KdDivergence && "頂背離"}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer width="100%" height="50%">

@@ -77,6 +77,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
                       {item.value.value.hourly?.map((prompt, index) => (
                         <Typography
                           key={index}
+                          component="div"
                           variant="caption"
                           color="textSecondary"
                         >
@@ -93,6 +94,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
                       {item.value.value.daily.map((prompt, index) => (
                         <Typography
                           key={index}
+                          component="div"
                           variant="caption"
                           color="textSecondary"
                         >
@@ -109,6 +111,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
                       {item.value.value.weekly?.map((prompt, index) => (
                         <Typography
                           key={index}
+                          component="div"
                           variant="caption"
                           color="textSecondary"
                         >

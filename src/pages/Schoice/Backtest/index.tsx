@@ -7,7 +7,7 @@ import {
   MenuItem,
   SelectChangeEvent,
   Stack,
-  LinearProgress,
+  Divider,
 } from "@mui/material";
 import { SetStateAction, useContext, useState } from "react";
 import useSchoiceStore from "../../../store/Schoice.store";
@@ -24,6 +24,8 @@ import type { Options as BacktestOptions } from "../../../../../../fiwo/backtest
 import useStocksStore from "../../../store/Stock.store";
 import Options from "./options";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
+import Progress from "./Progress";
+import { toast } from "react-toastify";
 
 enum Status {
   Running = "running",
@@ -32,7 +34,7 @@ enum Status {
 
 export default function Backtest() {
   const { stocks } = useStocksStore();
-  const { bulls, bears, filterStocks } = useSchoiceStore();
+  const { bulls, bears, filterStocks, setBacktestPersent } = useSchoiceStore();
   const { dates } = useContext(DatabaseContext);
   const [ctx, setCtx] = useState<Context>();
   const [selectedBull, setSelectedBull] = useState("");
@@ -73,7 +75,11 @@ export default function Backtest() {
             <Typography variant="subtitle1" gutterBottom>
               Bull Strategy
             </Typography>
-            <Select value={selectedBull} onChange={handleBullChange}  size="small">
+            <Select
+              value={selectedBull}
+              onChange={handleBullChange}
+              size="small"
+            >
               <MenuItem value="">
                 <em>None</em>
               </MenuItem>
@@ -122,7 +128,10 @@ export default function Backtest() {
               startIcon={<PlayCircleFilledWhiteIcon />}
               variant="contained"
               onClick={async () => {
-                if (!selectedBull || !selectedBear) return;
+                if (!selectedBull || !selectedBear) {
+                  toast.error("請選擇多空策略");
+                  return;
+                }
                 setStatus(Status.Running);
                 const buy = (stockId: string, date: number) =>
                   get(stockId, date, bulls[selectedBull]);
@@ -143,6 +152,13 @@ export default function Backtest() {
                 let status = true;
                 while (status) {
                   status = await ctx.run();
+                  console.log();
+                  setBacktestPersent(
+                    Math.floor(
+                      (ctx.dateSequence.historyDates.length / dates.length) *
+                        100
+                    )
+                  );
                 }
                 setStatus(Status.Idle);
               }}
@@ -152,11 +168,13 @@ export default function Backtest() {
           </Stack>
           <Options setOptions={setOptions} options={options} />
 
-          {status === Status.Running && <LinearProgress />}
+          {status === Status.Running && <Progress />}
+          <Divider sx={{ my: 2 }} />
 
           <Typography>勝: {ctx?.record.win}</Typography>
           <Typography>敗: {ctx?.record.lose}</Typography>
           <Typography>收益: {ctx?.record.profit}</Typography>
+          <Typography>交易次數: {ctx?.record.history.length}</Typography>
         </Grid2>
       </Grid2>
     </Container>

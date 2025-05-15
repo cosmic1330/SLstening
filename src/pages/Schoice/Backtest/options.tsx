@@ -14,7 +14,7 @@ import {
   Options as BacktestOptions,
   BuyPrice,
   SellPrice,
-} from "../../../../../../fiwo/backtest_v2/dist/esm";
+} from "@ch20026103/backtest-lib";
 
 export default function Options({
   options,

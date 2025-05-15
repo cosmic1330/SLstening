@@ -1,31 +1,27 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import type { Options as BacktestOptions } from "@ch20026103/backtest-lib";
+import { BuyPrice, Context, SellPrice } from "@ch20026103/backtest-lib";
+import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import {
   Button,
   Container,
+  Divider,
   Grid2,
-  Typography,
-  Select,
   MenuItem,
+  Select,
   SelectChangeEvent,
   Stack,
-  Divider,
+  Typography,
 } from "@mui/material";
 import { SetStateAction, useContext, useState } from "react";
-import useSchoiceStore from "../../../store/Schoice.store";
-import useBacktestFunc from "./useBacktestFunc";
+import { toast } from "react-toastify";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import {
-  BuyPrice,
-  Context,
-  SellPrice,
-} from "../../../../../../fiwo/backtest_v2/dist/esm";
-import type { Options as BacktestOptions } from "../../../../../../fiwo/backtest_v2/dist/esm";
+import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
 import Options from "./options";
-import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import Progress from "./Progress";
-import { toast } from "react-toastify";
+import useBacktestFunc from "./useBacktestFunc";
 
 enum Status {
   Running = "running",

@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ch20026103/anysis": "0.0.17-alpha1",
-    "@ch20026103/backtest-lib": "0.0.1-alpha",
+    "@ch20026103/backtest-lib": "0.0.2-beta",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.3.1",

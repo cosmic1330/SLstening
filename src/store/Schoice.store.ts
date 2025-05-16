@@ -52,6 +52,7 @@ interface SchoiceState {
     stocks: FilterStock[] | undefined,
     prompts: Prompts | undefined
   ) => void;
+  removeFilterStocks: () => void;
   recover: (id: string) => Promise<void>;
   changeChartType: (type: ChartType) => void;
   changeSqliteUpdateDate: (date: string) => void;
@@ -105,6 +106,17 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     }));
     store.set("filterStocks", stocks);
     store.set("filterConditions", prompts);
+    await store.save();
+  },
+  removeFilterStocks: async () => {
+    const store = await Store.load("schoice.json");
+    set(() => ({
+      filterStocks: undefined,
+      filterConditions: undefined,
+    }));
+    store.delete("filterStocks");
+    store.delete("filterConditions");
+    await store.save();
   },
   recover: async (id: string) => {
     const store = await Store.load("schoice.json");

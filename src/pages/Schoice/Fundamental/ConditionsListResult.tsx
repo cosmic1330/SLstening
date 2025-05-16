@@ -51,7 +51,7 @@ export default function ConditionsListResult({
           }}
         />
       </Box>
-      <Button variant="contained" color="success" onClick={handleClick}>
+      <Button variant="contained" color="success" onClick={handleClick} disabled={results.length === 0}>
         確定
       </Button>
     </Stack>

@@ -5,11 +5,11 @@ import RepartitionIcon from "@mui/icons-material/Repartition";
 import { toast } from "react-toastify";
 
 export default function FilterStocks() {
-  const { filterStocks, setFilterStocks } = useSchoiceStore();
+  const { filterStocks, removeFilterStocks } = useSchoiceStore();
   if (!filterStocks) return <></>;
 
   const handleClick = () => {
-    setFilterStocks(undefined, undefined);
+    removeFilterStocks();
     toast.success("已清除基本面塞選");
   };
 

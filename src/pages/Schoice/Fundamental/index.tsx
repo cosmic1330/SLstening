@@ -24,7 +24,7 @@ export default function Fundamental() {
     indicator1: StockFundamentalQueryBuilder.options.indicators[0],
     operator: StockFundamentalQueryBuilder.options.operators[0],
     day2: StockFundamentalQueryBuilder.options.days[1],
-    indicator2: StockFundamentalQueryBuilder.options.indicators[0],
+    indicator2: "0",
   });
 
   const indicators = StockFundamentalQueryBuilder.options.indicators;
@@ -47,6 +47,9 @@ export default function Fundamental() {
   };
 
   const handleAddCondition = () => {
+    if (!selects.indicator1 || !selects.operator || !selects.indicator2) {
+      return;
+    }
     setPrompts((prev) => [...prev, selects]);
   };
 

@@ -7,11 +7,15 @@ import useStocksStore from "../../../store/Stock.store";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
 
 export default function Favorite() {
-  const { stocks } = useStocksStore();
+  const { stocks, reload } = useStocksStore();
   const { dates } = useContext(DatabaseContext);
   const [result, setResult] = useState<any[]>([]);
 
   const query = useDatabaseQuery();
+
+  useEffect(() => {
+    reload()
+  }, []);
 
   useEffect(() => {
     const sql = `SELECT * FROM daily_deal JOIN stock ON daily_deal.stock_id = stock.id WHERE t="${

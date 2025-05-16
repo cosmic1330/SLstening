@@ -7,16 +7,15 @@ import { StockStoreType } from "../types";
  * 僅能在同一個thread中進行
  **/
 
-
 interface StocksState {
   stocks: StockStoreType[];
   menu: StockStoreType[];
-  increase: ({ id, name }: StockStoreType) => void;
-  remove: (id: string) => void;
-  reload: () => void;
-  clear: () => void;
-  update_menu: (stocks: StockStoreType[]) => void;
-  factory_reset: () => void;
+  increase: ({ id, name }: StockStoreType) =>  Promise<void>;
+  remove: (id: string) => Promise<void>;
+  reload: () => Promise<void>;
+  clear: () =>  Promise<void>;
+  update_menu: (stocks: StockStoreType[]) => Promise<void>;
+  factory_reset: () =>  Promise<void>;
 }
 
 const useStocksStore = create<StocksState>((set, get) => ({

@@ -1,4 +1,4 @@
-import { error, info } from "@tauri-apps/plugin-log";
+import { error, info, warn } from "@tauri-apps/plugin-log";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { load } from "cheerio";
 import { useCallback, useState } from "react";
@@ -36,6 +36,12 @@ export default function useDownloadStocks() {
         const row = thirdRowToEnd[i];
         const firstTd = $(row).find("td").eq(0).text(); // 第一個<td>
         const [id, name] = firstTd.split("　");
+
+        // id必須是四位數字且第一位不是0且第一位不是0
+        if (id.length !== 4 && !/^\d+$/.test(id) || id[0] === "0") {
+          warn(`Invalid ID: ${id} ${name}`);
+          continue;
+        }
         const type = $(row).find("td").eq(3).text(); // 第四個<td>
         const group = $(row).find("td").eq(4).text(); // 第五個<td>
         if (id.length === 4) {

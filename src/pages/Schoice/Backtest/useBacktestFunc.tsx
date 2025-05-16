@@ -1,15 +1,22 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { useCallback, useContext } from "react";
+import { useCallback, useContext, useRef } from "react";
 import { stockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
 import { stockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import { PromptItem } from "../../../types";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
+import { StockType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 
 export default function useBacktestFunc() {
   const { dates } = useContext(DatabaseContext);
+  const data_memory = useRef<{
+    date?: number;
+    data?: { [stock_id: string]: StockType };
+  }>({ date: undefined, data: {} });
+  const buy_memory = useRef<string[]>([]);
+  const sell_memory = useRef<string[]>([]);
   const query = useDatabaseQuery();
 
   const getWeekDates = useCallback(
@@ -60,14 +67,34 @@ export default function useBacktestFunc() {
   );
 
   const get = useCallback(
-    async (stockId: string, date: number, select: PromptItem) => {
-      if (!select) return;
+    async (
+      stockId: string,
+      date: number,
+      inWait: boolean,
+      { select, type }: { select: PromptItem; type: string }
+    ): Promise<StockType | null> => {
+      if (!select) return null;
       if (
         select.value.daily.length === 0 &&
         select.value.weekly.length === 0 &&
         select.value.hourly.length === 0
       ) {
-        return;
+        return null;
+      }
+
+      if (data_memory.current.date === date) {
+        if (type === "buy" && buy_memory.current.includes(stockId)) {
+          const data = data_memory.current.data;
+          if (data && data[stockId]) {
+            return data_memory.current.data?.[stockId] ?? null;
+          }
+        } else if (type === "sell" && sell_memory.current.includes(stockId)) {
+          const data = data_memory.current.data;
+          if (data && (data[stockId] || inWait)) {
+            return data_memory.current.data?.[stockId] ?? null;
+          }
+        }
+        return null;
       }
 
       let dailySQL = "";
@@ -76,7 +103,7 @@ export default function useBacktestFunc() {
       );
       if (date_index === -1) {
         console.error("Date not found in dates array:" + date);
-        return;
+        return null;
       }
       if (select.value.daily.length > 0) {
         const customDailyConditions = select.value.daily.map((prompt) =>
@@ -120,18 +147,28 @@ export default function useBacktestFunc() {
         }
       }
 
+      // 取得今日資料
+      const sql = `SELECT * FROM daily_deal WHERE t="${dates[date_index]}"`;
+      const stocks_data = await query(sql);
+      if (stocks_data) {
+        const data = stocks_data.reduce((acc, cur) => {
+          acc[cur.stock_id] = cur;
+          return acc;
+        }, {} as { [stock_id: string]: { stock_id: string } });
+        data_memory.current = { date, data };
+      } else {
+        data_memory.current = { date, data: {} }; // 保證 data 不為 undefined
+      }
+
       // 合併查詢
+      const memory = type === "buy" ? buy_memory : sell_memory;
       const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
         .filter((sql) => sql)
         .join("\nINTERSECT\n");
       const res: { stock_id: string }[] | undefined = await query(combinedSQL);
-      const finded = res?.find((r) => r.stock_id === stockId);
-      if (finded) {
-        const sql = `SELECT * FROM daily_deal WHERE t="${dates[date_index]}" AND daily_deal.stock_id = "${stockId}"`;
-        const a = await query(sql);
-        if (a && a.length > 0) {
-          return a[0];
-        }
+      if (res) {
+        memory.current = res.map((item) => item.stock_id);
+        return data_memory.current.data?.[stockId] ?? null; // 保證回傳 null
       }
       return null;
     },

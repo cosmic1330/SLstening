@@ -1,7 +1,11 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import type { Options as BacktestOptions } from "@ch20026103/backtest-lib";
-import { BuyPrice, Context, SellPrice } from "@ch20026103/backtest-lib";
+import {
+  BuyPrice,
+  Context,
+  SellPrice,
+} from "../../../../../../fiwo/backtest_v2/src/";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import {
   Button,
@@ -64,7 +68,7 @@ export default function Backtest() {
   const get = useBacktestFunc();
 
   return (
-    <Container>
+    <Container maxWidth="xl">
       <Grid2 container>
         <Grid2 size={12}>
           <Stack direction="row" alignItems="center" spacing={2}>
@@ -120,46 +124,86 @@ export default function Backtest() {
                 </MenuItem>
               )}
             </Select>
-            <Button
-              startIcon={<PlayCircleFilledWhiteIcon />}
-              variant="contained"
-              onClick={async () => {
-                if (!selectedBull || !selectedBear) {
-                  toast.error("請選擇多空策略");
-                  return;
-                }
-                setStatus(Status.Running);
-                const buy = (stockId: string, date: number) =>
-                  get(stockId, date, bulls[selectedBull]);
-                const sell = (stockId: string, date: number) =>
-                  get(stockId, date, bears[selectedBear]);
-                const contextDates = dates
-                  .reverse()
-                  .map((date) => dateFormat(date, Mode.StringToNumber));
-                const ctx = new Context({
-                  dates: contextDates,
-                  stocks:
-                    selectedStocks === "filterStocks" ? filterStocks : stocks,
-                  buy,
-                  sell,
-                });
-                setCtx(ctx);
+            {!ctx ? (
+              <Button
+                onClick={() => {
+                  if (!selectedBull || !selectedBear) {
+                    toast.error("請選擇多空策略");
+                    return;
+                  }
 
-                let status = true;
-                while (status) {
-                  status = await ctx.run();
-                  console.log();
-                  setBacktestPersent(
-                    Math.floor(
-                      (ctx.dateSequence.historyDates.length / dates.length) *
-                        100
-                    )
-                  );
-                }
-                setStatus(Status.Idle);
-              }}
-            >
-              Run Backtest
+                  const buy = (
+                    stockId: string,
+                    date: number,
+                    inWait: boolean
+                  ) =>
+                    get(stockId, date, inWait, {
+                      select: bulls[selectedBull],
+                      type: "buy",
+                    });
+                  const sell = (
+                    stockId: string,
+                    date: number,
+                    inWait: boolean
+                  ) =>
+                    get(stockId, date, inWait, {
+                      select: bears[selectedBear],
+                      type: "sell",
+                    });
+                  const contextDates = dates
+                    .reverse()
+                    .map((date) => dateFormat(date, Mode.StringToNumber));
+                  const ctx = new Context({
+                    dates: contextDates,
+                    stocks:
+                      selectedStocks === "filterStocks" ? filterStocks : stocks,
+                    buy,
+                    sell,
+                  });
+                  setCtx(ctx);
+                }}
+              >
+                Create
+              </Button>
+            ) : (
+              <>
+                <Button
+                  startIcon={<PlayCircleFilledWhiteIcon />}
+                  variant="contained"
+                  onClick={async () => {
+                    setStatus(Status.Running);
+                    if (ctx) {
+                      let status = true;
+                      while (status) {
+                        status = await ctx.run();
+                        setBacktestPersent(
+                          Math.floor(
+                            (ctx.dateSequence.historyDates.length /
+                              dates.length) *
+                              100
+                          )
+                        );
+                      }
+                    }
+                    setStatus(Status.Idle);
+                  }}
+                >
+                  Run
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => {
+                    setCtx(undefined);
+                    setStatus(Status.Idle);
+                  }}
+                >
+                  Delete
+                </Button>
+              </>
+            )}
+            <Button onClick={() => console.log(ctx)} variant="outlined">
+              Console
             </Button>
           </Stack>
           <Options setOptions={setOptions} options={options} />

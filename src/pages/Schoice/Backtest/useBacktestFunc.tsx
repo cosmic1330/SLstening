@@ -1,13 +1,18 @@
 import { dateFormat } from "@ch20026103/anysis";
+import { StockType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { useCallback, useContext, useRef } from "react";
 import { stockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
 import { stockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
 import { stockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import { PromptItem } from "../../../types";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
-import { StockType } from "@ch20026103/anysis/dist/esm/stockSkills/types";
+import { PromptItem } from "../../../types";
+
+export enum BacktestType {
+  Buy = "buy",
+  Sell = "sell",
+}
 
 export default function useBacktestFunc() {
   const { dates } = useContext(DatabaseContext);
@@ -15,8 +20,8 @@ export default function useBacktestFunc() {
     date?: number;
     data?: { [stock_id: string]: StockType };
   }>({ date: undefined, data: {} });
-  const buy_memory = useRef<string[]>([]);
-  const sell_memory = useRef<string[]>([]);
+  const buy_memory = useRef<string[] | null>(null);
+  const sell_memory = useRef<string[] | null>(null);
   const query = useDatabaseQuery();
 
   const getWeekDates = useCallback(
@@ -71,108 +76,145 @@ export default function useBacktestFunc() {
       stockId: string,
       date: number,
       inWait: boolean,
-      { select, type }: { select: PromptItem; type: string }
+      { select, type }: { select: PromptItem; type: BacktestType }
     ): Promise<StockType | null> => {
-      if (!select) return null;
-      if (
-        select.value.daily.length === 0 &&
-        select.value.weekly.length === 0 &&
-        select.value.hourly.length === 0
-      ) {
-        return null;
-      }
+      try {
+        if (!select) throw new Error("select is null");
+        if (
+          select.value.daily.length === 0 &&
+          select.value.weekly.length === 0 &&
+          select.value.hourly.length === 0
+        ) {
+          throw new Error("No conditions provided");
+        }
+        const date_index = dates.findIndex(
+          (d) => d === dateFormat(date, Mode.NumberToString)
+        );
+        if (date_index === -1) {
+          throw new Error(`Date not found in dates array: ${date}`);
+        }
 
-      if (data_memory.current.date === date) {
-        if (type === "buy" && buy_memory.current.includes(stockId)) {
+        // 已取得對應資料
+        if (
+          data_memory.current.date === date &&
+          buy_memory.current &&
+          type === BacktestType.Buy &&
+          (buy_memory.current.includes(stockId) || inWait)
+        ) {
           const data = data_memory.current.data;
           if (data && data[stockId]) {
-            return data_memory.current.data?.[stockId] ?? null;
+            return data[stockId];
           }
-        } else if (type === "sell" && sell_memory.current.includes(stockId)) {
+        } else if (
+          data_memory.current.date === date &&
+          sell_memory.current &&
+          type === BacktestType.Sell &&
+          (sell_memory.current.includes(stockId) || inWait)
+        ) {
           const data = data_memory.current.data;
-          if (data && (data[stockId] || inWait)) {
-            return data_memory.current.data?.[stockId] ?? null;
+          if (data && data[stockId]) {
+            return data[stockId];
           }
         }
+
+        // 缺少資料，重新查詢
+        if (data_memory.current.date !== date) {
+          const sql = `SELECT * FROM daily_deal WHERE t="${dateFormat(
+            date,
+            Mode.NumberToString
+          )}"`;
+          const stocks_data = await query(sql);
+          if (stocks_data) {
+            const data = stocks_data.reduce((acc, cur) => {
+              acc[cur.stock_id] = cur;
+              return acc;
+            }, {} as { [stock_id: string]: { stock_id: string } });
+            data_memory.current = { date, data };
+            sell_memory.current = null;
+            buy_memory.current = null;
+          } else {
+            data_memory.current = { date, data: {} }; // 保證 data 不為 undefined
+            sell_memory.current = null;
+            buy_memory.current = null;
+          }
+        }
+
+        // 如果類型還未取得符合條件的股票
+        if (
+          (type === BacktestType.Buy && buy_memory.current === null) ||
+          (type === BacktestType.Sell && sell_memory.current === null)
+        ) {
+          let dailySQL = "";
+          if (select.value.daily.length > 0) {
+            const customDailyConditions = select.value.daily.map((prompt) =>
+              stockDailyQueryBuilder.generateExpression(prompt).join(" ")
+            );
+            const sqlDailyQuery = stockDailyQueryBuilder.generateSqlQuery({
+              conditions: customDailyConditions,
+              dates: dates.filter((_, index) => index >= date_index),
+            });
+            dailySQL = sqlDailyQuery;
+          }
+
+          let weeklySQL = "";
+          if (select.value.weekly.length > 0) {
+            const customWeeklyConditions = select.value.weekly.map((prompt) =>
+              stockWeeklyQueryBuilder.generateExpression(prompt).join(" ")
+            );
+            const weeklyDateResults = await getWeekDates(dates[date_index]);
+            if (weeklyDateResults) {
+              const sqlWeeklyQuery = stockWeeklyQueryBuilder.generateSqlQuery({
+                conditions: customWeeklyConditions,
+                dates: weeklyDateResults.map((result) => result.t), // 直接傳入查詢到的週資料日期
+                weeksRange: weeklyDateResults.length,
+              });
+              weeklySQL = sqlWeeklyQuery;
+            }
+          }
+
+          let hourlySQL = "";
+          if (select.value.hourly?.length > 0) {
+            const customHourlyConditions = select.value.hourly.map((prompt) =>
+              stockHourlyQueryBuilder.generateExpression(prompt).join(" ")
+            );
+            const hourlyDateResults = await getHourDates(dates[date_index]);
+            if (hourlyDateResults) {
+              const sqlHourlyQuery = stockHourlyQueryBuilder.generateSqlQuery({
+                conditions: customHourlyConditions,
+                dates: hourlyDateResults.map((result) => result.ts),
+              });
+              hourlySQL = sqlHourlyQuery;
+            }
+          }
+
+          // 合併查詢
+          const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
+            .filter((sql) => sql)
+            .join("\nINTERSECT\n");
+          const res: { stock_id: string }[] | undefined = await query(
+            combinedSQL
+          );
+          if (res) {
+            const ids = res.map((item) => item.stock_id);
+            const memory = type === BacktestType.Buy ? buy_memory : sell_memory;
+            memory.current = ids;
+            if (ids.includes(stockId)) {
+              return data_memory.current.data?.[stockId] as StockType;
+            }
+            throw new Error(
+              `Stock ID ${stockId} not found in the filtered results`
+            );
+          }
+          throw new Error("No results found for the given conditions");
+        }
+        throw new Error(
+          `No data found for the given stockId: ${stockId} in date: ${date}`
+        );
+      } catch (error) {
         return null;
       }
-
-      let dailySQL = "";
-      const date_index = dates.findIndex(
-        (d) => d === dateFormat(date, Mode.NumberToString)
-      );
-      if (date_index === -1) {
-        console.error("Date not found in dates array:" + date);
-        return null;
-      }
-      if (select.value.daily.length > 0) {
-        const customDailyConditions = select.value.daily.map((prompt) =>
-          stockDailyQueryBuilder.generateExpression(prompt).join(" ")
-        );
-        const sqlDailyQuery = stockDailyQueryBuilder.generateSqlQuery({
-          conditions: customDailyConditions,
-          dates: dates.filter((_, index) => index >= date_index),
-        });
-        dailySQL = sqlDailyQuery;
-      }
-
-      let weeklySQL = "";
-      if (select.value.weekly.length > 0) {
-        const customWeeklyConditions = select.value.weekly.map((prompt) =>
-          stockWeeklyQueryBuilder.generateExpression(prompt).join(" ")
-        );
-        const weeklyDateResults = await getWeekDates(dates[date_index]);
-        if (weeklyDateResults) {
-          const sqlWeeklyQuery = stockWeeklyQueryBuilder.generateSqlQuery({
-            conditions: customWeeklyConditions,
-            dates: weeklyDateResults.map((result) => result.t), // 直接傳入查詢到的週資料日期
-            weeksRange: weeklyDateResults.length,
-          });
-          weeklySQL = sqlWeeklyQuery;
-        }
-      }
-
-      let hourlySQL = "";
-      if (select.value.hourly?.length > 0) {
-        const customHourlyConditions = select.value.hourly.map((prompt) =>
-          stockHourlyQueryBuilder.generateExpression(prompt).join(" ")
-        );
-        const hourlyDateResults = await getHourDates(dates[date_index]);
-        if (hourlyDateResults) {
-          const sqlHourlyQuery = stockHourlyQueryBuilder.generateSqlQuery({
-            conditions: customHourlyConditions,
-            dates: hourlyDateResults.map((result) => result.ts),
-          });
-          hourlySQL = sqlHourlyQuery;
-        }
-      }
-
-      // 取得今日資料
-      const sql = `SELECT * FROM daily_deal WHERE t="${dates[date_index]}"`;
-      const stocks_data = await query(sql);
-      if (stocks_data) {
-        const data = stocks_data.reduce((acc, cur) => {
-          acc[cur.stock_id] = cur;
-          return acc;
-        }, {} as { [stock_id: string]: { stock_id: string } });
-        data_memory.current = { date, data };
-      } else {
-        data_memory.current = { date, data: {} }; // 保證 data 不為 undefined
-      }
-
-      // 合併查詢
-      const memory = type === "buy" ? buy_memory : sell_memory;
-      const combinedSQL = [dailySQL, weeklySQL, hourlySQL]
-        .filter((sql) => sql)
-        .join("\nINTERSECT\n");
-      const res: { stock_id: string }[] | undefined = await query(combinedSQL);
-      if (res) {
-        memory.current = res.map((item) => item.stock_id);
-        return data_memory.current.data?.[stockId] ?? null; // 保證回傳 null
-      }
-      return null;
     },
-    [dates, query]
+    [dates, query, data_memory.current]
   );
 
   return get;

@@ -1,11 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import type { Options as BacktestOptions } from "@ch20026103/backtest-lib";
-import {
-  BuyPrice,
-  Context,
-  SellPrice,
-} from "../../../../../../fiwo/backtest_v2/src/";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import {
   Button,
@@ -20,12 +15,17 @@ import {
 } from "@mui/material";
 import { SetStateAction, useContext, useState } from "react";
 import { toast } from "react-toastify";
+import {
+  BuyPrice,
+  Context,
+  SellPrice,
+} from "../../../../../../js_project/backtest_v2/src";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
 import Options from "./options";
 import Progress from "./Progress";
-import useBacktestFunc from "./useBacktestFunc";
+import useBacktestFunc, { BacktestType } from "./useBacktestFunc";
 
 enum Status {
   Running = "running",
@@ -139,7 +139,7 @@ export default function Backtest() {
                   ) =>
                     get(stockId, date, inWait, {
                       select: bulls[selectedBull],
-                      type: "buy",
+                      type: BacktestType.Buy,
                     });
                   const sell = (
                     stockId: string,
@@ -148,9 +148,9 @@ export default function Backtest() {
                   ) =>
                     get(stockId, date, inWait, {
                       select: bears[selectedBear],
-                      type: "sell",
+                      type: BacktestType.Sell,
                     });
-                  const contextDates = dates
+                  const contextDates = [...dates]
                     .reverse()
                     .map((date) => dateFormat(date, Mode.StringToNumber));
                   const ctx = new Context({
@@ -174,16 +174,24 @@ export default function Backtest() {
                     setStatus(Status.Running);
                     if (ctx) {
                       let status = true;
-                      while (status) {
-                        status = await ctx.run();
-                        setBacktestPersent(
-                          Math.floor(
-                            (ctx.dateSequence.historyDates.length /
-                              dates.length) *
-                              100
-                          )
-                        );
-                      }
+                      // while (status) {
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      status = await ctx.run();
+                      setBacktestPersent(
+                        Math.floor(
+                          (ctx.dateSequence.historyDates.length /
+                            dates.length) *
+                            100
+                        )
+                      );
+                      // }
                     }
                     setStatus(Status.Idle);
                   }}
@@ -215,6 +223,27 @@ export default function Backtest() {
           <Typography>敗: {ctx?.record.lose}</Typography>
           <Typography>收益: {ctx?.record.profit}</Typography>
           <Typography>交易次數: {ctx?.record.history.length}</Typography>
+          <Typography>待購清單:</Typography>
+          {Object.keys(ctx?.record.waitSale || {}).map((key) => {
+            const date = ctx?.record.waitSale[key];
+            return (
+              <Typography key={key}>
+                {key}:{date}
+              </Typography>
+            );
+          })}
+          <Typography>
+            代售清單: {Object.keys(ctx?.record.waitSale || {}).length}
+          </Typography>
+          <Typography>庫存:</Typography>
+          {Object.keys(ctx?.record.inventory || {}).map((key) => {
+            const data = ctx?.record.inventory[key];
+            return (
+              <Typography key={key}>
+                {data?.id} {data?.name} {data?.buyDate}
+              </Typography>
+            );
+          })}
         </Grid2>
       </Grid2>
     </Container>

@@ -4,6 +4,7 @@ import {
   SellPrice,
 } from "@ch20026103/backtest-lib";
 import {
+  Checkbox,
   FormControl,
   InputLabel,
   MenuItem,
@@ -11,6 +12,7 @@ import {
   SelectChangeEvent,
   Stack,
   TextField,
+  Typography,
 } from "@mui/material";
 import { SetStateAction } from "react";
 
@@ -94,6 +96,15 @@ export default function Options({
           <MenuItem value={SellPrice.LOW}>最低價</MenuItem>
         </Select>
       </FormControl>
+
+
+      <Stack direction="row" alignItems="center">
+        <Checkbox
+          checked={options.isRandom}
+          onChange={handleChange("isRandom")}
+        />
+        <Typography variant="body2">隨機排列</Typography>
+      </Stack>
     </Stack>
   );
 }

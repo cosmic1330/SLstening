@@ -20,6 +20,7 @@ import { toast } from "react-toastify";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
+import shuffleArray from "../../../utils/shuffleArray";
 import BacktestResult from "./BacktestResult";
 import Options from "./options";
 import Progress from "./Progress";
@@ -43,6 +44,7 @@ export default function Backtest() {
     capital: 300000,
     sellPrice: SellPrice.LOW,
     buyPrice: BuyPrice.OPEN,
+    isRandom: true,
   });
 
   const handleBullChange = (
@@ -85,12 +87,21 @@ export default function Backtest() {
     const contextDates = [...dates]
       .reverse()
       .map((date) => dateFormat(date, Mode.StringToNumber));
+
+    // 隨機排列
+    let stocksValue = selectedStocks === "filterStocks" ? filterStocks : stocks;
+    if (options.isRandom && stocksValue) {
+      stocksValue = shuffleArray(stocksValue);
+    }
+
     const ctx = new Context({
       dates: contextDates,
-      stocks: selectedStocks === "filterStocks" ? filterStocks : stocks,
+      stocks: stocksValue,
       buy,
       sell,
+      options: { ...options }, // 確保傳遞的是新的物件
     });
+    console.log("ctx", ctx, options);
     setCtx(ctx);
   }, [
     selectedBull,
@@ -100,6 +111,7 @@ export default function Backtest() {
     stocks,
     dates,
     get,
+    options, // 加入 options 作為依賴
   ]);
 
   const run = useCallback(async () => {
@@ -120,7 +132,7 @@ export default function Backtest() {
       }
     }
     setStatus(Status.Idle);
-  }, [ctx, setBacktestPersent, dates]);
+  }, [ctx, setBacktestPersent, dates, options]);
 
   const stop = useCallback(() => {
     setStatus(Status.Idle);

@@ -12,6 +12,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
+import StockTextButton from "./StockTextButton";
 
 export default function Inventory({ ctx }: { ctx: Context }) {
   return (
@@ -39,7 +40,7 @@ export default function Inventory({ ctx }: { ctx: Context }) {
                     {`$${item.buyPrice}`}
                   </TableCell>
                   <TableCell align="center">
-                    {`${item.id}`} {`${item.name}`}
+                    <StockTextButton id={item.id} name={item.name} />
                   </TableCell>
                 </TableRow>
               ))}

@@ -44,8 +44,8 @@ export default function Backtest() {
     capital: 300000,
     sellPrice: SellPrice.LOW,
     buyPrice: BuyPrice.OPEN,
-    isRandom: true,
   });
+  const [isRandom, setIsRandom] = useState(true);
 
   const handleBullChange = (
     event: SelectChangeEvent<SetStateAction<string>>
@@ -90,7 +90,7 @@ export default function Backtest() {
 
     // 隨機排列
     let stocksValue = selectedStocks === "filterStocks" ? filterStocks : stocks;
-    if (options.isRandom && stocksValue) {
+    if (isRandom && stocksValue) {
       stocksValue = shuffleArray(stocksValue);
     }
 
@@ -111,7 +111,8 @@ export default function Backtest() {
     stocks,
     dates,
     get,
-    options, // 加入 options 作為依賴
+    options,
+    isRandom,
   ]);
 
   const run = useCallback(async () => {
@@ -227,7 +228,7 @@ export default function Backtest() {
             <Typography variant="subtitle1" gutterBottom>
               Additional Options
             </Typography>
-            <Options setOptions={setOptions} options={options} />
+            <Options {...{ isRandom, setIsRandom, options, setOptions }} />
           </Grid2>
 
           <Grid2 size={12}>

@@ -18,10 +18,14 @@ import { SetStateAction } from "react";
 
 export default function Options({
   options,
+  isRandom,
+  setIsRandom,
   setOptions,
 }: {
   options: BacktestOptions;
+  isRandom: boolean;
   setOptions: React.Dispatch<SetStateAction<BacktestOptions>>;
+  setIsRandom: React.Dispatch<SetStateAction<boolean>>;
 }) {
   const handleChange =
     (key: keyof BacktestOptions) =>
@@ -97,11 +101,10 @@ export default function Options({
         </Select>
       </FormControl>
 
-
       <Stack direction="row" alignItems="center">
         <Checkbox
-          checked={options.isRandom}
-          onChange={handleChange("isRandom")}
+          checked={isRandom}
+          onChange={() => setIsRandom((prev) => !prev)}
         />
         <Typography variant="body2">隨機排列</Typography>
       </Stack>

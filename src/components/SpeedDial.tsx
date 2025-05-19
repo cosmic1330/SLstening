@@ -101,7 +101,7 @@ export default function SpeedDial() {
       />
 
       <SpeedDialAction
-        key={"Logout"}
+        key={"LanguageSwitch"}
         icon={<LanguageSwitcher />}
         tooltipTitle={"切換語言"}
       />

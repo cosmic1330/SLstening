@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { create } from "zustand";
 import {
   FilterStock,
+  PromptItem,
   Prompts,
   PromptsMap,
   PromptType,
@@ -34,6 +35,7 @@ interface SchoiceState {
   todayDate: number;
   bulls: PromptsMap;
   bears: PromptsMap;
+  alarms: PromptsMap;
   select: {
     id: string;
     name: string;
@@ -47,8 +49,10 @@ interface SchoiceState {
   filterStocks?: FilterStock[];
   filterConditions?: Prompts;
   backtestPersent: number;
+  addAlarm: (alarm: PromptItem, id: string) => void;
+  removeAlarm: (id: string) => void;
   setBacktestPersent: (persent: number) => void;
-  setFilterStocks: (
+  addFilterStocks: (
     stocks: FilterStock[] | undefined,
     prompts: Prompts | undefined
   ) => void;
@@ -86,6 +90,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   theme: localStorage.getItem("slitenting-theme") || "",
   bulls: {},
   bears: {},
+  alarms: {},
   select: null,
   sqliteUpdateDate: "N/A",
   chartType:
@@ -95,10 +100,33 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   filterConditions: undefined,
   filterStocks: undefined,
   backtestPersent: 0,
+  addAlarm: async (alarm: PromptItem, id: string) => {
+    const store = await Store.load("schoice.json");
+    const alarms = get().alarms as PromptsMap;
+    const data = {
+      ...alarms,
+      [id]: alarm,
+    };
+    set(() => ({
+      alarms: data,
+    }));
+    await store.set("alarms", data);
+    await store.save();
+  },
+  removeAlarm: async (id: string) => {
+    const store = await Store.load("schoice.json");
+    const alarms = get().alarms as PromptsMap;
+    const { [id]: _, ...dataAlarm } = alarms;
+    set(() => ({
+      alarms: dataAlarm,
+    }));
+    await store.set("alarms", dataAlarm);
+    await store.save();
+  },
   setBacktestPersent: (persent: number) => {
     set({ backtestPersent: persent });
   },
-  setFilterStocks: async (stocks, prompts) => {
+  addFilterStocks: async (stocks, prompts) => {
     const store = await Store.load("schoice.json");
     set(() => ({
       filterStocks: stocks,
@@ -302,20 +330,38 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
     const store = await Store.load("schoice.json");
     const bulls = ((await store.get("bulls")) as PromptsMap) || {};
     const bears = ((await store.get("bears")) as PromptsMap) || {};
+    const alarms = ((await store.get("alarms")) as PromptsMap) || {};
     const trash = ((await store.get("trash")) as TrashPrompt[]) || [];
     const filterStocks =
-      ((await store.get("filterStocks")) as any) || undefined;
+      ((await store.get("filterStocks")) as FilterStock[]) || undefined;
     const filterConditions =
-      ((await store.get("filterConditions")) as any) || undefined;
-    set(() => ({ bulls, bears, trash, filterStocks, filterConditions }));
+      ((await store.get("filterConditions")) as Prompts) || undefined;
+    set(() => ({
+      bulls,
+      bears,
+      alarms,
+      trash,
+      filterStocks,
+      filterConditions,
+    }));
   },
   clear: async () => {
     const store = await Store.load("schoice.json");
     await store.delete("bulls");
     await store.delete("bears");
+    await store.delete("alarms");
     await store.delete("trash");
+    await store.delete("filterStocks");
+    await store.delete("filterConditions");
     await store.save();
-    set({ bulls: {}, bears: {}, trash: [] });
+    set({
+      bulls: {},
+      bears: {},
+      alarms: {},
+      trash: [],
+      filterStocks: undefined,
+      filterConditions: undefined,
+    });
   },
   clearSeleted: () => {
     set({ select: null });

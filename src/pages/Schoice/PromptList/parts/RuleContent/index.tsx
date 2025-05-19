@@ -1,6 +1,8 @@
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
+import NotificationAddIcon from "@mui/icons-material/NotificationAdd";
+import NotificationsOffIcon from "@mui/icons-material/NotificationsOff";
 import { IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { error } from "@tauri-apps/plugin-log";
@@ -10,6 +12,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
+import { toast } from "react-toastify";
 import useSchoiceStore from "../../../../../store/Schoice.store";
 import { PromptType, PromptValue } from "../../../../../types";
 import Summary from "./Summary";
@@ -24,7 +27,7 @@ export default function RuleContent({
     type: PromptType;
   };
 }) {
-  const { remove, reload, clearSeleted } = useSchoiceStore();
+  const { remove, reload, clearSeleted, addAlarm, alarms, removeAlarm } = useSchoiceStore();
   const navigate = useNavigate();
 
   const handleCopy = async () => {
@@ -49,6 +52,27 @@ export default function RuleContent({
     reload();
   };
 
+  const handleAddNotification = async () => {
+    try {
+      await addAlarm({ name: select.name, value: select.value }, select.id);
+      toast.success("加入告警偵測成功");
+    } catch (error) {
+      console.error(error);
+      toast.error("加入告警偵測失敗");
+    }
+  };
+
+  const handleRemoveNotification = async () => {
+    try {
+      await removeAlarm(select.id);
+      toast.success("移除告警偵測成功");
+    } catch (error) {
+      console.error(error);
+      toast.error("移除告警偵測失敗");
+    }
+  };
+
+
   return (
     <Stack spacing={2} alignItems="flex-start" width={"100%"}>
       <Typography variant="h4">{select && select.name}</Typography>
@@ -68,6 +92,20 @@ export default function RuleContent({
             <DeleteRoundedIcon fontSize="medium" />
           </IconButton>
         </Tooltip>
+        {select.type === PromptType.BEAR && !alarms[select.id] && (
+          <Tooltip title="加入告警偵測">
+            <IconButton onClick={handleAddNotification}>
+              <NotificationAddIcon fontSize="medium" />
+            </IconButton>
+          </Tooltip>
+        )}
+        {select.type === PromptType.BEAR && alarms[select.id] && (
+          <Tooltip title="移除告警偵測">
+            <IconButton onClick={handleRemoveNotification}>
+              <NotificationsOffIcon fontSize="medium" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
 
       <Summary select={select} />

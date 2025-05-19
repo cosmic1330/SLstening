@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { FilterStock, StorePrompt } from "../../../types";
-import { stockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
 import { Box, Button, Chip, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
+import { stockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
 import useSchoiceStore from "../../../store/Schoice.store";
-import { toast } from "react-toastify";
+import { FilterStock, StorePrompt } from "../../../types";
 
 export default function ConditionsListResult({
   prompts,
@@ -12,7 +12,7 @@ export default function ConditionsListResult({
   prompts: StorePrompt[];
 }) {
   const [results, setResults] = useState<FilterStock[]>([]);
-  const { setFilterStocks } = useSchoiceStore();
+  const { addFilterStocks } = useSchoiceStore();
   const query = useDatabaseQuery();
   useEffect(() => {
     const conditions = prompts.map((prompt) =>
@@ -33,7 +33,7 @@ export default function ConditionsListResult({
   }, [prompts]);
 
   const handleClick = () => {
-    setFilterStocks(results, prompts);
+    addFilterStocks(results, prompts);
     toast.success("添加基本面塞選成功");
   };
 
@@ -51,7 +51,12 @@ export default function ConditionsListResult({
           }}
         />
       </Box>
-      <Button variant="contained" color="success" onClick={handleClick} disabled={results.length === 0}>
+      <Button
+        variant="contained"
+        color="success"
+        onClick={handleClick}
+        disabled={results.length === 0}
+      >
         確定
       </Button>
     </Stack>

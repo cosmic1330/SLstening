@@ -16,6 +16,7 @@ import {
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import ConditionsList from "./ConditionsList";
 import ConditionsTable from "./ConditionsTable";
+import FundamentalResult from "./FundamentalResult";
 
 export default function Fundamental() {
   const [prompts, setPrompts] = useState<StorePrompt[]>([]);
@@ -62,7 +63,7 @@ export default function Fundamental() {
       <Grid2 size={6}>
         <ConditionsTable />
       </Grid2>
-      <Grid2 size={6} sx={{ height: "calc(100vh - 70px)", overflowY: "auto" }}>
+      <Grid2 size={6} sx={{ overflowY: "auto" }}>
         <Paper
           variant="outlined"
           sx={{ padding: "20px", marginBottom: "20px" }}
@@ -128,6 +129,9 @@ export default function Fundamental() {
             handleDeleteCondition,
           }}
         />
+      </Grid2>
+      <Grid2 size={12}>
+        <FundamentalResult />
       </Grid2>
     </Grid2>
   );

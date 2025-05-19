@@ -12,19 +12,23 @@ import { TickDealsType } from "../../types";
 
 export default function TickChart({ tickDeals }: { tickDeals: TickDealsType }) {
   const data = useMemo(() => {
-    const currentProgress = getTimeProgressPercent(tickDeals.ts);
-    const totalCount = Math.ceil(
-      tickDeals.closes.length / (currentProgress / 100)
-    );
     const res = [];
-    for (let i = 0; i < totalCount; i++) {
-      if (tickDeals.closes[i]) {
-        const close = tickDeals.closes[i];
-        const avgPrice = tickDeals.avgPrices[i];
-        res.push({ close, avgPrice });
-      } else {
-        res.push({ close: null, avgPrice: null });
+    try {
+      const currentProgress = getTimeProgressPercent(tickDeals.ts);
+      const totalCount = Math.ceil(
+        tickDeals.closes.length / (currentProgress / 100)
+      );
+      for (let i = 0; i < totalCount; i++) {
+        if (tickDeals.closes[i]) {
+          const close = tickDeals.closes[i];
+          const avgPrice = tickDeals.avgPrices[i];
+          res.push({ close, avgPrice });
+        } else {
+          res.push({ close: null, avgPrice: null });
+        }
       }
+    } catch (error) {
+      console.error("Error in data calculation:", error);
     }
     return res;
   }, [tickDeals]);

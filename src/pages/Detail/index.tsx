@@ -65,7 +65,7 @@ enum PictoreType {
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState(PictoreType.Daily);
+  const [picture, setPicture] = useState(PictoreType.Hourly);
 
   const goToSlide = useCallback((index: number) => {
     if (index >= 0 && index < slides.length) {

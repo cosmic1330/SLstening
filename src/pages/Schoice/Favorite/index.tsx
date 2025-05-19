@@ -4,27 +4,28 @@ import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useStocksStore from "../../../store/Stock.store";
-import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
+import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
+import Alarm from "./Alarm";
 
 export default function Favorite() {
   const { stocks, reload } = useStocksStore();
   const { dates } = useContext(DatabaseContext);
   const [result, setResult] = useState<any[]>([]);
-
-  const query = useDatabaseQuery();
+  const { getStocksData } = useFindStocksByPrompt();
 
   useEffect(() => {
-    reload()
+    reload();
   }, []);
 
   useEffect(() => {
-    const sql = `SELECT * FROM daily_deal JOIN stock ON daily_deal.stock_id = stock.id WHERE t="${
-      dates[0]
-    }" AND stock_id IN ('${stocks.map((r) => r.id).join("','")}')`;
-    query(sql).then((result) => {
+    if (dates?.length === 0 || stocks.length === 0) return;
+    getStocksData(
+      dates[0],
+      stocks.map((r) => r.id)
+    ).then((result) => {
       if (result) setResult(result);
     });
-  }, [stocks, dates]);
+  }, [stocks, dates, getStocksData]);
 
   return (
     <Container>
@@ -33,6 +34,7 @@ export default function Favorite() {
           <Typography variant="h5" gutterBottom textTransform="uppercase">
             Favorite
           </Typography>
+          <Alarm stocks={stocks}/>
           <ResultTable {...{ result }} type={ActionButtonType.Decrease} />
         </Grid2>
       </Grid2>

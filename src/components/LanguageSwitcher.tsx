@@ -1,5 +1,4 @@
 import { IconButton } from "@mui/material";
-import LanguageIcon from "@mui/icons-material/Language";
 import { useTranslation } from "react-i18next";
 import TranslateIcon from "@mui/icons-material/Translate";
 

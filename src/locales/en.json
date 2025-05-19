@@ -23,6 +23,21 @@
       "required": "Stock code is required",
       "pattern": "Stock code format is incorrect",
       "noStock":"Please enter stock code"
+    },
+    "Schoice": {
+      "Trash": {
+        "name": "Name",
+        "type": "Type",
+        "time": "Time",
+        "action": "Action",
+        "empty": "The trash is empty",
+        "remove": "Remove",
+        "recover": "Recover",
+        "promptDetails": "Prompt Details",
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "weekly": "Weekly"
+      }
     }
   }
 }

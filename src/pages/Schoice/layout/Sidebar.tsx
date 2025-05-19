@@ -12,6 +12,8 @@ import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
 import SmartButtonIcon from "@mui/icons-material/SmartButton";
+import { Lan } from "@mui/icons-material";
+import LanguageSwitcher from "../../../components/LanguageSwitcher";
 
 const GridItem = styled(Box)`
   width: 70px;
@@ -82,7 +84,8 @@ export default function SideBar() {
           </Tooltip>
         </Stack>
 
-        <Box>
+        <Stack spacing={2} alignItems="center">
+          <LanguageSwitcher />
           <Tooltip title="切換主題" arrow placement="right">
             <IconButton onClick={onThemeChange}>
               {theme === "light" ? <LightModeIcon /> : <DarkModeIcon />}
@@ -94,7 +97,7 @@ export default function SideBar() {
               <SettingsIcon />
             </IconButton>
           </Tooltip>
-        </Box>
+        </Stack>
       </GridItem>
     </Box>
   );

@@ -16,6 +16,7 @@ import formatDateTime from "../../../utils/formatDateTime";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import useSchoiceStore from "../../../store/Schoice.store";
+import { t } from "i18next";
 
 export default function CollapseRow({ item }: { item: TrashPrompt }) {
   const [open, setOpen] = useState(false);
@@ -43,7 +44,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
             onClick={() => removeFromTrash(item.id)}
             sx={{ mr: 1 }}
           >
-            Remove
+            {t("Pages.Schoice.Trash.remove")}
           </Button>
           <Button
             variant="contained"
@@ -52,7 +53,7 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
             onClick={() => recover(item.id)}
             sx={{ mr: 1 }}
           >
-            Recover
+            {t("Pages.Schoice.Trash.recover")}
           </Button>
         </TableCell>
       </TableRow>
@@ -61,14 +62,20 @@ export default function CollapseRow({ item }: { item: TrashPrompt }) {
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="body1" gutterBottom color="textSecondary">
-                Prompt Details
+                {t("Pages.Schoice.Trash.promptDetails")}
               </Typography>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell align="center">Hourly</TableCell>
-                    <TableCell align="center">Daily</TableCell>
-                    <TableCell align="center">Weekly</TableCell>
+                    <TableCell align="center">
+                      {t("Pages.Schoice.Trash.hourly")}
+                    </TableCell>
+                    <TableCell align="center">
+                      {t("Pages.Schoice.Trash.daily")}
+                    </TableCell>
+                    <TableCell align="center">
+                      {t("Pages.Schoice.Trash.weekly")}
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import useSchoiceStore from "../../../store/Schoice.store";
 import CollapseRow from "./CollapseRow";
+import { t } from "i18next";
 export default function TrashTable() {
   const { trash } = useSchoiceStore();
 
@@ -21,11 +22,17 @@ export default function TrashTable() {
             <TableRow>
               <TableCell align="center"></TableCell>
               <TableCell align="center" component="th" scope="row">
-                Name
+                {t("Pages.Schoice.Trash.name")}
               </TableCell>
-              <TableCell align="center">Type</TableCell>
-              <TableCell align="center">Time</TableCell>
-              <TableCell align="center">Actions</TableCell>
+              <TableCell align="center">
+                {t("Pages.Schoice.Trash.type")}
+              </TableCell>
+              <TableCell align="center">
+                {t("Pages.Schoice.Trash.time")}
+              </TableCell>
+              <TableCell align="center">
+                {t("Pages.Schoice.Trash.action")}
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -36,7 +43,7 @@ export default function TrashTable() {
               <TableRow>
                 <TableCell colSpan={5} align="center">
                   <Typography variant="body2" color="text.secondary">
-                    Trash is empty.
+                    {t("Pages.Schoice.Trash.empty")}
                   </Typography>
                 </TableCell>
               </TableRow>

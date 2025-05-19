@@ -12,8 +12,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
+import { useTranslation } from "react-i18next";
 
 const Content = () => {
+  const { t } = useTranslation();
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(
@@ -69,7 +71,7 @@ const Content = () => {
         <TextField
           fullWidth
           size="small"
-          label="Email"
+          label={t("Pages.Login.email")}
           name="email"
           type="email"
           value={email}
@@ -80,7 +82,7 @@ const Content = () => {
         <TextField
           fullWidth
           size="small"
-          label="Password"
+          label={t("Pages.Login.password")}
           name="password"
           type="password"
           value={password}
@@ -94,7 +96,7 @@ const Content = () => {
             onChange={(e) => setRemember(e.target.checked)}
           />
           <Typography variant="body2" color="textPrimary">
-            Remember me
+            {t("Pages.Login.rememberMe")}
           </Typography>
         </Stack>
         <Stack direction="row" spacing={2}>
@@ -106,7 +108,7 @@ const Content = () => {
             color="warning"
             variant="contained"
           >
-            Register
+            {t("Pages.Login.register")}
           </Button>
           <Button
             type="submit"
@@ -116,7 +118,7 @@ const Content = () => {
             size="small"
             variant="contained"
           >
-            Sign In
+            {t("Pages.Login.signIn")}
           </Button>
         </Stack>
         <Typography color="error" align="center">

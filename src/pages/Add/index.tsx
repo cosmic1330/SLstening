@@ -8,6 +8,7 @@ import useStocksStore from "../../store/Stock.store";
 import Menu from "./Menu";
 import type FormData from "./type";
 import { info } from "@tauri-apps/plugin-log";
+import { t } from "i18next";
 
 function Add() {
   const { increase, reload } = useStocksStore();
@@ -32,7 +33,7 @@ function Add() {
       await emit("stock-added", { stockNumber: data.stock.id });
       reset();
     } else {
-      info("請輸入股票代碼");
+      info(t("Pages.Add.noStock"));
     }
   }, []);
 
@@ -49,23 +50,23 @@ function Add() {
         </Box>
         <Stack direction="row" spacing={2}>
           <Button size="small" onClick={closeWindow} fullWidth>
-            關閉
+            {t("Pages.Add.close")}
           </Button>
           <Button type="submit" variant="contained" size="small" fullWidth>
-            加入
+            {t("Pages.Add.add")}
           </Button>
         </Stack>
       </form>
       <Box mt={2} textAlign="center">
         {disable ? (
-          <Typography variant="caption">下載中...</Typography>
+          <Typography variant="caption">{t("Pages.Add.download")}</Typography>
         ) : (
           <Button
             onClick={handleDownload}
             color="primary"
             sx={{ cursor: "pointer", textDecoration: "underline" }}
           >
-            沒有選項嗎? 點我載入
+            {t("Pages.Add.notFoundOptions")}
           </Button>
         )}
       </Box>

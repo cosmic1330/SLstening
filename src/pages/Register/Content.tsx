@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
+import { t } from "i18next";
 
 function Content() {
   const [errorMsg, setErrorMsg] = useState("");
@@ -46,12 +47,12 @@ function Content() {
   return (
     <Box component="form">
       <Typography variant="h3" align="center" color="textPrimary" gutterBottom>
-        Register
+        {t("Pages.Register.register")}
       </Typography>
       <Box component="form" onSubmit={handleSubmit} width="100%">
         <TextField
           fullWidth
-          label="Email"
+          label={t("Pages.Register.email")}
           name="email"
           type="email"
           value={email}
@@ -62,7 +63,7 @@ function Content() {
         />
         <TextField
           fullWidth
-          label="Password"
+          label={t("Pages.Register.password")}
           name="password"
           type="password"
           value={password}
@@ -73,7 +74,7 @@ function Content() {
         />
         <TextField
           fullWidth
-          label="Confirm Password"
+          label={t("Pages.Register.confirmPassword")}
           name="confirmPassword"
           type="password"
           value={confirmPassword}
@@ -91,7 +92,7 @@ function Content() {
           disabled={loading || !email || !password || !confirmPassword}
           onClick={signUp}
         >
-          Register
+          {t("Pages.Register.register")}
         </Button>
         <Typography color="error" align="center">
           {errorMsg}
@@ -105,7 +106,7 @@ function Content() {
         sx={{ cursor: "pointer", textDecoration: "underline" }}
         onClick={() => navigate("/")}
       >
-        Already have an account? Sign in
+        {t("Pages.Register.haveAccount")}
       </Typography>
     </Box>
   );

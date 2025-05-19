@@ -4,6 +4,7 @@ import { Control, Controller, FieldErrors } from "react-hook-form";
 import type FormData from "./type";
 import { Box, Typography } from "@mui/material";
 import useStocksStore from "../../store/Stock.store";
+import { t } from "i18next";
 
 export default function Menu({
   control,
@@ -21,10 +22,10 @@ export default function Menu({
         control={control}
         defaultValue={null}
         rules={{
-          required: "股票代號是必填項目",
+          required: t("Pages.Add.required"),
           pattern: {
             value: /^\d{4}$/,
-            message: "股票代號格式不正確",
+            message: t("Pages.Add.pattern"),
           },
         }}
         render={({ field }) => (
@@ -44,7 +45,7 @@ export default function Menu({
               field.onChange(newValue);
             }}
             fullWidth
-            renderInput={(params) => <TextField {...params} label="選擇加入股票" />}
+            renderInput={(params) => <TextField {...params} label= {t("Pages.Add.selectStock")} />}
           />
         )}
       />

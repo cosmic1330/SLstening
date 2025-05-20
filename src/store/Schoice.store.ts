@@ -319,11 +319,14 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   removeFromTrash: async (id: string) => {
     const store = await Store.load("schoice.json");
     set((state) => {
+      delete state.alarms[id];
       return {
         trash: state.trash.filter((item) => item.id !== id),
+        alarms: state.alarms,
       };
     });
     await store.set("trash", get().trash);
+    await store.set("alarms", get().alarms);
     await store.save();
   },
   reload: async () => {

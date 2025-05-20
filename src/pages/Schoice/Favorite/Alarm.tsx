@@ -1,14 +1,12 @@
 import { Card, CardContent, Chip, Stack, Typography, Grid2, Box } from "@mui/material";
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
 import { StockStoreType } from "../../../types";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
-import { DatabaseContext } from "../../../context/DatabaseContext";
 
 export default function Alarm({ stocks }: { stocks: StockStoreType[] }) {
   const { alarms } = useSchoiceStore();
-  const { dates } = useContext(DatabaseContext);
   const { getPromptSqlScripts, getCombinedSqlScript } = useFindStocksByPrompt();
   const query = useDatabaseQuery();
 

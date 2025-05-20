@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { getVersion } from "@tauri-apps/api/app";
 import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";

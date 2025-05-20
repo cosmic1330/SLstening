@@ -1,17 +1,12 @@
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+
 import { Box, Typography } from "@mui/material";
 import { useCallback, useContext, useEffect, useState } from "react";
-import { stockDailyQueryBuilder } from "../../../../../../classes/StockDailyQueryBuilder";
-import { stockHourlyQueryBuilder } from "../../../../../../classes/StockHourlyQueryBuilder";
-import { stockWeeklyQueryBuilder } from "../../../../../../classes/StockWeeklyQueryBuilder";
 import ResultTable from "../../../../../../components/ResultTable/ResultTable";
 import { DatabaseContext } from "../../../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../../../store/Schoice.store";
 import { PromptType, PromptValue } from "../../../../../../types";
 import useDatabaseQuery from "../../../../../../hooks/useDatabaseQuery";
 import useFindStocksByPrompt from "../../../../../../hooks/useFindStocksByPrompt";
-import { get } from "react-hook-form";
 
 export default function Result({
   select,

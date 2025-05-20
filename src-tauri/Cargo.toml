@@ -1,6 +1,6 @@
 [package]
 name = "slistening"
-version = "0.0.20"
+version = "0.0.21"
 description = "Slistening App"
 authors = ["jui.yu"]
 edition = "2021"

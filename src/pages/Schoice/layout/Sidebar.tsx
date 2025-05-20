@@ -12,7 +12,6 @@ import InsertRuleButton from "../../../components/InsertRuleButton";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
 import SmartButtonIcon from "@mui/icons-material/SmartButton";
-import { Lan } from "@mui/icons-material";
 import LanguageSwitcher from "../../../components/LanguageSwitcher";
 
 const GridItem = styled(Box)`

@@ -1,4 +1,3 @@
-import { Container, Grid2, Typography } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";

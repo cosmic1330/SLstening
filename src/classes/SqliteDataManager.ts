@@ -141,6 +141,7 @@ export default class SqliteDataManager {
       }
 
       if (sets.lose_skills_set.has(value.t)) {
+        info(`save db: ${stock.id} ${value.t}`);
         await this.saveTimeSharingSkillsTable(
           {
             stock_id: stock.id,
@@ -232,6 +233,7 @@ export default class SqliteDataManager {
       }
 
       if (sets.lose_deal_set.has(t)) {
+        info(`save db: ${stock.id} ${t}`);
         await this.saveDealTable(
           {
             stock_id: stock.id,

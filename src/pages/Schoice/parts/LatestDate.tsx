@@ -10,13 +10,8 @@ import useStocksStore from "../../../store/Stock.store";
 
 export default function LatestDate() {
   const { menu } = useStocksStore();
-  const {
-    dataCount,
-    sqliteUpdateDate,
-    changeSqliteUpdateDate,
-    changeDataCount,
-  } = useSchoiceStore();
-  const { db } = useContext(DatabaseContext);
+  const { dataCount, changeDataCount } = useSchoiceStore();
+  const { db, dates } = useContext(DatabaseContext);
 
   useEffect(() => {
     if (!db) return;
@@ -25,7 +20,6 @@ export default function LatestDate() {
       .getLatestDailyDealCount()
       .then((result) => {
         changeDataCount(result.count);
-        changeSqliteUpdateDate(result.date);
       })
       .catch((e) => {
         error(`Error getting latest daily deal count: ${e}`);
@@ -38,7 +32,7 @@ export default function LatestDate() {
         <Stack direction="row" spacing={1} justifyContent="flexstart">
           <CalendarMonthIcon fontSize="small" />
           <Typography variant="body1" textAlign="right">
-            {sqliteUpdateDate}
+            {dates[0] || "N/A"}
           </Typography>
         </Stack>
       </Tooltip>

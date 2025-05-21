@@ -31,7 +31,7 @@ export default function useDetailWebviewWindow({
       const webview = new WebviewWindow("detail", {
         title: `${id} ${name} (${group})`,
         url: `/detail/${id}`,
-        width: 500,
+        width: 700,
         height: 400,
       });
       webview.once("tauri://created", function () {});

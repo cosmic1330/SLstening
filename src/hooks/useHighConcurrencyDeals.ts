@@ -207,7 +207,7 @@ export default function useHighConcurrencyDeals() {
       // case 1-3: 寫入基本面資料
       // case 1-3: 寫入交易資料+
       try {
-        const [daily, weekly, hourly] = await Promise.allSettled([
+        const [daily, weekly, hourly, _] = await Promise.allSettled([
           getTaFetch(signal, stock, UrlTaPerdOptions.Day),
           getTaFetch(signal, stock, UrlTaPerdOptions.Week),
           getTaFetch(signal, stock, UrlTaPerdOptions.Hour),

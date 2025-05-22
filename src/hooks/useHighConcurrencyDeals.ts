@@ -68,7 +68,7 @@ export default function useHighConcurrencyDeals() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const { db, fetchDates, dates } = useContext(DatabaseContext);
   const { menu } = useStocksStore();
-  const { changeSqliteUpdateDate, changeDataCount } = useSchoiceStore();
+  const { changeDataCount } = useSchoiceStore();
 
   const getFundamentalFetch = useCallback(
     async (
@@ -86,7 +86,9 @@ export default function useHighConcurrencyDeals() {
           }
         );
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(
+            `getFundamentalFetch error! status: ${response.status}`
+          );
         }
         const json = await response.json();
         const { LatestValuation, StockInfo } = json.common;
@@ -104,11 +106,10 @@ export default function useHighConcurrencyDeals() {
         });
         return true;
       } catch (error: any) {
-        if (error?.message?.indexOf("Request canceled") == -1) {
-          throw error;
-        } else {
+        if (error?.message?.indexOf("Request canceled") !== -1) {
           throw new Error("Cancel");
         }
+        throw error;
       }
     },
     []
@@ -133,23 +134,24 @@ export default function useHighConcurrencyDeals() {
           }
         );
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(
+            `getTaFetch: ${perd} error! status: ${response.status}`
+          );
         }
         const text = await response.text();
         const ta_index = text.indexOf('"ta":');
         if (ta_index === -1) {
-          throw new Error("Invalid response format");
+          throw new Error("getTaFetch: Invalid response format");
         }
         const json_ta = "{" + text.slice(ta_index).replace(");", "");
         const parse = JSON.parse(json_ta);
         const ta = parse.ta as TaType;
         return ta;
       } catch (error: any) {
-        if (error?.message?.indexOf("Request canceled") == -1) {
-          throw error;
-        } else {
+        if (error?.message?.indexOf("Request canceled") !== -1) {
           throw new Error("Cancel");
         }
+        throw error;
       }
     },
     []
@@ -205,84 +207,48 @@ export default function useHighConcurrencyDeals() {
       // case 1-3: 寫入基本面資料
       // case 1-3: 寫入交易資料+
       try {
+        const [daily, weekly, hourly, _] = await Promise.allSettled([
+          getTaFetch(signal, stock, UrlTaPerdOptions.Day),
+          getTaFetch(signal, stock, UrlTaPerdOptions.Week),
+          getTaFetch(signal, stock, UrlTaPerdOptions.Hour),
+          getFundamentalFetch(signal, stock, sqliteDataManager),
+        ]);
+        if (
+          daily.status === "rejected" &&
+          weekly.status === "rejected" &&
+          hourly.status === "rejected"
+        ) {
+          throw new Error("All fetch failed");
+        }
         // daily
-        const daily = await getTaFetch(signal, stock, UrlTaPerdOptions.Day);
-        const daily_date = daily.map((item) =>
-          dateFormat(item.t, Mode.NumberToString)
-        );
-        const sqlite_daily_deal = await sqliteDataManager.getStockDates(
-          stock,
-          DealTableOptions.DailyDeal
-        );
-        const sqlite_daily_deal_date_set = new Set(
-          sqlite_daily_deal.map((item) => item.t)
-        );
-        const sqlite_daily_skills = await sqliteDataManager.getStockDates(
-          stock,
-          SkillsTableOptions.DailySkills
-        );
-        const sqlite_daily_skills_date_set = new Set(
-          sqlite_daily_skills.map((item) => item.t)
-        );
-        const lose_daily_deal_set = new Set(
-          daily_date.filter((item) => !sqlite_daily_deal_date_set.has(item))
-        );
-        const lose_daily_skills_set = new Set(
-          daily_date.filter((item) => !sqlite_daily_skills_date_set.has(item))
-        );
-        // weekly
-        const weekly = await getTaFetch(signal, stock, UrlTaPerdOptions.Week);
-        const weekly_date = weekly.map((item) =>
-          dateFormat(item.t, Mode.NumberToString)
-        );
-        const sqlite_weekly_deal = await sqliteDataManager.getStockDates(
-          stock,
-          DealTableOptions.WeeklyDeal
-        );
-        const sqlite_weekly_deal_date_set = new Set(
-          sqlite_weekly_deal.map((item) => item.t)
-        );
-        const sqlite_weekly_skills = await sqliteDataManager.getStockDates(
-          stock,
-          SkillsTableOptions.WeeklySkills
-        );
-        const sqlite_weekly_skills_date_set = new Set(
-          sqlite_weekly_skills.map((item) => item.t)
-        );
-        const lose_weekly_deal_set = new Set(
-          weekly_date.filter((item) => !sqlite_weekly_deal_date_set.has(item))
-        );
-        const lose_weekly_skills_set = new Set(
-          weekly_date.filter((item) => !sqlite_weekly_skills_date_set.has(item))
-        );
-        // hourly
-        const hourly = await getTaFetch(signal, stock, UrlTaPerdOptions.Hour);
-        const hourly_date = hourly.map((item) => item.t);
-        const sqlite_hourly_deal = await sqliteDataManager.getStockTimeSharing(
-          stock,
-          TimeSharingDealTableOptions.HourlyDeal
-        );
-        const sqlite_hourly_deal_date_set = new Set(
-          sqlite_hourly_deal.map((item) => item.ts)
-        );
-        const sqlite_hourly_skills =
-          await sqliteDataManager.getStockTimeSharing(
-            stock,
-            TimeSharingSkillsTableOptions.HourlySkills
-          );
-        const sqlite_hourly_skills_date_set = new Set(
-          sqlite_hourly_skills.map((item) => item.ts)
-        );
-        const lose_hourly_deal_set = new Set(
-          hourly_date.filter((item) => !sqlite_hourly_deal_date_set.has(item))
-        );
-        const lose_hourly_skills_set = new Set(
-          hourly_date.filter((item) => !sqlite_hourly_skills_date_set.has(item))
-        );
+        if (daily.status === "fulfilled") {
+          const dailyData = daily.value as TaType;
 
-        await Promise.all([
+          const daily_date = dailyData.map((item) =>
+            dateFormat(item.t, Mode.NumberToString)
+          );
+          const sqlite_daily_deal = await sqliteDataManager.getStockDates(
+            stock,
+            DealTableOptions.DailyDeal
+          );
+          const sqlite_daily_deal_date_set = new Set(
+            sqlite_daily_deal.map((item) => item.t)
+          );
+          const sqlite_daily_skills = await sqliteDataManager.getStockDates(
+            stock,
+            SkillsTableOptions.DailySkills
+          );
+          const sqlite_daily_skills_date_set = new Set(
+            sqlite_daily_skills.map((item) => item.t)
+          );
+          const lose_daily_deal_set = new Set(
+            daily_date.filter((item) => !sqlite_daily_deal_date_set.has(item))
+          );
+          const lose_daily_skills_set = new Set(
+            daily_date.filter((item) => !sqlite_daily_skills_date_set.has(item))
+          );
           sqliteDataManager.processor(
-            daily,
+            dailyData,
             stock,
             {
               dealType: DealTableOptions.DailyDeal,
@@ -292,9 +258,39 @@ export default function useHighConcurrencyDeals() {
               lose_deal_set: lose_daily_deal_set,
               lose_skills_set: lose_daily_skills_set,
             }
-          ),
+          );
+        }
+
+        // weekly
+        if (weekly.status === "fulfilled") {
+          const weeklyData = weekly.value as TaType;
+          const weekly_date = weeklyData.map((item) =>
+            dateFormat(item.t, Mode.NumberToString)
+          );
+          const sqlite_weekly_deal = await sqliteDataManager.getStockDates(
+            stock,
+            DealTableOptions.WeeklyDeal
+          );
+          const sqlite_weekly_deal_date_set = new Set(
+            sqlite_weekly_deal.map((item) => item.t)
+          );
+          const sqlite_weekly_skills = await sqliteDataManager.getStockDates(
+            stock,
+            SkillsTableOptions.WeeklySkills
+          );
+          const sqlite_weekly_skills_date_set = new Set(
+            sqlite_weekly_skills.map((item) => item.t)
+          );
+          const lose_weekly_deal_set = new Set(
+            weekly_date.filter((item) => !sqlite_weekly_deal_date_set.has(item))
+          );
+          const lose_weekly_skills_set = new Set(
+            weekly_date.filter(
+              (item) => !sqlite_weekly_skills_date_set.has(item)
+            )
+          );
           sqliteDataManager.processor(
-            weekly,
+            weeklyData,
             stock,
             {
               dealType: DealTableOptions.WeeklyDeal,
@@ -304,9 +300,38 @@ export default function useHighConcurrencyDeals() {
               lose_deal_set: lose_weekly_deal_set,
               lose_skills_set: lose_weekly_skills_set,
             }
-          ),
+          );
+        }
+        // hourly
+        if (hourly.status === "fulfilled") {
+          const hourlyData = hourly.value as TaType;
+          const hourly_date = hourlyData.map((item) => item.t);
+          const sqlite_hourly_deal =
+            await sqliteDataManager.getStockTimeSharing(
+              stock,
+              TimeSharingDealTableOptions.HourlyDeal
+            );
+          const sqlite_hourly_deal_date_set = new Set(
+            sqlite_hourly_deal.map((item) => item.ts)
+          );
+          const sqlite_hourly_skills =
+            await sqliteDataManager.getStockTimeSharing(
+              stock,
+              TimeSharingSkillsTableOptions.HourlySkills
+            );
+          const sqlite_hourly_skills_date_set = new Set(
+            sqlite_hourly_skills.map((item) => item.ts)
+          );
+          const lose_hourly_deal_set = new Set(
+            hourly_date.filter((item) => !sqlite_hourly_deal_date_set.has(item))
+          );
+          const lose_hourly_skills_set = new Set(
+            hourly_date.filter(
+              (item) => !sqlite_hourly_skills_date_set.has(item)
+            )
+          );
           sqliteDataManager.timeSharingProcessor(
-            hourly,
+            hourlyData,
             stock,
             {
               dealType: TimeSharingDealTableOptions.HourlyDeal,
@@ -316,19 +341,15 @@ export default function useHighConcurrencyDeals() {
               lose_deal_set: lose_hourly_deal_set,
               lose_skills_set: lose_hourly_skills_set,
             }
-          ),
-          getFundamentalFetch(signal, stock, sqliteDataManager),
-        ]);
-        setDownloaded((prev) => prev + 1);
-        changeDataCount(i + 1);
+          );
+        }
       } catch (e) {
-        error(`Error fetching data for stock ${stock.id}: ${e}`);
+        error(`Error fetching data for stock ${stock.id} ${stock.name}: ${e}`);
       }
+      setDownloaded((prev) => prev + 1);
+      changeDataCount(i + 1);
     }
 
-    changeSqliteUpdateDate(
-      dateFormat(new Date().getTime(), Mode.TimeStampToString)
-    );
     toast.success("Update Success ! 🎉");
     if (fetchDates) fetchDates();
 

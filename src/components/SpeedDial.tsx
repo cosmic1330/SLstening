@@ -19,7 +19,6 @@ import useAddWebviewWindow from "../hooks/useAddWebviewWindow";
 import useSchoiceWebviewWindow from "../hooks/useSchoiceWebviewWindow";
 import useStocksStore from "../store/Stock.store";
 import { supabase } from "../supabase";
-import LanguageSwitcher from "./LanguageSwitcher";
 
 export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();

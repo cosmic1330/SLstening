@@ -99,6 +99,12 @@ export default function SpeedDial() {
           navigate("/");
         }}
       />
+
+      <SpeedDialAction
+        key={"LanguageSwitch"}
+        icon={<LanguageSwitcher />}
+        tooltipTitle={"切換語言"}
+      />
     </MuiSpeedDial>
   );
 }

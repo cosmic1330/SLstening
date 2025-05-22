@@ -3,6 +3,7 @@ import {
   Grid2,
   Box as MuiBox,
   styled,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
@@ -14,10 +15,6 @@ import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
 import Ma10 from "./Items/Ma10";
 import Ma5 from "./Items/Ma5";
-import PreVolume from "./Items/PreVolume";
-import Volume from "./Items/Volume";
-import VolumeEstimated from "./Items/VolumeEstimated";
-import VolumeRatio from "./Items/VolumeRatio";
 import TickChart from "./TickChart";
 import Title from "./Title";
 
@@ -152,16 +149,86 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
         </Grid2>
 
         <Grid2 size={3}>
-          <Volume {...{ deals }} />
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            成交量
+          </Typography>
+          <Typography
+            variant="body2"
+            color={"#fff"}
+            fontWeight="bold"
+            textAlign="center"
+          >
+            {deals.length > 0 && deals[deals.length - 1].v}
+          </Typography>
         </Grid2>
         <Grid2 size={3}>
-          <PreVolume {...{ deals }} />
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            估量
+          </Typography>
+          <Tooltip
+            title={`昨日量 ${deals.length > 0 && deals[deals.length - 2].v}`}
+          >
+            <Typography
+              variant="body2"
+              color={
+                deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
+                  ? "#e58282"
+                  : "#fff"
+              }
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {deals.length > 0 && estimatedVolume}
+            </Typography>
+          </Tooltip>
         </Grid2>
-        <Grid2 size={3}>
-          <VolumeEstimated {...{ deals, estimatedVolume }} />
-        </Grid2>
-        <Grid2 size={3}>
-          <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
+
+        <Grid2 size={6}>
+          <Typography
+            variant="body2"
+            gutterBottom
+            component="div"
+            color="#fff"
+            textAlign="center"
+            noWrap
+          >
+            量能
+          </Typography>
+          <Tooltip
+            title={`估量${
+              estimatedVolume < avgDaysVolume ? " < " : " > "
+            }均量,異常放量比 ${
+              Math.round((estimatedVolume / avgDaysVolume) * 100) / 100
+            }`}
+          >
+            <Typography
+              variant="body2"
+              color={"#fff"}
+              fontWeight="bold"
+              textAlign="center"
+            >
+              {deals.length > 0 && estimatedVolume < avgDaysVolume ? "⭣" : "⭡"}
+              {deals.length > 0 && estimatedVolume / avgDaysVolume > 1.5
+                ? "異常放量"
+                : estimatedVolume / avgDaysVolume < 0.5
+                ? "量縮"
+                : "正常"}
+            </Typography>
+          </Tooltip>
         </Grid2>
       </Grid2>
       {tickDeals && <TickChart {...{ tickDeals }} />}

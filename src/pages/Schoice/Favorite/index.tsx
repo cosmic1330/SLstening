@@ -6,14 +6,12 @@ import { DatabaseContext } from "../../../context/DatabaseContext";
 import useStocksStore from "../../../store/Stock.store";
 import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
 import Alarm from "./Alarm";
-import useSchoiceStore from "../../../store/Schoice.store";
 
 export default function Favorite() {
   const { stocks, reload } = useStocksStore();
   const { dates } = useContext(DatabaseContext);
   const [result, setResult] = useState<any[]>([]);
   const { getStocksData } = useFindStocksByPrompt();
-  const { todayDate } = useSchoiceStore();
 
   useEffect(() => {
     reload();
@@ -22,7 +20,7 @@ export default function Favorite() {
   useEffect(() => {
     if (dates?.length === 0 || stocks.length === 0) return;
     getStocksData(
-      dates[todayDate],
+      dates[0],
       stocks.map((r) => r.id)
     ).then((result) => {
       if (result) setResult(result);

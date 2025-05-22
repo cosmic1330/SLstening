@@ -33,7 +33,7 @@ export default function MR() {
     response.push({
       t: deals[0].t,
       c: deals[0].c,
-      rsi: rsi_data.rsi || null,
+      j: rsi_data.rsi || null,
       osc: macd_data.osc || null,
       long: null,
       short: null,
@@ -47,7 +47,7 @@ export default function MR() {
       response.push({
         t: deal.t,
         c: deal.c,
-        rsi: rsi_data.rsi || null,
+        j: rsi_data.rsi || null,
         osc: macd_data.osc || null,
         long: rsi_data.rsi > 50 && macd_data.osc > 0 ? rsi_data.rsi : null,
         short: rsi_data.rsi < 50 && macd_data.osc < 0 ? rsi_data.rsi : null,
@@ -102,7 +102,7 @@ export default function MR() {
             <ReferenceLine y={80} stroke="#ff0000" strokeDasharray="5 5" />
             <ReferenceLine y={20} stroke="#ff0000" strokeDasharray="5 5" />
             <Line
-              dataKey="rsi"
+              dataKey="j"
               stroke="#589bf3"
               dot={false}
               activeDot={false}

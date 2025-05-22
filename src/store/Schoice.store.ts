@@ -43,6 +43,7 @@ interface SchoiceState {
     type: PromptType;
   } | null;
   theme: string;
+  sqliteUpdateDate: string;
   chartType: ChartType;
   trash: TrashPrompt[];
   filterStocks?: FilterStock[];
@@ -58,6 +59,7 @@ interface SchoiceState {
   removeFilterStocks: () => void;
   recover: (id: string) => Promise<void>;
   changeChartType: (type: ChartType) => void;
+  changeSqliteUpdateDate: (date: string) => void;
   changeTheme: (theme: string) => void;
   changeDataCount: (count: number) => void;
   changeUsing: (type: PromptType) => void;
@@ -90,6 +92,7 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   bears: {},
   alarms: {},
   select: null,
+  sqliteUpdateDate: "N/A",
   chartType:
     (localStorage.getItem("slitenting-chartType") as ChartType) ||
     ChartType.WEEKLY_BOLL,
@@ -180,6 +183,9 @@ const useSchoiceStore = create<SchoiceState>((set, get) => ({
   changeChartType: (type: ChartType) => {
     localStorage.setItem("slitenting-chartType", type);
     set({ chartType: type });
+  },
+  changeSqliteUpdateDate: (date: string) => {
+    set({ sqliteUpdateDate: date });
   },
   changeTheme: (theme: string) => {
     localStorage.setItem("slitenting-theme", theme);

@@ -70,47 +70,67 @@ export default function useHighConcurrencyDeals() {
   const { menu } = useStocksStore();
   const { changeDataCount } = useSchoiceStore();
 
+  // 通用重試函式
+  async function withRetry<T>(fn: () => Promise<T>, retries = 5): Promise<T> {
+    let lastError;
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+        // 若是被取消則直接丟出
+        if (err instanceof Error && err.message === "Cancel") throw err;
+        if (i < retries - 1) {
+          await new Promise((res) => setTimeout(res, 1000)); // 可調整重試間隔
+        }
+      }
+    }
+    throw lastError;
+  }
+
   const getFundamentalFetch = useCallback(
     async (
       signal: AbortSignal,
       stock: StockStoreType,
       sqliteDataManager: SqliteDataManager
     ) => {
-      try {
-        const year = new Date().getFullYear();
-        const response = await fetch(
-          `https://statementdog.com/api/v2/fundamentals/${stock.id}/${year}/${year}/cf`,
-          {
-            method: "GET",
-            signal,
-          }
-        );
-        if (!response.ok) {
-          throw new Error(
-            `getFundamentalFetch error! status: ${response.status}`
+      return withRetry(async () => {
+        try {
+          const year = new Date().getFullYear();
+          const response = await fetch(
+            `https://statementdog.com/api/v2/fundamentals/${stock.id}/${year}/${year}/cf`,
+            {
+              method: "GET",
+              signal,
+            }
           );
+          if (!response.ok) {
+            throw new Error(
+              `getFundamentalFetch error! status: ${response.status}`
+            );
+          }
+          const json = await response.json();
+          const { LatestValuation, StockInfo } = json.common;
+          const LatestValuationData = LatestValuation.data as StockFundamentals;
+          const StockInfoData = StockInfo.data as StockProfile;
+          await sqliteDataManager.saveFundamentalTable({
+            stock_id: stock.id,
+            pe: parseFloat(LatestValuationData.PE),
+            pb: parseFloat(LatestValuationData.PB),
+            dividend_yield: parseFloat(LatestValuationData.CashYield),
+            yoy: parseFloat(StockInfoData.latest_yoy_monthly_revenue),
+            eps: parseFloat(StockInfoData.latest_eps4q),
+            dividend_yield_3y: parseFloat(LatestValuationData.CashYield3Y),
+            dividend_yield_5y: parseFloat(LatestValuationData.CashYield5Y),
+          });
+          return true;
+        } catch (error: any) {
+          if (error?.message?.indexOf("Request canceled") !== -1) {
+            throw new Error("Cancel");
+          }
+          throw error;
         }
-        const json = await response.json();
-        const { LatestValuation, StockInfo } = json.common;
-        const LatestValuationData = LatestValuation.data as StockFundamentals;
-        const StockInfoData = StockInfo.data as StockProfile;
-        await sqliteDataManager.saveFundamentalTable({
-          stock_id: stock.id,
-          pe: parseFloat(LatestValuationData.PE),
-          pb: parseFloat(LatestValuationData.PB),
-          dividend_yield: parseFloat(LatestValuationData.CashYield),
-          yoy: parseFloat(StockInfoData.latest_yoy_monthly_revenue),
-          eps: parseFloat(StockInfoData.latest_eps4q),
-          dividend_yield_3y: parseFloat(LatestValuationData.CashYield3Y),
-          dividend_yield_5y: parseFloat(LatestValuationData.CashYield5Y),
-        });
-        return true;
-      } catch (error: any) {
-        if (error?.message?.indexOf("Request canceled") !== -1) {
-          throw new Error("Cancel");
-        }
-        throw error;
-      }
+      });
     },
     []
   );
@@ -121,38 +141,40 @@ export default function useHighConcurrencyDeals() {
       stock: StockStoreType,
       perd: UrlTaPerdOptions
     ) => {
-      try {
-        const response = await fetch(
-          generateDealDataDownloadUrl({
-            type: UrlType.Ta,
-            id: stock.id,
-            perd,
-          }),
-          {
-            method: "GET",
-            signal,
-          }
-        );
-        if (!response.ok) {
-          throw new Error(
-            `getTaFetch: ${perd} error! status: ${response.status}`
+      return withRetry(async () => {
+        try {
+          const response = await fetch(
+            generateDealDataDownloadUrl({
+              type: UrlType.Ta,
+              id: stock.id,
+              perd,
+            }),
+            {
+              method: "GET",
+              signal,
+            }
           );
+          if (!response.ok) {
+            throw new Error(
+              `getTaFetch: ${perd} error! status: ${response.status}`
+            );
+          }
+          const text = await response.text();
+          const ta_index = text.indexOf('"ta":');
+          if (ta_index === -1) {
+            throw new Error("getTaFetch: Invalid response format");
+          }
+          const json_ta = "{" + text.slice(ta_index).replace(");", "");
+          const parse = JSON.parse(json_ta);
+          const ta = parse.ta as TaType;
+          return ta;
+        } catch (error: any) {
+          if (error?.message?.indexOf("Request canceled") !== -1) {
+            throw new Error("Cancel");
+          }
+          throw error;
         }
-        const text = await response.text();
-        const ta_index = text.indexOf('"ta":');
-        if (ta_index === -1) {
-          throw new Error("getTaFetch: Invalid response format");
-        }
-        const json_ta = "{" + text.slice(ta_index).replace(");", "");
-        const parse = JSON.parse(json_ta);
-        const ta = parse.ta as TaType;
-        return ta;
-      } catch (error: any) {
-        if (error?.message?.indexOf("Request canceled") !== -1) {
-          throw new Error("Cancel");
-        }
-        throw error;
-      }
+      });
     },
     []
   );

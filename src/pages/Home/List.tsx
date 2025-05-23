@@ -1,12 +1,13 @@
 import { Box, Button, Container } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
+import { info } from "@tauri-apps/plugin-log";
 import { useEffect } from "react";
 import SpeedDial from "../../components/SpeedDial";
 import StockBox from "../../components/StockBox";
 import useAddWebviewWindow from "../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../store/Stock.store";
 import TwseBox from "./Twse";
-import { info } from "@tauri-apps/plugin-log";
+import WtxBox from "./Wtx";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -35,6 +36,7 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={7}>
+        <WtxBox />
         <TwseBox />
         {stocks.length === 0 ? (
           <Button fullWidth variant="contained" onClick={openAddWindow}>

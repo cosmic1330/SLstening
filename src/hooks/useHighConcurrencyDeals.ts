@@ -15,11 +15,10 @@ import {
   TaType,
   TimeSharingDealTableOptions,
   TimeSharingSkillsTableOptions,
-} from "../types";
-import generateDealDataDownloadUrl, {
   UrlTaPerdOptions,
   UrlType,
-} from "../utils/generateDealDataDownloadUrl";
+} from "../types";
+import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 import useDownloadStocks from "./useDownloadStocks";
 
 export enum Status {
@@ -81,7 +80,7 @@ export default function useHighConcurrencyDeals() {
         // 若是被取消則直接丟出
         if (err instanceof Error && err.message === "Cancel") throw err;
         if (i < retries - 1) {
-          await new Promise((res) => setTimeout(res, 1000)); // 可調整重試間隔
+          await new Promise((res) => setTimeout(res, 700)); // 可調整重試間隔
         }
       }
     }

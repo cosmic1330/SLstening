@@ -1,9 +1,8 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
-import useTwseDeals from "../../../hooks/useTwseDeals";
-import HourlyChart from "../CommonChart/HourlyChart";
-import TickChart from "../CommonChart/TickChart";
+import useWtxDeals from "../../../hooks/useWtxDeals";
+import MakChart from "../CommonChart/MakChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -12,24 +11,25 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
 `;
-export default function TwseBox() {
+export default function WtxBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
-    id: "twse",
-    name: "加權指數",
-    group: "大盤",
+    id: "wtx",
+    name: "台指期近一",
+    group: "期貨",
   });
-  const { deals, tickDeals } = useTwseDeals();
+  const { deals } = useWtxDeals();
+
   return (
     <Box my={2} color="#fff" border="1px solid #fff">
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={12}>{deals && <HourlyChart deals={deals} />}</Grid2>
+        <Grid2 size={12}>{deals && <MakChart deals={deals} />}</Grid2>
         <Grid2 size={12}>
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography variant="button">TWSE 加權</Typography>
+            <Typography variant="button">台指期近一</Typography>
             <Stack
               direction="row"
               alignItems="center"
@@ -54,9 +54,6 @@ export default function TwseBox() {
               {deals && deals.change}
             </Typography>
           </Stack>
-        </Grid2>
-        <Grid2 size={12}>
-          {tickDeals && <TickChart tickDeals={tickDeals} />}
         </Grid2>
       </Grid2>
     </Box>

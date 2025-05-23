@@ -2,11 +2,8 @@ import { info } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import { TaType, TickDealsType } from "../types";
-import generateDealDataDownloadUrl, {
-  UrlTaPerdOptions,
-  UrlType,
-} from "../utils/generateDealDataDownloadUrl";
+import { TaType, TickDealsType, UrlTaPerdOptions, UrlType } from "../types";
+import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
 export default function useDeals(id: string) {
   const { data: tickData, mutate: mutateTickDeals } = useSWR(

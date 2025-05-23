@@ -149,7 +149,7 @@ export default function MaKbar() {
               activeDot={false}
               legendType="none"
             />
-                        <Brush dataKey="name" height={20} stroke="#8884d8" />
+            <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

@@ -197,3 +197,19 @@ export type FundamentalTableType = {
 };
 
 export type FilterStock = { id: string; name: string }
+
+
+export enum UrlType {
+  Ta = "ta",
+  Indicators = "indicators",
+  Tick = "tick",
+}
+export enum UrlTaPerdOptions {
+  OneMinute = "1m",
+  FiveMinute = "5m",
+  ThirtyMinute = "30m",
+  Hour = "60m",
+  Day = "d",
+  Week = "w",
+  Month = "m",
+}

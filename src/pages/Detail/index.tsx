@@ -65,7 +65,9 @@ enum PictoreType {
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState(PictoreType.Hourly);
+  const [picture, setPicture] = useState(
+    localStorage.getItem("detail:picture:type") || PictoreType.Hourly
+  );
 
   const goToSlide = useCallback((index: number) => {
     if (index >= 0 && index < slides.length) {
@@ -225,6 +227,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
             variant={picture === PictoreType.Hourly ? "contained" : "text"}
             disabled={picture === PictoreType.Hourly}
             onClick={() => {
+              localStorage.setItem("detail:picture:type", PictoreType.Hourly);
               setPicture(PictoreType.Hourly);
             }}
           >
@@ -239,6 +242,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
             variant={picture === PictoreType.Daily ? "contained" : "text"}
             disabled={picture === PictoreType.Daily}
             onClick={() => {
+              localStorage.setItem("detail:picture:type", PictoreType.Daily);
               setPicture(PictoreType.Daily);
             }}
           >

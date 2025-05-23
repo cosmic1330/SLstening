@@ -21,6 +21,12 @@ export default function WinLoss({ ctx }: { ctx: Context }) {
             </Typography>
             <Typography variant="h5">{ctx?.record.lose}</Typography>
           </Box>
+          <Box>
+            <Typography variant="subtitle1" color="textSecondary">
+              Transaction Count
+            </Typography>
+            <Typography variant="h5">{ctx?.record.history.length}</Typography>
+          </Box>
         </Stack>
       </CardContent>
     </Card>

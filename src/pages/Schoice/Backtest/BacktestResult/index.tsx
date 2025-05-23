@@ -3,7 +3,7 @@ import { Grid2 as Grid } from "@mui/material";
 import CapitalInventory from "./CapitalInventory";
 import History from "./History";
 import Inventory from "./Inventory";
-import TotalTrades from "./TotalTrades";
+import TotalProfit from "./TotalProfit";
 import WinLoss from "./WinLoss";
 import WishList from "./WishList";
 
@@ -14,7 +14,7 @@ export default function BacktestResult({ ctx }: { ctx: Context }) {
         <WinLoss ctx={ctx} />
       </Grid>
       <Grid size={3}>
-        <TotalTrades ctx={ctx} />
+        <TotalProfit ctx={ctx} />
       </Grid>
       <Grid size={3}>
         <WishList ctx={ctx} />

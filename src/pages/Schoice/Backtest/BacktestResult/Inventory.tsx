@@ -47,7 +47,6 @@ export default function Inventory({ ctx }: { ctx: Context }) {
       },
       {}
     );
-    console.log(ctx?.record.inventory, resultMap);
     setUnsoldProfits(resultMap);
   }, []);
 

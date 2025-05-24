@@ -99,7 +99,7 @@ export default function HourlyChart({
         ...item,
       });
     }
-    return res.splice(-30);
+    return res.splice(-50);
   }, [deals.data]);
   return (
     <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow placement="bottom-start">

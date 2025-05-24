@@ -18,6 +18,7 @@ import {
   UrlTaPerdOptions,
   UrlType,
 } from "../types";
+import checkTimeRange from "../utils/checkTimeRange";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 import useDownloadStocks from "./useDownloadStocks";
 
@@ -198,13 +199,20 @@ export default function useHighConcurrencyDeals() {
     }
     setStatus(Status.Download);
     if (!db) {
-      info("Database not initialized");
+      error("Database not initialized");
       return;
     }
 
     // case 1-1: 移除大於第二筆日期的資料(刪除最後一筆資料)
     const sqliteDataManager = new SqliteDataManager(db);
-    sqliteDataManager.deleteLatestDailyDeal(dates[1]);
+    const preFetchTime = localStorage.getItem("schoice:fetch:time");
+    const isInTime = checkTimeRange(preFetchTime);
+
+    // 上次是在盤中請求則刪除前筆資料
+    if (isInTime) {
+      sqliteDataManager.deleteLatestDailyDeal(dates[1]);
+      info("Delete latest daily deal");
+    }
 
     setDownloaded(() => 0);
     // case 1-2: 為新的請求創建一個新的 AbortController
@@ -213,6 +221,23 @@ export default function useHighConcurrencyDeals() {
     const { signal } = abortController;
     if (menu.length === 0) {
       await handleDownloadMenu();
+    }
+
+    // 紀錄請求時間
+    const reverse = localStorage.getItem("schoice:fetch:reverse");
+    const taiwanTime = new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Taipei",
+    });
+    localStorage.setItem("schoice:fetch:time", taiwanTime);
+
+    // case 1-3: 反轉資料
+    if (reverse === "true") {
+      menu.reverse();
+      localStorage.setItem("schoice:fetch:reverse", "false");
+      info("Reverse menu");
+    } else {
+      localStorage.setItem("schoice:fetch:reverse", "true");
+      info("No reverse menu");
     }
 
     changeDataCount(0);
@@ -373,6 +398,9 @@ export default function useHighConcurrencyDeals() {
 
     toast.success("Update Success ! 🎉");
     if (fetchDates) fetchDates();
+    sqliteDataManager.getLatestDailyDealCount().then((result) => {
+      changeDataCount(result.count);
+    });
 
     setStatus(Status.Idle);
   }, [db, menu, status, dates, fetchDates]);

@@ -76,7 +76,7 @@ export default function MakChart({
         ...item,
       });
     }
-    return res.splice(-50);
+    return res.splice(-80);
   }, [deals.data]);
 
   return (

@@ -1,3 +1,5 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, Typography } from "@mui/material";
 import { useMemo } from "react";
 import {
@@ -15,14 +17,15 @@ import boll from "../../../cls_tools/boll";
 import ma from "../../../cls_tools/ma";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealTableType } from "../../../types";
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 
 // 自訂 Tooltip 元件，顯示 t 及所有 payload
 function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {
   if (!active || !payload || payload.length === 0) return null;
   // 取出 t
-  const t = dateFormat(new Date(payload[0]?.payload?.t * 1000).getTime(), Mode.TimeStampToString);
+  const t = dateFormat(
+    new Date(payload[0]?.payload?.t * 1000).getTime(),
+    Mode.TimeStampToString
+  );
   return (
     <Box sx={{ color: "#222", background: "#fff", p: 1, borderRadius: 1 }}>
       <Typography>t: {t}</Typography>
@@ -107,7 +110,7 @@ export default function MakChart({
     <Box height={120}>
       <ResponsiveContainer>
         <ComposedChart data={data}>
-          <XAxis />
+          <XAxis hide />
           <YAxis domain={["dataMin", "dataMax"]} dataKey="c" hide />
           <ZAxis type="number" range={[10]} />
           <Tooltip offset={50} content={<MakChartTooltip />} />

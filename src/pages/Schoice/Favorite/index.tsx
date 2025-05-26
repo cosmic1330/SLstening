@@ -3,10 +3,11 @@ import { useContext, useEffect, useState } from "react";
 import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";
 import { DatabaseContext } from "../../../context/DatabaseContext";
-import useStocksStore from "../../../store/Stock.store";
 import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
-import Alarm from "./Alarm";
 import useSchoiceStore from "../../../store/Schoice.store";
+import useStocksStore from "../../../store/Stock.store";
+import Alarm from "./Alarm";
+import InsertFavorite from "./InsertFavorite";
 
 export default function Favorite() {
   const { stocks, reload } = useStocksStore();
@@ -36,7 +37,8 @@ export default function Favorite() {
           <Typography variant="h5" gutterBottom textTransform="uppercase">
             Favorite
           </Typography>
-          <Alarm stocks={stocks}/>
+          <Alarm stocks={stocks} />
+          <InsertFavorite />
           <ResultTable {...{ result }} type={ActionButtonType.Decrease} />
         </Grid2>
       </Grid2>

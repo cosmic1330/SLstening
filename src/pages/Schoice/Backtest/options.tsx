@@ -30,7 +30,7 @@ export default function Options({
   const handleChange =
     (key: keyof BacktestOptions) =>
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setOptions((prev) => ({
+      setOptions((prev: BacktestOptions) => ({
         ...prev,
         [key]: parseFloat(event.target.value),
       }));
@@ -38,7 +38,7 @@ export default function Options({
 
   const handleSelectChange =
     (key: keyof BacktestOptions) => (event: SelectChangeEvent<unknown>) => {
-      setOptions((prev) => ({
+      setOptions((prev: BacktestOptions) => ({
         ...prev,
         [key]: event.target.value as BuyPrice | SellPrice,
       }));
@@ -66,7 +66,7 @@ export default function Options({
         onChange={handleChange("hightStockPrice")}
       />
       <TextField
-        label="可承受虧損"
+        label="可承受虧損(%)"
         size="small"
         type="number"
         onChange={handleChange("hightLoss")}

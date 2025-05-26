@@ -75,7 +75,7 @@ export default function useBacktestFunc() {
     async (
       stockId: string,
       date: number,
-      inWait: boolean,
+      inWait: boolean | undefined,
       { select, type }: { select: PromptItem; type: BacktestType }
     ): Promise<StockType | null> => {
       try {

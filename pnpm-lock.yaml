@@ -9,8 +9,8 @@ dependencies:
     specifier: 0.0.17-alpha1
     version: 0.0.17-alpha1
   '@ch20026103/backtest-lib':
-    specifier: 0.0.3-alpha
-    version: 0.0.3-alpha
+    specifier: 0.0.3-alpha1
+    version: 0.0.3-alpha1
   '@emotion/react':
     specifier: ^11.14.0
     version: 11.14.0(@types/react@18.3.21)(react@18.3.1)
@@ -318,8 +318,8 @@ packages:
     resolution: {integrity: sha512-iYSYGuRu3P9DugXrFvo1upEUxOBZ9s3upIY0Q/Wd1yyT4VNFfMWlLbWrMUSmL5AjZgc1zHJQnECwu+sMxNJafQ==}
     dev: false
 
-  /@ch20026103/backtest-lib@0.0.3-alpha:
-    resolution: {integrity: sha512-zCt3PnV+Hgzikuz0MOKlwpqnV4yW6zzld91umSC87DrMf2Pt2XYtQJxgQxzMr8drS+nFUS6Qq1bQkxym+A73Rg==}
+  /@ch20026103/backtest-lib@0.0.3-alpha1:
+    resolution: {integrity: sha512-bJQaGpPzpJ8v/CI473sul8AGgVNW6a7jhDxCxW3SWMtUVMM1n6lLXRMTS7giYXQUjgS9hmPKEzodNEQL+kHp9w==}
     dependencies:
       '@ch20026103/anysis': 0.0.17-alpha1
       '@types/node': 22.15.18

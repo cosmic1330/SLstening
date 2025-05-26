@@ -1,18 +1,24 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import type { Options as BacktestOptions } from "@ch20026103/backtest-lib";
+import type {
+  Options as BacktestOptions,
+  StrategyMethod,
+} from "@ch20026103/backtest-lib";
 import { BuyPrice, Context, SellPrice } from "@ch20026103/backtest-lib";
+import InfoIcon from "@mui/icons-material/Info";
 import PlayCircleFilledWhiteIcon from "@mui/icons-material/PlayCircleFilledWhite";
 import {
   Button,
   Container,
   Divider,
   Grid2,
+  IconButton,
   MenuItem,
   Paper,
   Select,
   SelectChangeEvent,
   Stack,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { SetStateAction, useCallback, useContext, useState } from "react";
@@ -20,6 +26,7 @@ import { toast } from "react-toastify";
 import { DatabaseContext } from "../../../context/DatabaseContext";
 import useSchoiceStore from "../../../store/Schoice.store";
 import useStocksStore from "../../../store/Stock.store";
+import { PromptItem } from "../../../types";
 import shuffleArray from "../../../utils/shuffleArray";
 import BacktestResult from "./BacktestResult";
 import Options from "./options";
@@ -36,8 +43,8 @@ export default function Backtest() {
   const { bulls, bears, filterStocks, setBacktestPersent } = useSchoiceStore();
   const { dates } = useContext(DatabaseContext);
   const [ctx, setCtx] = useState<Context>();
-  const [selectedBull, setSelectedBull] = useState("");
-  const [selectedBear, setSelectedBear] = useState("");
+  const [selectedBull, setSelectedBull] = useState<string[]>([]);
+  const [selectedBear, setSelectedBear] = useState<string[]>([]);
   const [selectedStocks, setSelectedStocks] = useState("stocks");
   const [status, setStatus] = useState<Status>(Status.Idle);
   const [options, setOptions] = useState<BacktestOptions>({
@@ -47,16 +54,14 @@ export default function Backtest() {
   });
   const [isRandom, setIsRandom] = useState(true);
 
-  const handleBullChange = (
-    event: SelectChangeEvent<SetStateAction<string>>
-  ) => {
-    setSelectedBull(event.target.value);
+  const handleBullChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    setSelectedBull(typeof value === "string" ? value.split(",") : value);
   };
 
-  const handleBearChange = (
-    event: SelectChangeEvent<SetStateAction<string>>
-  ) => {
-    setSelectedBear(event.target.value);
+  const handleBearChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value;
+    setSelectedBear(typeof value === "string" ? value.split(",") : value);
   };
 
   const handleStocksChange = (
@@ -69,21 +74,22 @@ export default function Backtest() {
 
   const createContext = useCallback(() => {
     setBacktestPersent(0);
-    if (!selectedBull || !selectedBear) {
+    if (!selectedBull.length || !selectedBear.length) {
       toast.error("請選擇多空策略");
       return;
     }
 
-    const buy = (stockId: string, date: number, inWait: boolean) =>
-      get(stockId, date, inWait, {
-        select: bulls[selectedBull],
-        type: BacktestType.Buy,
-      });
-    const sell = (stockId: string, date: number, inWait: boolean) =>
-      get(stockId, date, inWait, {
-        select: bears[selectedBear],
-        type: BacktestType.Sell,
-      });
+    const genStrategyMethod = (
+      select: PromptItem,
+      type: BacktestType
+    ): StrategyMethod => {
+      return (stockId: string, date: number, inWait: boolean | undefined) =>
+        get(stockId, date, inWait, {
+          select,
+          type,
+        });
+    };
+
     const contextDates = [...dates]
       .reverse()
       .map((date) => dateFormat(date, Mode.StringToNumber));
@@ -97,8 +103,12 @@ export default function Backtest() {
     const ctx = new Context({
       dates: contextDates,
       stocks: stocksValue,
-      buy,
-      sell,
+      buy: selectedBull.map((key) =>
+        genStrategyMethod(bulls[key], BacktestType.Buy)
+      ),
+      sell: selectedBear.map((key) =>
+        genStrategyMethod(bears[key], BacktestType.Sell)
+      ),
       options: { ...options }, // 確保傳遞的是新的物件
     });
     console.log("ctx", ctx, options);
@@ -162,12 +172,21 @@ export default function Backtest() {
           <Grid2 size={4}>
             <Typography variant="subtitle1" gutterBottom>
               Bull Strategy
+              <Tooltip title="可支持多選，多選結果為符合A或B或C其一時，納入待購清單，於隔日買進。">
+                <IconButton size="small">
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Typography>
             <Select
               fullWidth
               value={selectedBull}
               onChange={handleBullChange}
               size="small"
+              multiple
+              renderValue={(selected) =>
+                (selected as string[]).map((key) => bulls[key]?.name).join(", ")
+              }
             >
               <MenuItem value="">
                 <em>None</em>
@@ -183,6 +202,11 @@ export default function Backtest() {
           <Grid2 size={4}>
             <Typography variant="subtitle1" gutterBottom>
               Bears Strategy
+              <Tooltip title="可支持多選，多選結果為符合A或B或C其一時，納入待售清單，於隔日賣出。">
+                <IconButton size="small">
+                  <InfoIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Typography>
 
             <Select
@@ -190,6 +214,10 @@ export default function Backtest() {
               onChange={handleBearChange}
               size="small"
               fullWidth
+              multiple
+              renderValue={(selected) =>
+                (selected as string[]).map((key) => bears[key]?.name).join(", ")
+              }
             >
               <MenuItem value="">
                 <em>None</em>

@@ -42,16 +42,34 @@ export default class SqliteDataManager {
     }
   }
 
-  async deleteLatestDailyDeal(t: string) {
+  async deleteLatestDailyDeal({
+    stock_id,
+    t,
+  }: {
+    stock_id: string;
+    t: string;
+  }) {
     try {
       const num = dateFormat(t, Mode.StringToNumber) * 10000 + 1400;
-      info(`刪除 ${num} 和 ${t} 之後的資料`);
-      await this.db.execute(`DELETE FROM hourly_skills WHERE ts > '${num}';`);
-      await this.db.execute(`DELETE FROM hourly_deal WHERE ts > '${num}';`);
-      await this.db.execute(`DELETE FROM weekly_skills WHERE t > '${t}';`);
-      await this.db.execute(`DELETE FROM weekly_deal WHERE t > '${t}';`);
-      await this.db.execute(`DELETE FROM daily_skills WHERE t > '${t}';`);
-      await this.db.execute(`DELETE FROM daily_deal WHERE t > '${t}';`);
+      info(`刪除 ${stock_id}: ${num} 和 ${t} 之後的資料`);
+      await this.db.execute(
+        `DELETE FROM hourly_skills WHERE stock_id = ${stock_id} AND ts > '${num}';`
+      );
+      await this.db.execute(
+        `DELETE FROM hourly_deal WHERE  stock_id = ${stock_id} AND ts > '${num}';`
+      );
+      await this.db.execute(
+        `DELETE FROM weekly_skills WHERE  stock_id = ${stock_id} AND t > '${t}';`
+      );
+      await this.db.execute(
+        `DELETE FROM weekly_deal WHERE  stock_id = ${stock_id} AND t > '${t}';`
+      );
+      await this.db.execute(
+        `DELETE FROM daily_skills WHERE  stock_id = ${stock_id} AND t > '${t}';`
+      );
+      await this.db.execute(
+        `DELETE FROM daily_deal WHERE  stock_id = ${stock_id} AND t > '${t}';`
+      );
       return true;
     } catch (e) {
       error(`${e}`);
@@ -195,28 +213,9 @@ export default class SqliteDataManager {
     sets: {
       lose_deal_set: Set<string>;
       lose_skills_set: Set<string>;
-      delete_deal_set?: Set<string>;
-      delete_skills_set?: Set<string>;
     }
   ) {
     try {
-      if (sets.delete_deal_set && sets.delete_deal_set.size > 0) {
-        for (const t of sets.delete_deal_set) {
-          info(`delete ${options.dealType} db: ${t}`);
-          await this.db.execute(
-            `DELETE FROM ${options.dealType} WHERE stock_id=${stock.id} AND t = '${t}';`
-          );
-        }
-      }
-      if (sets.delete_skills_set && sets.delete_skills_set.size > 0) {
-        for (const t of sets.delete_skills_set) {
-          info(`delete ${options.skillsType} db: ${t}`);
-          await this.db.execute(
-            `DELETE FROM ${options.skillsType} WHERE stock_id=${stock.id} AND t = '${t}';`
-          );
-        }
-      }
-
       if (!ta || ta.length === 0) {
         return false;
       }

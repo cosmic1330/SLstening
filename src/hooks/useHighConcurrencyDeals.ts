@@ -21,6 +21,7 @@ import {
 import analyzeIndicatorsData, {
   IndicatorsDateTimeType,
 } from "../utils/analyzeIndicatorsData";
+import checkTimeRange from "../utils/checkTimeRange";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 import useDownloadStocks from "./useDownloadStocks";
 
@@ -215,10 +216,6 @@ export default function useHighConcurrencyDeals() {
     // case 1-1: 移除大於第二筆日期的資料(刪除最後一筆資料)
     const sqliteDataManager = new SqliteDataManager(db);
 
-    // 刪除前筆資料
-    sqliteDataManager.deleteLatestDailyDeal(dates[1]);
-    info("Delete latest daily deal");
-
     setDownloaded(() => 0);
     // case 1-2: 為新的請求創建一個新的 AbortController
     const abortController = new AbortController();
@@ -230,10 +227,6 @@ export default function useHighConcurrencyDeals() {
 
     // 紀錄請求時間
     const reverse = localStorage.getItem("schoice:fetch:reverse");
-    const taiwanTime = new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Taipei",
-    });
-    localStorage.setItem("schoice:fetch:time", taiwanTime);
 
     // case 1-3: 反轉資料
     if (reverse === "true") {
@@ -253,10 +246,23 @@ export default function useHighConcurrencyDeals() {
       }
       const stock = menu[i];
 
+      // 上次是在盤中請求則刪除前筆資料
+      const preFetchTime = localStorage.getItem(
+        `schoice:fetch:time:${stock.id}`
+      );
+      const isInTime = checkTimeRange(preFetchTime);
+      if (isInTime || !preFetchTime) {
+        sqliteDataManager.deleteLatestDailyDeal({
+          stock_id: stock.id,
+          t: dates[1],
+        });
+        info("Delete latest daily deal");
+      }
+
       // 隨機等待
-      const delay = Math.floor(Math.random() * (7000 - 3000 + 1)) + 3000;
+      const delay = Math.floor(Math.random() * (7000 - 2000 + 1)) + 2000;
       console.log(`等待 ${delay}ms 後請求 ${stock.id} ${stock.name}...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
 
       // case 1-3: 寫入股票代號資料
       try {
@@ -279,6 +285,12 @@ export default function useHighConcurrencyDeals() {
         ) {
           throw new Error("All fetch failed");
         }
+
+        const taiwanTime = new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Taipei",
+        });
+        localStorage.setItem(`schoice:fetch:time:${stock.id}`, taiwanTime);
+
         // daily
         if (daily.status === "fulfilled") {
           const dailyData = daily.value as TaType;
@@ -306,18 +318,21 @@ export default function useHighConcurrencyDeals() {
           const lose_daily_skills_set = new Set(
             daily_date.filter((item) => !sqlite_daily_skills_date_set.has(item))
           );
-          sqliteDataManager.processor(
-            dailyData,
-            stock,
-            {
-              dealType: DealTableOptions.DailyDeal,
-              skillsType: SkillsTableOptions.DailySkills,
-            },
-            {
-              lose_deal_set: lose_daily_deal_set,
-              lose_skills_set: lose_daily_skills_set,
-            }
-          );
+
+          if (lose_daily_deal_set.size > 0 || lose_daily_skills_set.size > 0) {
+            sqliteDataManager.processor(
+              dailyData,
+              stock,
+              {
+                dealType: DealTableOptions.DailyDeal,
+                skillsType: SkillsTableOptions.DailySkills,
+              },
+              {
+                lose_deal_set: lose_daily_deal_set,
+                lose_skills_set: lose_daily_skills_set,
+              }
+            );
+          }
         }
 
         // weekly
@@ -348,32 +363,24 @@ export default function useHighConcurrencyDeals() {
               (item) => !sqlite_weekly_skills_date_set.has(item)
             )
           );
-          // 多餘的資料
-          const unnecessary_weekly_skills_set = new Set(
-            sqlite_weekly_deal
-              .filter((item) => !weekly_date.includes(item.t))
-              .map((item) => item.t)
-          );
-          const unnecessary_weekly_deal_set = new Set(
-            sqlite_weekly_skills
-              .filter((item) => !weekly_date.includes(item.t))
-              .map((item) => item.t)
-          );
 
-          sqliteDataManager.processor(
-            weeklyData,
-            stock,
-            {
-              dealType: DealTableOptions.WeeklyDeal,
-              skillsType: SkillsTableOptions.WeeklySkills,
-            },
-            {
-              lose_deal_set: lose_weekly_deal_set,
-              lose_skills_set: lose_weekly_skills_set,
-              delete_deal_set: unnecessary_weekly_deal_set,
-              delete_skills_set: unnecessary_weekly_skills_set,
-            }
-          );
+          if (
+            lose_weekly_deal_set.size > 0 ||
+            lose_weekly_skills_set.size > 0
+          ) {
+            sqliteDataManager.processor(
+              weeklyData,
+              stock,
+              {
+                dealType: DealTableOptions.WeeklyDeal,
+                skillsType: SkillsTableOptions.WeeklySkills,
+              },
+              {
+                lose_deal_set: lose_weekly_deal_set,
+                lose_skills_set: lose_weekly_skills_set,
+              }
+            );
+          }
         }
         // hourly
         if (hourly.status === "fulfilled") {
@@ -403,18 +410,23 @@ export default function useHighConcurrencyDeals() {
               (item) => !sqlite_hourly_skills_date_set.has(item)
             )
           );
-          sqliteDataManager.timeSharingProcessor(
-            hourlyData,
-            stock,
-            {
-              dealType: TimeSharingDealTableOptions.HourlyDeal,
-              skillsType: TimeSharingSkillsTableOptions.HourlySkills,
-            },
-            {
-              lose_deal_set: lose_hourly_deal_set,
-              lose_skills_set: lose_hourly_skills_set,
-            }
-          );
+          if (
+            lose_hourly_deal_set.size > 0 ||
+            lose_hourly_skills_set.size > 0
+          ) {
+            sqliteDataManager.timeSharingProcessor(
+              hourlyData,
+              stock,
+              {
+                dealType: TimeSharingDealTableOptions.HourlyDeal,
+                skillsType: TimeSharingSkillsTableOptions.HourlySkills,
+              },
+              {
+                lose_deal_set: lose_hourly_deal_set,
+                lose_skills_set: lose_hourly_skills_set,
+              }
+            );
+          }
         }
       } catch (e) {
         error(`Error fetching data for stock ${stock.id} ${stock.name}: ${e}`);

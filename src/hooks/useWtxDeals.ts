@@ -2,12 +2,16 @@ import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import { DealTableType, UrlTaPerdOptions, UrlType } from "../types";
-import generateFuturesDealDataDownloadUrl, { FutureIds } from "../utils/generateFuturesDealDataDownloadUrl";
+import { DealTableType, FutureIds, UrlTaPerdOptions, UrlType } from "../types";
+import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
 export default function useWtxDeals() {
   const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
-    generateFuturesDealDataDownloadUrl({type:UrlType.Indicators, id: FutureIds.WTX, perd: UrlTaPerdOptions.Day}),
+    generateDealDataDownloadUrl({
+      type: UrlType.Indicators,
+      id: FutureIds.WTX,
+      perd: UrlTaPerdOptions.Day,
+    }),
     tauriFetcher
   );
 

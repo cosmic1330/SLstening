@@ -1,4 +1,4 @@
-import { Boll, Kd, Ma, Macd, Obv, Rsi, Week } from "@ch20026103/anysis";
+import { Boll, Kd, Ma, Macd, Obv, Rsi } from "@ch20026103/anysis";
 import dateFormat, {
   Mode,
 } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
@@ -108,6 +108,9 @@ export default class SqliteDataManager {
       let rsi10_data = rsi.init(init, 10);
       let obv_data = obv.init(init, 5);
 
+      const deals: TimeSharingDealTableType[] = [];
+      const skills: TimeSharingSkillsTableType[] = [];
+
       for (let i = 0; i < ta.length; i++) {
         const value = ta[i];
 
@@ -126,56 +129,54 @@ export default class SqliteDataManager {
         }
 
         if (sets.lose_deal_set.has(value.t)) {
-          await this.saveTimeSharingDealTable(
-            {
-              stock_id: stock.id,
-              ts: value.t,
-              c: value.c,
-              o: value.o,
-              h: value.h,
-              l: value.l,
-              v: value.v,
-            },
-            options.dealType,
-            stock
-          );
+          deals.push({
+            stock_id: stock.id,
+            ts: value.t,
+            c: value.c,
+            o: value.o,
+            h: value.h,
+            l: value.l,
+            v: value.v,
+          });
         }
 
         if (sets.lose_skills_set.has(value.t)) {
-          info(`save db: ${stock.id} ${value.t}`);
-          await this.saveTimeSharingSkillsTable(
-            {
-              stock_id: stock.id,
-              ts: value.t,
-              ma5: ma5_data.ma,
-              ma5_ded: ma5_data.exclusionValue["d-1"],
-              ma10: ma10_data.ma,
-              ma10_ded: ma10_data.exclusionValue["d-1"],
-              ma20: ma20_data.ma,
-              ma20_ded: ma20_data.exclusionValue["d-1"],
-              ma60: ma60_data.ma,
-              ma60_ded: ma60_data.exclusionValue["d-1"],
-              ma120: ma120_data.ma,
-              ma120_ded: ma120_data.exclusionValue["d-1"],
-              macd: macd_data.macd,
-              dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-              osc: macd_data.osc,
-              k: kd_data.k,
-              d: kd_data.d,
-              j: kd_data.j,
-              rsi5: rsi5_data.rsi,
-              rsi10: rsi10_data.rsi,
-              bollUb: boll_data.bollUb,
-              bollMa: boll_data.bollMa,
-              bollLb: boll_data.bollLb,
-              obv: obv_data.obv,
-              obv5: obv_data.obvMa,
-            },
-            options.skillsType,
-            stock
-          );
+          skills.push({
+            stock_id: stock.id,
+            ts: value.t,
+            ma5: ma5_data.ma,
+            ma5_ded: ma5_data.exclusionValue["d-1"],
+            ma10: ma10_data.ma,
+            ma10_ded: ma10_data.exclusionValue["d-1"],
+            ma20: ma20_data.ma,
+            ma20_ded: ma20_data.exclusionValue["d-1"],
+            ma60: ma60_data.ma,
+            ma60_ded: ma60_data.exclusionValue["d-1"],
+            ma120: ma120_data.ma,
+            ma120_ded: ma120_data.exclusionValue["d-1"],
+            macd: macd_data.macd,
+            dif: macd_data.dif[macd_data.dif.length - 1] || 0,
+            osc: macd_data.osc,
+            k: kd_data.k,
+            d: kd_data.d,
+            j: kd_data.j,
+            rsi5: rsi5_data.rsi,
+            rsi10: rsi10_data.rsi,
+            bollUb: boll_data.bollUb,
+            bollMa: boll_data.bollMa,
+            bollLb: boll_data.bollLb,
+            obv: obv_data.obv,
+            obv5: obv_data.obvMa,
+          });
         }
       }
+
+      await this.saveTimeSharingDealTable(deals, options.dealType, stock);
+      info(`save ${options.dealType} db: ${stock.id} ${deals.length} records`);
+      await this.saveTimeSharingSkillsTable(skills, options.skillsType, stock);
+      info(
+        `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
+      );
 
       return true;
     } catch (e) {
@@ -194,9 +195,28 @@ export default class SqliteDataManager {
     sets: {
       lose_deal_set: Set<string>;
       lose_skills_set: Set<string>;
+      delete_deal_set?: Set<string>;
+      delete_skills_set?: Set<string>;
     }
   ) {
     try {
+      if (sets.delete_deal_set && sets.delete_deal_set.size > 0) {
+        for (const t of sets.delete_deal_set) {
+          info(`delete ${options.dealType} db: ${t}`);
+          await this.db.execute(
+            `DELETE FROM ${options.dealType} WHERE stock_id=${stock.id} AND t = '${t}';`
+          );
+        }
+      }
+      if (sets.delete_skills_set && sets.delete_skills_set.size > 0) {
+        for (const t of sets.delete_skills_set) {
+          info(`delete ${options.skillsType} db: ${t}`);
+          await this.db.execute(
+            `DELETE FROM ${options.skillsType} WHERE stock_id=${stock.id} AND t = '${t}';`
+          );
+        }
+      }
+
       if (!ta || ta.length === 0) {
         return false;
       }
@@ -221,6 +241,9 @@ export default class SqliteDataManager {
       let rsi10_data = rsi.init(init, 10);
       let obv_data = obv.init(init, 5);
 
+      const deals: DealTableType[] = [];
+      const skills: SkillsTableType[] = [];
+
       for (let i = 0; i < ta.length; i++) {
         const value = ta[i];
         const t = dateFormat(value.t, Mode.NumberToString);
@@ -239,184 +262,19 @@ export default class SqliteDataManager {
         }
 
         if (sets.lose_deal_set.has(t)) {
-          info(`save db: ${stock.id} ${t}`);
-          await this.saveDealTable(
-            {
-              stock_id: stock.id,
-              t,
-              c: value.c,
-              o: value.o,
-              h: value.h,
-              l: value.l,
-              v: value.v,
-            },
-            options.dealType,
-            stock
-          );
+          deals.push({
+            stock_id: stock.id,
+            t,
+            c: value.c,
+            o: value.o,
+            h: value.h,
+            l: value.l,
+            v: value.v,
+          });
         }
 
         if (sets.lose_skills_set.has(t)) {
-          await this.saveSkillsTable(
-            {
-              stock_id: stock.id,
-              t,
-              ma5: ma5_data.ma,
-              ma5_ded: ma5_data.exclusionValue["d-1"],
-              ma10: ma10_data.ma,
-              ma10_ded: ma10_data.exclusionValue["d-1"],
-              ma20: ma20_data.ma,
-              ma20_ded: ma20_data.exclusionValue["d-1"],
-              ma60: ma60_data.ma,
-              ma60_ded: ma60_data.exclusionValue["d-1"],
-              ma120: ma120_data.ma,
-              ma120_ded: ma120_data.exclusionValue["d-1"],
-              macd: macd_data.macd,
-              dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-              osc: macd_data.osc,
-              k: kd_data.k,
-              d: kd_data.d,
-              j: kd_data.j,
-              rsi5: rsi5_data.rsi,
-              rsi10: rsi10_data.rsi,
-              bollUb: boll_data.bollUb,
-              bollMa: boll_data.bollMa,
-              bollLb: boll_data.bollLb,
-              obv: obv_data.obv,
-              obv5: obv_data.obvMa,
-            },
-            options.skillsType,
-            stock
-          );
-        }
-      }
-      return true;
-    } catch (e) {
-      error(`${stock.name}: processor error: ${e}`);
-      return false;
-    }
-  }
-
-  weeklyProcessorByDailyData(ta: TaType, stock: StockStoreType) {
-    try {
-      if (!ta || ta.length === 0) {
-        throw new Error("ta is empty");
-      }
-      const boll = new Boll();
-      const ma = new Ma();
-      const macd = new Macd();
-      const kd = new Kd();
-      const rsi = new Rsi();
-      const obv = new Obv();
-
-      const week = new Week();
-      let week_data = week.init(ta[0]);
-      for (let i = 1; i < ta.length; i++) {
-        week_data = week.next(ta[i], week_data);
-      }
-
-      const init = week_data.week[0];
-      let t = dateFormat(init.t, Mode.NumberToString);
-      let weeklyDealSaveStatus = this.saveDealTable(
-        {
-          stock_id: stock.id,
-          t,
-          c: init.c,
-          o: init.o,
-          h: init.h,
-          l: init.l,
-          v: init.v,
-        },
-        DealTableOptions.WeeklyDeal,
-        stock
-      );
-
-      if (!weeklyDealSaveStatus) {
-        throw new Error("weeklyDealSaveStatus failed");
-      }
-
-      let ma5_data = ma.init(init, 5);
-      let ma10_data = ma.init(init, 10);
-      let ma20_data = ma.init(init, 20);
-      let ma60_data = ma.init(init, 60);
-      let ma120_data = ma.init(init, 120);
-      let boll_data = boll.init(init);
-      let macd_data = macd.init(init);
-      let kd_data = kd.init(init, 9);
-      let rsi5_data = rsi.init(init, 5);
-      let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
-
-      let weeklySkillsSaveStatus = this.saveSkillsTable(
-        {
-          stock_id: stock.id,
-          t,
-          ma5: ma5_data.ma,
-          ma5_ded: ma5_data.exclusionValue["d-1"],
-          ma10: ma10_data.ma,
-          ma10_ded: ma10_data.exclusionValue["d-1"],
-          ma20: ma20_data.ma,
-          ma20_ded: ma20_data.exclusionValue["d-1"],
-          ma60: ma60_data.ma,
-          ma60_ded: ma60_data.exclusionValue["d-1"],
-          ma120: ma120_data.ma,
-          ma120_ded: ma120_data.exclusionValue["d-1"],
-          macd: macd_data.macd,
-          dif: macd_data.dif[macd_data.dif.length - 1] || 0,
-          osc: macd_data.osc,
-          k: kd_data.k,
-          d: kd_data.d,
-          j: kd_data.j,
-          rsi5: rsi5_data.rsi,
-          rsi10: rsi10_data.rsi,
-          bollUb: boll_data.bollUb,
-          bollMa: boll_data.bollMa,
-          bollLb: boll_data.bollLb,
-          obv: obv_data.obv,
-          obv5: obv_data.obvMa,
-        },
-        SkillsTableOptions.WeeklySkills,
-        stock
-      );
-
-      if (!weeklySkillsSaveStatus) {
-        throw new Error("weeklySkillsSaveStatus failed");
-      }
-
-      for (let i = 1; i < week_data.week.length; i++) {
-        t = dateFormat(week_data.week[i].t, Mode.NumberToString);
-
-        weeklyDealSaveStatus = this.saveDealTable(
-          {
-            stock_id: stock.id,
-            t,
-            c: week_data.week[i].c,
-            o: week_data.week[i].o,
-            h: week_data.week[i].h,
-            l: week_data.week[i].l,
-            v: week_data.week[i].v,
-          },
-          DealTableOptions.WeeklyDeal,
-          stock
-        );
-
-        if (!weeklyDealSaveStatus) {
-          throw new Error("weeklyDealSaveStatus failed");
-        }
-
-        ma5_data = ma.next(week_data.week[i], ma5_data, 5);
-        ma10_data = ma.next(week_data.week[i], ma10_data, 10);
-        ma20_data = ma.next(week_data.week[i], ma20_data, 20);
-        ma60_data = ma.next(week_data.week[i], ma60_data, 60);
-        ma120_data = ma.next(week_data.week[i], ma120_data, 120);
-        boll_data = boll.next(week_data.week[i], boll_data, 20);
-        macd_data = macd.next(week_data.week[i], macd_data);
-        kd_data = kd.next(week_data.week[i], kd_data, 9);
-        rsi5_data = rsi.next(week_data.week[i], rsi5_data, 5);
-        rsi10_data = rsi.next(week_data.week[i], rsi10_data, 10);
-        obv_data = obv.next(week_data.week[i], obv_data, 5);
-
-        weeklySkillsSaveStatus = this.saveSkillsTable(
-          {
+          skills.push({
             stock_id: stock.id,
             t,
             ma5: ma5_data.ma,
@@ -442,21 +300,20 @@ export default class SqliteDataManager {
             bollLb: boll_data.bollLb,
             obv: obv_data.obv,
             obv5: obv_data.obvMa,
-          },
-          SkillsTableOptions.WeeklySkills,
-          stock
-        );
-
-        if (!weeklySkillsSaveStatus) {
-          throw new Error("weeklySkillsSaveStatus failed");
+          });
         }
       }
+      await this.saveDealTable(deals, options.dealType, stock);
+      info(`save ${options.dealType} db: ${stock.id} ${deals.length} records`);
+      await this.saveSkillsTable(skills, options.skillsType, stock);
+      info(
+        `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
+      );
       return true;
     } catch (e) {
-      error(`${stock.name}:${e}`);
+      error(`${stock.name}: processor error: ${e}`);
       return false;
     }
-    return false;
   }
 
   // Base
@@ -495,15 +352,18 @@ export default class SqliteDataManager {
   }
 
   async saveDealTable(
-    deal: DealTableType,
+    deals: DealTableType[],
     table: DealTableOptions,
     stock: StockStoreType
   ) {
     try {
-      await this.db.execute(
-        `INSERT INTO ${table} (stock_id, t, c, o, h, l, v) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [deal.stock_id, deal.t, deal.c, deal.o, deal.h, deal.l, deal.v]
-      );
+      const sql = `INSERT INTO ${table} (stock_id, t, c, o, h, l, v) VALUES ${deals
+        .map(
+          (deal) =>
+            `(${deal.stock_id}, '${deal.t}', ${deal.c}, ${deal.o}, ${deal.h}, ${deal.l}, ${deal.v})`
+        )
+        .join(", ")}`;
+      await this.db.execute(sql);
       return true;
     } catch (e) {
       throw new Error(`${stock.name}:${e}`);
@@ -511,13 +371,12 @@ export default class SqliteDataManager {
   }
 
   async saveSkillsTable(
-    skills: SkillsTableType,
+    skills: SkillsTableType[],
     table: SkillsTableOptions,
     stock: StockStoreType
   ) {
     try {
-      await this.db.execute(
-        `INSERT INTO ${table} (stock_id,
+      const sql = `INSERT INTO ${table} (stock_id,
           t,
           ma5,
           ma5_ded,
@@ -541,35 +400,13 @@ export default class SqliteDataManager {
           bollMa,
           bollLb,
           obv,
-          obv5) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
-        [
-          skills.stock_id,
-          skills.t,
-          skills.ma5,
-          skills.ma5_ded,
-          skills.ma10,
-          skills.ma10_ded,
-          skills.ma20,
-          skills.ma20_ded,
-          skills.ma60,
-          skills.ma60_ded,
-          skills.ma120,
-          skills.ma120_ded,
-          skills.macd,
-          skills.dif,
-          skills.osc,
-          skills.k,
-          skills.d,
-          skills.j,
-          skills.rsi5,
-          skills.rsi10,
-          skills.bollUb,
-          skills.bollMa,
-          skills.bollLb,
-          skills.obv,
-          skills.obv5,
-        ]
-      );
+          obv5) VALUES ${skills
+            .map(
+              (skill) =>
+                `(${skill.stock_id}, '${skill.t}', ${skill.ma5}, ${skill.ma5_ded}, ${skill.ma10}, ${skill.ma10_ded}, ${skill.ma20}, ${skill.ma20_ded}, ${skill.ma60}, ${skill.ma60_ded}, ${skill.ma120}, ${skill.ma120_ded}, ${skill.macd}, ${skill.dif}, ${skill.osc}, ${skill.k}, ${skill.d}, ${skill.j}, ${skill.rsi5}, ${skill.rsi10}, ${skill.bollUb}, ${skill.bollMa}, ${skill.bollLb}, ${skill.obv}, ${skill.obv5})`
+            )
+            .join(", ")}`;
+      await this.db.execute(sql);
       return true;
     } catch (e) {
       throw new Error(`${stock.name}:${e}`);
@@ -578,15 +415,18 @@ export default class SqliteDataManager {
 
   // TimeSharing
   async saveTimeSharingDealTable(
-    deal: TimeSharingDealTableType,
+    deal: TimeSharingDealTableType[],
     table: TimeSharingDealTableOptions,
     stock: StockStoreType
   ) {
     try {
-      await this.db.execute(
-        `INSERT INTO ${table} (stock_id, ts, c, o, h, l, v) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [deal.stock_id, deal.ts, deal.c, deal.o, deal.h, deal.l, deal.v]
-      );
+      const sql = `INSERT INTO ${table} (stock_id, ts, c, o, h, l, v) VALUES ${deal
+        .map(
+          (deal) =>
+            `(${deal.stock_id}, ${deal.ts}, ${deal.c}, ${deal.o}, ${deal.h}, ${deal.l}, ${deal.v})`
+        )
+        .join(", ")}`;
+      await this.db.execute(sql);
       return true;
     } catch (e) {
       throw new Error(`${stock.name}:${e}`);
@@ -594,13 +434,12 @@ export default class SqliteDataManager {
   }
 
   async saveTimeSharingSkillsTable(
-    skills: TimeSharingSkillsTableType,
+    skills: TimeSharingSkillsTableType[],
     table: TimeSharingSkillsTableOptions,
     stock: StockStoreType
   ) {
     try {
-      await this.db.execute(
-        `INSERT INTO ${table} (stock_id,
+      const sql = `INSERT INTO ${table} (stock_id,
           ts,
           ma5,
           ma5_ded,
@@ -624,35 +463,13 @@ export default class SqliteDataManager {
           bollMa,
           bollLb,
           obv,
-          obv5) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
-        [
-          skills.stock_id,
-          skills.ts,
-          skills.ma5,
-          skills.ma5_ded,
-          skills.ma10,
-          skills.ma10_ded,
-          skills.ma20,
-          skills.ma20_ded,
-          skills.ma60,
-          skills.ma60_ded,
-          skills.ma120,
-          skills.ma120_ded,
-          skills.macd,
-          skills.dif,
-          skills.osc,
-          skills.k,
-          skills.d,
-          skills.j,
-          skills.rsi5,
-          skills.rsi10,
-          skills.bollUb,
-          skills.bollMa,
-          skills.bollLb,
-          skills.obv,
-          skills.obv5,
-        ]
-      );
+          obv5) VALUES ${skills
+            .map(
+              (skill) =>
+                `(${skill.stock_id}, ${skill.ts}, ${skill.ma5}, ${skill.ma5_ded}, ${skill.ma10}, ${skill.ma10_ded}, ${skill.ma20}, ${skill.ma20_ded}, ${skill.ma60}, ${skill.ma60_ded}, ${skill.ma120}, ${skill.ma120_ded}, ${skill.macd}, ${skill.dif}, ${skill.osc}, ${skill.k}, ${skill.d}, ${skill.j}, ${skill.rsi5}, ${skill.rsi10}, ${skill.bollUb}, ${skill.bollMa}, ${skill.bollLb}, ${skill.obv}, ${skill.obv5})`
+            )
+            .join(", ")}`;
+      await this.db.execute(sql);
       return true;
     } catch (e) {
       throw new Error(`${stock.name}:${e}`);

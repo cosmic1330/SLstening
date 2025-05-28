@@ -2,7 +2,10 @@ import { info } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import { TaType, TickDealsType, UrlTaPerdOptions, UrlType } from "../types";
+import { TickDealsType, UrlTaPerdOptions, UrlType } from "../types";
+import analyzeIndicatorsData, {
+  IndicatorsDateTimeType,
+} from "../utils/analyzeIndicatorsData";
 import checkTimeRange from "../utils/checkTimeRange";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
@@ -16,7 +19,7 @@ export default function useDeals(id: string) {
   );
   const { data: dailyData, mutate: mutateDailyDeals } = useSWR(
     generateDealDataDownloadUrl({
-      type: UrlType.Ta,
+      type: UrlType.Indicators,
       id,
       perd: UrlTaPerdOptions.Day,
     }),
@@ -82,11 +85,7 @@ export default function useDeals(id: string) {
 
   const deals = useMemo(() => {
     if (!dailyData) return [];
-    const ta_index = dailyData.indexOf('"ta":');
-    const json_ta = "{" + dailyData.slice(ta_index).replace(");", "");
-    const parse = JSON.parse(json_ta);
-    const response = parse.ta as TaType;
-    return response;
+    return analyzeIndicatorsData(dailyData, IndicatorsDateTimeType.Date);
   }, [dailyData]);
 
   const name = useMemo(() => {

@@ -4,6 +4,7 @@ import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useTwseDeals from "../../../hooks/useTwseDeals";
 import HourlyChart from "../CommonChart/HourlyChart";
 import TickChart from "../CommonChart/TickChart";
+import { FutureIds } from "../../../types";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -14,7 +15,7 @@ const Box = styled(MuiBox)`
 `;
 export default function TwseBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
-    id: "twse",
+    id: FutureIds.TWSE,
     name: "加權指數",
     group: "大盤",
   });

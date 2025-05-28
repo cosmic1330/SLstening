@@ -18,7 +18,9 @@ import {
   UrlTaPerdOptions,
   UrlType,
 } from "../types";
-import checkTimeRange from "../utils/checkTimeRange";
+import analyzeIndicatorsData, {
+  IndicatorsDateTimeType,
+} from "../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 import useDownloadStocks from "./useDownloadStocks";
 
@@ -135,40 +137,47 @@ export default function useHighConcurrencyDeals() {
     []
   );
 
-  const getTaFetch = useCallback(
+  const getIndicatorFetch = useCallback(
     async (
       signal: AbortSignal,
       stock: StockStoreType,
       perd: UrlTaPerdOptions
-    ) => {
+    ): Promise<TaType> => {
       return withRetry(async () => {
         try {
           const response = await fetch(
             generateDealDataDownloadUrl({
-              type: UrlType.Ta,
+              type: UrlType.Indicators,
               id: stock.id,
               perd,
             }),
             {
               method: "GET",
               signal,
+              headers: {
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
+              },
             }
           );
           if (!response.ok) {
             throw new Error(
-              `getTaFetch: ${perd} error! status: ${response.status}`
+              `getIndicatorFetch: ${perd} error! status: ${response.status}`
             );
           }
           const text = await response.text();
-          const ta_index = text.indexOf('"ta":');
-          if (ta_index === -1) {
-            throw new Error("getTaFetch: Invalid response format");
+          const taData = analyzeIndicatorsData(
+            text,
+            perd === UrlTaPerdOptions.Hour
+              ? IndicatorsDateTimeType.DateTime
+              : IndicatorsDateTimeType.Date
+          );
+          if (!taData || taData.length === 0) {
+            throw new Error(`getIndicatorFetch: ${perd} no data!`);
           }
-          const json_ta = "{" + text.slice(ta_index).replace(");", "");
-          const parse = JSON.parse(json_ta);
-          const ta = parse.ta as TaType;
-          return ta;
+          return taData;
         } catch (error: any) {
+          console.log(error);
           if (error?.message?.indexOf("Request canceled") !== -1) {
             throw new Error("Cancel");
           }
@@ -205,14 +214,10 @@ export default function useHighConcurrencyDeals() {
 
     // case 1-1: 移除大於第二筆日期的資料(刪除最後一筆資料)
     const sqliteDataManager = new SqliteDataManager(db);
-    const preFetchTime = localStorage.getItem("schoice:fetch:time");
-    const isInTime = checkTimeRange(preFetchTime);
 
-    // 上次是在盤中請求則刪除前筆資料
-    if (isInTime) {
-      sqliteDataManager.deleteLatestDailyDeal(dates[1]);
-      info("Delete latest daily deal");
-    }
+    // 刪除前筆資料
+    sqliteDataManager.deleteLatestDailyDeal(dates[1]);
+    info("Delete latest daily deal");
 
     setDownloaded(() => 0);
     // case 1-2: 為新的請求創建一個新的 AbortController
@@ -242,6 +247,8 @@ export default function useHighConcurrencyDeals() {
 
     changeDataCount(0);
     for (let i = 0; i < menu.length; i++) {
+      // 等待 700ms
+      await new Promise((resolve) => setTimeout(resolve, 700));
       if (sessionStorage.getItem("schoice:update:stop") === "true") {
         break;
       }
@@ -250,13 +257,14 @@ export default function useHighConcurrencyDeals() {
       try {
         await sqliteDataManager.saveStockTable(stock);
       } catch (error) {}
+
       // case 1-3: 寫入基本面資料
       // case 1-3: 寫入交易資料+
       try {
         const [daily, weekly, hourly, _] = await Promise.allSettled([
-          getTaFetch(signal, stock, UrlTaPerdOptions.Day),
-          getTaFetch(signal, stock, UrlTaPerdOptions.Week),
-          getTaFetch(signal, stock, UrlTaPerdOptions.Hour),
+          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Day),
+          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Week),
+          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Hour),
           getFundamentalFetch(signal, stock, sqliteDataManager),
         ]);
         if (
@@ -335,6 +343,18 @@ export default function useHighConcurrencyDeals() {
               (item) => !sqlite_weekly_skills_date_set.has(item)
             )
           );
+          // 多餘的資料
+          const unnecessary_weekly_skills_set = new Set(
+            sqlite_weekly_deal
+              .filter((item) => !weekly_date.includes(item.t))
+              .map((item) => item.t)
+          );
+          const unnecessary_weekly_deal_set = new Set(
+            sqlite_weekly_skills
+              .filter((item) => !weekly_date.includes(item.t))
+              .map((item) => item.t)
+          );
+
           sqliteDataManager.processor(
             weeklyData,
             stock,
@@ -345,6 +365,8 @@ export default function useHighConcurrencyDeals() {
             {
               lose_deal_set: lose_weekly_deal_set,
               lose_skills_set: lose_weekly_skills_set,
+              delete_deal_set: unnecessary_weekly_deal_set,
+              delete_skills_set: unnecessary_weekly_skills_set,
             }
           );
         }

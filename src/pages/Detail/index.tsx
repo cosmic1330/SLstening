@@ -7,8 +7,10 @@ import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
-import { TaType, UrlTaPerdOptions, UrlType } from "../../types";
-import formatDateTime from "../../utils/formatDateTime";
+import { UrlTaPerdOptions, UrlType } from "../../types";
+import analyzeIndicatorsData, {
+  IndicatorsDateTimeType,
+} from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
 import AvgMaKbar from "./AvgMaKbar";
 import Close from "./Close";
@@ -18,7 +20,6 @@ import MaKbar from "./MaKbar";
 import MJ from "./MJ";
 import MR from "./MR";
 import Obv from "./Obv";
-import generateFuturesDealDataDownloadUrl, { FutureIds } from "../../utils/generateFuturesDealDataDownloadUrl";
 
 const slides = [
   {
@@ -63,8 +64,9 @@ enum PictoreType {
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState(
-    localStorage.getItem("detail:picture:type") || PictoreType.Hourly
+  const [picture, setPicture] = useState<PictoreType>(
+    (localStorage.getItem("detail:picture:type") as PictoreType) ||
+      PictoreType.Hourly
   );
 
   const goToSlide = useCallback((index: number) => {
@@ -135,70 +137,26 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const { id } = useParams();
 
   const { data } = useSWR(
-    id === "twse" && picture === PictoreType.Hourly
-      ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
-      : id === "twse" && picture === PictoreType.Daily
-      ? `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=d;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`
-      : id === "wtx" && picture === PictoreType.Hourly
-      ? generateFuturesDealDataDownloadUrl({
-          type: UrlType.Ta,
-          id: FutureIds.WTX,
-          perd: UrlTaPerdOptions.ThirtyMinute,
-        })
-      : id === "wtx" && picture === PictoreType.Daily
-      ? generateFuturesDealDataDownloadUrl({
-          type: UrlType.Ta,
-          id: FutureIds.WTX,
-          perd: UrlTaPerdOptions.Day,
-        })
-      : picture === PictoreType.Hourly
-      ? generateDealDataDownloadUrl({
-          type: UrlType.Ta,
-          id: id || "",
-          perd: UrlTaPerdOptions.Hour,
-        })
-      : generateDealDataDownloadUrl({
-          type: UrlType.Ta,
-          id: id || "",
-          perd: UrlTaPerdOptions.Day,
-        }),
+    generateDealDataDownloadUrl({
+      type: UrlType.Indicators,
+      id: encodeURIComponent(id as string),
+      perd:
+        picture === PictoreType.Hourly
+          ? UrlTaPerdOptions.Hour
+          : UrlTaPerdOptions.Day,
+    }),
     tauriFetcher
   );
 
   const deals = useMemo(() => {
     if (!data || !id) return [];
-    if (id === "twse") {
-      const json = JSON.parse(data as string);
-      const opens = json[0].chart.indicators.quote[0].open;
-      const closes = json[0].chart.indicators.quote[0].close;
-      const highs = json[0].chart.indicators.quote[0].high;
-      const lows = json[0].chart.indicators.quote[0].low;
-      const volumes = json[0].chart.indicators.quote[0].volume;
-      const ts = json[0].chart.timestamp;
-
-      const response: TaType = [];
-      for (let i = 0; i < opens.length; i++) {
-        if (opens[i] !== null) {
-          response.push({
-            t: formatDateTime(
-              new Date(ts[i] * 1000).getTime()
-            ) as unknown as number,
-            o: opens[i],
-            c: closes[i],
-            h: highs[i],
-            l: lows[i],
-            v: volumes[i],
-          });
-        }
-      }
-      return response;
-    } else {
-      const ta_index = (data as string).indexOf('"ta":');
-      const json_ta = "{" + (data as string).slice(ta_index).replace(");", "");
-      const parse = JSON.parse(json_ta);
-      const response = parse.ta as TaType;
-      return response;
-    }
+    if (typeof data !== "string") return [];
+    return analyzeIndicatorsData(
+      data,
+      picture === PictoreType.Hourly
+        ? IndicatorsDateTimeType.DateTime
+        : IndicatorsDateTimeType.Date
+    );
   }, [data, id, picture]);
 
   return (

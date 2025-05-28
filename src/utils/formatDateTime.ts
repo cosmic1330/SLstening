@@ -5,7 +5,7 @@ const formatDateTime = (timestamp: number) => {
   const dd = String(d.getDate()).padStart(2, "0");
   const hh = String(d.getHours()).padStart(2, "0");
   const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+  return parseInt(`${yyyy}${mm}${dd}${hh}${mi}`, 10);
 };
 
 export default formatDateTime;

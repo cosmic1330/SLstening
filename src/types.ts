@@ -196,12 +196,11 @@ export type FundamentalTableType = {
   dividend_yield_5y: number;
 };
 
-export type FilterStock = { id: string; name: string }
-
+export type FilterStock = { id: string; name: string };
 
 export enum UrlType {
-  Ta = "ta",
   Indicators = "indicators",
+  Ta = "ta",
   Tick = "tick",
 }
 export enum UrlTaPerdOptions {
@@ -212,4 +211,9 @@ export enum UrlTaPerdOptions {
   Day = "d",
   Week = "w",
   Month = "m",
+}
+
+export enum FutureIds {
+  WTX = "WTX%26.TW", // 台指期近一
+  TWSE = "^TWII", // 台灣加權指數
 }

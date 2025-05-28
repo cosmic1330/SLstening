@@ -3,6 +3,7 @@ import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useWtxDeals from "../../../hooks/useWtxDeals";
 import MakChart from "../CommonChart/MakChart";
+import { FutureIds } from "../../../types";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -13,7 +14,7 @@ const Box = styled(MuiBox)`
 `;
 export default function WtxBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
-    id: "wtx",
+    id: FutureIds.WTX,
     name: "台指期近一",
     group: "期貨",
   });

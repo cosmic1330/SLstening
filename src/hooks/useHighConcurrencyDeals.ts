@@ -247,12 +247,17 @@ export default function useHighConcurrencyDeals() {
 
     changeDataCount(0);
     for (let i = 0; i < menu.length; i++) {
-      // 等待 700ms
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      // 檢查是否手動停止
       if (sessionStorage.getItem("schoice:update:stop") === "true") {
         break;
       }
       const stock = menu[i];
+
+      // 隨機等待
+      const delay = Math.floor(Math.random() * (7000 - 3000 + 1)) + 3000;
+      console.log(`等待 ${delay}ms 後請求 ${stock.id} ${stock.name}...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+
       // case 1-3: 寫入股票代號資料
       try {
         await sqliteDataManager.saveStockTable(stock);

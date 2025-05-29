@@ -2,6 +2,7 @@ import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { fetch } from "@tauri-apps/plugin-http";
 import { error, info } from "@tauri-apps/plugin-log";
+import pLimit from "p-limit";
 import { useCallback, useContext, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import SqliteDataManager from "../classes/SqliteDataManager";
@@ -225,8 +226,9 @@ export default function useHighConcurrencyDeals() {
       await handleDownloadMenu();
     }
 
-    // 紀錄請求時間
+    // 取得設定
     const reverse = localStorage.getItem("schoice:fetch:reverse");
+    const limit = pLimit(5);
 
     // case 1-3: 反轉資料
     if (reverse === "true") {
@@ -254,29 +256,29 @@ export default function useHighConcurrencyDeals() {
       if (isInTime || !preFetchTime) {
         sqliteDataManager.deleteLatestDailyDeal({
           stock_id: stock.id,
-          t: dates[1],
+          t: dates[2],
         });
         info("Delete latest daily deal");
       }
 
       // 隨機等待
-      const delay = Math.floor(Math.random() * (7000 - 2000 + 1)) + 2000;
+      const delay = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000;
       console.log(`等待 ${delay}ms 後請求 ${stock.id} ${stock.name}...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
 
-      // case 1-3: 寫入股票代號資料
+      // case 1-4: 寫入股票代號資料
       try {
         await sqliteDataManager.saveStockTable(stock);
       } catch (error) {}
 
-      // case 1-3: 寫入基本面資料
-      // case 1-3: 寫入交易資料+
+      // case 1-4: 寫入交易資料與基本面資料
       try {
         const [daily, weekly, hourly, _] = await Promise.allSettled([
-          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Day),
-          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Week),
-          getIndicatorFetch(signal, stock, UrlTaPerdOptions.Hour),
-          getFundamentalFetch(signal, stock, sqliteDataManager),
+          limit(() => getIndicatorFetch(signal, stock, UrlTaPerdOptions.Day)),
+          limit(() => getIndicatorFetch(signal, stock, UrlTaPerdOptions.Week)),
+          limit(() => getIndicatorFetch(signal, stock, UrlTaPerdOptions.Hour)),
+          // 基本面資料
+          limit(() => getFundamentalFetch(signal, stock, sqliteDataManager)),
         ]);
         if (
           daily.status === "rejected" &&
@@ -286,6 +288,7 @@ export default function useHighConcurrencyDeals() {
           throw new Error("All fetch failed");
         }
 
+        // 紀錄請求時間
         const taiwanTime = new Date().toLocaleString("en-US", {
           timeZone: "Asia/Taipei",
         });

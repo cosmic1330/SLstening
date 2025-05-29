@@ -302,16 +302,15 @@ export default class SqliteDataManager {
           });
         }
       }
-      this.saveDealTable(deals, options.dealType, stock).then(() => {
-        info(
-          `save ${options.dealType} db: ${stock.id} ${deals.length} records`
-        );
-      });
-      this.saveSkillsTable(skills, options.skillsType, stock).then(() => {
-        info(
-          `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
-        );
-      });
+      await this.saveDealTable(deals, options.dealType, stock);
+      info(`save ${options.dealType} db: ${stock.id} ${deals.length} records`);
+      await this.saveSkillsTable(skills, options.skillsType, stock).then(
+        () => {
+          info(
+            `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
+          );
+        }
+      );
       return true;
     } catch (e) {
       error(`${stock.name}: processor error: ${e}`);

@@ -254,11 +254,11 @@ export default function useHighConcurrencyDeals() {
       );
       const isInTime = checkTimeRange(preFetchTime);
       if (isInTime || !preFetchTime) {
-        sqliteDataManager.deleteLatestDailyDeal({
+        info(`Delete latest daily deal for stock ${stock.id} ${stock.name}: ${dates[1]}`);
+        await sqliteDataManager.deleteLatestDailyDeal({
           stock_id: stock.id,
-          t: dates[2],
+          t: dates[1],
         });
-        info("Delete latest daily deal");
       }
 
       // 隨機等待

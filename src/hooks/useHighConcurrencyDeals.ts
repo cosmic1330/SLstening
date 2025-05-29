@@ -228,15 +228,31 @@ export default function useHighConcurrencyDeals() {
 
     // 取得設定
     const reverse = localStorage.getItem("schoice:fetch:reverse");
+    const previousDownloaded = localStorage.getItem(
+      "schoice:update:downloaded"
+    );
+    // date[0] 為現在日期
+    if (
+      previousDownloaded &&
+      dates[0] === dateFormat(new Date().getTime(), Mode.TimeStampToString)
+    ) {
+      info(`Previous downloaded stock ID: ${previousDownloaded}`);
+      const index = menu.findIndex((stock) => stock.id === previousDownloaded);
+      if (reverse === "false") {
+        menu.splice(0, index + 1);
+      } else {
+        menu.splice(index + 1, menu.length - index - 1);
+      }
+    }
     const limit = pLimit(5);
 
     // case 1-3: 反轉資料
-    if (reverse === "true") {
+    if (reverse === "false") {
       menu.reverse();
-      localStorage.setItem("schoice:fetch:reverse", "false");
+      localStorage.setItem("schoice:fetch:reverse", "true");
       info("Reverse menu");
     } else {
-      localStorage.setItem("schoice:fetch:reverse", "true");
+      localStorage.setItem("schoice:fetch:reverse", "false");
       info("No reverse menu");
     }
 
@@ -254,7 +270,9 @@ export default function useHighConcurrencyDeals() {
       );
       const isInTime = checkTimeRange(preFetchTime);
       if (isInTime || !preFetchTime) {
-        info(`Delete latest daily deal for stock ${stock.id} ${stock.name}: ${dates[1]}`);
+        info(
+          `Delete latest daily deal for stock ${stock.id} ${stock.name}: ${dates[1]}`
+        );
         await sqliteDataManager.deleteLatestDailyDeal({
           stock_id: stock.id,
           t: dates[1],
@@ -436,6 +454,7 @@ export default function useHighConcurrencyDeals() {
       }
       setDownloaded((prev) => prev + 1);
       changeDataCount(i + 1);
+      localStorage.setItem("schoice:update:downloaded", stock.id);
     }
 
     toast.success("Update Success ! 🎉");

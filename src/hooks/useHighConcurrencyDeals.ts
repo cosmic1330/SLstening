@@ -278,6 +278,19 @@ export default function useHighConcurrencyDeals() {
           t: dates[1],
         });
       }
+      // 上次不是在盤中請求且請求日期等於今天
+      else if (
+        !isInTime &&
+        preFetchTime &&
+        preFetchTime.split(",")[0] ===
+          new Date()
+            .toLocaleString("en-US", {
+              timeZone: "Asia/Taipei",
+            })
+            .split(",")[0]
+      ) {
+        continue; // 跳過今天的請求
+      }
 
       // 隨機等待
       const delay = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000;

@@ -1,8 +1,15 @@
-import { Button, Divider, Stack, Tooltip, Typography } from "@mui/material";
 import FilterAltIcon from "@mui/icons-material/FilterAlt";
-import useSchoiceStore from "../../../store/Schoice.store";
 import RepartitionIcon from "@mui/icons-material/Repartition";
+import {
+  Box,
+  Button,
+  Divider,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@mui/material";
 import { toast } from "react-toastify";
+import useSchoiceStore from "../../../store/Schoice.store";
 
 export default function FilterStocks() {
   const { filterStocks, removeFilterStocks } = useSchoiceStore();
@@ -16,9 +23,11 @@ export default function FilterStocks() {
   return (
     <>
       <Tooltip title="Filter By Fundamental">
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <FilterAltIcon />
-          <Typography>{filterStocks.length}</Typography>
+        <Box>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <FilterAltIcon />
+            <Typography>{filterStocks.length}</Typography>
+          </Stack>
           <Button
             size="small"
             variant="contained"
@@ -28,7 +37,7 @@ export default function FilterStocks() {
           >
             Free
           </Button>
-        </Stack>
+        </Box>
       </Tooltip>
       <Divider orientation="vertical" flexItem />
     </>

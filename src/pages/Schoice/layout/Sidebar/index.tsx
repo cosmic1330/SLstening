@@ -8,11 +8,11 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { Box, IconButton, Stack, styled, Tooltip } from "@mui/material";
 import { useNavigate } from "react-router";
-import InsertRuleButton from "../../../components/InsertRuleButton";
-import useSchoiceStore from "../../../store/Schoice.store";
-import useStocksStore from "../../../store/Stock.store";
+import InsertRuleButton from "../../../../components/InsertRuleButton";
+import useSchoiceStore from "../../../../store/Schoice.store";
+import useStocksStore from "../../../../store/Stock.store";
 import SmartButtonIcon from "@mui/icons-material/SmartButton";
-import LanguageSwitcher from "../../../components/LanguageSwitcher";
+import LanguageSwitcher from "../../../../components/LanguageSwitcher";
 
 const GridItem = styled(Box)`
   width: 70px;

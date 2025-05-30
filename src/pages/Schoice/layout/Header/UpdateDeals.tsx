@@ -2,8 +2,8 @@ import { Button, Stack } from "@mui/material";
 import { useCallback } from "react";
 import useHighConcurrencyDeals, {
   Status,
-} from "../../../hooks/useHighConcurrencyDeals";
-import Process from "./Process";
+} from "../../../../hooks/useHighConcurrencyDeals";
+import Process from "../../parts/Process";
 import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
 
 export default function UpdateDeals() {

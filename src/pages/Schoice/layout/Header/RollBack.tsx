@@ -8,7 +8,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import useSchoiceStore from "../../../store/Schoice.store";
+import useSchoiceStore from "../../../../store/Schoice.store";
 
 export default function RollBack() {
   const { todayDate, changeTodayDate } = useSchoiceStore();
@@ -25,12 +25,13 @@ export default function RollBack() {
     <>
       <Box>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography>Rollback:</Typography>
+          <Typography variant="body2">Rollback:</Typography>
           <IconButton onClick={handleBackward} size="small">
             <ArrowBackIcon />
           </IconButton>
           <TextField
             size="small"
+            variant="standard"
             value={todayDate}
             onChange={(event) => {
               const value = event.target.value;

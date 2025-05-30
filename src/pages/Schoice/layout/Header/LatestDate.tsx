@@ -3,10 +3,10 @@ import PetsIcon from "@mui/icons-material/Pets";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { error } from "@tauri-apps/plugin-log";
 import { useContext, useEffect } from "react";
-import SqliteDataManager from "../../../classes/SqliteDataManager";
-import { DatabaseContext } from "../../../context/DatabaseContext";
-import useSchoiceStore from "../../../store/Schoice.store";
-import useStocksStore from "../../../store/Stock.store";
+import SqliteDataManager from "../../../../classes/SqliteDataManager";
+import { DatabaseContext } from "../../../../context/DatabaseContext";
+import useSchoiceStore from "../../../../store/Schoice.store";
+import useStocksStore from "../../../../store/Stock.store";
 
 export default function LatestDate() {
   const { menu } = useStocksStore();

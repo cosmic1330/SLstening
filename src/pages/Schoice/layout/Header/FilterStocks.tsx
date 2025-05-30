@@ -9,7 +9,7 @@ import {
   Typography,
 } from "@mui/material";
 import { toast } from "react-toastify";
-import useSchoiceStore from "../../../store/Schoice.store";
+import useSchoiceStore from "../../../../store/Schoice.store";
 
 export default function FilterStocks() {
   const { filterStocks, removeFilterStocks } = useSchoiceStore();

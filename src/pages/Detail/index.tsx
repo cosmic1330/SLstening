@@ -2,7 +2,14 @@ import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import { Box, Button, IconButton } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion } from "framer-motion";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
@@ -12,61 +19,62 @@ import analyzeIndicatorsData, {
   IndicatorsDateTimeType,
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
-import AvgMaKbar from "./AvgMaKbar";
-import Close from "./Close";
-import Kd from "./Kd";
-import Ma from "./Ma";
-import MaKbar from "./MaKbar";
-import MJ from "./MJ";
-import MR from "./MR";
-import Obv from "./Obv";
 
-const slides = [
-  {
-    id: "ma_k",
-    content: <MaKbar />,
-  },
-  {
-    id: "avg_k",
-    content: <AvgMaKbar />,
-  },
-  {
-    id: "obv",
-    content: <Obv />,
-  },
-  {
-    id: "ma",
-    content: <Ma />,
-  },
-  {
-    id: "mj",
-    content: <MJ />,
-  },
-  {
-    id: "mr",
-    content: <MR />,
-  },
-  {
-    id: "kd",
-    content: <Kd />,
-  },
-  {
-    id: "low_close",
-    content: <Close />,
-  },
-];
-
-enum PictoreType {
-  Daily = "daily",
-  Hourly = "hourly",
-}
+// lazy load components
+const MaKbar = lazy(() => import("./MaKbar"));
+const AvgMaKbar = lazy(() => import("./AvgMaKbar"));
+const Obv = lazy(() => import("./Obv"));
+const Ma = lazy(() => import("./Ma"));
+const MJ = lazy(() => import("./MJ"));
+const MR = lazy(() => import("./MR"));
+const Kd = lazy(() => import("./Kd"));
+const Close = lazy(() => import("./Close"));
 
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
-  const [picture, setPicture] = useState<PictoreType>(
-    (localStorage.getItem("detail:picture:type") as PictoreType) ||
-      PictoreType.Hourly
+  const [perd, setPerd] = useState<UrlTaPerdOptions>(
+    (localStorage.getItem("detail:perd:type") as UrlTaPerdOptions) ||
+      UrlTaPerdOptions.Hour
+  );
+
+  // slides 需依賴 perd，移到 useMemo 內
+  const slides = useMemo(
+    () => [
+      {
+        id: "ma_k",
+        content: <MaKbar />,
+      },
+      {
+        id: "avg_k",
+        content: <AvgMaKbar />,
+      },
+      {
+        id: "obv",
+        content: <Obv />,
+      },
+      {
+        id: "ma",
+        content: <Ma />,
+      },
+      {
+        id: "mj",
+        content: <MJ />,
+      },
+      {
+        id: "mr",
+        content: <MR />,
+      },
+      {
+        id: "kd",
+        content: <Kd />,
+      },
+      {
+        id: "low_close",
+        content: <Close />,
+      },
+    ],
+    [perd]
   );
 
   const goToSlide = useCallback((index: number) => {
@@ -140,24 +148,20 @@ const FullscreenVerticalCarousel: React.FC = () => {
     generateDealDataDownloadUrl({
       type: UrlType.Indicators,
       id: encodeURIComponent(id as string),
-      perd:
-        picture === PictoreType.Hourly
-          ? UrlTaPerdOptions.Hour
-          : UrlTaPerdOptions.Day,
+      perd,
     }),
     tauriFetcher
   );
 
   const deals = useMemo(() => {
-    if (!data || !id) return [];
-    if (typeof data !== "string") return [];
+    if (!data || !id || typeof data !== "string") return [];
     return analyzeIndicatorsData(
       data,
-      picture === PictoreType.Hourly
+      perd === UrlTaPerdOptions.Hour
         ? IndicatorsDateTimeType.DateTime
         : IndicatorsDateTimeType.Date
     );
-  }, [data, id, picture]);
+  }, [data, id, perd]);
 
   return (
     <Box position="relative" width="100vw" height="100vh" overflow="hidden">
@@ -181,7 +185,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
               justifyContent: "center",
             }}
           >
-            {slides[current].content}
+            <Suspense fallback={<div>Loading...</div>}>
+              {slides[current].content}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
 
@@ -192,11 +198,11 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
-            variant={picture === PictoreType.Hourly ? "contained" : "text"}
-            disabled={picture === PictoreType.Hourly}
+            variant={perd === UrlTaPerdOptions.Hour ? "contained" : "text"}
+            disabled={perd === UrlTaPerdOptions.Hour}
             onClick={() => {
-              localStorage.setItem("detail:picture:type", PictoreType.Hourly);
-              setPicture(PictoreType.Hourly);
+              localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Hour);
+              setPerd(UrlTaPerdOptions.Hour);
             }}
           >
             小時圖
@@ -207,11 +213,11 @@ const FullscreenVerticalCarousel: React.FC = () => {
               backgroundColor: "rgba(255,255,255,0.3)",
               "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
             }}
-            variant={picture === PictoreType.Daily ? "contained" : "text"}
-            disabled={picture === PictoreType.Daily}
+            variant={perd === UrlTaPerdOptions.Day ? "contained" : "text"}
+            disabled={perd === UrlTaPerdOptions.Day}
             onClick={() => {
-              localStorage.setItem("detail:picture:type", PictoreType.Daily);
-              setPicture(PictoreType.Daily);
+              localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Day);
+              setPerd(UrlTaPerdOptions.Day);
             }}
           >
             日線圖

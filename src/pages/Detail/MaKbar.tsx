@@ -1,5 +1,14 @@
-import { Box, Container, Stack, Typography } from "@mui/material";
-import { useContext, useMemo } from "react";
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import {
+  Box,
+  Container,
+  Divider,
+  Tooltip as MuiTooltip,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { useContext } from "react";
 import {
   Brush,
   ComposedChart,
@@ -11,87 +20,56 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import ma from "../../cls_tools/ma";
-import ArrowDown from "../../components/ArrowDown";
-import ArrowUp from "../../components/ArrowUp";
-import { DealsContext } from "../../context/DealsContext";
-import { Tooltip as MuiTooltip } from "@mui/material";
 import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
+import { DealsContext } from "../../context/DealsContext";
+import useMarketAnalysis from "../../hooks/useMarketAnalysis";
+import { UrlTaPerdOptions } from "../../types";
 
-export default function MaKbar() {
+export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
+  const {
+    trends: chartData,
+    trendChangePoints,
+    power,
+  } = useMarketAnalysis({
+    ta: deals,
+    perd,
+  });
 
-  const chartData = useMemo(() => {
-    if (deals?.length === 0) return [];
-    const response = [];
-    let ma5_data = ma.init(deals[0], 5);
-    let ma10_data = ma.init(deals[0], 10);
-    let ma20_data = ma.init(deals[0], 20);
-    response.push({
-      x: deals[0].t,
-      y: deals[0].l,
-      ma20: ma20_data.ma || null,
-      ma5: ma5_data.ma || null,
-      ma10: ma10_data.ma || null,
-      c: deals[0].c,
-      l: deals[0].l,
-      h: deals[0].h,
-      o: deals[0].o,
-    });
-    for (let i = 1; i < deals.length; i++) {
-      const deal = deals[i];
-      ma5_data = ma.next(deal, ma5_data, 5);
-      ma10_data = ma.next(deal, ma10_data, 10);
-      ma20_data = ma.next(deal, ma20_data, 20);
-      response.push({
-        x: deal.t,
-        ma5: ma5_data.ma || null,
-        ma10: ma10_data.ma || null,
-        ma20: ma20_data.ma || null,
-        y: deal.l,
-        c: deal.c,
-        l: deal.l,
-        h: deal.h,
-        o: deal.o,
-      });
-    }
-    return response;
-  }, [deals]);
+  // 計算 h 的最大值和 l 的最小值
+  const hMax = Math.max(...chartData.map((d) => d.h ?? -Infinity));
+  const lMin = Math.min(...chartData.map((d) => d.l ?? Infinity));
 
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
         <MuiTooltip
-          title={
-            <Typography>
-              對照K線是否在五日線上且不低於前低
-              <br />
-              紅色：K線在五日線上且不低於前低，趨勢轉強
-              <br />
-              綠色：K線在五日線下且持續破低，趨勢轉弱
+          title={trendChangePoints?.splice(-5)?.map((point) => (
+            <Typography variant="body2" key={point.t}>
+              {dateFormat(point.t, Mode.NumberToString)} {point.trend}
             </Typography>
-          }
+          ))}
           arrow
         >
           <Typography variant="h5" gutterBottom>
             K線
           </Typography>
         </MuiTooltip>
-        {chartData.length > 0 &&
-        chartData[chartData.length - 1].ma5 !== null &&
-        chartData[chartData.length - 1].l > chartData[chartData.length - 2].l &&
-        chartData[chartData.length - 1].c >
-          (chartData[chartData.length - 1].ma5 as number) ? (
-          <ArrowUp color="#e26d6d" />
-        ) : (
-          <ArrowDown color="#79e26d" />
-        )}
+        <Stack  direction="row" spacing={1} alignItems="center">
+          <Typography variant="body2" color="textSecondary">
+            {chartData.length > 0 && chartData[chartData.length - 1]?.trend}
+          </Typography>
+          <Divider orientation="vertical" flexItem />
+          <Typography variant="body2" color="textSecondary">
+            {power}
+          </Typography>
+        </Stack>
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
           <ComposedChart data={chartData.slice(-160)}>
-            <XAxis dataKey="x" />
-            <YAxis domain={["dataMin", "dataMax"]} dataKey="y" />
+            <XAxis dataKey="t" />
+            <YAxis domain={[lMin, hMax]} dataKey="l" />
             <ZAxis type="number" range={[10]} />
             <Tooltip offset={50} />
             <Line

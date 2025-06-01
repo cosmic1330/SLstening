@@ -30,7 +30,7 @@ export default function TickChart({ tickDeals }: { tickDeals:  Omit<TickDealsTyp
   }, [tickDeals]);
 
   return (
-    <Box height={50}>
+    <Box height={100}>
       <ResponsiveContainer>
         <LineChart data={data}>
           <YAxis domain={["dataMin", "dataMax"]} hide />

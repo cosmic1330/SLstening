@@ -2,9 +2,8 @@ import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useTwseDeals from "../../../hooks/useTwseDeals";
-import HourlyChart from "../CommonChart/HourlyChart";
-import TickChart from "../CommonChart/TickChart";
 import { FutureIds } from "../../../types";
+import TickChart from "../CommonChart/TickChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -23,7 +22,6 @@ export default function TwseBox() {
   return (
     <Box my={2} color="#fff" border="1px solid #fff">
       <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={12}>{deals && <HourlyChart deals={deals} />}</Grid2>
         <Grid2 size={12}>
           <Stack
             direction="row"

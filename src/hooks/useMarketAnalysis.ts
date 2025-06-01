@@ -16,6 +16,7 @@ export default function useMarketAnalysis({
   perd,
 }: UseMarketAnalysisOptions) {
   const deals = useMemo(() => {
+    if (!ta || ta.length === 0) return [];
     const response = [];
     let kdData = kd.init(ta[0], 9);
     let macdData = macd.init(ta[0]);

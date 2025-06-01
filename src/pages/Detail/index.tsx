@@ -43,7 +43,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
     () => [
       {
         id: "ma_k",
-        content: <MaKbar />,
+        content: <MaKbar perd={perd} />,
       },
       {
         id: "avg_k",

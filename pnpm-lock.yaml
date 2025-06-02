@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@ch20026103/anysis':
-    specifier: 0.0.17-alpha1
-    version: 0.0.17-alpha1
+    specifier: 0.0.17-alpha2
+    version: 0.0.17-alpha2
   '@ch20026103/backtest-lib':
     specifier: 0.0.3-alpha1
     version: 0.0.3-alpha1
@@ -316,6 +316,10 @@ packages:
 
   /@ch20026103/anysis@0.0.17-alpha1:
     resolution: {integrity: sha512-iYSYGuRu3P9DugXrFvo1upEUxOBZ9s3upIY0Q/Wd1yyT4VNFfMWlLbWrMUSmL5AjZgc1zHJQnECwu+sMxNJafQ==}
+    dev: false
+
+  /@ch20026103/anysis@0.0.17-alpha2:
+    resolution: {integrity: sha512-SOwYjnhnBkkDZwGYzuGKay/hOoSyPi1dOvnQhnPLzsHS1fJuiS4dVJMBz9Zzy6TX26O109GGdHiE3R6cHsNdaQ==}
     dev: false
 
   /@ch20026103/backtest-lib@0.0.3-alpha1:

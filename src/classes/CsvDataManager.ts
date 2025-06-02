@@ -1,4 +1,4 @@
-import { Boll, dateFormat, Kd, Ma, Macd, Obv, Rsi } from "@ch20026103/anysis";
+import { Boll, dateFormat, Kd, Ma, Macd, Obv, ObvEma, Rsi } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import {
   DealTableOptions,
@@ -49,6 +49,7 @@ export default class CsvDataManager {
     const kd = new Kd();
     const rsi = new Rsi();
     const obv = new Obv();
+    const obvEma = new ObvEma();
 
     const init = ta[0];
     let t = dateFormat(init.t, Mode.NumberToString);
@@ -62,7 +63,8 @@ export default class CsvDataManager {
     let kd_data = kd.init(init, 9);
     let rsi5_data = rsi.init(init, 5);
     let rsi10_data = rsi.init(init, 10);
-    let obv_data = obv.init(init, 5);
+    let obv_data = obv.init(init);
+    let obvEma_data = obvEma.init(obv_data.obv, 5);
     data.push({
       stock_id: stock.id,
       t,
@@ -88,7 +90,7 @@ export default class CsvDataManager {
       boll_ma: boll_data.bollMa,
       boll_lb: boll_data.bollLb,
       obv: obv_data.obv,
-      obv5: obv_data.obvMa,
+      obv5: obvEma_data.ema,
     });
 
     for (let i = 1; i < ta.length; i++) {
@@ -104,7 +106,8 @@ export default class CsvDataManager {
       kd_data = kd.next(value, kd_data, 9);
       rsi5_data = rsi.next(value, rsi5_data, 5);
       rsi10_data = rsi.next(value, rsi10_data, 10);
-      obv_data = obv.next(value, obv_data, 5);
+      obv_data = obv.next(value, obv_data);
+      obvEma_data = obvEma.next(obv_data.obv, obvEma_data, 5);
 
       data.push({
         stock_id: stock.id,
@@ -131,7 +134,7 @@ export default class CsvDataManager {
         boll_ma: boll_data.bollMa,
         boll_lb: boll_data.bollLb,
         obv: obv_data.obv,
-        obv5: obv_data.obvMa,
+        obv5: obvEma_data.ema,
       });
     }
     if (type === SkillsTableOptions.DailySkills) this.dailyskills.push(...data);

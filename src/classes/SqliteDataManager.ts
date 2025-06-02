@@ -1,4 +1,4 @@
-import { Boll, Kd, Ma, Macd, Obv, Rsi } from "@ch20026103/anysis";
+import { Boll, Kd, Ma, Macd, Obv, ObvEma, Rsi } from "@ch20026103/anysis";
 import dateFormat, {
   Mode,
 } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
@@ -112,6 +112,7 @@ export default class SqliteDataManager {
       const kd = new Kd();
       const rsi = new Rsi();
       const obv = new Obv();
+      const obvEma = new ObvEma();
 
       const init = ta[0];
       let ma5_data = ma.init(init, 5);
@@ -124,7 +125,8 @@ export default class SqliteDataManager {
       let kd_data = kd.init(init, 9);
       let rsi5_data = rsi.init(init, 5);
       let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
+      let obv_data = obv.init(init);
+      let obvEma_data = obvEma.init(obv_data.obv, 5);
 
       const deals: TimeSharingDealTableType[] = [];
       const skills: TimeSharingSkillsTableType[] = [];
@@ -143,7 +145,8 @@ export default class SqliteDataManager {
           kd_data = kd.next(value, kd_data, 9);
           rsi5_data = rsi.next(value, rsi5_data, 5);
           rsi10_data = rsi.next(value, rsi10_data, 10);
-          obv_data = obv.next(value, obv_data, 5);
+          obv_data = obv.next(value, obv_data);
+          obvEma_data = obvEma.next(obv_data.obv, obvEma_data, 5);
         }
 
         if (sets.lose_deal_set.has(value.t)) {
@@ -184,7 +187,7 @@ export default class SqliteDataManager {
             bollMa: boll_data.bollMa,
             bollLb: boll_data.bollLb,
             obv: obv_data.obv,
-            obv5: obv_data.obvMa,
+            obv5: obvEma_data.ema,
           });
         }
       }
@@ -226,6 +229,7 @@ export default class SqliteDataManager {
       const kd = new Kd();
       const rsi = new Rsi();
       const obv = new Obv();
+      const obvEma = new ObvEma();
 
       const init = ta[0];
       let ma5_data = ma.init(init, 5);
@@ -238,7 +242,8 @@ export default class SqliteDataManager {
       let kd_data = kd.init(init, 9);
       let rsi5_data = rsi.init(init, 5);
       let rsi10_data = rsi.init(init, 10);
-      let obv_data = obv.init(init, 5);
+      let obv_data = obv.init(init);
+      let obvEma_data = obvEma.init(obv_data.obv, 5);
 
       const deals: DealTableType[] = [];
       const skills: SkillsTableType[] = [];
@@ -257,7 +262,8 @@ export default class SqliteDataManager {
           kd_data = kd.next(value, kd_data, 9);
           rsi5_data = rsi.next(value, rsi5_data, 5);
           rsi10_data = rsi.next(value, rsi10_data, 10);
-          obv_data = obv.next(value, obv_data, 5);
+          obv_data = obv.next(value, obv_data);
+          obvEma_data = obvEma.next(obv_data.obv, obvEma_data, 5);
         }
 
         if (sets.lose_deal_set.has(t)) {
@@ -298,19 +304,17 @@ export default class SqliteDataManager {
             bollMa: boll_data.bollMa,
             bollLb: boll_data.bollLb,
             obv: obv_data.obv,
-            obv5: obv_data.obvMa,
+            obv5: obvEma_data.ema,
           });
         }
       }
       await this.saveDealTable(deals, options.dealType, stock);
       info(`save ${options.dealType} db: ${stock.id} ${deals.length} records`);
-      await this.saveSkillsTable(skills, options.skillsType, stock).then(
-        () => {
-          info(
-            `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
-          );
-        }
-      );
+      await this.saveSkillsTable(skills, options.skillsType, stock).then(() => {
+        info(
+          `save ${options.skillsType} db: ${stock.id} ${skills.length} records`
+        );
+      });
       return true;
     } catch (e) {
       error(`${stock.name}: processor error: ${e}`);

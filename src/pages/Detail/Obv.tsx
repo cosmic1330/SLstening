@@ -1,6 +1,7 @@
 import {
   Box,
   Container,
+  Divider,
   Tooltip as MuiTooltip,
   Stack,
   Typography,
@@ -17,35 +18,44 @@ import {
   YAxis,
 } from "recharts";
 import obv from "../../cls_tools/obv";
-import ArrowDown from "../../components/ArrowDown";
-import ArrowUp from "../../components/ArrowUp";
+import obvEma from "../../cls_tools/obvEma";
 import { DealsContext } from "../../context/DealsContext";
+import { UrlTaPerdOptions } from "../../types";
+import analyzeOBVSignals from "../../utils/detectObvDivergence";
 
-export default function Obv() {
+export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
 
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let pre = obv.init(deals[0], 10);
+    let obvData = obv.init(deals[0]);
+    let obvEmaData = obvEma.init(obvData.obv, 10);
+
     response.push({
       t: deals[0].t,
-      obv: pre.obv,
-      obv5: pre.obvMa,
+      obv: obvData.obv,
+      ema10: obvEmaData.ema,
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      pre = obv.next(deal, pre, 10);
+      obvData = obv.next(deal, obvData);
+      obvEmaData = obvEma.next(obvData.obv, obvEmaData, 10);
       response.push({
         t: deal.t,
-        obv: pre.obv,
-        obv5: pre.obvMa,
+        obv: obvData.obv,
+        ema10: obvEmaData.ema,
         c: deal.c,
       });
     }
     return response;
   }, [deals]);
+
+  const singals = useMemo(
+    () => (perd === UrlTaPerdOptions.Day ? analyzeOBVSignals(chartData).splice(-5) : []),
+    [chartData, perd]
+  );
 
   return (
     <Container component="main">
@@ -53,9 +63,13 @@ export default function Obv() {
         <MuiTooltip
           title={
             <Typography>
-              對照股價上升，OBV是否同步上升
+              [頂背離期間搭配日後死叉]
               <br />
-              判斷價量先行和是否量增價漲
+              [底背離期間搭配日後黃叉]
+              <br />
+              頂背離期間＋出現死叉： 趨勢轉空
+              <br />
+              底背離期間＋出現黃叉： 趨勢轉多
             </Typography>
           }
           arrow
@@ -64,16 +78,40 @@ export default function Obv() {
             OBV 流線圖
           </Typography>
         </MuiTooltip>
-        {chartData.length > 1 &&
-        chartData[chartData.length - 1].obv >
-          chartData[chartData.length - 1].obv5 &&
-        chartData[chartData.length - 1].obv -
-          chartData[chartData.length - 1].obv5 >
-          chartData[chartData.length - 2].obv -
-            chartData[chartData.length - 2].obv5 ? (
-          <ArrowUp color="#e26d6d" />
-        ) : (
-          <ArrowDown color="#79e26d" />
+        <Typography variant="body2" gutterBottom>
+          {chartData.length > 1 &&
+          chartData[chartData.length - 1].obv >
+            chartData[chartData.length - 1].ema10 &&
+          chartData[chartData.length - 2].obv <=
+            chartData[chartData.length - 2].ema10 &&
+          chartData[chartData.length - 3].obv <=
+            chartData[chartData.length - 3].ema10
+            ? "黃叉"
+            : chartData.length > 1 &&
+              chartData[chartData.length - 1].obv <
+                chartData[chartData.length - 1].ema10 &&
+              chartData[chartData.length - 2].obv >=
+                chartData[chartData.length - 2].ema10 &&
+              chartData[chartData.length - 3].obv >=
+                chartData[chartData.length - 3].ema10
+            ? "死叉"
+            : "趨勢延續"}
+        </Typography>
+        <Divider orientation="vertical" flexItem />
+        {singals.length > 0 && (
+          <MuiTooltip
+            title={singals?.map((signal) => (
+              <Typography variant="body2" key={signal.t}>
+                {signal.t} {signal.type}
+              </Typography>
+            ))}
+          >
+            <Typography variant="body2" color="textSecondary">
+              {`背離:${singals[singals.length - 1].t} ${
+                singals[singals.length - 1].type
+              }`}
+            </Typography>
+          </MuiTooltip>
         )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
@@ -98,7 +136,7 @@ export default function Obv() {
             <Tooltip offset={50} />
             <Area
               type="monotone"
-              dataKey="obv5"
+              dataKey="ema10"
               stroke="#ff7300"
               fill="#ff7300"
             />

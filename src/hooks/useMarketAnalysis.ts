@@ -62,8 +62,7 @@ export default function useMarketAnalysis({
             deal.ma10 !== null &&
             deal.ma20 !== null &&
             deal.ma5 > deal.ma20 &&
-            deal.ma10 > deal.ma20 &&
-            deal.c > deal.ma20
+            deal.ma10 > deal.ma20
           ) {
             return { ...deal, trend: "多頭" };
           } else if (
@@ -71,8 +70,7 @@ export default function useMarketAnalysis({
             deal.ma10 !== null &&
             deal.ma20 !== null &&
             deal.ma5 < deal.ma20 &&
-            deal.ma10 < deal.ma20 &&
-            deal.c < deal.ma20
+            deal.ma10 < deal.ma20
           ) {
             return { ...deal, trend: "空頭" };
           } else {
@@ -116,25 +114,25 @@ export default function useMarketAnalysis({
     const seclastDeal = deals[deals.length - 2];
     const thrlastDeal = deals[deals.length - 3];
     if (
-      (lastDeal.osc > seclastDeal.osc || lastDeal > thrlastDeal) &&
-      lastDeal.osc > 0
-    ) {
-      return "多方力道漸強";
-    } else if (
-      (lastDeal.osc < seclastDeal.osc || lastDeal < thrlastDeal) &&
+      (lastDeal.osc < seclastDeal.osc || lastDeal.osc < thrlastDeal.osc) &&
       lastDeal.osc < 0
     ) {
       return "空方力道漸強";
     } else if (
-      (lastDeal.osc > seclastDeal.osc || lastDeal > thrlastDeal) &&
-      lastDeal.osc < 0
-    ) {
-      return "多方力道漸弱";
-    } else if (
-      (lastDeal.osc < seclastDeal.osc || lastDeal < thrlastDeal) &&
+      (lastDeal.osc > seclastDeal.osc || lastDeal.osc > thrlastDeal.osc) &&
       lastDeal.osc > 0
     ) {
+      return "多方力道漸強";
+    } else if (
+      (lastDeal.osc > seclastDeal.osc || lastDeal.osc > thrlastDeal.osc) &&
+      lastDeal.osc < 0
+    ) {
       return "空方力道漸弱";
+    } else if (
+      (lastDeal.osc < seclastDeal.osc || lastDeal.osc < thrlastDeal.osc) &&
+      lastDeal.osc > 0
+    ) {
+      return "多方力道漸弱";
     }
     return "無明顯力道";
   }, [deals]);

@@ -60,7 +60,6 @@ export default function AvgMaKbar() {
   }, [deals]);
   // 計算 h 的最大值和 l 的最小值
   const hMax = Math.max(...chartData.map((d) => d.h ?? -Infinity));
-  const lMin = Math.min(...chartData.map((d) => d.l ?? Infinity));
 
   return (
     <Container component="main">
@@ -97,7 +96,7 @@ export default function AvgMaKbar() {
         <ResponsiveContainer>
           <ComposedChart data={chartData.slice(-160)}>
             <XAxis dataKey="x" />
-            <YAxis domain={[lMin, hMax]} dataKey="y" />
+            <YAxis domain={["dataMin", hMax]} dataKey="y" />
             <ZAxis type="number" range={[10]} />
             <Tooltip offset={10} />
             <Line

@@ -1,7 +1,17 @@
-type Item = { c: number; k: number; d: number };
+import { SignalType } from "../types";
 
-export default function detectKdDivergence(data: Item[]) {
-  if (data.length < 10) return false;
+export enum KdSignalType {
+  BEARISH_DIVERGENCE = "頂背離",
+  BULLISH_DIVERGENCE = "底背離",
+}
+
+type Item = { t: number; c: number; k: number; d: number };
+
+export default function detectKdDivergence(
+  data: Item[]
+): SignalType<KdSignalType>[] {
+  if (data.length < 10) return [];
+  const signals: SignalType<KdSignalType>[] = [];
   const crossPoints = [];
 
   // 1. 找出黃金交叉與死亡交叉點
@@ -37,21 +47,26 @@ export default function detectKdDivergence(data: Item[]) {
     }
   }
 
-  // 3. 比較最近兩個 KD 高點
-  if (kdHighs.length < 2) return false;
+  // 3. 比較最近兩個 KD 高點（頂背離）
+  if (kdHighs.length >= 2) {
+    const lastHigh = kdHighs[kdHighs.length - 1];
+    const prevHigh = kdHighs[kdHighs.length - 2];
+    const priceHigherHigh = lastHigh.close > prevHigh.close;
+    const kLowerHigh = lastHigh.k < prevHigh.k;
+    // 4. 確認最後是否發生死亡交叉（代表波段結束）
+    const lastCross = crossPoints[crossPoints.length - 1];
+    const hasRecentDeathCross =
+      lastCross &&
+      lastCross.type === "death" &&
+      lastCross.index >= lastHigh.index;
+    if (priceHigherHigh && kLowerHigh && hasRecentDeathCross) {
+      signals.push({
+        t: data[lastHigh.index].t,
+        type: KdSignalType.BEARISH_DIVERGENCE,
+        description: "價格創新高但KD未創新高，且波段結束，出現頂背離訊號。",
+      });
+    }
+  }
 
-  const lastHigh = kdHighs[kdHighs.length - 1];
-  const prevHigh = kdHighs[kdHighs.length - 2];
-
-  const priceHigherHigh = lastHigh.close > prevHigh.close;
-  const kLowerHigh = lastHigh.k < prevHigh.k;
-
-  // 4. 確認最後是否發生死亡交叉（代表波段結束）
-  const lastCross = crossPoints[crossPoints.length - 1];
-  const hasRecentDeathCross =
-    lastCross &&
-    lastCross.type === "death" &&
-    lastCross.index >= lastHigh.index;
-
-  return priceHigherHigh && kLowerHigh && hasRecentDeathCross;
+  return signals;
 }

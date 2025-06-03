@@ -50,8 +50,7 @@ export default function Kd() {
     return response;
   }, [deals]);
 
-  const KdDivergence = useMemo(() => {
-    if (chartData.length === 0) return null;
+  const singals = useMemo(() => {
     return detectKdDivergence(chartData);
   }, [chartData]);
 
@@ -74,7 +73,21 @@ export default function Kd() {
             KD 背離指標
           </Typography>
         </MuiTooltip>
-        {KdDivergence && "頂背離"}
+        {singals.length > 0 && (
+          <MuiTooltip
+            title={singals?.map((signal) => (
+              <Typography variant="body2" key={signal.t}>
+                {signal.t} {signal.type}
+              </Typography>
+            ))}
+          >
+            <Typography variant="body2" color="textSecondary">
+              {`${singals[singals.length - 1].t} ${
+                singals[singals.length - 1].type
+              }`}
+            </Typography>
+          </MuiTooltip>
+        )}
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer width="100%" height="50%">

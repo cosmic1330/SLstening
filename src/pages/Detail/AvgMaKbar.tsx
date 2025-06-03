@@ -1,4 +1,10 @@
-import { Box, Container, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Container,
+  Tooltip as MuiTooltip,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
   Brush,
@@ -11,12 +17,11 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import ma from "../../cls_tools/ma";
+import ema from "../../cls_tools/ema";
 import ArrowDown from "../../components/ArrowDown";
 import ArrowUp from "../../components/ArrowUp";
-import { DealsContext } from "../../context/DealsContext";
 import AvgCandlestickRectangle from "../../components/RechartCustoms/AvgCandlestickRectangle";
-import { Tooltip as MuiTooltip } from "@mui/material";
+import { DealsContext } from "../../context/DealsContext";
 
 export default function AvgMaKbar() {
   const deals = useContext(DealsContext);
@@ -24,15 +29,13 @@ export default function AvgMaKbar() {
   const chartData = useMemo(() => {
     if (deals?.length === 0) return [];
     const response = [];
-    let ma5_data = ma.init(deals[0], 5);
-    let ma10_data = ma.init(deals[0], 10);
-    let ma20_data = ma.init(deals[0], 20);
+    let ema5_data = ema.init(deals[0], 5);
+    let ema10_data = ema.init(deals[0], 10);
     response.push({
       x: deals[0].t,
       y: deals[0].l,
-      ma20: ma20_data.ma || null,
-      ma5: ma5_data.ma || null,
-      ma10: ma10_data.ma || null,
+      ema5: ema5_data.ema || null,
+      ema10: ema10_data.ema || null,
       c: deals[0].c,
       l: deals[0].l,
       h: deals[0].h,
@@ -40,14 +43,12 @@ export default function AvgMaKbar() {
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
-      ma5_data = ma.next(deal, ma5_data, 5);
-      ma10_data = ma.next(deal, ma10_data, 10);
-      ma20_data = ma.next(deal, ma20_data, 20);
+      ema5_data = ema.next(deal, ema5_data, 5);
+      ema10_data = ema.next(deal, ema10_data, 10);
       response.push({
         x: deal.t,
-        ma5: ma5_data.ma || null,
-        ma10: ma10_data.ma || null,
-        ma20: ma20_data.ma || null,
+        ema10: ema10_data.ema || null,
+        ema5: ema5_data.ema || null,
         y: deal.l,
         c: deal.c,
         l: deal.l,
@@ -57,6 +58,9 @@ export default function AvgMaKbar() {
     }
     return response;
   }, [deals]);
+  // 計算 h 的最大值和 l 的最小值
+  const hMax = Math.max(...chartData.map((d) => d.h ?? -Infinity));
+  const lMin = Math.min(...chartData.map((d) => d.l ?? Infinity));
 
   return (
     <Container component="main">
@@ -76,14 +80,14 @@ export default function AvgMaKbar() {
           arrow
         >
           <Typography variant="h5" gutterBottom>
-            均K指標
+            均K力道指標
           </Typography>
         </MuiTooltip>
         {chartData.length > 0 &&
-        chartData[chartData.length - 1].ma5 !== null &&
-        chartData[chartData.length - 1].l > chartData[chartData.length - 2].l &&
-        chartData[chartData.length - 1].c >
-          (chartData[chartData.length - 1].ma5 as number) ? (
+        chartData[chartData.length - 1].ema5 !== null &&
+        chartData[chartData.length - 1].ema10 !== null &&
+        chartData[chartData.length - 1].ema5! >
+          chartData[chartData.length - 1].ema10! ? (
           <ArrowUp color="#e26d6d" />
         ) : (
           <ArrowDown color="#79e26d" />
@@ -93,9 +97,9 @@ export default function AvgMaKbar() {
         <ResponsiveContainer>
           <ComposedChart data={chartData.slice(-160)}>
             <XAxis dataKey="x" />
-            <YAxis domain={["dataMin", "dataMax"]} dataKey="y" />
+            <YAxis domain={[lMin, hMax]} dataKey="y" />
             <ZAxis type="number" range={[10]} />
-            <Tooltip offset={50} />
+            <Tooltip offset={10} />
             <Line
               dataKey="h"
               stroke="#000"
@@ -131,27 +135,20 @@ export default function AvgMaKbar() {
             <Customized component={AvgCandlestickRectangle} />
 
             <Line
-              dataKey="ma5"
+              dataKey="ema5"
               stroke="#589bf3"
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Line
-              dataKey="ma10"
+              dataKey="ema10"
               stroke="#ff7300"
               dot={false}
               activeDot={false}
               legendType="none"
             />
-            <Line
-              dataKey="ma20"
-              stroke="#63c762"
-              dot={false}
-              activeDot={false}
-              legendType="none"
-            />
-            <Brush dataKey="name" height={20} stroke="#8884d8" />
+            <Brush dataKey="name" height={5} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

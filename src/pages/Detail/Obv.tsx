@@ -107,7 +107,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
             ))}
           >
             <Typography variant="body2" color="textSecondary">
-              {`背離:${singals[singals.length - 1].t} ${
+              {`${singals[singals.length - 1].t} ${
                 singals[singals.length - 1].type
               }`}
             </Typography>

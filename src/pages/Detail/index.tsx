@@ -28,7 +28,6 @@ const Ma = lazy(() => import("./Ma"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
 const Kd = lazy(() => import("./Kd"));
-const Close = lazy(() => import("./Close"));
 
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
@@ -42,20 +41,16 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const slides = useMemo(
     () => [
       {
+        id: "ma",
+        content: <Ma />,
+      },
+      {
         id: "ma_k",
         content: <MaKbar perd={perd} />,
       },
       {
         id: "avg_k",
         content: <AvgMaKbar />,
-      },
-      {
-        id: "obv",
-        content: <Obv perd={perd} />,
-      },
-      {
-        id: "ma",
-        content: <Ma />,
       },
       {
         id: "mj",
@@ -70,8 +65,8 @@ const FullscreenVerticalCarousel: React.FC = () => {
         content: <Kd />,
       },
       {
-        id: "low_close",
-        content: <Close />,
+        id: "obv",
+        content: <Obv perd={perd} />,
       },
     ],
     [perd]

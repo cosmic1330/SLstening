@@ -1,19 +1,17 @@
-enum OBVSignalType {
+import { SignalType } from "../types";
+
+enum ObvSignalType {
   BEARISH_DIVERGENCE = "頂背離",
   BULLISH_DIVERGENCE = "底背離",
 }
-interface OBVSignal {
-  t: number;
-  type: OBVSignalType;
-  description: string;
-}
+
 
 // 主判斷函式
-function analyzeOBVSignals(
+function detectObvDivergence(
   data: { t: number; c: number; obv: number }[],
   lookbackPeriod: number = 21 // 背離檢測週期
-): OBVSignal[] {
-  const signals: OBVSignal[] = [];
+): SignalType[] {
+  const signals: SignalType[] = [];
 
   // 主迴圈分析
   for (let i = lookbackPeriod; i < data.length; i++) {
@@ -37,7 +35,7 @@ function analyzeOBVSignals(
     ) {
       signals.push({
         t: current.t,
-        type: OBVSignalType.BEARISH_DIVERGENCE,
+        type: ObvSignalType.BEARISH_DIVERGENCE,
         description: `價格創${lookbackPeriod}日新高但OBV未同步，觀察日後是否有K線反轉型態或Obv死叉。`,
       });
     }
@@ -48,7 +46,7 @@ function analyzeOBVSignals(
     ) {
       signals.push({
         t: current.t,
-        type: OBVSignalType.BULLISH_DIVERGENCE,
+        type: ObvSignalType.BULLISH_DIVERGENCE,
         description: `價格創${lookbackPeriod}日新低但OBV未同步，若OBV金叉，且價格突破均線壓力，確認多頭啟動。`,
       });
     }
@@ -57,4 +55,4 @@ function analyzeOBVSignals(
   return signals;
 }
 
-export default analyzeOBVSignals;
+export default detectObvDivergence;

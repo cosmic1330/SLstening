@@ -63,7 +63,7 @@ export default function Ma() {
         ma20: ma20_data.ma || null,
         ma60: ma60_data.ma || null,
         ma120: ma120_data.ma || null,
-        ...deal
+        ...deal,
       });
     }
     return response;
@@ -113,7 +113,7 @@ export default function Ma() {
               chartData[chartData.length - 1].ma20 !== null &&
               chartData[chartData.length - 1].c <
                 chartData[chartData.length - 1].ma20!
-            ? ArrangementTypeMode.CloseFallingBelowMa20 
+            ? ArrangementTypeMode.CloseFallingBelowMa20
             : chartData.length > 1 &&
               chartData[chartData.length - 1] != null &&
               chartData[chartData.length - 1].ma20 !== null &&

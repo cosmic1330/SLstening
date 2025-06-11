@@ -111,16 +111,22 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
               activeDot={false}
               legendType="none"
             />
-
-            <Line
+<Line
               dataKey="ma10"
-              stroke="#ff7300"
+              stroke="#b277f2"
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Line
               dataKey="ma20"
+              stroke="#ff7300"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="ma60"
               stroke="#63c762"
               dot={false}
               activeDot={false}

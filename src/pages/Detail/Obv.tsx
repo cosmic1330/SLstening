@@ -12,6 +12,7 @@ import {
   Brush,
   ComposedChart,
   Line,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,8 +21,8 @@ import {
 import obv from "../../cls_tools/obv";
 import obvEma from "../../cls_tools/obvEma";
 import { DealsContext } from "../../context/DealsContext";
-import { UrlTaPerdOptions } from "../../types";
-import analyzeOBVSignals from "../../utils/detectObvDivergence";
+import { DivergenceSignalType, UrlTaPerdOptions } from "../../types";
+import detectObvDivergence from "../../utils/detectObvDivergence";
 
 export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
@@ -35,7 +36,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
     response.push({
       t: deals[0].t,
       obv: obvData.obv,
-      ema10: obvEmaData.ema,
+      emaObv10: obvEmaData.ema,
       c: deals[0].c,
     });
     for (let i = 1; i < deals.length; i++) {
@@ -45,17 +46,17 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
       response.push({
         t: deal.t,
         obv: obvData.obv,
-        ema10: obvEmaData.ema,
+        emaObv10: obvEmaData.ema,
         c: deal.c,
       });
     }
     return response;
   }, [deals]);
 
-  const singals = useMemo(
-    () => (perd === UrlTaPerdOptions.Day ? analyzeOBVSignals(chartData).splice(-5) : []),
-    [chartData, perd]
-  );
+  const singals = useMemo(() => {
+    const data = chartData;
+    return detectObvDivergence(data).splice(-5);
+  }, [chartData, perd]);
 
   return (
     <Container component="main">
@@ -81,19 +82,19 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
         <Typography variant="body2" gutterBottom>
           {chartData.length > 1 &&
           chartData[chartData.length - 1].obv >
-            chartData[chartData.length - 1].ema10 &&
+            chartData[chartData.length - 1].emaObv10 &&
           chartData[chartData.length - 2].obv <=
-            chartData[chartData.length - 2].ema10 &&
+            chartData[chartData.length - 2].emaObv10 &&
           chartData[chartData.length - 3].obv <=
-            chartData[chartData.length - 3].ema10
+            chartData[chartData.length - 3].emaObv10
             ? "黃叉"
             : chartData.length > 1 &&
               chartData[chartData.length - 1].obv <
-                chartData[chartData.length - 1].ema10 &&
+                chartData[chartData.length - 1].emaObv10 &&
               chartData[chartData.length - 2].obv >=
-                chartData[chartData.length - 2].ema10 &&
+                chartData[chartData.length - 2].emaObv10 &&
               chartData[chartData.length - 3].obv >=
-                chartData[chartData.length - 3].ema10
+                chartData[chartData.length - 3].emaObv10
             ? "死叉"
             : "趨勢延續"}
         </Typography>
@@ -127,6 +128,19 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
               activeDot={false}
               legendType="none"
             />
+            {singals.map((signal) => (
+              <ReferenceDot
+                key={signal.t}
+                x={signal.t}
+                y={signal.c}
+                r={3}
+                fill={
+                  signal.type === DivergenceSignalType.BEARISH_DIVERGENCE
+                    ? "green"
+                    : "red"
+                }
+              />
+            ))}
           </ComposedChart>
         </ResponsiveContainer>
         <ResponsiveContainer width="100%" height="50%">
@@ -136,7 +150,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
             <Tooltip offset={50} />
             <Area
               type="monotone"
-              dataKey="ema10"
+              dataKey="emaObv10"
               stroke="#ff7300"
               fill="#ff7300"
             />

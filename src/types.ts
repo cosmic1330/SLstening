@@ -223,3 +223,8 @@ export interface SignalType<T = string> {
   type: T;
   description: string;
 }
+
+export enum DivergenceSignalType {
+  BEARISH_DIVERGENCE = "頂背離",
+  BULLISH_DIVERGENCE = "底背離",
+}

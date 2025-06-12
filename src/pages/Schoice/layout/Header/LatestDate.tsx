@@ -2,14 +2,13 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import PetsIcon from "@mui/icons-material/Pets";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { error } from "@tauri-apps/plugin-log";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react";
 import SqliteDataManager from "../../../../classes/SqliteDataManager";
 import { DatabaseContext } from "../../../../context/DatabaseContext";
 import useSchoiceStore from "../../../../store/Schoice.store";
-import useStocksStore from "../../../../store/Stock.store";
 
 export default function LatestDate() {
-  const { menu } = useStocksStore();
+  const [stocksCount, setStocksCount] = useState(0);
   const { dataCount, changeDataCount } = useSchoiceStore();
   const { db, dates } = useContext(DatabaseContext);
 
@@ -23,6 +22,14 @@ export default function LatestDate() {
       })
       .catch((e) => {
         error(`Error getting latest daily deal count: ${e}`);
+      });
+    sqliteDataManager
+      .getStocksCount()
+      .then((result) => {
+        setStocksCount(result);
+      })
+      .catch((e) => {
+        error(`Error getting stocks count: ${e}`);
       });
   }, [db]);
 
@@ -41,7 +48,7 @@ export default function LatestDate() {
         <Stack direction="row" spacing={1} justifyContent="flexstart">
           <PetsIcon fontSize="small" />
           <Typography variant="body1" textAlign="right">
-            {menu.length} / {dataCount}
+            {stocksCount} / {dataCount}
           </Typography>
         </Stack>
       </Tooltip>

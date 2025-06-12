@@ -1,17 +1,14 @@
-import { SignalType } from "../types";
+import { DivergenceSignalType, SignalType } from "../types";
 
-export enum KdSignalType {
-  BEARISH_DIVERGENCE = "頂背離",
-  BULLISH_DIVERGENCE = "底背離",
+interface KdDivergenceSignal extends SignalType {
+  k: number;
 }
 
 type Item = { t: number; c: number; k: number; d: number };
 
-export default function detectKdDivergence(
-  data: Item[]
-): SignalType<KdSignalType>[] {
+export default function detectKdDivergence(data: Item[]): KdDivergenceSignal[] {
   if (data.length < 10) return [];
-  const signals: SignalType<KdSignalType>[] = [];
+  const signals: KdDivergenceSignal[] = [];
   const crossPoints = [];
 
   // 1. 找出黃金交叉與死亡交叉點
@@ -62,7 +59,8 @@ export default function detectKdDivergence(
     if (priceHigherHigh && kLowerHigh && hasRecentDeathCross) {
       signals.push({
         t: data[lastHigh.index].t,
-        type: KdSignalType.BEARISH_DIVERGENCE,
+        k: data[lastHigh.index].k,
+        type: DivergenceSignalType.BEARISH_DIVERGENCE,
         description: "價格創新高但KD未創新高，且波段結束，出現頂背離訊號。",
       });
     }

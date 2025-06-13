@@ -3,9 +3,6 @@ import { DivergenceSignalType, SignalType } from "../types";
 interface KdDivergenceSignal extends SignalType {
   k: number;
   d: number;
-  h: number;
-  prevHighIndex?: number; // 前一個高點的索引
-  daysDiff?: number; // 與前一個高點的天數差
 }
 
 type Item = {
@@ -159,9 +156,6 @@ export default function detectKdDivergence(data: Item[]): KdDivergenceSignal[] {
         t: currentHigh.t,
         k: currentHigh.k,
         d: currentHigh.d,
-        h: currentHigh.h,
-        prevHighIndex: prevHigh.index,
-        daysDiff: daysDiff,
         type: DivergenceSignalType.BEARISH_DIVERGENCE,
         description: `價格高點較${daysDiff}天前上漲${priceIncrease.toFixed(
           1
@@ -195,9 +189,6 @@ export default function detectKdDivergence(data: Item[]): KdDivergenceSignal[] {
         t: currentLow.t,
         k: currentLow.k,
         d: currentLow.d,
-        h: data[currentLow.index].h, // 當天的高點
-        prevHighIndex: prevLow.index,
-        daysDiff: daysDiff,
         type: DivergenceSignalType.BULLISH_DIVERGENCE,
         description: `價格低點較${daysDiff}天前下跌${priceDecrease.toFixed(
           1

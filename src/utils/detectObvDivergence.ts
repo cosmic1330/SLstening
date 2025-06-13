@@ -1,11 +1,12 @@
 import { DivergenceSignalType, SignalType } from "../types";
 
 interface ObvDivergenceSignal extends SignalType {
-  c: number;
+  price: number;
 }
 
 interface DataPoint {
   t: number;
+  h: number;
   c: number;
   obv: number;
   emaObv10: number;
@@ -87,7 +88,8 @@ function detectObvDivergence(
 
           // 價格創新高的條件
           const priceIncrease = (current.c - prevHigh.c) / prevHigh.c;
-          if (priceIncrease > minPriceDiff) {
+          const priceIncrease2 = (current.h - prevHigh.h) / prevHigh.h;
+          if (priceIncrease > minPriceDiff || priceIncrease2 > minPriceDiff) {
             // OBV沒有同步創新高 = 背離
             if (current.obv < prevHigh.obv) {
               const daysDiff = Math.round(
@@ -95,7 +97,7 @@ function detectObvDivergence(
               );
               signals.push({
                 t: current.t,
-                c: current.c,
+                price: current.h,
                 type: DivergenceSignalType.BEARISH_DIVERGENCE,
                 description: `價格較${daysDiff}天前高點上漲${(
                   priceIncrease * 100
@@ -127,7 +129,7 @@ function detectObvDivergence(
               );
               signals.push({
                 t: current.t,
-                c: current.c,
+                price: current.c,
                 type: DivergenceSignalType.BULLISH_DIVERGENCE,
                 description: `價格較${daysDiff}天前低點下跌${(
                   priceDecrease * 100

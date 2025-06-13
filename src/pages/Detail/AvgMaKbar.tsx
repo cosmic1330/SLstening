@@ -11,6 +11,7 @@ import {
   ComposedChart,
   Customized,
   Line,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -32,34 +33,55 @@ export default function AvgMaKbar() {
     let ema5_data = ema.init(deals[0], 5);
     let ema10_data = ema.init(deals[0], 10);
     response.push({
-      x: deals[0].t,
-      y: deals[0].l,
       ema5: ema5_data.ema || null,
       ema10: ema10_data.ema || null,
-      c: deals[0].c,
-      l: deals[0].l,
-      h: deals[0].h,
-      o: deals[0].o,
+      ...deals[0],
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       ema5_data = ema.next(deal, ema5_data, 5);
       ema10_data = ema.next(deal, ema10_data, 10);
       response.push({
-        x: deal.t,
         ema10: ema10_data.ema || null,
         ema5: ema5_data.ema || null,
-        y: deal.l,
-        c: deal.c,
-        l: deal.l,
-        h: deal.h,
-        o: deal.o,
+        ...deal,
       });
     }
     return response;
   }, [deals]);
   // 計算 h 的最大值和 l 的最小值
-  const hMax = Math.max(...chartData.map((d) => d.h ?? -Infinity));
+  const hMax =
+    +chartData.length === 0
+      ? 0
+      : Math.max(...chartData.map((d) => d.h ?? -Infinity));
+
+  // 找出ema和ema10交叉的點
+  const singals = useMemo(() => {
+    const points = [];
+    for (let i = 1; i < chartData.length; i++) {
+      const prev = chartData[i - 1];
+      const curr = chartData[i];
+      if (
+        prev.ema5 !== null &&
+        prev.ema10 !== null &&
+        curr.ema5 !== null &&
+        curr.ema10 !== null
+      ) {
+        if (prev.ema5 < prev.ema10 && curr.ema5 > curr.ema10) {
+          points.push({
+            ...prev,
+            type: "golden",
+          });
+        } else if (prev.ema5 > prev.ema10 && curr.ema5 < curr.ema10) {
+          points.push({
+            ...prev,
+            type: "death",
+          });
+        }
+      }
+    }
+    return points;
+  }, [chartData]);
 
   return (
     <Container component="main">
@@ -95,10 +117,11 @@ export default function AvgMaKbar() {
       <Box height="calc(100vh - 32px)" width="100%">
         <ResponsiveContainer>
           <ComposedChart data={chartData.slice(-160)}>
-            <XAxis dataKey="x" />
-            <YAxis domain={["dataMin", hMax]} dataKey="y" />
+            <XAxis dataKey="t" />
+            <YAxis domain={["dataMin", hMax]} dataKey="l" />
             <ZAxis type="number" range={[10]} />
             <Tooltip offset={10} />
+
             <Line
               dataKey="h"
               stroke="#000"
@@ -147,6 +170,18 @@ export default function AvgMaKbar() {
               activeDot={false}
               legendType="none"
             />
+            {singals.map((signal) => (
+              <ReferenceDot
+                key={signal.t}
+                x={signal.t}
+                y={
+                  signal.type === "golden" ? signal.ema5! + signal.ema5!*0.03 : signal.ema5! - signal.ema5!*0.03
+                }
+                r={2}
+                fill={signal.type === "golden" ? "#e26d6d" : "#79e26d"}
+                stroke="none"
+              />
+            ))}
             <Brush dataKey="name" height={5} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>

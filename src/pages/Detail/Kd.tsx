@@ -19,8 +19,8 @@ import {
 } from "recharts";
 import kd from "../../cls_tools/kd";
 import { DealsContext } from "../../context/DealsContext";
-import detectKdDivergence from "../../utils/detectKdDivergence";
 import { DivergenceSignalType } from "../../types";
+import detectKdDivergence from "../../utils/detectKdDivergence";
 
 export default function Kd() {
   const deals = useContext(DealsContext);
@@ -112,12 +112,14 @@ export default function Kd() {
               dot={false}
               activeDot={false}
               legendType="none"
-            />{singals.map((signal) => (
+            />
+            {singals.map((signal) => (
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
                 y={signal.k}
                 r={3}
+                stroke={"none"}
                 fill={
                   signal.type === DivergenceSignalType.BEARISH_DIVERGENCE
                     ? "green"

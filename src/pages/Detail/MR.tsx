@@ -90,7 +90,7 @@ export default function MR() {
         </MuiTooltip>
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
-        <ResponsiveContainer width="100%" height="30%">
+        <ResponsiveContainer width="100%" height="50%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
@@ -106,23 +106,25 @@ export default function MR() {
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.c + 3}
-                r={2}
+                y={signal.c + signal.c * 0.02}
+                r={1.5}
                 fill={"red"}
+                stroke={"none"}
               />
             ))}
             {shortSignals.map((signal) => (
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.c - 3}
-                r={2}
+                y={signal.c - signal.c * 0.02}
+                r={1.5}
                 fill={"green"}
+                stroke={"none"}
               />
             ))}
           </ComposedChart>
         </ResponsiveContainer>
-        <ResponsiveContainer width="100%" height="40%">
+        <ResponsiveContainer width="100%" height="25%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis
@@ -132,6 +134,7 @@ export default function MR() {
             <Tooltip offset={50} />
             <ReferenceLine y={80} stroke="#ff0000" strokeDasharray="5 5" />
             <ReferenceLine y={20} stroke="#ff0000" strokeDasharray="5 5" />
+            <ReferenceLine y={50} stroke="#589bf3" strokeDasharray="3" />
             <Line
               dataKey="rsi"
               stroke="#589bf3"
@@ -139,23 +142,9 @@ export default function MR() {
               activeDot={false}
               legendType="none"
             />
-            <Area
-              type="monotone"
-              dataKey="long"
-              fill="#faa"
-              stroke="#faa"
-              baseValue={50}
-            />
-            <Area
-              type="monotone"
-              dataKey="short"
-              fill="#afa"
-              stroke="#afa"
-              baseValue={50}
-            />
           </ComposedChart>
         </ResponsiveContainer>
-        <ResponsiveContainer width="100%" height="30%">
+        <ResponsiveContainer width="100%" height="25%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis />

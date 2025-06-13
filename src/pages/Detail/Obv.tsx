@@ -34,18 +34,18 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
     let obvEmaData = obvEma.init(obvData.obv, 10);
 
     response.push({
+      ...deals[0],
       obv: obvData.obv,
       emaObv10: obvEmaData.ema,
-      ...deals[0],
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       obvData = obv.next(deal, obvData);
       obvEmaData = obvEma.next(obvData.obv, obvEmaData, 10);
       response.push({
+        ...deal,
         obv: obvData.obv,
         emaObv10: obvEmaData.ema,
-        ...deal,
       });
     }
     return response;
@@ -130,8 +130,9 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.c}
+                y={signal.price}
                 r={3}
+                stroke={"none"}
                 fill={
                   signal.type === DivergenceSignalType.BEARISH_DIVERGENCE
                     ? "green"

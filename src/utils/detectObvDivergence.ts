@@ -1,7 +1,7 @@
 import { DivergenceSignalType, SignalType } from "../types";
 
 interface ObvDivergenceSignal extends SignalType {
-  c: number;
+  price: number;
 }
 
 interface DataPoint {
@@ -97,7 +97,7 @@ function detectObvDivergence(
               );
               signals.push({
                 t: current.t,
-                c: current.h,
+                price: current.h,
                 type: DivergenceSignalType.BEARISH_DIVERGENCE,
                 description: `價格較${daysDiff}天前高點上漲${(
                   priceIncrease * 100
@@ -129,7 +129,7 @@ function detectObvDivergence(
               );
               signals.push({
                 t: current.t,
-                c: current.c,
+                price: current.c,
                 type: DivergenceSignalType.BULLISH_DIVERGENCE,
                 description: `價格較${daysDiff}天前低點下跌${(
                   priceDecrease * 100

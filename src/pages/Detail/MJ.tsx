@@ -90,7 +90,7 @@ export default function MJ() {
         </MuiTooltip>
       </Stack>
       <Box height="calc(100vh - 32px)" width="100%">
-        <ResponsiveContainer width="100%" height="30%">
+        <ResponsiveContainer width="100%" height="50%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
@@ -106,23 +106,25 @@ export default function MJ() {
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.c + 3}
-                r={2}
+                y={signal.c + signal.c * 0.02}
+                r={1.5}
                 fill={"red"}
+                stroke={"none"}
               />
             ))}
             {shortSignals.map((signal) => (
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.c - 3}
-                r={2}
+                y={signal.c - signal.c * 0.02}
+                r={1.5}
                 fill={"green"}
+                stroke={"none"}
               />
             ))}
           </ComposedChart>
         </ResponsiveContainer>
-        <ResponsiveContainer width="100%" height="40%">
+        <ResponsiveContainer width="100%" height="25%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis
@@ -155,7 +157,7 @@ export default function MJ() {
             />
           </ComposedChart>
         </ResponsiveContainer>
-        <ResponsiveContainer width="100%" height="30%">
+        <ResponsiveContainer width="100%" height="25%">
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis />

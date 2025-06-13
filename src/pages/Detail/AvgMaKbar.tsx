@@ -50,7 +50,10 @@ export default function AvgMaKbar() {
     return response;
   }, [deals]);
   // 計算 h 的最大值和 l 的最小值
-  const hMax = Math.max(...chartData.map((d) => d.h ?? -Infinity));
+  const hMax =
+    +chartData.length === 0
+      ? 0
+      : Math.max(...chartData.map((d) => d.h ?? -Infinity));
 
   // 找出ema和ema10交叉的點
   const singals = useMemo(() => {
@@ -171,9 +174,12 @@ export default function AvgMaKbar() {
               <ReferenceDot
                 key={signal.t}
                 x={signal.t}
-                y={signal.type === "golden" ? signal.ema5! + 2 : signal.ema5! - 2}
-                r={3}
-                fill={signal.type === "golden" ? "#cc1212" : "#1b920e"}
+                y={
+                  signal.type === "golden" ? signal.ema5! + signal.ema5!*0.03 : signal.ema5! - signal.ema5!*0.03
+                }
+                r={2}
+                fill={signal.type === "golden" ? "#e26d6d" : "#79e26d"}
+                stroke="none"
               />
             ))}
             <Brush dataKey="name" height={5} stroke="#8884d8" />

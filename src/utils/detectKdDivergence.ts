@@ -72,9 +72,9 @@ export default function detectKdDivergence(data: Item[]): KdDivergenceSignal[] {
     if (start.type === "golden") {
       // 找下一個死亡交叉，如果沒有就到數據結尾
       let endIndex = data.length - 1;
-      for (let k = i + 1; k < crossPoints.length; k++) {
-        if (crossPoints[k].type === "death") {
-          endIndex = crossPoints[k].index;
+      for (let j = i + 1; j < crossPoints.length; j++) {
+        if (crossPoints[j].type === "death") {
+          endIndex = crossPoints[j].index;
           break;
         }
       }
@@ -109,9 +109,9 @@ export default function detectKdDivergence(data: Item[]): KdDivergenceSignal[] {
     if (start.type === "death") {
       // 找下一個黃金交叉，如果沒有就到數據結尾
       let endIndex = data.length - 1;
-      for (let k = i + 1; k < crossPoints.length; k++) {
-        if (crossPoints[k].type === "golden") {
-          endIndex = crossPoints[k].index;
+      for (let j = i + 1; j < crossPoints.length; j++) {
+        if (crossPoints[j].type === "golden") {
+          endIndex = crossPoints[j].index;
           break;
         }
       }

@@ -12,6 +12,7 @@ import {
   Brush,
   ComposedChart,
   Line,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -31,32 +32,44 @@ export default function MJ() {
     let kd_data = kd.init(deals[0], 9);
     let macd_data = macd.init(deals[0]);
     response.push({
-      t: deals[0].t,
-      c: deals[0].c,
       j: kd_data.j || null,
       osc: macd_data.osc || null,
       long: null,
       short: null,
       positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
       negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
+      ...deals[0],
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       kd_data = kd.next(deal, kd_data, 9);
       macd_data = macd.next(deal, macd_data);
       response.push({
-        t: deal.t,
-        c: deal.c,
         j: kd_data.j || null,
         osc: macd_data.osc || null,
         long: kd_data.j > 50 && macd_data.osc > 0 ? kd_data.j : null,
         short: kd_data.j < 50 && macd_data.osc < 0 ? kd_data.j : null,
         positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
         negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
+        ...deal,
       });
     }
     return response;
   }, [deals]);
+
+  const longSignals = useMemo(() => {
+    return chartData.filter(
+      (item) =>
+        item.j !== null && item.osc !== null && item.j > 50 && item.osc > 0
+    );
+  }, [chartData]);
+
+  const shortSignals = useMemo(() => {
+    return chartData.filter(
+      (item) =>
+        item.j !== null && item.osc !== null && item.j < 50 && item.osc < 0
+    );
+  }, [chartData]);
 
   return (
     <Container component="main">
@@ -89,6 +102,24 @@ export default function MJ() {
               activeDot={false}
               legendType="none"
             />
+            {longSignals.map((signal) => (
+              <ReferenceDot
+                key={signal.t}
+                x={signal.t}
+                y={signal.c + 3}
+                r={2}
+                fill={"red"}
+              />
+            ))}
+            {shortSignals.map((signal) => (
+              <ReferenceDot
+                key={signal.t}
+                x={signal.t}
+                y={signal.c - 3}
+                r={2}
+                fill={"green"}
+              />
+            ))}
           </ComposedChart>
         </ResponsiveContainer>
         <ResponsiveContainer width="100%" height="40%">

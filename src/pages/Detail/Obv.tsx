@@ -34,20 +34,18 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
     let obvEmaData = obvEma.init(obvData.obv, 10);
 
     response.push({
-      t: deals[0].t,
       obv: obvData.obv,
       emaObv10: obvEmaData.ema,
-      c: deals[0].c,
+      ...deals[0],
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       obvData = obv.next(deal, obvData);
       obvEmaData = obvEma.next(obvData.obv, obvEmaData, 10);
       response.push({
-        t: deal.t,
         obv: obvData.obv,
         emaObv10: obvEmaData.ema,
-        c: deal.c,
+        ...deal,
       });
     }
     return response;

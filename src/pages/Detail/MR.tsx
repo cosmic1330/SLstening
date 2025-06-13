@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
-  Area,
   Bar,
   Brush,
   ComposedChart,

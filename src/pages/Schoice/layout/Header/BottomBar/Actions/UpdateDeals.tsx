@@ -1,10 +1,10 @@
-import { Button, Stack } from "@mui/material";
+import SyncIcon from "@mui/icons-material/Sync";
+import { Button, Stack, Typography } from "@mui/material";
 import { useCallback } from "react";
 import useHighConcurrencyDeals, {
   Status,
-} from "../../../../hooks/useHighConcurrencyDeals";
-import Process from "../../parts/Process";
-import SystemUpdateAltIcon from '@mui/icons-material/SystemUpdateAlt';
+} from "../../../../../../hooks/useHighConcurrencyDeals";
+import Process from "../../../../parts/Process";
 
 export default function UpdateDeals() {
   const { run, status, persent, stop } = useHighConcurrencyDeals();
@@ -19,16 +19,19 @@ export default function UpdateDeals() {
   }, [status, run, stop]);
 
   return (
-    <Stack alignItems="end">
-      {status !== Status.Idle && <Process persent={persent} />}
+    <Stack direction="row" alignItems="center" spacing={1}>
+      <Typography variant="body2" color="text.secondary">
+        {status !== Status.Idle && <Process persent={persent} />}
+      </Typography>
       <Button
-        size="small"
         variant="contained"
         onClick={handleClick}
+        size="large"
+        startIcon={<SyncIcon />}
         color={status === Status.Idle ? "primary" : "error"}
-        startIcon={<SystemUpdateAltIcon />}
+        sx={{ color: "#fff" }}
       >
-        {status === Status.Download ? ` 取消` : "Update"}
+        {status === Status.Download ? ` 取消` : "更新資料"}
       </Button>
     </Stack>
   );

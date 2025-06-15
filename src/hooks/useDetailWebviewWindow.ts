@@ -32,7 +32,7 @@ export default function useDetailWebviewWindow({
         title: `${id} ${name} (${group})`,
         url: `/detail/${id}`,
         width: 700,
-        height: 400,
+        height: 500,
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {

@@ -77,9 +77,25 @@ export default function Ma() {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
-        <Typography variant="h5" gutterBottom>
-          Ma 河流圖
-        </Typography>
+        <MuiTooltip
+          title={
+            <Box>
+              <Typography variant="body2">
+                1.
+                RSI在中間區間（非極端），KD頻繁交叉，且MACD也在零軸附近變化，此時多指向盤整格局
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                2.
+                可結合均線排列、型態學（箱型、三角收斂）、布林通道、成交量等確認行情是否盤整。
+              </Typography>
+            </Box>
+          }
+          arrow
+        >
+          <Typography variant="h5" gutterBottom>
+            Ma 河流圖
+          </Typography>
+        </MuiTooltip>
         <Typography variant="body2" gutterBottom>
           {chartData.length > 1 &&
           chartData[chartData.length - 1] != null &&

@@ -61,13 +61,15 @@ export default function Kd() {
       <Stack spacing={1} direction="row" alignItems="center">
         <MuiTooltip
           title={
-            <Typography>
-              對照股價過高，KD是否同步過高
-              <br />
-              股價過高，KD沒有過高，趨勢轉弱
-              <br />
-              股價破低，KD沒有破低，趨勢轉強
-            </Typography>
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                KD 背離指標用於判斷股價與 KD 指標之間的背離情況。
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                當股價創新高而 KD 沒有同步創新高，或股價創新低而 KD
+                沒有同步創新低時，可能預示著趨勢的轉變。
+              </Typography>
+            </Box>
           }
           arrow
         >

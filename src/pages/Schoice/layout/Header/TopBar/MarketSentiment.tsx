@@ -1,9 +1,10 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, Button, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../../../../../api/http_cache";
+import useDetailWebviewWindow from "../../../../../hooks/useDetailWebviewWindow";
 import useMarketAnalysis from "../../../../../hooks/useMarketAnalysis";
 import { FutureIds, UrlTaPerdOptions, UrlType } from "../../../../../types";
 import analyzeIndicatorsData, {
@@ -12,6 +13,11 @@ import analyzeIndicatorsData, {
 import generateDealDataDownloadUrl from "../../../../../utils/generateDealDataDownloadUrl";
 
 export default function MarketSentiment() {
+  const { openDetailWindow } = useDetailWebviewWindow({
+    id: FutureIds.WTX,
+    name: "台指期近一",
+    group: "期貨",
+  });
   const { data } = useSWR(
     generateDealDataDownloadUrl({
       type: UrlType.Indicators,
@@ -74,10 +80,10 @@ export default function MarketSentiment() {
       </Typography>
 
       <Typography variant="body2">
-        台指期(h):{" "}
-        <Typography variant="body2" component={"span"} fontWeight={700}>
+        台指期(h):
+        <Button variant="text" onClick={openDetailWindow} size="small">
           {ta[ta.length - 1]?.c}
-        </Typography>{" "}
+        </Button>
         <Typography
           variant="body2"
           component={"span"}

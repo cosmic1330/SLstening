@@ -75,11 +75,16 @@ export default function MR() {
       <Stack spacing={1} direction="row" alignItems="center">
         <MuiTooltip
           title={
-            <Typography>
-              RSI線往上穿過中線(50)且Osc從下往上穿過0線(紅柱)，代表買進點
-              <br />
-              RSI線往下穿過中線(50)且Osc從上往下穿過0線(綠柱)，代表賣出點
-            </Typography>
+            <Box>
+              <Typography variant="body2">
+                1. 當 RSI 線往下穿過中線 (50) 且 Osc 從上往下穿過 0 線
+                (綠柱)，代表賣出點。
+              </Typography>
+              <Typography variant="body2">
+                2. 當 RSI 線往上穿過中線 (50) 且 Osc 從下往上穿過 0 線
+                (紅柱)，代表買進點。
+              </Typography>
+            </Box>
           }
           arrow
         >

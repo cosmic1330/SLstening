@@ -7,8 +7,31 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useState } from "react";
 
 export default function SystemStatus() {
+  const [dbSize, setDbSize] = useState<string | null>(null);
+  const [dbPath, setDbPath] = useState<string | null>(null);
+
+  const getStorageSize = useCallback(async () => {
+    // get_db_size 現在回傳 [size, db_path]
+    const result = await invoke<[number, string]>("get_db_size");
+    if (result && Array.isArray(result)) {
+      const [size, path] = result;
+      const sizeInGB = (size / (1024 * 1024 * 1024)).toFixed(2);
+      setDbSize(`${sizeInGB} GB`);
+      setDbPath(path);
+    } else {
+      setDbSize("未知");
+      setDbPath(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    getStorageSize();
+  }, [getStorageSize]);
+
   return (
     <Box mt={5}>
       <Card>
@@ -36,10 +59,10 @@ export default function SystemStatus() {
                 <Storage color="primary" />
                 <Box>
                   <Typography variant="body2" fontWeight="bold">
-                    資料庫大小：1.2 GB
+                    資料庫大小：{dbSize || "載入中..."}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    4,328 筆紀錄
+                  <Typography variant="caption" color="text.secondary" >
+                    {dbPath || "載入中..."}
                   </Typography>
                 </Box>
               </Stack>

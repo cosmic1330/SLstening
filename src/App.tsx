@@ -19,6 +19,7 @@ import Favorite from "./pages/Schoice/Favorite";
 import Trash from "./pages/Schoice/Trash";
 import Backtest from "./pages/Schoice/Backtest";
 import Fundamental from "./pages/Schoice/Fundamental";
+import { UserProvider } from "./context/UserContext";
 
 function App() {
   const { reload } = useStocksStore();
@@ -28,41 +29,43 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route index element={<Login />} />
-        <Route path="register" element={<Register />} />
-        <Route path="add" element={<Add />} />
-        <Route path="schoice" element={<Schoice />}>
-          <Route index element={<PromptList />} />
-          <Route path="favorite" element={<Favorite />} />
-          <Route path="add" element={<PromptAdd />} />
-          <Route path="edit/:id" element={<PromptEdit />} />
-          <Route path="setting" element={<Setting />} />
-          <Route path="trash" element={<Trash />} />
-          <Route path="backtest" element={<Backtest />} />
-          <Route path="fundamental" element={<Fundamental />} />
-          <Route path="*" element={<Navigate to="/schoice" />} />
-        </Route>
-        <Route path="detail/:id" element={<Detail />} />
-        <Route path="dashboard" element={<Home />}>
-          <Route index element={<List />} />
-          <Route path="other" element={<Other />} />
-        </Route>
-      </Routes>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick={false}
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="dark"
-      />
-    </BrowserRouter>
+    <UserProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route index element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="add" element={<Add />} />
+          <Route path="schoice" element={<Schoice />}>
+            <Route index element={<PromptList />} />
+            <Route path="favorite" element={<Favorite />} />
+            <Route path="add" element={<PromptAdd />} />
+            <Route path="edit/:id" element={<PromptEdit />} />
+            <Route path="setting" element={<Setting />} />
+            <Route path="trash" element={<Trash />} />
+            <Route path="backtest" element={<Backtest />} />
+            <Route path="fundamental" element={<Fundamental />} />
+            <Route path="*" element={<Navigate to="/schoice" />} />
+          </Route>
+          <Route path="detail/:id" element={<Detail />} />
+          <Route path="dashboard" element={<Home />}>
+            <Route index element={<List />} />
+            <Route path="other" element={<Other />} />
+          </Route>
+        </Routes>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick={false}
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
+      </BrowserRouter>
+    </UserProvider>
   );
 }
 

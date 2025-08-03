@@ -4,6 +4,7 @@ import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useWtxDeals from "../../../hooks/useWtxDeals";
 import MakChart from "../CommonChart/MakChart";
 import { FutureIds } from "../../../types";
+import { useUser } from "../../../context/UserContext";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -12,6 +13,7 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
 `;
+
 export default function WtxBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
     id: FutureIds.WTX,
@@ -19,6 +21,11 @@ export default function WtxBox() {
     group: "期貨",
   });
   const { deals } = useWtxDeals();
+  const { isPaid } = useUser();
+
+  if (!isPaid) {
+    return null;
+  }
 
   return (
     <Box my={2} color="#fff" border="1px solid #fff">

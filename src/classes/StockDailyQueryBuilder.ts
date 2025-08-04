@@ -1,7 +1,8 @@
 import { QueryBuilderMappingItem, StorePrompt } from "../types";
+import { BaseQueryBuilder } from "./BaseQueryBuilder";
 
-export class StockDailyQueryBuilder {
-  private mapping: Record<string, QueryBuilderMappingItem> = {
+export class StockDailyQueryBuilder extends BaseQueryBuilder {
+  protected mapping: Record<string, QueryBuilderMappingItem> = {
     收盤價: { key: "c", group: "_day_ago" },
     開盤價: { key: "o", group: "_day_ago" },
     成交量: { key: "v", group: "_day_ago" },
@@ -32,41 +33,11 @@ export class StockDailyQueryBuilder {
     obv5: { key: "obv5", group: "_day_ago_sk" },
   };
 
-  // 新增靜態選項
-  static readonly options = {
-    days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前", "自定義數值"],
-    indicators: [
-      "收盤價",
-      "開盤價",
-      "成交量",
-      "最低價",
-      "最高價",
-      "ma5",
-      "ma5扣抵",
-      "ma10",
-      "ma10扣抵",
-      "ma20",
-      "ma20扣抵",
-      "ma60",
-      "ma60扣抵",
-      "ma120",
-      "ma120扣抵",
-      "macd",
-      "dif",
-      "osc",
-      "k",
-      "d",
-      "j",
-      "rsi5",
-      "rsi10",
-      "布林上軌",
-      "布林中軌",
-      "布林下軌",
-      "obv",
-      "obv5",
-    ],
-    operators: ["大於", "小於", "等於", "大於等於", "小於等於"],
-  } as const;
+  protected getSpecificOptions(): Record<string, readonly string[]> {
+    return {
+      days: ["今天", "昨天", "前天", "3天前", "4天前", "5天前", "自定義數值"],
+    };
+  }
 
   private convertDayToNumber(day: string): number {
     const dayMapping: Record<string, number> = {
@@ -78,17 +49,6 @@ export class StockDailyQueryBuilder {
       "5天前": 5,
     };
     return dayMapping[day] || 0;
-  }
-
-  private convertOperator(operator: string): string {
-    const operatorMapping: Record<string, string> = {
-      小於: "<",
-      大於: ">",
-      等於: "=",
-      大於等於: ">=",
-      小於等於: "<=",
-    };
-    return operatorMapping[operator] || "=";
   }
 
   public generateExpression(prompt: StorePrompt): string[] {

@@ -1,4 +1,4 @@
-import { Box, Button, Container, Grid2, Typography } from "@mui/material";
+import { Button, Container, Grid2, Typography } from "@mui/material";
 import { nanoid } from "nanoid";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
@@ -6,12 +6,17 @@ import useSchoiceStore from "../../../store/Schoice.store";
 import { Prompts, PromptType } from "../../../types";
 import ExpressionGenerator from "../parts/ExpressionGenerator";
 import PromptName from "../parts/PromptName";
+import { PromptList } from "../parts/PromptList";
+
+type PromptCategory = "hourly" | "daily" | "weekly";
 
 export default function PromptAdd() {
   const { increase, selectObj } = useSchoiceStore();
-  const [hourlyPrompts, setHourlyPrompts] = useState<Prompts>([]);
-  const [dailyPrompts, setDailyPrompts] = useState<Prompts>([]);
-  const [weekPrompts, setWeekPrompts] = useState<Prompts>([]);
+  const [prompts, setPrompts] = useState<Record<PromptCategory, Prompts>>({
+    hourly: [],
+    daily: [],
+    weekly: [],
+  });
 
   const [name, setName] = useState(nanoid());
   const location = useLocation();
@@ -22,11 +27,7 @@ export default function PromptAdd() {
   const handleCreate = async () => {
     const id = await increase(
       name,
-      {
-        hourly: hourlyPrompts,
-        daily: dailyPrompts,
-        weekly: weekPrompts,
-      },
+      prompts,
       promptType === "bulls" ? PromptType.BULLS : PromptType.BEAR
     );
     if (id)
@@ -37,22 +38,18 @@ export default function PromptAdd() {
     navigate("/schoice");
   };
 
-  const handleRemove = (
-    type: "hourly" | "daily" | "weekly",
-    index: number
-  ) => {
-    switch (type) {
-      case "hourly":
-        setHourlyPrompts(hourlyPrompts.filter((_, i) => i !== index));
-        break;
-      case "daily":
-        setDailyPrompts(dailyPrompts.filter((_, i) => i !== index));
-        break;
-      case "weekly":
-        setWeekPrompts(weekPrompts.filter((_, i) => i !== index));
-        break;
-    }
+  const handleRemove = (type: PromptCategory, index: number) => {
+    setPrompts((prev) => ({
+      ...prev,
+      [type]: prev[type].filter((_, i) => i !== index),
+    }));
   };
+
+  const promptCategories: { type: PromptCategory; title: string }[] = [
+    { type: "hourly", title: "已加入的小時線條件" },
+    { type: "daily", title: "已加入的日線條件" },
+    { type: "weekly", title: "已加入的週線條件" },
+  ];
 
   return (
     <Grid2 container>
@@ -71,92 +68,35 @@ export default function PromptAdd() {
           <ExpressionGenerator
             {...{
               promptType,
-              setHourlyPrompts,
-              setDailyPrompts,
-              setWeekPrompts,
+              setHourlyPrompts: (newPrompts) =>
+                setPrompts((p) => ({ ...p, hourly: newPrompts(p.hourly) })),
+              setDailyPrompts: (newPrompts) =>
+                setPrompts((p) => ({ ...p, daily: newPrompts(p.daily) })),
+              setWeekPrompts: (newPrompts) =>
+                setPrompts((p) => ({ ...p, weekly: newPrompts(p.weekly) })),
             }}
           />
         </Container>
       </Grid2>
       <Grid2 size={6}>
         <Container>
-          <Typography variant="h5" gutterBottom my={2}>
-            已加入的小時線條件
-          </Typography>
-          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
-            {hourlyPrompts.length === 0 && (
-              <Typography variant="body2" gutterBottom>
-                空
-              </Typography>
-            )}
-            {hourlyPrompts.map((prompt, index) => (
-              <Typography key={index} variant="body2" gutterBottom>
-                {index + 1}. {Object.values(prompt).join("")}{" "}
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={() => handleRemove("hourly", index)}
-                >
-                  Remove
-                </Button>
-              </Typography>
-            ))}
-          </Box>
-
-          <Typography variant="h5" gutterBottom my={2}>
-            已加入的日線條件
-          </Typography>
-          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
-            {dailyPrompts.length === 0 && (
-              <Typography variant="body2" gutterBottom>
-                空
-              </Typography>
-            )}
-            {dailyPrompts.map((prompt, index) => (
-              <Typography key={index} variant="body2" gutterBottom>
-                {index + 1}. {Object.values(prompt).join("")}{" "}
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={() => handleRemove("daily", index)}
-                >
-                  Remove
-                </Button>
-              </Typography>
-            ))}
-          </Box>
-
-          <Typography variant="h5" gutterBottom my={2}>
-            已加入的週線條件
-          </Typography>
-          <Box border="1px solid #000" borderRadius={1} p={2} mb={2}>
-            {weekPrompts.length === 0 && (
-              <Typography variant="body2" gutterBottom>
-                空
-              </Typography>
-            )}
-            {weekPrompts.map((prompt, index) => (
-              <Typography key={index} variant="body2" gutterBottom>
-                {index + 1}. {Object.values(prompt).join("")}{" "}
-                <Button
-                  size="small"
-                  color="error"
-                  onClick={() => handleRemove("weekly", index)}
-                >
-                  Remove
-                </Button>
-              </Typography>
-            ))}
-          </Box>
+          {promptCategories.map(({ type, title }) => (
+            <PromptList
+              key={type}
+              title={title}
+              prompts={prompts[type]}
+              onRemove={(index) => handleRemove(type, index)}
+            />
+          ))}
 
           <Button
             onClick={handleCreate}
             fullWidth
             variant="contained"
             disabled={
-              (hourlyPrompts.length === 0 &&
-                dailyPrompts.length === 0 &&
-                weekPrompts.length === 0) ||
+              (prompts.hourly.length === 0 &&
+                prompts.daily.length === 0 &&
+                prompts.weekly.length === 0) ||
               name === ""
             }
             color="success"

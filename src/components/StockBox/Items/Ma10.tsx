@@ -1,4 +1,4 @@
-import { Box, Grid2, Tooltip, Typography } from "@mui/material";
+import { Box, Grid, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 
 function TooltipConent({
@@ -18,27 +18,27 @@ function TooltipConent({
 }) {
   return (
     <Box>
-      <Grid2 container>
-        <Grid2 size={6}>
+      <Grid container>
+        <Grid size={6}>
           <Typography variant="body2" color="#fff">
             ma10
           </Typography>
-        </Grid2>
-        <Grid2 size={6}>
+        </Grid>
+        <Grid size={6}>
           <Typography
             variant="body2"
             color={lastPrice > ma10 ? "#fff" : "#e58282"}
           >
             {ma10}
           </Typography>
-        </Grid2>
+        </Grid>
 
-        <Grid2 size={6}>
+        <Grid size={6}>
           <Typography variant="body2" color="#fff">
             ma10扣抵
           </Typography>
-        </Grid2>
-        <Grid2 size={6}>
+        </Grid>
+        <Grid size={6}>
           <Typography
             variant="body2"
             color={lastPrice > ma10_deduction_value ? "#fff" : "#e58282"}
@@ -51,13 +51,13 @@ function TooltipConent({
           >
             {ma10_deduction_time}
           </Typography>
-        </Grid2>
-        <Grid2 size={6}>
+        </Grid>
+        <Grid size={6}>
           <Typography variant="body2" color="#fff">
             明日ma10扣抵
           </Typography>
-        </Grid2>
-        <Grid2 size={6}>
+        </Grid>
+        <Grid size={6}>
           <Typography
             variant="body2"
             color={
@@ -74,8 +74,8 @@ function TooltipConent({
           >
             {ma10_tomorrow_deduction_time}
           </Typography>
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

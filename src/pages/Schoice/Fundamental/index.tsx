@@ -1,19 +1,19 @@
-import { useState } from "react";
-import { StockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
-import { StorePrompt } from "../../../types";
+import AddCircleIcon from "@mui/icons-material/AddCircle";
 import {
+  Box,
   Button,
+  Grid,
   MenuItem,
+  Paper,
   Select,
   SelectChangeEvent,
   TextField,
-  Typography,
-  Box,
-  Paper,
   Tooltip,
-  Grid2,
+  Typography,
 } from "@mui/material";
-import AddCircleIcon from "@mui/icons-material/AddCircle";
+import { useState } from "react";
+import { StockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
+import { StorePrompt } from "../../../types";
 import ConditionsList from "./ConditionsList";
 import ConditionsTable from "./ConditionsTable";
 import FundamentalResult from "./FundamentalResult";
@@ -59,11 +59,11 @@ export default function Fundamental() {
   };
 
   return (
-    <Grid2 container spacing={2} px={2}>
-      <Grid2 size={6}>
+    <Grid container spacing={2} px={2}>
+      <Grid size={6}>
         <ConditionsTable />
-      </Grid2>
-      <Grid2 size={6} sx={{ overflowY: "auto" }}>
+      </Grid>
+      <Grid size={6} sx={{ overflowY: "auto" }}>
         <Paper
           variant="outlined"
           sx={{ padding: "20px", marginBottom: "20px" }}
@@ -129,10 +129,10 @@ export default function Fundamental() {
             handleDeleteCondition,
           }}
         />
-      </Grid2>
-      <Grid2 size={12}>
+      </Grid>
+      <Grid size={12}>
         <FundamentalResult />
-      </Grid2>
-    </Grid2>
+      </Grid>
+    </Grid>
   );
 }

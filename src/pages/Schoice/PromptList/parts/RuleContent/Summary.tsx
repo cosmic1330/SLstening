@@ -1,5 +1,5 @@
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { Grid2 } from "@mui/material";
+import { Grid } from "@mui/material";
 import Accordion from "@mui/material/Accordion";
 import AccordionDetails from "@mui/material/AccordionDetails";
 import AccordionSummary from "@mui/material/AccordionSummary";
@@ -22,8 +22,8 @@ export default function Summary({
         <Typography variant="body1">策略內容</Typography>
       </AccordionSummary>
       <AccordionDetails>
-        <Grid2 container spacing={2}>
-          <Grid2 size={3}>
+        <Grid container spacing={2}>
+          <Grid size={3}>
             <Typography variant="h6" gutterBottom>
               小時線
             </Typography>
@@ -37,8 +37,8 @@ export default function Summary({
                   prompt.indicator2}
               </Typography>
             ))}
-          </Grid2>
-          <Grid2 size={3}>
+          </Grid>
+          <Grid size={3}>
             <Typography variant="h6" gutterBottom>
               日線
             </Typography>
@@ -52,8 +52,8 @@ export default function Summary({
                   prompt.indicator2}
               </Typography>
             ))}
-          </Grid2>
-          <Grid2 size={3}>
+          </Grid>
+          <Grid size={3}>
             <Typography variant="h6" gutterBottom>
               週線
             </Typography>
@@ -67,8 +67,8 @@ export default function Summary({
                   prompt.indicator2}
               </Typography>
             ))}
-          </Grid2>
-        </Grid2>
+          </Grid>
+        </Grid>
       </AccordionDetails>
     </Accordion>
   );

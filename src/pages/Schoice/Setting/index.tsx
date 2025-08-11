@@ -1,5 +1,6 @@
-import { Container, Grid2, Typography } from "@mui/material";
+import { Container, Grid, Typography } from "@mui/material";
 import CacheManagement from "./CacheManagement";
+import CloudSync from "./CloudSync";
 import DatabaseDeletion from "./DatabaseDeletion";
 import DatabaseRepair from "./DatabaseRepair";
 import OtherSettings from "./OtherSettings";
@@ -11,12 +12,13 @@ export default function Setting() {
       <Typography variant="h5" fontWeight="bold" mb={3}>
         系統管理
       </Typography>
-      <Grid2 container spacing={3}>
+      <Grid container spacing={2}>
         <DatabaseRepair />
         <DatabaseDeletion />
         <CacheManagement />
         <OtherSettings />
-      </Grid2>
+        <CloudSync />
+      </Grid>
       <SystemStatus />
     </Container>
   );

@@ -4,7 +4,7 @@ import EmojiNatureIcon from "@mui/icons-material/EmojiNature";
 import {
   Button,
   Container,
-  Grid2,
+  Grid,
   Stack,
   Switch,
   Typography,
@@ -46,14 +46,14 @@ function Other() {
       }}
     >
       <Stack height="100%" justifyContent="center" spacing={4}>
-        <Grid2 container spacing={1}>
-          <Grid2 size={6} display="flex" alignItems="center">
+        <Grid container spacing={1}>
+          <Grid size={6} display="flex" alignItems="center">
             <DownloadIcon />
             <Typography variant="body1" fontWeight="bold" ml={1}>
               更新股票列表
             </Typography>
-          </Grid2>
-          <Grid2
+          </Grid>
+          <Grid
             size={6}
             justifyContent="flex-end"
             display="flex"
@@ -68,15 +68,15 @@ function Other() {
             >
               {disable ? "執行中..." : "更新"}
             </Button>
-          </Grid2>
+          </Grid>
 
-          <Grid2 size={6} display="flex" alignItems="center">
+          <Grid size={6} display="flex" alignItems="center">
             <EmojiNatureIcon />
             <Typography variant="body1" fontWeight="bold" ml={1}>
               視窗置頂
             </Typography>
-          </Grid2>
-          <Grid2
+          </Grid>
+          <Grid
             size={6}
             justifyContent="flex-end"
             display="flex"
@@ -88,15 +88,15 @@ function Other() {
               }
               onChange={handleAlwaysOnTopChange}
             />
-          </Grid2>
+          </Grid>
 
-          <Grid2 size={6} display="flex" alignItems="center">
+          <Grid size={6} display="flex" alignItems="center">
             <EmojiNatureIcon />
             <Typography variant="body1" fontWeight="bold" ml={1}>
               回到原廠設定
             </Typography>
-          </Grid2>
-          <Grid2
+          </Grid>
+          <Grid
             size={6}
             justifyContent="flex-end"
             display="flex"
@@ -110,8 +110,8 @@ function Other() {
             >
               清除資料
             </Button>
-          </Grid2>
-        </Grid2>
+          </Grid>
+        </Grid>
         <Button
           variant="contained"
           size="small"

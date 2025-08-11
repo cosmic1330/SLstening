@@ -4,7 +4,7 @@ import {
   Card,
   CardActions,
   CardContent,
-  Grid2,
+  Grid,
   Stack,
   Switch,
   Typography,
@@ -14,7 +14,7 @@ import { useState } from "react";
 export default function CacheManagement() {
   const [autoClear, setAutoClear] = useState(false);
   return (
-    <Grid2 size={{ xs: 12, md: 6 }}>
+    <Grid size={{ xs: 12, md: 6 }}>
       <Card sx={{ height: "100%" }}>
         <CardContent>
           <Stack direction="row" alignItems="center" spacing={1} mb={1}>
@@ -43,6 +43,6 @@ export default function CacheManagement() {
           </Stack>
         </CardActions>
       </Card>
-    </Grid2>
+    </Grid>
   );
 }

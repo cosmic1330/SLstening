@@ -11,7 +11,7 @@ import {
   Button,
   Container,
   Divider,
-  Grid2,
+  Grid,
   IconButton,
   MenuItem,
   Paper,
@@ -168,8 +168,8 @@ export default function Backtest() {
         elevation={16}
         sx={{ padding: 2, marginBottom: 2, borderRadius: 2 }}
       >
-        <Grid2 container spacing={3}>
-          <Grid2 size={4}>
+        <Grid container spacing={3}>
+          <Grid size={4}>
             <Typography variant="subtitle1" gutterBottom>
               Bull Strategy
               <Tooltip title="可支持多選，多選結果為符合A或B或C其一時，納入待購清單，於隔日買進。">
@@ -197,9 +197,9 @@ export default function Backtest() {
                 </MenuItem>
               ))}
             </Select>
-          </Grid2>
+          </Grid>
 
-          <Grid2 size={4}>
+          <Grid size={4}>
             <Typography variant="subtitle1" gutterBottom>
               Bears Strategy
               <Tooltip title="可支持多選，多選結果為符合A或B或C其一時，納入待售清單，於隔日賣出。">
@@ -228,9 +228,9 @@ export default function Backtest() {
                 </MenuItem>
               ))}
             </Select>
-          </Grid2>
+          </Grid>
 
-          <Grid2 size={4}>
+          <Grid size={4}>
             <Typography variant="subtitle1" gutterBottom>
               Source
             </Typography>
@@ -249,17 +249,17 @@ export default function Backtest() {
                 </MenuItem>
               )}
             </Select>
-          </Grid2>
+          </Grid>
 
           {/* Additional Options */}
-          <Grid2 size={12}>
+          <Grid size={12}>
             <Typography variant="subtitle1" gutterBottom>
               Additional Options
             </Typography>
             <Options {...{ isRandom, setIsRandom, options, setOptions }} />
-          </Grid2>
+          </Grid>
 
-          <Grid2 size={12}>
+          <Grid size={12}>
             <Stack direction="row" spacing={2} justifyContent="center">
               {!ctx && status === Status.Idle && (
                 <Button variant="contained" onClick={createContext}>
@@ -286,8 +286,8 @@ export default function Backtest() {
                 </Button>
               )}
             </Stack>
-          </Grid2>
-        </Grid2>
+          </Grid>
+        </Grid>
       </Paper>
 
       {ctx && <Progress />}

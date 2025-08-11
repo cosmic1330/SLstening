@@ -1,16 +1,26 @@
-import { Card, CardContent, Chip, Stack, Typography, Grid2, Box } from "@mui/material";
-import { useState, useEffect } from "react";
-import useSchoiceStore from "../../../store/Schoice.store";
-import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
-import { StockStoreType } from "../../../types";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Grid,
+  Stack,
+  Typography,
+} from "@mui/material";
+import { useEffect, useState } from "react";
 import useDatabaseQuery from "../../../hooks/useDatabaseQuery";
+import useFindStocksByPrompt from "../../../hooks/useFindStocksByPrompt";
+import useSchoiceStore from "../../../store/Schoice.store";
+import { StockStoreType } from "../../../types";
 
 export default function Alarm({ stocks }: { stocks: StockStoreType[] }) {
   const { alarms } = useSchoiceStore();
   const { getPromptSqlScripts, getCombinedSqlScript } = useFindStocksByPrompt();
   const query = useDatabaseQuery();
 
-  const [stockAlarmMap, setStockAlarmMap] = useState<Record<string, string[]>>({});
+  const [stockAlarmMap, setStockAlarmMap] = useState<Record<string, string[]>>(
+    {}
+  );
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -40,27 +50,34 @@ export default function Alarm({ stocks }: { stocks: StockStoreType[] }) {
     }
     if (stocks.length && Object.keys(alarms).length) fetchData();
     else setStockAlarmMap({});
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [alarms, stocks]);
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Typography variant="h6" gutterBottom color="primary" >
+      <Typography variant="h6" gutterBottom color="primary">
         Alarm 警示條件對照
       </Typography>
       {stocks.length === 0 ? (
         <Typography color="text.secondary">無追蹤股票</Typography>
       ) : (
-        <Grid2 container spacing={2}>
+        <Grid container spacing={2}>
           {stocks
-            .filter((stock) =>
-              stockAlarmMap[stock.id] && stockAlarmMap[stock.id].length > 0
+            .filter(
+              (stock) =>
+                stockAlarmMap[stock.id] && stockAlarmMap[stock.id].length > 0
             )
             .map((stock) => (
-              <Grid2 key={stock.id} size={3}>
+              <Grid key={stock.id} size={3}>
                 <Card sx={{ borderRadius: 2, minHeight: 120, boxShadow: 3 }}>
                   <CardContent>
-                    <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      gutterBottom
+                    >
                       {stock.id} {stock.name}
                     </Typography>
                     {loading ? (
@@ -68,15 +85,20 @@ export default function Alarm({ stocks }: { stocks: StockStoreType[] }) {
                     ) : (
                       <Stack direction="row" spacing={1} flexWrap="wrap">
                         {stockAlarmMap[stock.id].map((alarm, idx) => (
-                          <Chip key={idx} label={alarm} color="warning" size="small" />
+                          <Chip
+                            key={idx}
+                            label={alarm}
+                            color="warning"
+                            size="small"
+                          />
                         ))}
                       </Stack>
                     )}
                   </CardContent>
                 </Card>
-              </Grid2>
+              </Grid>
             ))}
-        </Grid2>
+        </Grid>
       )}
     </Box>
   );

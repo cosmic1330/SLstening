@@ -1,19 +1,19 @@
+import DeleteIcon from "@mui/icons-material/Delete";
+import StarBorderIcon from "@mui/icons-material/StarBorder";
 import {
-  Typography,
-  Paper,
   Card,
   CardContent,
-  Grid2,
   Chip,
-  Tooltip,
-  IconButton,
-  Stack,
   Divider,
+  Grid,
+  IconButton,
+  Paper,
+  Stack,
+  Tooltip,
+  Typography,
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { StorePrompt } from "../../../types";
 import ConditionsListResult from "./ConditionsListResult";
-import StarBorderIcon from "@mui/icons-material/StarBorder";
 
 export default function ConditionsList({
   prompts,
@@ -27,9 +27,9 @@ export default function ConditionsList({
       <Typography variant="h6" gutterBottom fontWeight="bold">
         條件列表
       </Typography>
-      <Grid2 container spacing={2}>
+      <Grid container spacing={2}>
         {prompts.map((prompt, index) => (
-          <Grid2 size={3} key={index}>
+          <Grid size={3} key={index}>
             <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
               <CardContent>
                 <Stack
@@ -97,9 +97,9 @@ export default function ConditionsList({
                 </Stack>
               </CardContent>
             </Card>
-          </Grid2>
+          </Grid>
         ))}
-      </Grid2>
+      </Grid>
       <Divider sx={{ my: 2 }} />
       <ConditionsListResult {...{ prompts }} />
     </Paper>

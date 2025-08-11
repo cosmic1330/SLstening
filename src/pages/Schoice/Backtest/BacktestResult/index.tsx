@@ -1,5 +1,5 @@
 import { Context } from "@ch20026103/backtest-lib";
-import { Grid2 as Grid } from "@mui/material";
+import { Grid } from "@mui/material";
 import CapitalInventory from "./CapitalInventory";
 import History from "./History";
 import Inventory from "./Inventory";

@@ -1,12 +1,12 @@
-import { Button, Container, Grid2, Typography } from "@mui/material";
+import { Button, Container, Grid, Typography } from "@mui/material";
 import { nanoid } from "nanoid";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import useSchoiceStore from "../../../store/Schoice.store";
 import { Prompts, PromptType } from "../../../types";
 import ExpressionGenerator from "../parts/ExpressionGenerator";
-import PromptName from "../parts/PromptName";
 import { PromptList } from "../parts/PromptList";
+import PromptName from "../parts/PromptName";
 
 type PromptCategory = "hourly" | "daily" | "weekly";
 
@@ -52,8 +52,8 @@ export default function PromptAdd() {
   ];
 
   return (
-    <Grid2 container>
-      <Grid2 size={6}>
+    <Grid container>
+      <Grid size={6}>
         <Container>
           <Typography
             variant="h5"
@@ -77,8 +77,8 @@ export default function PromptAdd() {
             }}
           />
         </Container>
-      </Grid2>
-      <Grid2 size={6}>
+      </Grid>
+      <Grid size={6}>
         <Container>
           {promptCategories.map(({ type, title }) => (
             <PromptList
@@ -104,7 +104,7 @@ export default function PromptAdd() {
             建立
           </Button>
         </Container>
-      </Grid2>
-    </Grid2>
+      </Grid>
+    </Grid>
   );
 }

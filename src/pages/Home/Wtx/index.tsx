@@ -1,10 +1,10 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
-import { Grid2, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import { useUser } from "../../../context/UserContext";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useWtxDeals from "../../../hooks/useWtxDeals";
-import MakChart from "../CommonChart/MakChart";
 import { FutureIds } from "../../../types";
-import { useUser } from "../../../context/UserContext";
+import MakChart from "../CommonChart/MakChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -29,9 +29,9 @@ export default function WtxBox() {
 
   return (
     <Box my={2} color="#fff" border="1px solid #fff">
-      <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={12}>{deals && <MakChart deals={deals} />}</Grid2>
-        <Grid2 size={12}>
+      <Grid container alignItems="center" mb={1}>
+        <Grid size={12}>{deals && <MakChart deals={deals} />}</Grid>
+        <Grid size={12}>
           <Stack
             direction="row"
             alignItems="center"
@@ -62,8 +62,8 @@ export default function WtxBox() {
               {deals && deals.change}
             </Typography>
           </Stack>
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
     </Box>
   );
 }

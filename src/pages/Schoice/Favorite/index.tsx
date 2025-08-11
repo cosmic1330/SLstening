@@ -1,4 +1,4 @@
-import { Container, Grid2, Typography } from "@mui/material";
+import { Container, Grid, Typography } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import ResultTable from "../../../components/ResultTable/ResultTable";
 import { ActionButtonType } from "../../../components/ResultTable/types";
@@ -32,16 +32,16 @@ export default function Favorite() {
 
   return (
     <Container>
-      <Grid2 container>
-        <Grid2 size={12}>
+      <Grid container>
+        <Grid size={12}>
           <Typography variant="h5" gutterBottom textTransform="uppercase">
             Favorite
           </Typography>
           <Alarm stocks={stocks} />
           <InsertFavorite />
           <ResultTable {...{ result }} type={ActionButtonType.Decrease} />
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
     </Container>
   );
 }

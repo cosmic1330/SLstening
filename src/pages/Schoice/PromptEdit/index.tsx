@@ -1,11 +1,4 @@
-import {
-  Box,
-  Button,
-  Container,
-  Grid2,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Container, Grid, Stack, Typography } from "@mui/material";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSchoiceStore from "../../../store/Schoice.store";
@@ -45,10 +38,7 @@ export default function PromptEdit() {
     }
   };
 
-  const handleRemove = (
-    type: "hourly" | "daily" | "weekly",
-    index: number
-  ) => {
+  const handleRemove = (type: "hourly" | "daily" | "weekly", index: number) => {
     switch (type) {
       case "hourly":
         setHourlyPrompts(hourlyPrompts.filter((_, i) => i !== index));
@@ -72,8 +62,8 @@ export default function PromptEdit() {
       </Typography>
     );
   return (
-    <Grid2 container>
-      <Grid2 size={6}>
+    <Grid container>
+      <Grid size={6}>
         <Container>
           <Typography
             variant="h5"
@@ -96,8 +86,8 @@ export default function PromptEdit() {
             }}
           />
         </Container>
-      </Grid2>
-      <Grid2 size={6}>
+      </Grid>
+      <Grid size={6}>
         <Container>
           <Typography variant="h5" gutterBottom my={2}>
             已加入的小時線條件
@@ -207,7 +197,7 @@ export default function PromptEdit() {
             </Button>
           </Stack>
         </Container>
-      </Grid2>
-    </Grid2>
+      </Grid>
+    </Grid>
   );
 }

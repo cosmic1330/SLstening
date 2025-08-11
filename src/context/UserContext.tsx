@@ -9,7 +9,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [isPaid, setIsPaid] = useState(false);
+  const [isPaid, setIsPaid] = useState(true);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -24,7 +24,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (error) {
           console.error('Error fetching profile:', error);
         } else if (profile) {
-          setIsPaid(profile.plan_tier === 'premium');
+          // setIsPaid(profile.plan_tier === 'premium');
+          setIsPaid(true);
         }
       }
     };

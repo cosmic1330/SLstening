@@ -1,12 +1,5 @@
 import { Backup, CheckCircle, Storage } from "@mui/icons-material";
-import {
-  Box,
-  Card,
-  CardContent,
-  Grid2,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, Grid, Stack, Typography } from "@mui/material";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 
@@ -33,14 +26,14 @@ export default function SystemStatus() {
   }, [getStorageSize]);
 
   return (
-    <Box mt={5}>
+    <Box mt={4}>
       <Card>
         <CardContent>
           <Typography variant="subtitle1" fontWeight="bold" mb={2}>
             系統狀態
           </Typography>
-          <Grid2 container spacing={2}>
-            <Grid2 size={{ xs: 12, md: 4 }}>
+          <Grid container spacing={2}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <CheckCircle color="success" />
                 <Box>
@@ -53,21 +46,21 @@ export default function SystemStatus() {
                   </Typography>
                 </Box>
               </Stack>
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Storage color="primary" />
                 <Box>
                   <Typography variant="body2" fontWeight="bold">
                     資料庫大小：{dbSize || "載入中..."}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" >
+                  <Typography variant="caption" color="text.secondary">
                     {dbPath || "載入中..."}
                   </Typography>
                 </Box>
               </Stack>
-            </Grid2>
-            <Grid2 size={{ xs: 12, md: 4 }}>
+            </Grid>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <Backup color="secondary" />
                 <Box>
@@ -79,8 +72,8 @@ export default function SystemStatus() {
                   </Typography>
                 </Box>
               </Stack>
-            </Grid2>
-          </Grid2>
+            </Grid>
+          </Grid>
         </CardContent>
       </Card>
     </Box>

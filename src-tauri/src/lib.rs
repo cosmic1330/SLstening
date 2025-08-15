@@ -129,7 +129,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_sql::Builder::new()
-                .add_migrations("sqlite:schoice.db", sqlite::migrations::value())
+                .add_migrations("sqlite:slistening.db", sqlite::migrations::value())
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
@@ -151,7 +151,10 @@ pub fn run() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, create_csv_from_json,])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            create_csv_from_json
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

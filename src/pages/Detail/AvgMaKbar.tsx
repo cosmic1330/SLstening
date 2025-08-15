@@ -175,7 +175,7 @@ export default function AvgMaKbar() {
                 key={signal.t}
                 x={signal.t}
                 y={
-                  signal.type === "golden" ? signal.ema5! + signal.ema5!*0.03 : signal.ema5! - signal.ema5!*0.03
+                  signal.type === "golden" ? signal.ema5! + signal.ema5!*0.015 : signal.ema5! - signal.ema5!*0.015
                 }
                 r={2}
                 fill={signal.type === "golden" ? "#e26d6d" : "#79e26d"}

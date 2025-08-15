@@ -1,10 +1,4 @@
-import {
-  Button,
-  Grid2,
-  Box as MuiBox,
-  styled,
-  Typography,
-} from "@mui/material";
+import { Button, Grid, Box as MuiBox, styled, Typography } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { useMemo } from "react";
 import useDeals from "../../hooks/useDeals";
@@ -80,8 +74,8 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
 
   return (
     <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
-      <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={5}>
+      <Grid container alignItems="center" mb={1}>
+        <Grid size={5}>
           <Button
             variant="contained"
             size="small"
@@ -93,13 +87,13 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           >
             {stock.id} {name}
           </Button>
-        </Grid2>
-        <Grid2 size={7}>
+        </Grid>
+        <Grid size={7}>
           <Title stock={stock} lastPrice={lastPrice} percent={percent} />
-        </Grid2>
-      </Grid2>
-      <Grid2 container alignItems="center" mb={1}>
-        <Grid2 size={3}>
+        </Grid>
+      </Grid>
+      <Grid container alignItems="center" mb={1}>
+        <Grid size={3}>
           <Ma5
             {...{
               ma5,
@@ -110,8 +104,8 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
               ma5_tomorrow_deduction_value,
             }}
           />
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <Ma10
             {...{
               ma10,
@@ -122,8 +116,8 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
               ma10_tomorrow_deduction_value,
             }}
           />
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <Typography
             variant="body2"
             gutterBottom
@@ -146,24 +140,24 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           >
             {deals.length > 0 && deals[deals.length - 2].l}
           </Typography>
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <AvgPrice {...{ lastPrice, tickDeals }} />
-        </Grid2>
+        </Grid>
 
-        <Grid2 size={3}>
+        <Grid size={3}>
           <Volume {...{ deals }} />
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <PreVolume {...{ deals }} />
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <VolumeEstimated {...{ deals, estimatedVolume }} />
-        </Grid2>
-        <Grid2 size={3}>
+        </Grid>
+        <Grid size={3}>
           <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
-        </Grid2>
-      </Grid2>
+        </Grid>
+      </Grid>
       {tickDeals && <TickChart {...{ tickDeals }} />}
     </Box>
   );

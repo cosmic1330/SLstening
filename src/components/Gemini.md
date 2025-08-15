@@ -6,8 +6,6 @@ This directory contains reusable React components that are used throughout the a
 
 - **ArrowDown.tsx** and **ArrowUp.tsx**: Simple components that display down and up arrows, respectively, using Material-UI's `ForwardRoundedIcon` with a rotation.
 
-- **InsertRuleButton.tsx**: A button that opens a dialog to allow users to insert a new "rule" by pasting a JSON string. The component validates the JSON and adds the new rule to the application's state using the `useSchoiceStore` hook.
-
 - **LanguageSwitcher.tsx**: A button that switches the application's language between English and Traditional Chinese using the `react-i18next` library.
 
 - **SpeedDial.tsx**: A Material-UI Speed Dial component that provides quick access to common actions, such as:

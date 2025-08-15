@@ -118,7 +118,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       opacity: 0,
       transition: { duration: 0.3, ease: "easeInOut" },
     }),
-  };
+  } as any;
 
   const direction = (next: number) => next - current;
 

@@ -1,7 +1,7 @@
 {
   "identifier": "desktops",
   "platforms": ["macOS", "windows", "linux"],
-  "windows": ["main", "detail", "add", "schoice"],
+  "windows": ["main", "detail", "add"],
   "permissions": [
     "core:default",
     "opener:default",

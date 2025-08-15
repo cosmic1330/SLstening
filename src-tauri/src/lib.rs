@@ -121,20 +121,6 @@ fn create_csv_from_json(
     write_entities_to_csv(&entities, &csv_path).map_err(|e| format!("CSV 創建失敗: {:?}", e))
 }
 
-#[tauri::command]
-fn get_db_size(app_handle: tauri::AppHandle) -> Result<(u64, String), String> {
-    // 取得 app 資料夾下的 sqlite 資料庫路徑
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
-    let db_path = app_data_dir.join("schoice.db");
-    let size = std::fs::metadata(&db_path)
-        .map(|meta| meta.len())
-        .map_err(|e| format!("Failed to get db size: {}", e))?;
-    Ok((size, db_path.to_string_lossy().to_string()))
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -143,7 +129,7 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_sql::Builder::new()
-                .add_migrations("sqlite:schoice.db", sqlite::migrations::value())
+                .add_migrations("sqlite:slistening.db", sqlite::migrations::value())
                 .build(),
         )
         .plugin(tauri_plugin_shell::init())
@@ -167,8 +153,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            create_csv_from_json,
-            get_db_size
+            create_csv_from_json
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -6,7 +6,6 @@ This directory contains a collection of custom React hooks that encapsulate reus
 
 - **useAddWebviewWindow.ts**: A hook for opening a new webview window for adding a stock.
 - **useDetailWebviewWindow.ts**: A hook for opening a detail view of a stock in a separate webview window.
-- **useSchoiceWebviewWindow.ts**: A hook for opening the main stock selection window.
 
 ## Data Fetching and Management Hooks
 

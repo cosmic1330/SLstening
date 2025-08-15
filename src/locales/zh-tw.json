@@ -23,21 +23,6 @@
       "required": "股票代號是必填項目",
       "pattern": "股票代號格式不正確",
       "noStock": "請輸入股票代碼"
-    },
-    "Schoice": {
-      "Trash": {
-        "name": "策略名稱",
-        "type": "策略類型",
-        "time": "刪除時間",
-        "action": "操作",
-        "empty": "垃圾桶是空的",
-        "remove": "刪除",
-        "recover": "恢復",
-        "promptDetails": "策略詳情",
-        "hourly": "小時線",
-        "daily": "日線",
-        "weekly": "周線"
-      }
     }
   }
 }

@@ -33,9 +33,33 @@ export class StockWeeklyQueryBuilder extends BaseQueryBuilder {
     obv5: { key: "obv5", group: "_week_ago_sk" },
   };
 
+  protected operatorMapping: Record<string, string> = {
+    小於: "<",
+    大於: ">",
+    等於: "=",
+    大於等於: ">=",
+    小於等於: "<=",
+  };
+
+  getOptions() {
+    return {
+      weeks: this.getSpecificOptions().weeks,
+      indicators: [...Object.keys(this.mapping)],
+      operators: Object.keys(this.operatorMapping),
+    };
+  }
+
   protected getSpecificOptions(): Record<string, readonly string[]> {
     return {
-      weeks: ["本週", "上週", "上上週", "3週前", "4週前", "5週前", "自定義數值"],
+      weeks: [
+        "本週",
+        "上週",
+        "上上週",
+        "3週前",
+        "4週前",
+        "5週前",
+        "自定義數值",
+      ],
     };
   }
 

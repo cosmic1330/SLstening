@@ -68,11 +68,11 @@ export default function PromptAdd() {
           <ExpressionGenerator
             {...{
               promptType,
-              setHourlyPrompts: (newPrompts) =>
+              setHourlyPrompts: (newPrompts: any) =>
                 setPrompts((p) => ({ ...p, hourly: newPrompts(p.hourly) })),
-              setDailyPrompts: (newPrompts) =>
+              setDailyPrompts: (newPrompts: any) =>
                 setPrompts((p) => ({ ...p, daily: newPrompts(p.daily) })),
-              setWeekPrompts: (newPrompts) =>
+              setWeekPrompts: (newPrompts: any) =>
                 setPrompts((p) => ({ ...p, weekly: newPrompts(p.weekly) })),
             }}
           />

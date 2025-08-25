@@ -1,7 +1,7 @@
 import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import { Box, Button, IconButton } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
   lazy,
   Suspense,
@@ -103,7 +103,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
     return () => window.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
 
-  const slideVariants = {
+  const slideVariants: Variants = {
     initial: (direction: number) => ({
       y: direction > 0 ? "100%" : "-100%",
       opacity: 0,

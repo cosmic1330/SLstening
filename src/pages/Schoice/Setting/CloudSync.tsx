@@ -1,4 +1,4 @@
-import CloudIcon from '@mui/icons-material/Cloud';
+import CloudIcon from "@mui/icons-material/Cloud";
 import {
   Box,
   Button,
@@ -9,11 +9,9 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useState } from "react";
-import useDatabase from "../../../hooks/useDatabase";
 
 const CloudSync: React.FC = () => {
   const [updateAt, setUpdateAt] = useState("N/A");
-  const db = useDatabase();
 
   const handleSync = async () => {};
 
@@ -36,7 +34,9 @@ const CloudSync: React.FC = () => {
             mt={2}
           >
             <Box>
-              <Typography variant="body2" gutterBottom>上次更新時間 {updateAt}</Typography>
+              <Typography variant="body2" gutterBottom>
+                上次更新時間 {updateAt}
+              </Typography>
               <Button variant="contained" color="primary" onClick={handleSync}>
                 同步本地資料到雲端
               </Button>

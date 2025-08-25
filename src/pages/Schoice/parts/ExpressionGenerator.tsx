@@ -10,9 +10,9 @@ import {
   ToggleButtonGroup,
 } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
-import { StockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
-import { StockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
-import { StockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
+import { stockDailyQueryBuilder } from "../../../classes/StockDailyQueryBuilder";
+import { stockHourlyQueryBuilder } from "../../../classes/StockHourlyQueryBuilder";
+import { stockWeeklyQueryBuilder } from "../../../classes/StockWeeklyQueryBuilder";
 import { Prompts, StorePrompt } from "../../../types";
 
 type TimeFrame = "hour" | "day" | "week";
@@ -30,25 +30,25 @@ function ExpressionGenerator({
   const [selects, setSelects] = useState<StorePrompt>({
     day1:
       timeFrame === "hour"
-        ? StockHourlyQueryBuilder.options.hours[0]
+        ? stockHourlyQueryBuilder.getOptions().hours[0]
         : timeFrame === "day"
-        ? StockDailyQueryBuilder.options.days[0]
-        : StockWeeklyQueryBuilder.options.weeks[0],
+        ? stockDailyQueryBuilder.getOptions().days[0]
+        : stockWeeklyQueryBuilder.getOptions().weeks[0],
     indicator1:
       timeFrame === "hour"
-        ? StockHourlyQueryBuilder.options.indicators[0]
-        : StockDailyQueryBuilder.options.indicators[0],
-    operator: StockDailyQueryBuilder.options.operators[0],
+        ? stockHourlyQueryBuilder.getOptions().indicators[0]
+        : stockDailyQueryBuilder.getOptions().indicators[0],
+    operator: stockDailyQueryBuilder.getOptions().operators[0],
     day2:
       timeFrame === "hour"
-        ? StockHourlyQueryBuilder.options.hours[0]
+        ? stockHourlyQueryBuilder.getOptions().hours[0]
         : timeFrame === "day"
-        ? StockDailyQueryBuilder.options.days[0]
-        : StockWeeklyQueryBuilder.options.weeks[0],
+        ? stockDailyQueryBuilder.getOptions().days[0]
+        : stockWeeklyQueryBuilder.getOptions().weeks[0],
     indicator2:
       timeFrame === "hour"
-        ? StockHourlyQueryBuilder.options.indicators[0]
-        : StockDailyQueryBuilder.options.indicators[0],
+        ? stockHourlyQueryBuilder.getOptions().indicators[0]
+        : stockDailyQueryBuilder.getOptions().indicators[0],
   });
 
   const handleTimeFrameChange = (
@@ -61,28 +61,28 @@ function ExpressionGenerator({
         ...prev,
         day1:
           newTimeFrame === "hour"
-            ? StockHourlyQueryBuilder.options.hours[0]
+            ? stockHourlyQueryBuilder.getOptions().hours[0]
             : newTimeFrame === "day"
-            ? StockDailyQueryBuilder.options.days[0]
-            : StockWeeklyQueryBuilder.options.weeks[0],
+            ? stockDailyQueryBuilder.getOptions().days[0]
+            : stockWeeklyQueryBuilder.getOptions().weeks[0],
         day2:
           newTimeFrame === "hour"
-            ? StockHourlyQueryBuilder.options.hours[0]
+            ? stockHourlyQueryBuilder.getOptions().hours[0]
             : newTimeFrame === "day"
-            ? StockDailyQueryBuilder.options.days[0]
-            : StockWeeklyQueryBuilder.options.weeks[0],
+            ? stockDailyQueryBuilder.getOptions().days[0]
+            : stockWeeklyQueryBuilder.getOptions().weeks[0],
         indicator1:
           newTimeFrame === "hour"
-            ? StockHourlyQueryBuilder.options.indicators[0]
+            ? stockHourlyQueryBuilder.getOptions().indicators[0]
             : newTimeFrame === "day"
-            ? StockDailyQueryBuilder.options.indicators[0]
-            : StockWeeklyQueryBuilder.options.indicators[0],
+            ? stockDailyQueryBuilder.getOptions().indicators[0]
+            : stockWeeklyQueryBuilder.getOptions().indicators[0],
         indicator2:
           newTimeFrame === "hour"
-            ? StockHourlyQueryBuilder.options.indicators[0]
+            ? stockHourlyQueryBuilder.getOptions().indicators[0]
             : newTimeFrame === "day"
-            ? StockDailyQueryBuilder.options.indicators[0]
-            : StockWeeklyQueryBuilder.options.indicators[0],
+            ? stockDailyQueryBuilder.getOptions().indicators[0]
+            : stockWeeklyQueryBuilder.getOptions().indicators[0],
       }));
     }
   };
@@ -105,19 +105,19 @@ function ExpressionGenerator({
 
   const timeOptions =
     timeFrame === "hour"
-      ? StockHourlyQueryBuilder.options.hours
+      ? stockHourlyQueryBuilder.getOptions().hours
       : timeFrame === "day"
-      ? StockDailyQueryBuilder.options.days
-      : StockWeeklyQueryBuilder.options.weeks;
+      ? stockDailyQueryBuilder.getOptions().days
+      : stockWeeklyQueryBuilder.getOptions().weeks;
 
   const indicators =
     timeFrame === "hour"
-      ? StockHourlyQueryBuilder.options.indicators
+      ? stockHourlyQueryBuilder.getOptions().indicators
       : timeFrame === "day"
-      ? StockDailyQueryBuilder.options.indicators
-      : StockWeeklyQueryBuilder.options.indicators;
+      ? stockDailyQueryBuilder.getOptions().indicators
+      : stockWeeklyQueryBuilder.getOptions().indicators;
 
-  const operators = StockDailyQueryBuilder.options.operators;
+  const operators = stockDailyQueryBuilder.getOptions().operators;
 
   return (
     <Box>

@@ -3,7 +3,6 @@ import BuildIcon from "@mui/icons-material/Build";
 import ContentPasteGoRoundedIcon from "@mui/icons-material/ContentPasteGoRounded";
 import HexagonRoundedIcon from "@mui/icons-material/HexagonRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import RestorePageIcon from "@mui/icons-material/RestorePage";
 import { SpeedDial as MuiSpeedDial } from "@mui/material";
 import SpeedDialAction from "@mui/material/SpeedDialAction";
@@ -16,7 +15,6 @@ import {
 } from "@tauri-apps/plugin-notification";
 import { useNavigate } from "react-router";
 import useAddWebviewWindow from "../hooks/useAddWebviewWindow";
-import useSchoiceWebviewWindow from "../hooks/useSchoiceWebviewWindow";
 import useStocksStore from "../store/Stock.store";
 import { supabase } from "../supabase";
 
@@ -24,7 +22,6 @@ export default function SpeedDial() {
   const { clear, stocks } = useStocksStore();
   const navigate = useNavigate();
   const { openAddWindow } = useAddWebviewWindow();
-  const { openSchoiceWindow } = useSchoiceWebviewWindow();
 
   const handleCopy = async () => {
     try {

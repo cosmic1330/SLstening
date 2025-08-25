@@ -33,6 +33,23 @@ export class StockHourlyQueryBuilder extends BaseQueryBuilder {
     obv5: { key: "obv5", group: "_hour_ago_sk" },
   };
 
+
+  protected operatorMapping: Record<string, string> = {
+    小於: "<",
+    大於: ">",
+    等於: "=",
+    大於等於: ">=",
+    小於等於: "<=",
+  };
+
+  getOptions() {
+    return {
+      hours: this.getSpecificOptions().hours,
+      indicators: [...Object.keys(this.mapping)],
+      operators: Object.keys(this.operatorMapping),
+    };
+  }
+
   protected getSpecificOptions(): Record<string, readonly string[]> {
     return {
       hours: [

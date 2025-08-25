@@ -12,24 +12,22 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
-import { StockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
+import { stockFundamentalQueryBuilder } from "../../../classes/StockFundamentalQueryBuilder";
 import { StorePrompt } from "../../../types";
 import ConditionsList from "./ConditionsList";
 import ConditionsTable from "./ConditionsTable";
 import FundamentalResult from "./FundamentalResult";
 
 export default function Fundamental() {
+  const { indicators, operators } = stockFundamentalQueryBuilder.getOptions();
   const [prompts, setPrompts] = useState<StorePrompt[]>([]);
   const [selects, setSelects] = useState<StorePrompt>({
-    day1: StockFundamentalQueryBuilder.options.days[0],
-    indicator1: StockFundamentalQueryBuilder.options.indicators[0],
-    operator: StockFundamentalQueryBuilder.options.operators[0],
-    day2: StockFundamentalQueryBuilder.options.days[1],
+    day1: stockFundamentalQueryBuilder.getOptions().days[0],
+    indicator1: indicators[0],
+    operator: operators[0],
+    day2: stockFundamentalQueryBuilder.getOptions().days[1],
     indicator2: "0",
   });
-
-  const indicators = StockFundamentalQueryBuilder.options.indicators;
-  const operators = StockFundamentalQueryBuilder.options.operators;
 
   const handleChange = (event: SelectChangeEvent<string>) => {
     const { value, name } = event.target;

@@ -12,6 +12,14 @@ export class StockFundamentalQueryBuilder extends BaseQueryBuilder {
     五年平均殖利率: { key: "dividend_yield_5y", group: "" },
   };
 
+  protected operatorMapping: Record<string, string> = {
+    小於: "<",
+    大於: ">",
+    等於: "=",
+    大於等於: ">=",
+    小於等於: "<=",
+  };
+
   protected getSpecificOptions(): Record<string, readonly string[]> {
     return {
       days: ["今天", "自定義數值"],
@@ -42,6 +50,14 @@ export class StockFundamentalQueryBuilder extends BaseQueryBuilder {
     `;
 
     return query.trim();
+  }
+
+  public getOptions() {
+    return {
+      days: this.getSpecificOptions().days,
+      indicators: [...Object.keys(this.mapping)],
+      operators: Object.keys(this.operatorMapping),
+    };
   }
 }
 

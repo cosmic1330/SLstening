@@ -73,12 +73,12 @@ export default function SpeedDial() {
         onClick={clear}
       />
 
-      <SpeedDialAction
+      {/* <SpeedDialAction
         key={"Update Stock Menu"}
         icon={<QueryStatsIcon />}
         tooltipTitle={"即時選股"}
         onClick={openSchoiceWindow}
-      />
+      /> */}
 
       <SpeedDialAction
         key={"Go Other Page"}

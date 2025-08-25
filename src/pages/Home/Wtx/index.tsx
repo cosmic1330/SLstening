@@ -1,6 +1,5 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
-import { useUser } from "../../../context/UserContext";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useWtxDeals from "../../../hooks/useWtxDeals";
 import { FutureIds } from "../../../types";
@@ -21,11 +20,6 @@ export default function WtxBox() {
     group: "期貨",
   });
   const { deals } = useWtxDeals();
-  const { isPaid } = useUser();
-
-  if (!isPaid) {
-    return null;
-  }
 
   return (
     <Box my={2} color="#fff" border="1px solid #fff">

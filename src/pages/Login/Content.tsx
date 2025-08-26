@@ -64,7 +64,7 @@ const Content = () => {
   return (
     <Box component="form">
       <Typography variant="h4" align="center" gutterBottom>
-        <img src="tauri.svg" alt="logo" style={{ width: "33%" }} />
+        <img src="icon.png" alt="logo" style={{ width: "80%" }} />
       </Typography>
 
       <Box width="100%">

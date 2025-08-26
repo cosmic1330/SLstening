@@ -1,6 +1,5 @@
 import { Container, Grid, Typography } from "@mui/material";
 import CacheManagement from "./CacheManagement";
-import CloudSync from "./CloudSync";
 import DatabaseDeletion from "./DatabaseDeletion";
 import DatabaseRepair from "./DatabaseRepair";
 import OtherSettings from "./OtherSettings";
@@ -17,7 +16,6 @@ export default function Setting() {
         <DatabaseDeletion />
         <CacheManagement />
         <OtherSettings />
-        <CloudSync />
       </Grid>
       <SystemStatus />
     </Container>

@@ -9,10 +9,12 @@ export default function Title({
   stock,
   percent,
   lastPrice,
+  canDelete = true,
 }: {
   stock: StockStoreType;
   percent: number;
   lastPrice: number;
+  canDelete?: boolean;
 }) {
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
@@ -46,7 +48,7 @@ export default function Title({
       >
         {percent}%
       </Typography>
-      <IconButton
+      {canDelete &&<IconButton
         size="small"
         onClick={(e) => {
           e.stopPropagation();
@@ -55,7 +57,7 @@ export default function Title({
         sx={{ color: "#fff" }}
       >
         <DeleteIcon fontSize="small" />
-      </IconButton>
+      </IconButton>}
     </Stack>
   );
 }

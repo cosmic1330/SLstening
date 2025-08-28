@@ -22,7 +22,7 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
 `;
-export default function StockBox({ stock }: { stock: StockStoreType }) {
+export default function StockBox({ stock, canDelete }: { stock: StockStoreType, canDelete?: boolean }) {
   const { deals, name, tickDeals } = useDeals(stock.id);
   const {
     ma5,
@@ -89,7 +89,7 @@ export default function StockBox({ stock }: { stock: StockStoreType }) {
           </Button>
         </Grid>
         <Grid size={7}>
-          <Title stock={stock} lastPrice={lastPrice} percent={percent} />
+          <Title stock={stock} lastPrice={lastPrice} percent={percent} canDelete={canDelete} />
         </Grid>
       </Grid>
       <Grid container alignItems="center" mb={1}>

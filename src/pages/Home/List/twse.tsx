@@ -3,7 +3,7 @@ import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
 import useTwseDeals from "../../../hooks/useTwseDeals";
 import { FutureIds } from "../../../types";
-import TickChart from "../CommonChart/TickChart";
+import TickChart from "../../../components/CommonChart/TickChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);

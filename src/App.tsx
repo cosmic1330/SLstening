@@ -2,24 +2,25 @@ import { useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
 import "./App.css";
+import { UserProvider } from "./context/UserContext";
 import Add from "./pages/Add";
 import Detail from "./pages/Detail/index";
 import Home from "./pages/Home";
+import GreenBall from "./pages/Home/GreenBall";
 import List from "./pages/Home/List";
-import Other from "./pages/Home/Other";
+import RedBall from "./pages/Home/RedBall";
+import Setting from "./pages/Home/Setting";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Schoice from "./pages/Schoice";
+import Backtest from "./pages/Schoice/Backtest";
+import Favorite from "./pages/Schoice/Favorite";
+import Fundamental from "./pages/Schoice/Fundamental";
 import PromptAdd from "./pages/Schoice/PromptAdd";
 import PromptEdit from "./pages/Schoice/PromptEdit";
 import PromptList from "./pages/Schoice/PromptList";
-import Setting from "./pages/Schoice/Setting";
-import useStocksStore from "./store/Stock.store";
-import Register from "./pages/Register";
-import Favorite from "./pages/Schoice/Favorite";
 import Trash from "./pages/Schoice/Trash";
-import Backtest from "./pages/Schoice/Backtest";
-import Fundamental from "./pages/Schoice/Fundamental";
-import { UserProvider } from "./context/UserContext";
+import useStocksStore from "./store/Stock.store";
 
 function App() {
   const { reload } = useStocksStore();
@@ -49,7 +50,10 @@ function App() {
           <Route path="detail/:id" element={<Detail />} />
           <Route path="dashboard" element={<Home />}>
             <Route index element={<List />} />
-            <Route path="other" element={<Other />} />
+            <Route path="setting" element={<Setting />} />
+            <Route path="redball" element={<RedBall />} />
+            <Route path="greenball" element={<GreenBall />} />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
           </Route>
         </Routes>
         <ToastContainer

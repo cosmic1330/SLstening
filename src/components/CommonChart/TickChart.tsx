@@ -7,8 +7,8 @@ import {
   ResponsiveContainer,
   YAxis,
 } from "recharts";
-import { TickDealsType } from "../../../types";
-import getTimeProgressPercent from "../../../utils/getTimeProgressPercent";
+import { TickDealsType } from "../../types";
+import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
 export default function TickChart({ tickDeals }: { tickDeals:  Omit<TickDealsType, "id">  }) {
   const data = useMemo(() => {

@@ -13,10 +13,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
-import useDownloadStocks from "../../hooks/useDownloadStocks";
-import useStocksStore from "../../store/Stock.store";
+import useDownloadStocks from "../../../hooks/useDownloadStocks";
+import useStocksStore from "../../../store/Stock.store";
 
-function Other() {
+function Setting() {
   const { factory_reset } = useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   let navigate = useNavigate();
@@ -126,4 +126,4 @@ function Other() {
     </Container>
   );
 }
-export default Other;
+export default Setting;

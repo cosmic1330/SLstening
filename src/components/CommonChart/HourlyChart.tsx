@@ -1,11 +1,11 @@
 import { Box, Tooltip } from "@mui/material";
 import { useMemo } from "react";
 import { Line, LineChart, ResponsiveContainer, YAxis } from "recharts";
-import boll from "../../../cls_tools/boll";
-import ma from "../../../cls_tools/ma";
-import ChartTooltip from "../../../components/ResultTable/Charts/ChartTooltip";
-import { IndicatorColorType } from "../../../components/ResultTable/types";
-import { DealTableType } from "../../../types";
+import boll from "../../cls_tools/boll";
+import ma from "../../cls_tools/ma";
+import ChartTooltip from "../../components/ResultTable/Charts/ChartTooltip";
+import { IndicatorColorType } from "../../components/ResultTable/types";
+import { DealTableType } from "../../types";
 
 const IndicatorColor: IndicatorColorType[] = [
   {
@@ -102,7 +102,11 @@ export default function HourlyChart({
     return res.splice(-50);
   }, [deals.data]);
   return (
-    <Tooltip title={<ChartTooltip value={IndicatorColor} />} arrow placement="bottom-start">
+    <Tooltip
+      title={<ChartTooltip value={IndicatorColor} />}
+      arrow
+      placement="bottom-start"
+    >
       <Box height={60}>
         <ResponsiveContainer>
           <LineChart data={data}>

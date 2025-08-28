@@ -13,10 +13,10 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import boll from "../../../cls_tools/boll";
-import ma from "../../../cls_tools/ma";
-import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
-import { DealTableType } from "../../../types";
+import boll from "../../cls_tools/boll";
+import ma from "../../cls_tools/ma";
+import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
+import { DealTableType } from "../../types";
 
 // 自訂 Tooltip 元件，顯示 t 及所有 payload
 function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {

@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
 import { useTranslation } from "react-i18next";
+import GoogleOauthButton from "../../components/GoogleOauthButton";
 
 const Content = () => {
   const { t } = useTranslation();
@@ -64,7 +65,7 @@ const Content = () => {
   return (
     <Box component="form">
       <Typography variant="h4" align="center" gutterBottom>
-        <img src="icon.png" alt="logo" style={{ width: "80%" }} />
+        <img src="icon.png" alt="logo" style={{ width: "60%" }} />
       </Typography>
 
       <Box width="100%">
@@ -120,6 +121,14 @@ const Content = () => {
           >
             {t("Pages.Login.signIn")}
           </Button>
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="center"
+          my={2}
+        >
+          <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
         </Stack>
         <Typography color="error" align="center">
           {errorMsg}

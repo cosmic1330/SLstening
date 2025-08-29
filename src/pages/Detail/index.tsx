@@ -36,13 +36,14 @@ const FullscreenVerticalCarousel: React.FC = () => {
     (localStorage.getItem("detail:perd:type") as UrlTaPerdOptions) ||
       UrlTaPerdOptions.Hour
   );
+  const { id } = useParams();
 
   // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
     () => [
       {
         id: "ma",
-        content: <Ma />,
+        content: <Ma id={id} />,
       },
       {
         id: "ma_k",
@@ -136,8 +137,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
       unlisten.then((fn) => fn()); // 清理监听器
     };
   }, []);
-
-  const { id } = useParams();
 
   const { data } = useSWR(
     generateDealDataDownloadUrl({

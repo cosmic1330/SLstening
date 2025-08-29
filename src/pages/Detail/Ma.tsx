@@ -18,6 +18,7 @@ import {
 import ma from "../../cls_tools/ma";
 import { DealsContext } from "../../context/DealsContext";
 import detectMaCrossDivergence from "../../utils/detectMaCrossDivergence";
+import Fundamental from "./Fundamental";
 
 enum ArrangementTypeMode {
   LongArrangement = "多頭排列",
@@ -31,7 +32,7 @@ enum ArrangementTypeMode {
   RisingAboveMa120 = "Ma5站上Ma120",
 }
 
-export default function Ma() {
+export default function Ma({id}: { id: string | undefined }) {
   const deals = useContext(DealsContext);
 
   const chartData = useMemo(() => {
@@ -77,21 +78,7 @@ export default function Ma() {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
-        <MuiTooltip
-          title={
-            <Box>
-              <Typography variant="body2">
-                1.
-                RSI在中間區間（非極端），KD頻繁交叉，且MACD也在零軸附近變化，此時多指向盤整格局
-              </Typography>
-              <Typography variant="body2" gutterBottom>
-                2.
-                可結合均線排列、型態學（箱型、三角收斂）、布林通道、成交量等確認行情是否盤整。
-              </Typography>
-            </Box>
-          }
-          arrow
-        >
+        <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h5" gutterBottom>
             Ma 河流圖
           </Typography>

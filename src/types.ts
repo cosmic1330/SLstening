@@ -228,3 +228,59 @@ export enum DivergenceSignalType {
   BEARISH_DIVERGENCE = "頂背離",
   BULLISH_DIVERGENCE = "底背離",
 }
+
+export type FinancialMetricTableType = {
+  stock_id: string;
+  pe: number | null;
+  pb: number | null;
+  dividend_yield: number | null;
+  report_period: string | null;
+  gross_profit_margin: number | null;
+  operating_margin: number | null;
+  pre_tax_profit_margin: number | null;
+  roa: number | null;
+  roe: number | null;
+  book_value_per_share: number | null;
+  updated_at: string; // 或 Date
+};
+
+export type RecentFundamentalTableType = {
+  stock_id: string;
+
+  // 最近四季 EPS
+  eps_recent_q1: number | null;
+  eps_recent_q1_name: string | null;
+  eps_recent_q2: number | null;
+  eps_recent_q2_name: string | null;
+  eps_recent_q3: number | null;
+  eps_recent_q3_name: string | null;
+  eps_recent_q4: number | null;
+  eps_recent_q4_name: string | null;
+
+  // 最近四年 EPS
+  eps_recent_y1: number | null;
+  eps_recent_y1_name: string | null;
+  eps_recent_y2: number | null;
+  eps_recent_y2_name: string | null;
+  eps_recent_y3: number | null;
+  eps_recent_y3_name: string | null;
+  eps_recent_y4: number | null;
+  eps_recent_y4_name: string | null;
+
+  // 最近四個月 營收（月增率 / 年增率 / 月份名稱）
+  revenue_recent_m1_mom: number | null;
+  revenue_recent_m1_yoy: number | null;
+  revenue_recent_m1_name: string | null;
+
+  revenue_recent_m2_mom: number | null;
+  revenue_recent_m2_yoy: number | null;
+  revenue_recent_m2_name: string | null;
+
+  revenue_recent_m3_mom: number | null;
+  revenue_recent_m3_yoy: number | null;
+  revenue_recent_m3_name: string | null;
+
+  revenue_recent_m4_mom: number | null;
+  revenue_recent_m4_yoy: number | null;
+  revenue_recent_m4_name: string | null;
+};

@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import StockBox from "../../../components/StockBox";
 import { StockStoreType } from "../../../types";
-import BottomBar from "../layout/BottomBar";
 
 function csvToStockStore(csv: string): StockStoreType[] {
   const lines = csv.trim().split(/\r?\n/);
@@ -54,7 +53,6 @@ export default function RedBall() {
         {stocks.map((stock, index) => (
           <StockBox key={index} stock={stock} canDelete={false} />
         ))}
-        <BottomBar />
       </Box>
     </Container>
   );

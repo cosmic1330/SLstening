@@ -7,7 +7,6 @@ import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../../store/Stock.store";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
-import BottomBar from "../layout/BottomBar";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -45,7 +44,6 @@ function List() {
         ) : (
           stocks.map((stock, index) => <StockBox key={index} stock={stock} />)
         )}
-        <BottomBar />
       </Box>
     </Container>
   );

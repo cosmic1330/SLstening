@@ -98,7 +98,6 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     value: any;
     suffix?: string;
     decimals?: number;
-    isPositive?: boolean;
     flex?: boolean;
   }) => (
     <Box

@@ -92,7 +92,6 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     value,
     suffix = "",
     decimals = 2,
-    isPositive = true,
     flex = true,
   }: {
     label: string;

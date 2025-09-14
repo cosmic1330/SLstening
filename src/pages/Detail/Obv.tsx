@@ -8,7 +8,6 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
-  Area,
   Brush,
   ComposedChart,
   Line,
@@ -19,10 +18,10 @@ import {
   YAxis,
 } from "recharts";
 import obv from "../../cls_tools/obv";
-import obvEma from "../../cls_tools/obvEma";
 import { DealsContext } from "../../context/DealsContext";
 import { DivergenceSignalType, UrlTaPerdOptions } from "../../types";
 import detectObvDivergence from "../../utils/detectObvDivergence";
+import detectObvBreakout from "../../utils/detectObvBreakout";
 
 export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
@@ -31,21 +30,17 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
     if (deals?.length === 0) return [];
     const response = [];
     let obvData = obv.init(deals[0]);
-    let obvEmaData = obvEma.init(obvData.obv, 10);
 
     response.push({
       ...deals[0],
       obv: obvData.obv,
-      emaObv10: obvEmaData.ema,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       obvData = obv.next(deal, obvData);
-      obvEmaData = obvEma.next(obvData.obv, obvEmaData, 10);
       response.push({
         ...deal,
         obv: obvData.obv,
-        emaObv10: obvEmaData.ema,
       });
     }
     return response;
@@ -53,7 +48,12 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
 
   const singals = useMemo(() => {
     const data = chartData;
-    return detectObvDivergence(data).splice(-5);
+    return detectObvDivergence(data);
+  }, [chartData, perd]);
+
+  const trends = useMemo(() => {
+    const data = chartData;
+    return detectObvBreakout(data);
   }, [chartData, perd]);
 
   return (
@@ -62,13 +62,21 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
         <MuiTooltip
           title={
             <Typography>
-              [頂背離期間搭配日後死叉]
+              [健康的上升趨勢]價格持續創下新高，同時 OBV
+              線也跟著持續創下新高，買盤力道強勁，趨勢有望延續。
               <br />
-              [底背離期間搭配日後黃叉]
+              [健康的下降趨勢]價格持續創下新低，同時 OBV
+              線也跟著持續創下新低，賣壓沉重，趨勢短期難以扭轉。
               <br />
-              頂背離期間＋出現死叉： 趨勢轉空
+              頂背離: 股價持續上漲，創下近期新高，但 OBV
+              線卻沒有跟著創下新高，反而開始走平或下滑。
               <br />
-              底背離期間＋出現黃叉： 趨勢轉多
+              底背離: 股價持續下跌，創下近期新低，但 OBV
+              線卻沒有跟著創下新低，反而開始走平或小幅上揚。
+              <br />
+              可以像分析股價一樣，在 OBV
+              線上畫出支撐線、壓力線或趨勢線。由於「量在價先」，OBV
+              線的突破通常會早於價格線的突破。
             </Typography>
           }
           arrow
@@ -77,25 +85,6 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
             OBV 流線圖
           </Typography>
         </MuiTooltip>
-        <Typography variant="body2" gutterBottom>
-          {chartData.length > 1 &&
-          chartData[chartData.length - 1].obv >
-            chartData[chartData.length - 1].emaObv10 &&
-          chartData[chartData.length - 2].obv <=
-            chartData[chartData.length - 2].emaObv10 &&
-          chartData[chartData.length - 3].obv <=
-            chartData[chartData.length - 3].emaObv10
-            ? "黃叉"
-            : chartData.length > 1 &&
-              chartData[chartData.length - 1].obv <
-                chartData[chartData.length - 1].emaObv10 &&
-              chartData[chartData.length - 2].obv >=
-                chartData[chartData.length - 2].emaObv10 &&
-              chartData[chartData.length - 3].obv >=
-                chartData[chartData.length - 3].emaObv10
-            ? "死叉"
-            : "趨勢延續"}
-        </Typography>
         <Divider orientation="vertical" flexItem />
         {singals.length > 0 && (
           <MuiTooltip
@@ -143,22 +132,18 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
           </ComposedChart>
         </ResponsiveContainer>
         <ResponsiveContainer width="100%" height="50%">
-          <ComposedChart data={chartData} syncId="anySyncId">
+          <ComposedChart data={trends} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
             <Tooltip offset={50} />
-            <Area
-              type="monotone"
-              dataKey="emaObv10"
-              stroke="#ff7300"
-              fill="#ff7300"
-            />
-            <Area
-              type="monotone"
+            <Line
               dataKey="obv"
               stroke="#589bf3"
-              fill="#589bf3"
+              dot={false}
+              activeDot={false}
+              legendType="none"
             />
+            <Line dataKey="trend" stroke="#f35e5e" dot={false} activeDot={false} legendType="none" />
             <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>

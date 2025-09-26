@@ -3,7 +3,8 @@ import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import { TickDealsType, UrlTaPerdOptions, UrlType } from "../types";
-import analyzeIndicatorsData, {
+import {
+  analyzeIndicatorsData,
   IndicatorsDateTimeType,
 } from "../utils/analyzeIndicatorsData";
 import checkTimeRange from "../utils/checkTimeRange";

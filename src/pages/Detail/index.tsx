@@ -14,8 +14,10 @@ import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
 import { tauriFetcher } from "../../api/http_cache";
 import { DealsContext } from "../../context/DealsContext";
-import { UrlTaPerdOptions, UrlType } from "../../types";
-import analyzeIndicatorsData, {
+import { FutureIds, UrlTaPerdOptions, UrlType } from "../../types";
+import {
+  analyzeIndicatorsData,
+  analyzeNasdaqIndicatorsData,
   IndicatorsDateTimeType,
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
@@ -24,6 +26,7 @@ import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl
 const MaKbar = lazy(() => import("./MaKbar"));
 const AvgMaKbar = lazy(() => import("./AvgMaKbar"));
 const Obv = lazy(() => import("./Obv"));
+const Ad = lazy(() => import("./AdLine"));
 const Ma = lazy(() => import("./Ma"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
@@ -69,6 +72,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "obv",
         content: <Obv perd={perd} />,
+      },
+      {
+        id: "ad",
+        content: <Ad />,
       },
       {
         id: "mfi",
@@ -144,22 +151,35 @@ const FullscreenVerticalCarousel: React.FC = () => {
   }, []);
 
   const { data } = useSWR(
-    generateDealDataDownloadUrl({
-      type: UrlType.Indicators,
-      id: encodeURIComponent(id as string),
-      perd,
-    }),
+    id === FutureIds.NASDAQ
+      ? `https://query1.finance.yahoo.com/v8/finance/chart/${
+          FutureIds.NASDAQ
+        }?interval=${perd === UrlTaPerdOptions.Hour ? "1h" : "1d"}&range=${
+          perd === UrlTaPerdOptions.Hour ? "60d" : "300d"
+        }`
+      : generateDealDataDownloadUrl({
+          type: UrlType.Indicators,
+          id: encodeURIComponent(id as string),
+          perd,
+        }),
     tauriFetcher
   );
 
   const deals = useMemo(() => {
     if (!data || !id || typeof data !== "string") return [];
-    return analyzeIndicatorsData(
-      data,
-      perd === UrlTaPerdOptions.Hour
-        ? IndicatorsDateTimeType.DateTime
-        : IndicatorsDateTimeType.Date
-    );
+    return id === FutureIds.NASDAQ
+      ? analyzeNasdaqIndicatorsData(
+          data,
+          perd === UrlTaPerdOptions.Hour
+            ? IndicatorsDateTimeType.DateTime
+            : IndicatorsDateTimeType.Date
+        )
+      : analyzeIndicatorsData(
+          data,
+          perd === UrlTaPerdOptions.Hour
+            ? IndicatorsDateTimeType.DateTime
+            : IndicatorsDateTimeType.Date
+        );
   }, [data, id, perd]);
 
   return (

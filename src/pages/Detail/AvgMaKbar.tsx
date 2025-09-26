@@ -1,6 +1,11 @@
+import dateFormat, {
+  Mode,
+} from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import InfoIcon from "@mui/icons-material/Info";
 import {
   Box,
   Container,
+  IconButton,
   Tooltip as MuiTooltip,
   Stack,
   Typography,
@@ -86,23 +91,25 @@ export default function AvgMaKbar() {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
+        <Typography variant="h5" gutterBottom>
+          均K力道指標
+        </Typography>
         <MuiTooltip
           title={
-            <Typography>
-              判斷上漲動能是否延續
-              <br />
-              紅色：多方動能
-              <br />
-              綠色：空方動能
-              <br />
-              柱體：越長越強
-            </Typography>
+            <Box>
+              {singals.splice(-5)?.map((point) => (
+                <Typography variant="body2" key={point.t}>
+                  {dateFormat(point.t, Mode.NumberToString)}{" "}
+                  {point.type === "golden" ? "多頭" : "空頭"}
+                </Typography>
+              ))}
+            </Box>
           }
           arrow
         >
-          <Typography variant="h5" gutterBottom>
-            均K力道指標
-          </Typography>
+          <IconButton size="small">
+            <InfoIcon fontSize="small" />
+          </IconButton>
         </MuiTooltip>
         {chartData.length > 0 &&
         chartData[chartData.length - 1].ema5 !== null &&
@@ -175,7 +182,9 @@ export default function AvgMaKbar() {
                 key={signal.t}
                 x={signal.t}
                 y={
-                  signal.type === "golden" ? signal.ema5! + signal.ema5!*0.015 : signal.ema5! - signal.ema5!*0.015
+                  signal.type === "golden"
+                    ? signal.ema5! + signal.ema5! * 0.015
+                    : signal.ema5! - signal.ema5! * 0.015
                 }
                 r={2}
                 fill={signal.type === "golden" ? "#e26d6d" : "#79e26d"}

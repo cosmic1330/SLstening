@@ -1,9 +1,11 @@
 import { dateFormat } from "@ch20026103/anysis";
+import InfoIcon from "@mui/icons-material/Info";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import {
   Box,
   Container,
   Divider,
+  IconButton,
   Tooltip as MuiTooltip,
   Stack,
   Typography,
@@ -42,6 +44,9 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   return (
     <Container component="main">
       <Stack spacing={1} direction="row" alignItems="center">
+        <Typography variant="h5" gutterBottom>
+          K線
+        </Typography>
         <MuiTooltip
           title={trendChangePoints?.splice(-5)?.map((point) => (
             <Typography variant="body2" key={point.t}>
@@ -50,11 +55,11 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
           ))}
           arrow
         >
-          <Typography variant="h5" gutterBottom>
-            K線
-          </Typography>
+          <IconButton size="small">
+            <InfoIcon fontSize="small" />
+          </IconButton>
         </MuiTooltip>
-        <Stack  direction="row" spacing={1} alignItems="center">
+        <Stack direction="row" spacing={1} alignItems="center">
           <Typography variant="body2" color="textSecondary">
             {chartData.length > 0 && chartData[chartData.length - 1]?.trend}
           </Typography>
@@ -111,7 +116,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
               activeDot={false}
               legendType="none"
             />
-<Line
+            <Line
               dataKey="ma10"
               stroke="#b277f2"
               dot={false}

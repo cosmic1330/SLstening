@@ -7,6 +7,7 @@ import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../../store/Stock.store";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
+import NasdaqBox from "./nasdaq";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -35,6 +36,7 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
+        <NasdaqBox />
         <WtxBox />
         <TwseBox />
         {stocks.length === 0 ? (

@@ -216,6 +216,7 @@ export enum UrlTaPerdOptions {
 export enum FutureIds {
   WTX = "WTX%26.TW", // 台指期近一
   TWSE = "^TWII", // 台灣加權指數
+  NASDAQ = "^IXIC", // 納斯達克指數
 }
 
 export interface SignalType<T = string> {

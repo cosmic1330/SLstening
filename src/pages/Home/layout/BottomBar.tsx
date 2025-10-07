@@ -1,14 +1,13 @@
 import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import BuildIcon from "@mui/icons-material/Build";
+import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
+import HomeIcon from "@mui/icons-material/Home";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { AppBar, IconButton, Stack } from "@mui/material";
 import { useNavigate } from "react-router";
 import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { supabase } from "../../../supabase";
-import HomeIcon from '@mui/icons-material/Home';
-import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 export default function BottomBar() {
   const { openAddWindow } = useAddWebviewWindow();
   const navigate = useNavigate();
@@ -16,7 +15,13 @@ export default function BottomBar() {
     <AppBar
       position="fixed"
       color="info"
-      sx={{ top: "auto", bottom: 0, height: 60, display: "flex", justifyContent: "center" }}
+      sx={{
+        top: "auto",
+        bottom: 0,
+        height: 60,
+        display: "flex",
+        justifyContent: "center",
+      }}
     >
       <IconButton
         onClick={openAddWindow}

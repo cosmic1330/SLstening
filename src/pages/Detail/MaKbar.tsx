@@ -33,6 +33,7 @@ import { UrlTaPerdOptions } from "../../types";
 export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
   const [showGaps, setShowGaps] = useState(true); // 控制缺口顯示的狀態
+  const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(false); // 控制是否只顯示未補缺口
 
   const {
     trends: chartData,
@@ -45,7 +46,8 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
 
   // 檢測跳空缺口
   const {
-    gaps,
+    gapsWithFillStatus,
+    unfilledGaps,
     recentGaps,
     totalGaps,
     upGapsCount,
@@ -55,7 +57,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
 
   // 準備缺口視覺化數據
   const { gapLines, enhancedChartData } = useGapVisualization({
-    gaps,
+    gaps: showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus,
     chartData,
     isVisible: showGaps,
   });
@@ -142,6 +144,16 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
               checked={showGaps}
               onChange={(e) => setShowGaps(e.target.checked)}
               color="primary"
+            />
+            <Typography variant="caption" color="textSecondary">
+              只顯示未補缺
+            </Typography>
+            <Switch
+              size="small"
+              checked={showOnlyUnfilled}
+              onChange={(e) => setShowOnlyUnfilled(e.target.checked)}
+              color="secondary"
+              disabled={!showGaps}
             />
           </Stack>
         </Stack>

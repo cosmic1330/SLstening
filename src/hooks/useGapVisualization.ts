@@ -77,19 +77,21 @@ export function useGapVisualization({
         // 但要檢查缺口是否已被回補
         if (dataPoint.t >= gap.date) {
           // 檢查是否已被回補：價格是否觸及缺口區間
-          let isFilledAtThisPoint = false;
+          // let isFilledAtThisPoint = false;
 
-          if (gap.type === "up") {
-            // 向上跳空：如果當天最低價觸及缺口下邊界，則已回補
-            isFilledAtThisPoint = dataPoint.l <= gap.low;
-          } else {
-            // 向下跳空：如果當天最高價觸及缺口上邊界，則已回補
-            isFilledAtThisPoint = dataPoint.h >= gap.high;
-          }
+          // if (gap.type === "up") {
+          //   // 向上跳空：如果當天最低價觸及缺口下邊界，則已回補
+          //   isFilledAtThisPoint = dataPoint.l <= gap.low;
+          // } else {
+          //   // 向下跳空：如果當天最高價觸及缺口上邊界，則已回補
+          //   isFilledAtThisPoint = dataPoint.h >= gap.high;
+          // }
 
           // 如果缺口尚未回補，繼續顯示線條
-          newDataPoint[`gap_upper_${gap.date}`] = gap.upperLine.value;
-          newDataPoint[`gap_lower_${gap.date}`] = gap.lowerLine.value;
+          // if (!gap.filled || dataPoint.t === gap.date || !isFilledAtThisPoint) {
+            newDataPoint[`gap_upper_${gap.date}`] = gap.upperLine.value;
+            newDataPoint[`gap_lower_${gap.date}`] = gap.lowerLine.value;
+          // }
         }
       });
 

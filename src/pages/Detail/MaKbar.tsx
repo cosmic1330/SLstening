@@ -34,6 +34,57 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
   const [showGaps, setShowGaps] = useState(true); // 控制缺口顯示的狀態
   const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(false); // 控制是否只顯示未補缺口
+  const [hoveredGapDate, setHoveredGapDate] = useState<number | undefined>(
+    undefined
+  ); // 控制高亮的缺口日期
+
+  // 自定義 Tooltip 組件來處理 hover 事件
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      // 檢查當前 hover 的位置是否有缺口
+      const currentGaps = (
+        showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus
+      ).filter((gap) => gap.date === label);
+
+      if (currentGaps.length > 0) {
+        // 如果有缺口，設置高亮
+        if (hoveredGapDate !== label) {
+          setHoveredGapDate(label);
+        }
+      } else {
+        // 如果沒有缺口，清除高亮
+        if (hoveredGapDate !== undefined) {
+          setHoveredGapDate(undefined);
+        }
+      }
+
+      return (
+        <div
+          className="custom-tooltip"
+          style={{
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            padding: "10px",
+            border: "1px solid #ccc",
+            borderRadius: "4px",
+          }}
+        >
+          <p>{`日期: ${dateFormat(label, Mode.NumberToString)}`}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }}>
+              {`${entry.dataKey}: ${entry.value}`}
+            </p>
+          ))}
+        </div>
+      );
+    }
+
+    // 當沒有 hover 時清除高亮
+    if (hoveredGapDate !== undefined) {
+      setHoveredGapDate(undefined);
+    }
+
+    return null;
+  };
 
   const {
     trends: chartData,
@@ -60,6 +111,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
     gaps: showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus,
     chartData,
     isVisible: showGaps,
+    highlightedGapDate: hoveredGapDate,
   });
 
   // 計算 h 的最大值和 l 的最小值
@@ -164,7 +216,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", hMax]} dataKey="l" />
             <ZAxis type="number" range={[10]} />
-            <Tooltip offset={50} />
+            <Tooltip content={<CustomTooltip />} offset={50} />
             <Line
               dataKey="h"
               stroke="#000"

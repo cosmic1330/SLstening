@@ -24,7 +24,7 @@ function csvToStockStore(csv: string): StockStoreType[] {
   });
 }
 
-export default function GreenBall() {
+export default function RedBall() {
   const [stocks, setStocks] = useState<StockStoreType[]>([]);
 
   useEffect(() => {

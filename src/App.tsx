@@ -6,7 +6,7 @@ import { UserProvider } from "./context/UserContext";
 import Add from "./pages/Add";
 import Detail from "./pages/Detail/index";
 import Home from "./pages/Home";
-import GreenBall from "./pages/Home/GreenBall";
+import TurnoverRate from "./pages/Home/TurnoverRate";
 import List from "./pages/Home/List";
 import RedBall from "./pages/Home/RedBall";
 import Setting from "./pages/Home/Setting";
@@ -52,7 +52,7 @@ function App() {
             <Route index element={<List />} />
             <Route path="setting" element={<Setting />} />
             <Route path="redball" element={<RedBall />} />
-            <Route path="greenball" element={<GreenBall />} />
+            <Route path="turnoverRate" element={<TurnoverRate />} />
             <Route path="*" element={<Navigate to="/dashboard" />} />
           </Route>
         </Routes>

@@ -8,6 +8,7 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { supabase } from "../../../supabase";
 import HomeIcon from '@mui/icons-material/Home';
+import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 export default function BottomBar() {
   const { openAddWindow } = useAddWebviewWindow();
   const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function BottomBar() {
           size="medium"
           color="inherit"
           onClick={() => {
-            navigate("/dashboard/other");
+            navigate("/dashboard/setting");
           }}
         >
           <BuildIcon fontSize="medium" />
@@ -68,10 +69,10 @@ export default function BottomBar() {
           size="medium"
           color="inherit"
           onClick={() => {
-            navigate("/dashboard/greenball");
+            navigate("/dashboard/turnoverRate");
           }}
         >
-          <TrendingDownIcon fontSize="medium" />
+          <CurrencyExchangeIcon fontSize="medium" />
         </IconButton>
         <IconButton
           size="medium"

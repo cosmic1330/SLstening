@@ -24,7 +24,7 @@ function csvToStockStore(csv: string): StockStoreType[] {
   });
 }
 
-export default function RedBall() {
+export default function TurnoverRate() {
   const [stocks, setStocks] = useState<StockStoreType[]>([]);
 
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function RedBall() {
         mb={1}
         sx={{ textShadow: "0 0 3px #000" }}
       >
-        SListenting 綠球股
+        SListenting 週轉率排行
       </Typography>
       <Box mt={2} mb={"80px"}>
         {stocks.map((stock, index) => (

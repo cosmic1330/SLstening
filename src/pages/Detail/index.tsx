@@ -24,9 +24,8 @@ import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl
 
 // lazy load components
 const MaKbar = lazy(() => import("./MaKbar"));
-const AvgMaKbar = lazy(() => import("./AvgMaKbar"));
+const HighCloseSignal = lazy(() => import("./HighCloseSignal"));
 const Obv = lazy(() => import("./Obv"));
-const Ad = lazy(() => import("./AdLine"));
 const Ma = lazy(() => import("./Ma"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
@@ -54,8 +53,8 @@ const FullscreenVerticalCarousel: React.FC = () => {
         content: <MaKbar perd={perd} />,
       },
       {
-        id: "avg_k",
-        content: <AvgMaKbar />,
+        id: "high_close_signal",
+        content: <HighCloseSignal />,
       },
       {
         id: "mj",
@@ -72,10 +71,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "obv",
         content: <Obv perd={perd} />,
-      },
-      {
-        id: "ad",
-        content: <Ad />,
       },
       {
         id: "mfi",

@@ -9,6 +9,7 @@ import { useContext, useMemo } from "react";
 import {
   Brush,
   ComposedChart,
+  Customized,
   Line,
   ReferenceDot,
   ReferenceLine,
@@ -18,6 +19,7 @@ import {
   YAxis,
 } from "recharts";
 import kd from "../../cls_tools/kd";
+import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../context/DealsContext";
 import { DivergenceSignalType } from "../../types";
 import detectKdDivergence from "../../utils/detectKdDivergence";
@@ -33,9 +35,11 @@ export default function Kd() {
       t: deals[0].t,
       k: pre.k,
       d: pre.d,
+      o: deals[0].o,
       c: deals[0].c,
       l: deals[0].l,
       h: deals[0].h,
+      prevL: null, // 第一天沒有前一天的資料
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
@@ -44,12 +48,14 @@ export default function Kd() {
         t: deal.t,
         k: pre.k,
         d: pre.d,
+        o: deal.o,
         c: deal.c,
         l: deal.l,
         h: deal.h,
+        prevL: deals[i - 1].h, // 前一天的最低價
       });
     }
-    return response;
+    return response.splice(-150);
   }, [deals]);
 
   const singals = useMemo(() => {
@@ -138,13 +144,53 @@ export default function Kd() {
             <YAxis domain={["dataMin", "dataMax"]} />
             <Tooltip offset={50} />
             <Line
-              dataKey="c"
+              dataKey="h"
               stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
               dot={false}
               activeDot={false}
               legendType="none"
             />
-            <Brush dataKey="name" height={20} stroke="#8884d8" />
+            <Line
+              dataKey="c"
+              stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="l"
+              stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="o"
+              stroke="#000"
+              opacity={0} // 設置透明度為 0，隱藏線條
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Customized component={BaseCandlestickRectangle} />
+            <Line
+              dataKey="c"
+              stroke="#589bf3"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="prevL"
+              stroke="#ff7300"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Brush dataKey="name" height={10} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

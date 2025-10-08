@@ -68,7 +68,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
             borderRadius: "4px",
           }}
         >
-          <p>{`日期: ${dateFormat(label, Mode.NumberToString)}`}</p>
+          <p>{`日期: ${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }}>
               {`${entry.dataKey}: ${entry.value}`}

@@ -143,7 +143,6 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
               activeDot={false}
               legendType="none"
             />
-            <Line dataKey="trend" stroke="#f35e5e" dot={false} activeDot={false} legendType="none" />
             <Brush dataKey="name" height={20} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>

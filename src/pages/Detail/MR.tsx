@@ -7,6 +7,7 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
+  Area,
   Bar,
   Brush,
   ComposedChart,
@@ -53,7 +54,7 @@ export default function MR() {
         ...deal,
       });
     }
-    return response;
+    return response.splice(-150);
   }, [deals]);
 
   const longSignals = useMemo(() => {
@@ -145,6 +146,20 @@ export default function MR() {
               dot={false}
               activeDot={false}
               legendType="none"
+            />
+            <Area
+              type="monotone"
+              dataKey="long"
+              fill="#faa"
+              stroke="#faa"
+              baseValue={50}
+            />
+            <Area
+              type="monotone"
+              dataKey="short"
+              fill="#afa"
+              stroke="#afa"
+              baseValue={50}
             />
           </ComposedChart>
         </ResponsiveContainer>

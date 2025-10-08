@@ -7,7 +7,6 @@ import {
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
-  Brush,
   ComposedChart,
   Customized,
   Line,
@@ -55,7 +54,7 @@ export default function Kd() {
         prevL: deals[i - 1].h, // 前一天的最低價
       });
     }
-    return response.splice(-150);
+    return response.splice(-160);
   }, [deals]);
 
   const singals = useMemo(() => {
@@ -183,14 +182,6 @@ export default function Kd() {
               activeDot={false}
               legendType="none"
             />
-            <Line
-              dataKey="prevL"
-              stroke="#ff7300"
-              dot={false}
-              activeDot={false}
-              legendType="none"
-            />
-            <Brush dataKey="name" height={10} stroke="#8884d8" />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

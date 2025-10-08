@@ -54,7 +54,7 @@ export default function MR() {
         ...deal,
       });
     }
-    return response.splice(-150);
+    return response.splice(-160);
   }, [deals]);
 
   const longSignals = useMemo(() => {

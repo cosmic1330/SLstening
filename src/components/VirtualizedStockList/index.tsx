@@ -17,8 +17,8 @@ interface VirtualizedStockListProps {
 export default function VirtualizedStockList({
   stocks,
   height,
-  width = "100%",
-  itemHeight = 250, // StockBox 的估計高度
+  width = "calc(100% - 8px)",
+  itemHeight = 200, // StockBox 的估計高度
   canDelete = false,
   showDebug = false, // 默認不顯示調試信息
 }: VirtualizedStockListProps) {
@@ -37,11 +37,9 @@ export default function VirtualizedStockList({
   const Row = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
       const stock = stocks[index];
-
       if (!stock) {
         return (
-          <div style={style}>
-            <div
+            <Box
               style={{
                 height: itemHeight,
                 display: "flex",
@@ -51,8 +49,7 @@ export default function VirtualizedStockList({
               }}
             >
               Loading...
-            </div>
-          </div>
+            </Box>
         );
       }
 
@@ -92,15 +89,28 @@ export default function VirtualizedStockList({
           totalItems={stocks.length}
         />
       )}
-      <List
-        height={height}
-        width={width}
-        itemCount={stocks.length}
-        itemSize={itemHeight}
-        onItemsRendered={onItemsRendered}
+      <Box
+        sx={{
+          "& > div": {
+            // 隱藏滾動條但保持滾動功能
+            scrollbarWidth: "none", // Firefox
+            msOverflowStyle: "none", // IE and Edge
+            "&::-webkit-scrollbar": {
+              display: "none", // WebKit 瀏覽器
+            },
+          },
+        }}
       >
-        {Row}
-      </List>
+        <List
+          height={height}
+          width={width}
+          itemCount={stocks.length}
+          itemSize={itemHeight}
+          onItemsRendered={onItemsRendered}
+        >
+          {Row}
+        </List>
+      </Box>
     </>
   );
 }

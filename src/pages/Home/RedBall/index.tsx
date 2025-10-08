@@ -1,7 +1,8 @@
 import { Box, Container, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
-import StockBox from "../../../components/StockBox";
+import VirtualizedStockList from "../../../components/VirtualizedStockList";
+import { useDebugMode } from "../../../hooks/useDebugMode";
 import { StockStoreType } from "../../../types";
 
 function csvToStockStore(csv: string): StockStoreType[] {
@@ -27,6 +28,9 @@ function csvToStockStore(csv: string): StockStoreType[] {
 export default function RedBall() {
   const [stocks, setStocks] = useState<StockStoreType[]>([]);
 
+  // 使用 hook 來響應調試模式變化
+  const isDebugMode = useDebugMode();
+
   useEffect(() => {
     const sheetId = "1v42zeXlZIUaqmDTyu3FjQrq7a4Pcudbf9S53AH8wyBA";
     const gid = "411196894";
@@ -37,6 +41,9 @@ export default function RedBall() {
       setStocks(data);
     });
   }, []);
+
+  // 計算可用的視窗高度（扣除標題和邊距）
+  const viewportHeight = window.innerHeight - 150; // 預留 200px 給標題和其他元素
 
   return (
     <Container component="main">
@@ -49,10 +56,16 @@ export default function RedBall() {
       >
         SListenting 紅球股
       </Typography>
-      <Box mt={2} mb={"80px"}>
-        {stocks.map((stock, index) => (
-          <StockBox key={index} stock={stock} canDelete={false} />
-        ))}
+      <Box mt={2} >
+        {stocks.length > 0 && (
+          <VirtualizedStockList
+            stocks={stocks}
+            height={viewportHeight}
+            itemHeight={250} // 根據實際 StockBox 高度調整
+            canDelete={false}
+            showDebug={isDebugMode} // 從設定中讀取調試模式
+          />
+        )}
       </Box>
     </Container>
   );

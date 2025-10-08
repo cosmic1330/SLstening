@@ -1,4 +1,5 @@
 import ArrowBackIosNewIcon from "@mui/icons-material/ArrowBackIosNew";
+import BugReportIcon from "@mui/icons-material/BugReport";
 import DownloadIcon from "@mui/icons-material/Download";
 import EmojiNatureIcon from "@mui/icons-material/EmojiNature";
 import {
@@ -36,6 +37,16 @@ function Setting() {
     await factory_reset();
     sendNotification({ title: "Factory Reset", body: "Reset Success!" });
   }, []);
+
+  const handleDebugModeChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      localStorage.setItem(
+        "slitenting-debugMode",
+        event.target.checked.toString()
+      );
+    },
+    []
+  );
 
   return (
     <Container
@@ -87,6 +98,26 @@ function Setting() {
                 localStorage.getItem("slitenting-alwaysOnTop") === "true"
               }
               onChange={handleAlwaysOnTopChange}
+            />
+          </Grid>
+
+          <Grid size={6} display="flex" alignItems="center">
+            <BugReportIcon />
+            <Typography variant="body1" fontWeight="bold" ml={1}>
+              調試模式
+            </Typography>
+          </Grid>
+          <Grid
+            size={6}
+            justifyContent="flex-end"
+            display="flex"
+            alignItems="center"
+          >
+            <Switch
+              defaultChecked={
+                localStorage.getItem("slitenting-debugMode") === "true"
+              }
+              onChange={handleDebugModeChange}
             />
           </Grid>
 

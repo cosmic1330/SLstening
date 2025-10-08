@@ -10,29 +10,39 @@ import {
 import checkTimeRange from "../utils/checkTimeRange";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
-export default function useDeals(id: string) {
+export default function useConditionalDeals(
+  id: string,
+  enabled: boolean = true
+) {
   const { data: tickData, mutate: mutateTickDeals } = useSWR(
-    generateDealDataDownloadUrl({
-      type: UrlType.Tick,
-      id,
-    }),
+    enabled
+      ? generateDealDataDownloadUrl({
+          type: UrlType.Tick,
+          id,
+        })
+      : null,
     tauriFetcher
   );
   const { data: dailyData, mutate: mutateDailyDeals } = useSWR(
-    generateDealDataDownloadUrl({
-      type: UrlType.Indicators,
-      id,
-      perd: UrlTaPerdOptions.Day,
-    }),
+    enabled
+      ? generateDealDataDownloadUrl({
+          type: UrlType.Indicators,
+          id,
+          perd: UrlTaPerdOptions.Day,
+        })
+      : null,
     tauriFetcher
   );
 
   useEffect(() => {
+    if (!enabled) return; // 如果未啟用，不啟動定時器
+
     const taiwanTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Taipei",
     });
     const isInTime = checkTimeRange(taiwanTime);
     if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
+
     const interval = setInterval(() => {
       const taiwanTime = new Date().toLocaleString("en-US", {
         timeZone: "Asia/Taipei",
@@ -47,7 +57,7 @@ export default function useDeals(id: string) {
     }, 10000); // 每 10 秒檢查一次
 
     return () => clearInterval(interval); // 清除定時器
-  }, [mutateDailyDeals, mutateTickDeals]);
+  }, [mutateDailyDeals, mutateTickDeals, enabled, id]);
 
   const tickDeals = useMemo(() => {
     try {
@@ -83,7 +93,7 @@ export default function useDeals(id: string) {
       info(`Error parsing tickData: ${e}`);
       return null;
     }
-  }, [tickData]);
+  }, [tickData, id]);
 
   const deals = useMemo(() => {
     if (!dailyData) return [];

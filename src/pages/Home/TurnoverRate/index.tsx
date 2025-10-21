@@ -124,7 +124,6 @@ export default function TurnoverRate() {
             stocks={filteredStocks}
             height={viewportHeight}
             itemHeight={250} // 根據實際 StockBox 高度調整
-            canDelete={false}
             showDebug={isDebugMode} // 從設定中讀取調試模式
           />
         )}

@@ -10,7 +10,6 @@ interface VirtualizedStockListProps {
   height: number;
   width?: number | string;
   itemHeight: number;
-  canDelete?: boolean;
   showDebug?: boolean; // 添加調試選項
 }
 
@@ -19,7 +18,6 @@ export default function VirtualizedStockList({
   height,
   width = "calc(100% - 8px)",
   itemHeight = 200, // StockBox 的估計高度
-  canDelete = false,
   showDebug = false, // 默認不顯示調試信息
 }: VirtualizedStockListProps) {
   const [visibleStartIndex, setVisibleStartIndex] = useState(0);
@@ -39,31 +37,27 @@ export default function VirtualizedStockList({
       const stock = stocks[index];
       if (!stock) {
         return (
-            <Box
-              style={{
-                height: itemHeight,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-              }}
-            >
-              Loading...
-            </Box>
+          <Box
+            style={{
+              height: itemHeight,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+            }}
+          >
+            Loading...
+          </Box>
         );
       }
 
       return (
         <Box style={style}>
-          <LazyStockBox
-            stock={stock}
-            canDelete={canDelete}
-            isVisible={isItemVisible(index)}
-          />
+          <LazyStockBox stock={stock} isVisible={isItemVisible(index)} />
         </Box>
       );
     },
-    [stocks, canDelete, isItemVisible, itemHeight]
+    [stocks, isItemVisible, itemHeight]
   );
 
   const onItemsRendered = useCallback(

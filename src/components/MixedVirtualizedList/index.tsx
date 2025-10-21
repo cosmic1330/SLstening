@@ -77,7 +77,6 @@ export default function MixedVirtualizedList({
           <Box style={style}>
             <LazyStockBox
               stock={item.data}
-              canDelete={canDelete}
               isVisible={isItemVisible(index)}
             />
           </Box>

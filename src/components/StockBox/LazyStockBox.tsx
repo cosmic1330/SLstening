@@ -1,4 +1,6 @@
 import { Box, Grid, Skeleton, Typography, styled } from "@mui/material";
+import { useMemo } from "react";
+import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import ConditionalStockBox from "./ConditionalStockBox";
 
@@ -13,15 +15,27 @@ const StyledBox = styled(Box)`
 
 interface LazyStockBoxProps {
   stock: StockStoreType;
-  canDelete?: boolean;
   isVisible: boolean;
 }
 
-export default function LazyStockBox({
-  stock,
-  canDelete,
-  isVisible,
-}: LazyStockBoxProps) {
+export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
+  // 取得監測中的股票列表
+  const { stocks: monitoredStocks } = useStocksStore();
+
+  // 只有在可見時才計算監測狀態（效能優化）
+  const { canDelete, canAdd } = useMemo(() => {
+    if (!isVisible) {
+      return { canDelete: false, canAdd: false };
+    }
+
+    const isMonitored = monitoredStocks.some(
+      (monitoredStock) => monitoredStock.id === stock.id
+    );
+    return {
+      canDelete: isMonitored,
+      canAdd: !isMonitored,
+    };
+  }, [isVisible, monitoredStocks, stock.id]);
   // 直接根據 isVisible 來決定是否加載數據
   // 不再使用 shouldLoad 狀態，確保只有可見時才請求
 
@@ -87,6 +101,11 @@ export default function LazyStockBox({
 
   // 只有真正可見時才渲染實際的 StockBox 並啟用 API 請求
   return (
-    <ConditionalStockBox stock={stock} canDelete={canDelete} enabled={true} />
+    <ConditionalStockBox
+      stock={stock}
+      canDelete={canDelete}
+      canAdd={canAdd}
+      enabled={true}
+    />
   );
 }

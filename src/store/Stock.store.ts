@@ -10,28 +10,35 @@ import { StockStoreType } from "../types";
 interface StocksState {
   stocks: StockStoreType[];
   menu: StockStoreType[];
-  increase: ({ id, name }: StockStoreType) =>  Promise<void>;
+  increase: ({ id, name }: StockStoreType) => Promise<void>;
   remove: (id: string) => Promise<void>;
   reload: () => Promise<void>;
-  clear: () =>  Promise<void>;
+  clear: () => Promise<void>;
   update_menu: (stocks: StockStoreType[]) => Promise<void>;
-  factory_reset: () =>  Promise<void>;
+  factory_reset: () => Promise<void>;
 }
 
 const useStocksStore = create<StocksState>((set, get) => ({
   stocks: [],
   menu: [],
   increase: async (stock: StockStoreType) => {
-    // 去除重複
-    const uniqueData = Array.from(new Set([...get().stocks, stock]));
-    const store = await Store.load("settings.json");
-    await store.set("stocks", uniqueData);
-    await store.save();
-    set(() => {
-      return {
-        stocks: uniqueData,
-      };
-    });
+    const currentStocks = get().stocks;
+    // 檢查是否已存在相同 ID 的股票
+    const exists = currentStocks.some(
+      (existingStock) => existingStock.id === stock.id
+    );
+
+    if (!exists) {
+      const updatedStocks = [...currentStocks, stock];
+      const store = await Store.load("settings.json");
+      await store.set("stocks", updatedStocks);
+      await store.save();
+      set(() => {
+        return {
+          stocks: updatedStocks,
+        };
+      });
+    }
   },
   remove: async (id: string) => {
     const data = get().stocks.filter((stock) => stock.id !== id);

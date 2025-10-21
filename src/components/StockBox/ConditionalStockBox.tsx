@@ -26,12 +26,14 @@ const Box = styled(MuiBox)`
 interface ConditionalStockBoxProps {
   stock: StockStoreType;
   canDelete?: boolean;
+  canAdd?: boolean;
   enabled?: boolean;
 }
 
 export default function ConditionalStockBox({
   stock,
   canDelete,
+  canAdd,
   enabled = true,
 }: ConditionalStockBoxProps) {
   const { deals, name, tickDeals } = useConditionalDeals(stock.id, enabled);
@@ -105,6 +107,7 @@ export default function ConditionalStockBox({
             lastPrice={lastPrice}
             percent={percent}
             canDelete={canDelete}
+            canAdd={canAdd}
           />
         </Grid>
       </Grid>

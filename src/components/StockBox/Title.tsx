@@ -1,3 +1,4 @@
+import AddIcon from "@mui/icons-material/Add";
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { IconButton, Stack, Typography } from "@mui/material";
@@ -10,11 +11,13 @@ export default function Title({
   percent,
   lastPrice,
   canDelete = true,
+  canAdd = false,
 }: {
   stock: StockStoreType;
   percent: number;
   lastPrice: number;
   canDelete?: boolean;
+  canAdd?: boolean;
 }) {
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
@@ -22,7 +25,7 @@ export default function Title({
     group: stock.group,
   });
 
-  const { remove } = useStocksStore();
+  const { remove, increase } = useStocksStore();
 
   return (
     <Stack
@@ -48,16 +51,30 @@ export default function Title({
       >
         {percent}%
       </Typography>
-      {canDelete &&<IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation();
-          remove(stock.id);
-        }}
-        sx={{ color: "#fff" }}
-      >
-        <DeleteIcon fontSize="small" />
-      </IconButton>}
+      {canDelete && (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            remove(stock.id);
+          }}
+          sx={{ color: "#fff" }}
+        >
+          <DeleteIcon fontSize="small" />
+        </IconButton>
+      )}
+      {canAdd && (
+        <IconButton
+          size="small"
+          onClick={(e) => {
+            e.stopPropagation();
+            increase(stock);
+          }}
+          sx={{ color: "#fff" }}
+        >
+          <AddIcon fontSize="small" />
+        </IconButton>
+      )}
     </Stack>
   );
 }

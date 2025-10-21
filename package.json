@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "app": "tauri dev",
-    "build_app": "tauri build"
+    "package": "tauri build"
   },
   "dependencies": {
     "@ch20026103/anysis": "0.0.19-alpha",

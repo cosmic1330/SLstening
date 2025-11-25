@@ -1,13 +1,13 @@
-import { Box, Button, Container } from "@mui/material";
+import { Box, Container } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { useEffect } from "react";
-import StockBox from "../../../components/StockBox";
+import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../../store/Stock.store";
+import NasdaqBox from "./nasdaq";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
-import NasdaqBox from "./nasdaq";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -33,19 +33,32 @@ function List() {
     };
   }, []);
 
+  // 計算可用的視窗高度（扣除標題、標籤和邊距）
+  const viewportHeight =
+    window.innerHeight - (stocks.length > 0 ? 200 : 150);
+
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
         <NasdaqBox />
         <WtxBox />
         <TwseBox />
-        {stocks.length === 0 ? (
+        <Box mt={2} mb={"80px"}>
+          {stocks.length > 0 && (
+            <VirtualizedStockList
+              stocks={stocks}
+              height={viewportHeight}
+              itemHeight={250} // 根據實際 StockBox 高度調整
+            />
+          )}
+        </Box>
+        {/* {stocks.length === 0 ? (
           <Button fullWidth variant="contained" onClick={openAddWindow}>
             新增第一筆追蹤
           </Button>
         ) : (
           stocks.map((stock, index) => <StockBox key={index} stock={stock} />)
-        )}
+        )} */}
       </Box>
     </Container>
   );

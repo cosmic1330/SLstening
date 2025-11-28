@@ -278,6 +278,13 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
               activeDot={false}
               legendType="none"
             />
+            {/* <Line
+              dataKey="ma120"
+              stroke="#4aa0a0"
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            /> */}
             {/* 缺口線條 - 條件渲染 */}
             {showGaps &&
               gapLines

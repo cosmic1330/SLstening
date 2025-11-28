@@ -25,9 +25,8 @@ import AvgMaKbar from "./AvgMaKbar";
 
 // lazy load components
 const MaKbar = lazy(() => import("./MaKbar"));
-const HighCloseSignal = lazy(() => import("./HighCloseSignal"));
 const Obv = lazy(() => import("./Obv"));
-const Ma = lazy(() => import("./Ma"));
+const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
 const Kd = lazy(() => import("./Kd"));
@@ -46,18 +45,14 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const slides = useMemo(
     () => [
       {
-        id: "ma",
-        content: <Ma id={id} />,
+        id: "ichimoku_cloud",
+        content: <IchimokuCloud id={id} />,
       },
       {
         id: "ma_k",
         content: <MaKbar perd={perd} />,
       },
       { id: "avg_k", content: <AvgMaKbar /> },
-      {
-        id: "high_close_signal",
-        content: <HighCloseSignal />,
-      },
       {
         id: "mj",
         content: <MJ />,

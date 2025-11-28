@@ -24,12 +24,14 @@ export default function useMarketAnalysis({
     let ma10Data = ma.init(ta[0], 10);
     let ma20Data = ma.init(ta[0], 20);
     let ma60Data = ma.init(ta[0], 60);
+    let ma120Data = ma.init(ta[0], 120);
     response.push({
       osc: macdData.osc,
       ma5: ma5Data.ma || null,
       ma10: ma10Data.ma || null,
       ma20: ma20Data.ma || null,
       ma60: ma60Data.ma || null,
+      ma120: ma120Data.ma || null,
       ...ta[0],
     });
     for (let i = 1; i < ta.length; i++) {
@@ -40,12 +42,14 @@ export default function useMarketAnalysis({
       ma10Data = ma.next(deal, ma10Data, 10);
       ma20Data = ma.next(deal, ma20Data, 20);
       ma60Data = ma.next(deal, ma60Data, 60);
+      ma120Data = ma.next(deal, ma120Data, 120);
       response.push({
         osc: macdData.osc,
         ma5: ma5Data.ma || null,
         ma10: ma10Data.ma || null,
         ma20: ma20Data.ma || null,
         ma60: ma60Data.ma || null,
+        ma120: ma120Data.ma || null,
         ...deal,
       });
     }

@@ -22,6 +22,7 @@ import {
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
 import AvgMaKbar from "./AvgMaKbar";
+import Bollean from "./Bollean";
 
 // lazy load components
 const MaKbar = lazy(() => import("./MaKbar"));
@@ -44,6 +45,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
   // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
     () => [
+      {
+        id: "bollean",
+        content: <Bollean />,
+      },
       {
         id: "ichimoku_cloud",
         content: <IchimokuCloud id={id} />,

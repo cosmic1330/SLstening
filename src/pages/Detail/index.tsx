@@ -51,7 +51,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       },
       {
         id: "ichimoku_cloud",
-        content: <IchimokuCloud id={id} />,
+        content: <IchimokuCloud id={id} perd={perd} />,
       },
       {
         id: "ma_k",

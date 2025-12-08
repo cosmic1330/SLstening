@@ -22,6 +22,9 @@ import ichimoku from "./ichimoku";
 import { DealsContext } from "../../../context/DealsContext";
 import Fundamental from "../Fundamental";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import { UrlTaPerdOptions } from "../../../types";
 
 // Define the structure for the chart data, including Ichimoku values
 interface IchimokuChartData
@@ -42,7 +45,13 @@ interface IchimokuChartData
   kumo_bear: [number, number] | null;
 }
 
-export default function Ichimoku({ id }: { id: string | undefined }) {
+export default function Ichimoku({
+  id,
+  perd,
+}: {
+  id: string | undefined;
+  perd: UrlTaPerdOptions;
+}) {
   const deals = useContext(DealsContext);
   const [showConversionBase, setShowConversionBase] = useState(true);
   const [showKumo, setShowKumo] = useState(true);
@@ -73,9 +82,14 @@ export default function Ichimoku({ id }: { id: string | undefined }) {
     const lastDataPoint = baseData[baseData.length - 1];
     if (lastDataPoint) {
       for (let i = 1; i <= 26; i++) {
-        const futureDate = new Date(lastDataPoint.t);
-        futureDate.setDate(futureDate.getDate() + i);
-        const futureDateString = futureDate.toISOString().split("T")[0];
+        const futureDate = new Date(
+          dateFormat(lastDataPoint.t, Mode.NumberToTimeStamp)
+        );
+        if (perd === UrlTaPerdOptions.Hour) {
+          futureDate.setHours(futureDate.getHours() + i);
+        } else if (perd === UrlTaPerdOptions.Day) {
+          futureDate.setDate(futureDate.getDate() + i);
+        }
 
         const sourceIndex = baseData.length - 27 + i; // Corrected index
         const sourceForFutureSpans =
@@ -84,7 +98,7 @@ export default function Ichimoku({ id }: { id: string | undefined }) {
             : null;
 
         finalData.push({
-          t: futureDateString,
+          t: dateFormat(futureDate.getTime(), Mode.TimeStampToNumber),
           o: null,
           h: null,
           l: null,
@@ -105,6 +119,7 @@ export default function Ichimoku({ id }: { id: string | undefined }) {
       let kumo_bear: [number, number] | null = null;
 
       if (senkouA !== null && senkouB !== null) {
+        ``;
         if (senkouA > senkouB) {
           kumo_bull = [senkouB, senkouA];
           kumo_bear = [senkouA, senkouA]; // Zero-height area

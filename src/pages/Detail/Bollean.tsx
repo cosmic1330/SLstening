@@ -1,17 +1,10 @@
-import {
-  Box,
-  Container,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Container, Stack, Typography } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
   ComposedChart,
   Customized,
   Line,
-  ReferenceLine,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -29,21 +22,21 @@ export default function Bollean() {
 
     response.push({
       ...deals[0],
-      bollUb: boll_data.bollUb,
-      bollMa: boll_data.bollMa,
-      bollLb: boll_data.bollLb,
+      bollUb: boll_data.bollUb || null,
+      bollMa: boll_data.bollMa || null,
+      bollLb: boll_data.bollLb || null,
     });
     for (let i = 1; i < deals.length; i++) {
       const deal = deals[i];
       boll_data = boll.next(deal, boll_data, 20);
       response.push({
         ...deal,
-        bollUb: boll_data.bollUb,
-        bollMa: boll_data.bollMa,
-        bollLb: boll_data.bollLb,
+        bollUb: boll_data.bollUb || null,
+        bollMa: boll_data.bollMa || null,
+        bollLb: boll_data.bollLb || null,
       });
     }
-    return response;
+    return response.slice(-180);
   }, [deals]);
 
   return (
@@ -58,9 +51,6 @@ export default function Bollean() {
           <ComposedChart data={chartData} syncId="anySyncId">
             <XAxis dataKey="t" />
             <YAxis domain={["dataMin", "dataMax"]} />
-            <Tooltip offset={50} />
-            <ReferenceLine y={80} stroke="#ff0000" strokeDasharray="5 5" />
-            <ReferenceLine y={20} stroke="#ff0000" strokeDasharray="5 5" />
             <Line
               dataKey="h"
               stroke="#000"

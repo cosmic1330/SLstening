@@ -129,7 +129,7 @@ export default function Ichimoku({
         }
       }
       return { ...d, kumo_bull, kumo_bear };
-    });
+    }).splice(-180);
   }, [deals]);
 
   return (

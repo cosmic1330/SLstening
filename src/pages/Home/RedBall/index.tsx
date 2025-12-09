@@ -1,30 +1,17 @@
 import { Box, Container, Tab, Tabs, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
+import getDbInstance from "../../../database/postgres";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import { useDebugMode } from "../../../hooks/useDebugMode";
 import { StockStoreType } from "../../../types";
 
-function csvToStockStore(csv: string): (StockStoreType & { list: string })[] {
-  const lines = csv.trim().split(/\r?\n/);
-  const headers = lines[0].split(",");
-
-  return lines.slice(1).map((line) => {
-    const values = line.split(",");
-    const record: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      record[h] = values[i];
-    });
-
-    return {
-      id: record["stock_id"],
-      name: record["stock_name"],
-      group: record["industry_group"],
-      type: record["market_type"],
-      list: record["list"],
-    };
-  });
-}
+type RedListRow = {
+  stock_id: string;
+  stock_name: string;
+  industry_group: string;
+  market_type: string;
+  list: string;
+};
 
 export default function RedBall() {
   const [stocks, setStocks] = useState<(StockStoreType & { list: string })[]>(
@@ -40,26 +27,61 @@ export default function RedBall() {
   const isDebugMode = useDebugMode();
 
   useEffect(() => {
-    const sheetId = "1v42zeXlZIUaqmDTyu3FjQrq7a4Pcudbf9S53AH8wyBA";
-    const gid = "411196894";
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&id=${sheetId}&gid=${gid}`;
+    const fetchData = async () => {
+      try {
+        const db = await getDbInstance();
+        const rows = await db.select<RedListRow[]>(`WITH ranked AS (
+            SELECT
+                tr.stock_id,
+                tr.record_date,
+                DENSE_RANK() OVER (ORDER BY tr.record_date DESC) AS list
+            FROM public.turnover_rank tr
+            WHERE tr.type = 'red_ball'
+              AND tr.record_date IN (
+                    SELECT DISTINCT record_date
+                    FROM public.turnover_rank
+                    WHERE type = 'red_ball'
+                    ORDER BY record_date DESC
+                    LIMIT 3
+              )
+        )
+        SELECT
+            s.stock_id,
+            s.stock_name,
+            s.industry_group,
+            s.market_type,
+            r.list
+        FROM stock s
+        JOIN ranked r
+          ON r.stock_id = s.stock_id
+        ORDER BY r.list, s.stock_id;`);
+        console.log(rows);
+        const data = rows.map((row) => ({
+          id: row.stock_id,
+          name: row.stock_name,
+          group: row.industry_group,
+          type: row.market_type,
+          list: row.list,
+        }));
+        setStocks(data);
 
-    tauriFetcher(url, TauriFetcherType.Text).then((text) => {
-      const data = csvToStockStore(text as string);
-      setStocks(data);
+        // 獲取所有可用的 list 值
+        const uniqueLists = Array.from(
+          new Set(data.map((stock) => stock.list).filter(Boolean))
+        ) as string[];
+        const sortedLists = uniqueLists.sort();
+        setAvailableLists(sortedLists);
 
-      // 獲取所有可用的 list 值
-      const uniqueLists = Array.from(
-        new Set(data.map((stock) => stock.list).filter(Boolean))
-      ) as string[];
-      const sortedLists = uniqueLists.sort();
-      setAvailableLists(sortedLists);
-
-      // 自動選擇第一個可用的 list 值
-      if (sortedLists.length > 0) {
-        setSelectedList(sortedLists[0]);
+        // 自動選擇第一個可用的 list 值
+        if (sortedLists.length > 0) {
+          setSelectedList(sortedLists[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch red list from database:", error);
       }
-    });
+    };
+
+    fetchData();
   }, []);
 
   // 處理股票過濾邏輯

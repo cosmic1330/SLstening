@@ -1,60 +1,47 @@
-import { Box, Container, Tab, Tabs, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import { Box, CircularProgress, Container, Tab, Tabs, Typography } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
 import getDbInstance from "../../../database/postgres";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import { useDebugMode } from "../../../hooks/useDebugMode";
 import { StockStoreType } from "../../../types";
-
-type RedListRow = {
-  stock_id: string;
-  stock_name: string;
-  industry_group: string;
-  market_type: string;
-  list: string;
-};
+import { fetchRedBallStocks, RedListRow } from "../../../api/stockRepository";
 
 export default function RedBall() {
   const [stocks, setStocks] = useState<(StockStoreType & { list: string })[]>(
     []
   );
   const [selectedList, setSelectedList] = useState<string>("");
-  const [filteredStocks, setFilteredStocks] = useState<
-    (StockStoreType & { list: string })[]
-  >([]);
   const [availableLists, setAvailableLists] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // 使用 hook 來響應調試模式變化
   const isDebugMode = useDebugMode();
 
   useEffect(() => {
+    let isMounted = true; // 標記元件是否掛載中
+
     const fetchData = async () => {
+      if (isMounted) {
+        setIsLoading(true);
+        setError(null);
+      }
       try {
-        const db = await getDbInstance();
-        const rows = await db.select<RedListRow[]>(`WITH ranked AS (
-            SELECT
-                tr.stock_id,
-                tr.record_date,
-                DENSE_RANK() OVER (ORDER BY tr.record_date DESC) AS list
-            FROM public.turnover_rank tr
-            WHERE tr.type = 'red_ball'
-              AND tr.record_date IN (
-                    SELECT DISTINCT record_date
-                    FROM public.turnover_rank
-                    WHERE type = 'red_ball'
-                    ORDER BY record_date DESC
-                    LIMIT 3
-              )
-        )
-        SELECT
-            s.stock_id,
-            s.stock_name,
-            s.industry_group,
-            s.market_type,
-            r.list
-        FROM stock s
-        JOIN ranked r
-          ON r.stock_id = s.stock_id
-        ORDER BY r.list, s.stock_id;`);
+        const fetchPromise = (async () => {
+            const db = await getDbInstance();
+            return await fetchRedBallStocks(db);
+        })();
+
+        const timeoutPromise = new Promise<RedListRow[]>((_, reject) => {
+            setTimeout(() => {
+                reject(new Error("Connection timeout"));
+            }, 10000);
+        });
+
+        const rows = await Promise.race([fetchPromise, timeoutPromise]);
+
+        if (!isMounted) return; // 如果元件已卸載，則不更新狀態
+
         console.log(rows);
         const data = rows.map((row) => ({
           id: row.stock_id,
@@ -76,20 +63,31 @@ export default function RedBall() {
         if (sortedLists.length > 0) {
           setSelectedList(sortedLists[0]);
         }
-      } catch (error) {
-        console.error("Failed to fetch red list from database:", error);
+      } catch (error: any) {
+        if (isMounted) {
+            console.error("Failed to fetch red list from database:", error);
+            setError(error.message || "連線失敗，請稍後再試");
+        }
+      } finally {
+        if (isMounted) {
+            setIsLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+        isMounted = false; // 清理函式：標記元件已卸載
+    };
   }, []);
 
   // 處理股票過濾邏輯
-  useEffect(() => {
+  const filteredStocks = useMemo(() => {
     if (selectedList) {
-      const filtered = stocks.filter((stock) => stock.list === selectedList);
-      setFilteredStocks(filtered);
+      return stocks.filter((stock) => stock.list === selectedList);
     }
+    return [];
   }, [stocks, selectedList]);
 
   // 處理分頁切換
@@ -141,13 +139,35 @@ export default function RedBall() {
       )}
 
       <Box mt={2} mb={"80px"}>
-        {filteredStocks.length > 0 && (
+        {isLoading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 10 }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+            <Typography
+            variant="h6"
+            color="error"
+            align="center"
+            sx={{ mt: 10 }}
+          >
+            {error === "Connection timeout" ? "連線逾時，請檢查網路連線" : "連線失敗，請稍後再試"}
+          </Typography>
+        ) : filteredStocks.length > 0 ? (
           <VirtualizedStockList
             stocks={filteredStocks}
             height={viewportHeight}
             itemHeight={250} // 根據實際 StockBox 高度調整
             showDebug={isDebugMode} // 從設定中讀取調試模式
           />
+        ) : (
+          <Typography
+            variant="h6"
+            color="text.secondary"
+            align="center"
+            sx={{ mt: 10, color: "#aaa" }}
+          >
+            目前沒有資料
+          </Typography>
         )}
       </Box>
     </Container>

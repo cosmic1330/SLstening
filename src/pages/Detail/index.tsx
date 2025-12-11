@@ -22,7 +22,7 @@ import {
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
 import AvgMaKbar from "./AvgMaKbar";
-import Bollean from "./Bollean";
+import Bollean from "./Bollean/Bollean";
 
 // lazy load components
 const MaKbar = lazy(() => import("./MaKbar"));

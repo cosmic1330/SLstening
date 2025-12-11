@@ -28,7 +28,7 @@ import {
 } from "recharts";
 import boll from "../../../cls_tools/boll";
 import { DealsContext } from "../../../context/DealsContext";
-import Fundamental from "../Fundamental";
+import Fundamental from "../Tooltip/Fundamental";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";

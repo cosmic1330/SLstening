@@ -29,7 +29,7 @@ import {
 } from "recharts";
 import ichimoku from "./ichimoku";
 import { DealsContext } from "../../../context/DealsContext";
-import Fundamental from "../Fundamental";
+import Fundamental from "../Tooltip/Fundamental";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";

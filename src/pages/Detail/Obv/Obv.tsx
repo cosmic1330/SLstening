@@ -92,10 +92,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
       obvData = obv.next(deals[i], obvData);
       tempChartData.push({ ...deals[i], obv: obvData.obv });
     }
-    return detectObvDivergence(tempChartData, {
-      pivotPeriod: 5,
-      maxLookback: 60,
-    });
+    return detectObvDivergence(tempChartData);
   }, [deals, perd]);
 
   const chartData = useMemo(() => {

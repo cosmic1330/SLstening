@@ -31,7 +31,7 @@ const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
 const Kd = lazy(() => import("./Kd"));
-const Mfi = lazy(() => import("./Mfi"));
+const Mfi = lazy(() => import("./Mfi/Mfi"));
 
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);

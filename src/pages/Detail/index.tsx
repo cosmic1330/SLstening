@@ -26,7 +26,7 @@ import Bollean from "./Bollean/Bollean";
 
 // lazy load components
 const MaKbar = lazy(() => import("./MaKbar"));
-const Obv = lazy(() => import("./Obv"));
+const Obv = lazy(() => import("./Obv/Obv"));
 const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
 const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));

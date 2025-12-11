@@ -1,10 +1,10 @@
 import { Box, Grid, Skeleton, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
-import { supabase } from "../../supabase";
+import { supabase } from "../../../supabase";
 import {
   FinancialMetricTableType,
   RecentFundamentalTableType,
-} from "../../types";
+} from "../../../types";
 
 export default function Fundamental({ id }: { id: string | undefined }) {
   const [financialMetrics, setFinancialMetrics] =
@@ -107,10 +107,7 @@ export default function Fundamental({ id }: { id: string | undefined }) {
         mb: 0.3,
       }}
     >
-      <Typography
-        variant="caption"
-        sx={{ fontSize: "0.7rem" }}
-      >
+      <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
         {label}:
       </Typography>
       <Typography

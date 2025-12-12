@@ -21,11 +21,11 @@ import {
   IndicatorsDateTimeType,
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
-import AvgMaKbar from "./AvgMaKbar";
+import AvgMaKbar from "./Kbar/EmaAvgKbar";
 import Bollean from "./Bollean/Bollean";
 
 // lazy load components
-const MaKbar = lazy(() => import("./MaKbar"));
+const MaKbar = lazy(() => import("./Ma/MaKbar"));
 const Obv = lazy(() => import("./Obv/Obv"));
 const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
 const MJ = lazy(() => import("./MJ"));

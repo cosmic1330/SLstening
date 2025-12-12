@@ -30,10 +30,10 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
-import ema from "../../cls_tools/ema";
-import AvgCandlestickRectangle from "../../components/RechartCustoms/AvgCandlestickRectangle";
-import { DealsContext } from "../../context/DealsContext";
-import Fundamental from "./Tooltip/Fundamental";
+import ema from "../../../cls_tools/ema";
+import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
+import { DealsContext } from "../../../context/DealsContext";
+import Fundamental from "../Tooltip/Fundamental";
 
 interface AvgMaChartData
   extends Partial<{
@@ -381,7 +381,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
       </Card>
 
       <Box sx={{ flexGrow: 1, minHeight: 0 }}>
-        <ResponsiveContainer width="100%" height="80%">
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} syncId="avgSync">
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" />

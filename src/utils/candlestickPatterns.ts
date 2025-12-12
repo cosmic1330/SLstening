@@ -18,9 +18,6 @@ export interface DetectedPattern {
     name: string;
 }
 
-// Helpers
-const isGreen = (k: Candle) => k.c > k.o;
-const isRed = (k: Candle) => k.c < k.o; // In Taiwan/Asia Red is up, Green is down. 
 // WAIT. The user README says:
 // 鍛頭線 (Hammer): ... (紅或綠)
 // In Taiwan: Red = UP, Green = DOWN.
@@ -80,7 +77,7 @@ export default function detectCandlestickPattern(
 
     // 5. Piercing Line - Downtrend
     if (trend === "down" && isBearish(prev) && isBullish(current)) {
-        if (current.o < prev.low && current.c > (prev.o + prev.c) / 2 && current.c < prev.o) {
+        if (current.o < prev.l && current.c > (prev.o + prev.c) / 2 && current.c < prev.o) {
              // Technically Piercing opens below low, closes above midpoint. 
              // Simplified: Open lower than prev Close (gap down), Close > Midpoint of prev Body.
              // prev is Bearish (O > C). Midpoint = (O+C)/2. 

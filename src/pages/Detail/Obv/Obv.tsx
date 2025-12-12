@@ -21,7 +21,6 @@ import {
 import obv from "../../../cls_tools/obv";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
-import { UrlTaPerdOptions } from "../../../types";
 import { calculateObvSignals } from "../../../utils/obvStrategy";
 import { calculateBollingerBands, calculateSMA } from "../../../utils/technicalIndicators";
 
@@ -83,7 +82,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
+export default function Obv() {
   // Use slice instead of splice to avoid mutating the context array
   const deals = useContext(DealsContext).slice(-150);
 

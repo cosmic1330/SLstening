@@ -68,7 +68,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       },
       {
         id: "obv",
-        content: <Obv perd={perd} />,
+        content: <Obv />,
       },
       {
         id: "mfi",

@@ -18,7 +18,6 @@ import {
 } from "@mui/material";
 import { useContext, useMemo, useState } from "react";
 import {
-  Brush,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -224,8 +223,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     else if (totalScore >= 60) rec = "Buy";
     else if (totalScore <= 30) rec = "Sell";
     else rec = "Hold";
-    
-    const stopLoss = (price * 0.95).toFixed(2);
+
 
     const avgSteps: AvgMaStep[] = [
         {

@@ -20,7 +20,6 @@ import { useContext, useMemo, useState } from "react";
 import {
   Area,
   Bar,
-  Brush,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -366,6 +365,7 @@ export default function MJ({ id }: { id?: string }) {
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
             <YAxis domain={["auto", "auto"]} />
+            <YAxis yAxisId="right_dummy" orientation="right" tick={false} axisLine={false} width={40} />
             <Tooltip
               offset={50}
               contentStyle={{
@@ -481,6 +481,9 @@ export default function MJ({ id }: { id?: string }) {
                  />
                );
              })}
+
+             
+
           </ComposedChart>
         </ResponsiveContainer>
 
@@ -494,7 +497,7 @@ export default function MJ({ id }: { id?: string }) {
                 <YAxis yAxisId="left" orientation="left" stroke="#888" fontSize={10} />
                 
                 {/* Right Axis for J-Line (0-100) */}
-                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} stroke="#2196f3" fontSize={10}/>
+                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} stroke="#2196f3" fontSize={10} width={40} />
 
                 <Tooltip offset={50} contentStyle={{ backgroundColor: "#222", border: "none" }} />
                 

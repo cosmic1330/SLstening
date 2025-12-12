@@ -169,7 +169,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
       <Divider sx={{ mb: 2 }} />
 
       {/* Content Area */}
-      <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'hidden', p: 1 }}>
+      <Box sx={{ flexGrow: 1, minHeight: 0, overflow: 'hidden'}}>
         <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
             data={chartData}
@@ -197,7 +197,7 @@ export default function Obv({ perd }: { perd: UrlTaPerdOptions }) {
             <Line dataKey="o" stroke="#000" opacity={0} dot={false} legendType="none" />
 
             {/* Indicators */}
-            <Line dataKey="ma20" stroke="#ffeb3b" strokeWidth={1} dot={false} name="MA20" />
+            <Line dataKey="ma20" stroke="#f1af20ff" strokeWidth={1} dot={false} name="MA20" />
             <Line dataKey="ma50" stroke="#9c27b0" strokeWidth={1} dot={false} name="MA50" />
             
             <Line dataKey="bbUpper" stroke="#9e9e9e" strokeDasharray="3 3" strokeWidth={1} dot={false} name="BB Upper" />

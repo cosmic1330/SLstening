@@ -38,8 +38,17 @@ const BaseCandlestickRectangle = (props: any) => {
       return null;
     }
 
-    const isRising =
-      closeSeriesPoint.value > openSeriesPoint.value ? true : false;
+    // Use payload for robust data comparison (fixes "All Red" issue)
+    const payload = (closeSeriesPoint as any).payload;
+    const isRising = payload && typeof payload.c === 'number' && typeof payload.o === 'number'
+        ? payload.c > payload.o
+        : closeSeriesPoint.value > openSeriesPoint.value;
+    
+    // Default to Taiwan standard (Red=Up, Green=Down) if not provided
+    const upColor = props.upColor || "#ff4d4f";
+    const downColor = props.downColor || "#52c41a";
+    const width = props.candleWidth || 3;
+    const xOffset = width / 2;
 
     return (
       <g key={`candlestick-${index}`}>
@@ -49,15 +58,15 @@ const BaseCandlestickRectangle = (props: any) => {
           height={Math.abs(lowSeriesPoint.y - highSeriesPoint.y) || 1} // 確保高度為正值
           x={lowSeriesPoint.x - 0.5} // 調整位置讓線條居中
           y={Math.min(lowSeriesPoint.y, highSeriesPoint.y)}
-          fill={isRising ? "#ff4d4f" : "#52c41a"}
+          fill={isRising ? upColor : downColor}
         />
         {/* Thick rectangle for open-close */}
         <Rectangle
-          width={3}
+          width={width}
           height={Math.abs(openSeriesPoint.y - closeSeriesPoint.y) || 1}
-          x={lowSeriesPoint.x - 1.5}
+          x={lowSeriesPoint.x - xOffset}
           y={Math.min(openSeriesPoint.y, closeSeriesPoint.y)}
-          fill={isRising ? "#ff4d4f" : "#52c41a"}
+          fill={isRising ? upColor : downColor}
         />
       </g>
     );

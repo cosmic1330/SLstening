@@ -78,9 +78,6 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     let ema5_data = ema.init(deals[0], 5);
     let ema10_data = ema.init(deals[0], 10);
     
-    // Calculate MA60 manually
-    // We need at least 60 points potentially, but we'll just do simple moving average
-    
     const response: AvgMaChartData[] = [];
 
     for (let i = 0; i < deals.length; i++) {
@@ -143,8 +140,6 @@ export default function AvgMaKbar({ id }: { id?: string }) {
       ) {
         const price = curr.c || 0;
         const ma60 = curr.ma60 || 0;
-        // Simple filter: if MA60 is not ready (0 or null), treat as trend? Or strict? 
-        // Let's treat as 'rebound' if unsure, to be safe. But if i < 60 usually no signal.
         
         if (prev.ema5 < prev.ema10 && curr.ema5 > curr.ema10) {
             // Golden Cross
@@ -190,7 +185,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     }
 
     // Signals
-    const recentSignal = signals.length > 0 ? signals.slice().reverse().find(s => s.t === current.t || s.t === chartData[chartData.length-2]?.t) : null;
+    const recentCross = signals.length > 0 ? signals.slice().reverse().find(s => (s.type === "golden" || s.type === "death") && (s.t === current.t || s.t === chartData[chartData.length-2]?.t)) : null;
     const trendUp = ema5 > ema10;
     const aboveLifeLine = isNum(ma60) && price > ma60;
     const volOk = isNum(vol) && isNum(volMa) && vol > volMa; // Volume support
@@ -203,16 +198,15 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     if (aboveLifeLine) totalScore += 15;
 
     // 2. Signal Quality (40)
-    if (recentSignal) {
-        if (recentSignal.type === "golden") {
-            if (recentSignal.subType === "trend") totalScore += 40; // Strong buy
+    if (recentCross) {
+        if (recentCross.type === "golden") {
+            if (recentCross.subType === "trend") totalScore += 40; // Strong buy
             else totalScore += 20; // Rebound buy
         } else {
-             if (recentSignal.subType === "trend") totalScore -= 40; // Strong sell
+             if (recentCross.subType === "trend") totalScore -= 40; // Strong sell
              else totalScore -= 20; // Correction
         }
     } else {
-        // Holding score
          if (trendUp && aboveLifeLine) totalScore += 20; // Holding trend
     }
     
@@ -253,12 +247,12 @@ export default function AvgMaKbar({ id }: { id?: string }) {
             description: "交叉與型態",
             checks: [
                 {
-                    label: `最新訊號: ${recentSignal ? (recentSignal.type === "golden" ? "黃金交叉" : "死亡交叉") : "無"}`,
-                    status: recentSignal?.type === "golden" ? "pass" : recentSignal?.type === "death" ? "fail" : "manual"
+                    label: `均線訊號: ${recentCross ? (recentCross.type === "golden" ? "黃金交叉" : "死亡交叉") : "無"}`,
+                    status: recentCross?.type === "golden" ? "pass" : recentCross?.type === "death" ? "fail" : "manual"
                 },
                 {
-                    label: `訊號性質: ${recentSignal ? (recentSignal.subType === "trend" ? "順勢 (強)" : "逆勢 (弱)") : "N/A"}`,
-                    status: recentSignal?.subType === "trend" ? "pass" : "manual"
+                    label: `訊號性質: ${recentCross ? (recentCross.subType === "trend" ? "順勢 (強)" : "逆勢 (弱)") : "N/A"}`,
+                    status: recentCross?.subType === "trend" ? "pass" : "manual"
                 }
             ]
         },

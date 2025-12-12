@@ -615,21 +615,21 @@ export default function Ichimoku({
                 <Area
                   type="monotone"
                   dataKey="kumo_bull"
-                  fill="rgba(76, 175, 80, 0.2)"
+                  fill="rgba(244, 67, 54, 0.2)"
                   stroke="none"
                   name="Bullish Cloud"
                 />
                 <Area
                   type="monotone"
                   dataKey="kumo_bear"
-                  fill="rgba(244, 67, 54, 0.2)"
+                  fill="rgba(76, 175, 80, 0.2)"
                   stroke="none"
                   name="Bearish Cloud"
                 />
                 <Line
                   type="monotone"
                   dataKey="senkouA"
-                  stroke="rgba(76, 175, 80, 0.6)"
+                  stroke="rgba(244, 67, 54, 0.6)"
                   strokeWidth={1}
                   dot={false}
                   name="Senkou A"
@@ -637,7 +637,7 @@ export default function Ichimoku({
                 <Line
                   type="monotone"
                   dataKey="senkouB"
-                  stroke="rgba(244, 67, 54, 0.6)"
+                  stroke="rgba(76, 175, 80, 0.6)"
                   strokeWidth={1}
                   dot={false}
                   name="Senkou B"

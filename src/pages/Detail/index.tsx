@@ -50,10 +50,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
         content: <Bollean />,
       },
       {
-        id: "ichimoku_cloud",
-        content: <IchimokuCloud id={id} perd={perd} />,
-      },
-      {
         id: "ma_k",
         content: <MaKbar perd={perd} />,
       },
@@ -77,6 +73,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "mfi",
         content: <Mfi />,
+      },
+      {
+        id: "ichimoku_cloud",
+        content: <IchimokuCloud id={id} perd={perd} />,
       },
     ],
     [perd]

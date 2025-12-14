@@ -57,166 +57,215 @@ interface StrategyStep {
 export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
-  
+
   // Gap Controls
   const [showGaps, setShowGaps] = useState(true);
   const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(false);
-  const [hoveredGapDate, setHoveredGapDate] = useState<number | undefined>(undefined);
+  const [hoveredGapDate, setHoveredGapDate] = useState<number | undefined>(
+    undefined
+  );
 
-  const {
-      trends: chartData,
-      power,
-  } = useMarketAnalysis({
-      ta: deals,
-      perd,
+  const { trends: chartData, power } = useMarketAnalysis({
+    ta: deals,
+    perd,
   });
 
   // Gap Detection
-  const {
-      gapsWithFillStatus,
-      unfilledGaps,
-      recentGaps,
-      unfilledGapsCount,
-  } = useGapDetection(deals.slice(-160), 1.0); 
+  const { gapsWithFillStatus, unfilledGaps, recentGaps, unfilledGapsCount } =
+    useGapDetection(deals.slice(-160), 1.0);
 
   // Gap Visualization Data
   const { gapLines, enhancedChartData } = useGapVisualization({
-      gaps: showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus,
-      chartData: chartData.slice(-160),
-      isVisible: showGaps,
-      highlightedGapDate: hoveredGapDate,
+    gaps: showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus,
+    chartData: chartData.slice(-160),
+    isVisible: showGaps,
+    highlightedGapDate: hoveredGapDate,
   });
 
   // Signal Calculation (Historical)
   const signals = useMemo(() => {
-      const result: { t: number | string; type: "buy" | "sell"; price: number }[] = [];
-      if (enhancedChartData.length < 2) return result;
+    const result: {
+      t: number | string;
+      type: "buy" | "sell";
+      price: number;
+      reason: string;
+    }[] = [];
+    if (enhancedChartData.length < 2) return result;
 
-      for (let i = 1; i < enhancedChartData.length; i++) {
-          const current = enhancedChartData[i];
-          const prev = enhancedChartData[i - 1];
+    for (let i = 1; i < enhancedChartData.length; i++) {
+      const current = enhancedChartData[i];
+      const prev = enhancedChartData[i - 1];
 
-          // Ensure we have values
-          if (typeof current.ma5 !== 'number' || typeof current.ma20 !== 'number' || 
-              typeof prev.ma5 !== 'number' || typeof prev.ma20 !== 'number') {
-              continue;
-          }
-
-          // Golden Cross (Buy)
-          if (prev.ma5 <= prev.ma20 && current.ma5 > current.ma20) {
-              result.push({ t: current.t!, type: "buy", price: current.l! });
-          }
-          // Death Cross (Sell)
-          else if (prev.ma5 >= prev.ma20 && current.ma5 < current.ma20) {
-              result.push({ t: current.t!, type: "sell", price: current.h! });
-          }
+      // Ensure we have values
+      if (
+        typeof current.ma5 !== "number" ||
+        typeof current.ma20 !== "number" ||
+        typeof prev.ma5 !== "number" ||
+        typeof prev.ma20 !== "number"
+      ) {
+        continue;
       }
-      return result;
+
+      // Golden Cross (Buy)
+      if (prev.ma5 <= prev.ma20 && current.ma5 > current.ma20) {
+        result.push({
+          t: current.t!,
+          type: "buy",
+          price: current.l!,
+          reason: "均線金叉",
+        });
+      }
+      // Death Cross (Sell)
+      else if (prev.ma5 >= prev.ma20 && current.ma5 < current.ma20) {
+        result.push({
+          t: current.t!,
+          type: "sell",
+          price: current.h!,
+          reason: "均線死叉",
+        });
+      }
+    }
+    return result;
   }, [enhancedChartData]);
 
   // Derived Logic for Dashboard
   const { steps, score, recommendation } = useMemo(() => {
-      if (enhancedChartData.length === 0) return { steps: [], score: 0, recommendation: "" };
+    if (enhancedChartData.length === 0)
+      return { steps: [], score: 0, recommendation: "" };
 
-      const current = enhancedChartData[enhancedChartData.length - 1];
-      
-      const price = current.c;
-      const trend = current.trend as string;
-      const ma5 = current.ma5;
-      const ma20 = current.ma20;
-      
-      const isNum = (n: any): n is number => typeof n === "number";
+    const current = enhancedChartData[enhancedChartData.length - 1];
 
-      if (!isNum(price) || !isNum(ma5) || !isNum(ma20)) {
-           return { steps: [], score: 0, recommendation: "Data Error" };
-      }
+    const price = current.c;
+    const trend = current.trend as string;
+    const ma5 = current.ma5;
+    const ma20 = current.ma20;
 
-      // 1. Trend Analysis
-      const isBullish = trend === "多頭";
-      const isBearish = trend === "空頭";
-      const maStackOk = ma5 > ma20;
+    const isNum = (n: any): n is number => typeof n === "number";
 
-      // 2. Gap Analysis
-      const lastGap = recentGaps.length > 0 ? recentGaps[0] : null;
-      const recentUpGap = lastGap && lastGap.type === "up";
-      const hasUnfilledUp = unfilledGaps.some(g => g.type === "up");
-      
-      // 3. Power Analysis
-      const powerStr = power as string;
-      const isPowerBullish = powerStr.includes("多方");
-      const isPowerBearish = powerStr.includes("空方");
+    if (!isNum(price) || !isNum(ma5) || !isNum(ma20)) {
+      return { steps: [], score: 0, recommendation: "Data Error" };
+    }
 
-      // 4. Signal (Current Candle)
-      const lastSignal = signals.length > 0 ? signals[signals.length -1] : null;
-      const isRecentBuy = lastSignal && lastSignal.type === "buy" && (enhancedChartData.length - enhancedChartData.indexOf(enhancedChartData.find(d => d.t === lastSignal.t) as any)) < 5;
+    // 1. Trend Analysis
+    const isBullish = trend === "多頭";
+    const isBearish = trend === "空頭";
+    const maStackOk = ma5 > ma20;
 
-      // Scoring
-      let totalScore = 0;
-      
-      // Trend (40)
-      if (isBullish) totalScore += 40;
-      else if (maStackOk) totalScore += 20;
-      if (isBearish) totalScore -= 20;
+    // 2. Gap Analysis
+    const lastGap = recentGaps.length > 0 ? recentGaps[0] : null;
+    const recentUpGap = lastGap && lastGap.type === "up";
+    const hasUnfilledUp = unfilledGaps.some((g) => g.type === "up");
 
-      // Gaps (30)
-      if (recentUpGap) totalScore += 20;
-      if (hasUnfilledUp) totalScore += 10;
-      if (lastGap && lastGap.type === "down") totalScore -= 10;
+    // 3. Power Analysis
+    const powerStr = power as string;
+    const isPowerBullish = powerStr.includes("多方");
+    const isPowerBearish = powerStr.includes("空方");
 
-      // Power (30)
-      if (isPowerBullish) totalScore += 30;
-      if (isPowerBearish) totalScore -= 20;
-      
-      // Bonus
-      if (isRecentBuy) totalScore += 10;
+    // 4. Signal (Current Candle)
+    const lastSignal = signals.length > 0 ? signals[signals.length - 1] : null;
+    const isRecentBuy =
+      lastSignal &&
+      lastSignal.type === "buy" &&
+      enhancedChartData.length -
+        enhancedChartData.indexOf(
+          enhancedChartData.find((d) => d.t === lastSignal.t) as any
+        ) <
+        5;
 
-      if (totalScore < 0) totalScore = 0;
-      if (totalScore > 100) totalScore = 100;
+    // Scoring
+    let totalScore = 0;
 
-      let rec = "Neutral";
-      if (totalScore >= 80) rec = "Strong Buy";
-      else if (totalScore >= 60) rec = "Buy";
-      else if (totalScore <= 30) rec = "Sell";
-      else rec = "Hold";
+    // Trend (40)
+    if (isBullish) totalScore += 40;
+    else if (maStackOk) totalScore += 20;
+    if (isBearish) totalScore -= 20;
 
-      const dashSteps: StrategyStep[] = [
+    // Gaps (30)
+    if (recentUpGap) totalScore += 20;
+    if (hasUnfilledUp) totalScore += 10;
+    if (lastGap && lastGap.type === "down") totalScore -= 10;
+
+    // Power (30)
+    if (isPowerBullish) totalScore += 30;
+    if (isPowerBearish) totalScore -= 20;
+
+    // Bonus
+    if (isRecentBuy) totalScore += 10;
+
+    if (totalScore < 0) totalScore = 0;
+    if (totalScore > 100) totalScore = 100;
+
+    let rec = "Neutral";
+    if (totalScore >= 80) rec = "Strong Buy";
+    else if (totalScore >= 60) rec = "Buy";
+    else if (totalScore <= 30) rec = "Sell";
+    else rec = "Hold";
+
+    const dashSteps: StrategyStep[] = [
+      {
+        label: "I. 趨勢分析",
+        description: `MA 排列: ${trend}`,
+        checks: [
           {
-              label: "I. 趨勢分析",
-              description: `MA 排列: ${trend}`,
-              checks: [
-                  { label: "均線多頭排列", status: isBullish ? "pass" : isBearish ? "fail" : "manual" },
-                  { label: `MA5 > MA20: ${maStackOk}`, status: maStackOk ? "pass" : "fail" }
-              ]
+            label: "均線多頭排列",
+            status: isBullish ? "pass" : isBearish ? "fail" : "manual",
           },
           {
-              label: "II. 缺口研判",
-              description: `未補: ${unfilledGapsCount} / 近期: ${lastGap ? (lastGap.type === 'up' ? '↑' : '↓') : '無'}`,
-              checks: [
-                   { label: "近期出現向上跳空", status: recentUpGap ? "pass" : "fail" },
-                   { label: "存在未補多方缺口", status: hasUnfilledUp ? "pass" : "fail" }
-              ]
+            label: `MA5 > MA20: ${maStackOk}`,
+            status: maStackOk ? "pass" : "fail",
           },
+        ],
+      },
+      {
+        label: "II. 缺口研判",
+        description: `未補: ${unfilledGapsCount} / 近期: ${
+          lastGap ? (lastGap.type === "up" ? "↑" : "↓") : "無"
+        }`,
+        checks: [
+          { label: "近期出現向上跳空", status: recentUpGap ? "pass" : "fail" },
           {
-               label: "III. 力道動能",
-               description: powerStr,
-               checks: [
-                   { label: "多方力道增強", status: isPowerBullish ? "pass" : "fail" },
-                   { label: "MACD 動能支持", status: isPowerBullish ? "pass" : isPowerBearish ? "fail" : "manual" }
-               ]
+            label: "存在未補多方缺口",
+            status: hasUnfilledUp ? "pass" : "fail",
           },
+        ],
+      },
+      {
+        label: "III. 力道動能",
+        description: powerStr,
+        checks: [
+          { label: "多方力道增強", status: isPowerBullish ? "pass" : "fail" },
           {
-              label: "IV. 綜合評估",
-              description: `得分: ${totalScore} - ${rec}`,
-              checks: [
-                  { label: `目前建議: ${rec}`, status: totalScore >= 60 ? "pass" : "manual" },
-                  { label: "近期金叉訊號", status: isRecentBuy ? "pass" : "manual" }
-              ]
-          }
-      ];
+            label: "MACD 動能支持",
+            status: isPowerBullish
+              ? "pass"
+              : isPowerBearish
+              ? "fail"
+              : "manual",
+          },
+        ],
+      },
+      {
+        label: "IV. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
+          },
+          { label: "近期金叉訊號", status: isRecentBuy ? "pass" : "manual" },
+        ],
+      },
+    ];
 
-      return { steps: dashSteps, score: totalScore, recommendation: rec };
-
-  }, [enhancedChartData, recentGaps, unfilledGaps, unfilledGapsCount, power, signals]);
+    return { steps: dashSteps, score: totalScore, recommendation: rec };
+  }, [
+    enhancedChartData,
+    recentGaps,
+    unfilledGaps,
+    unfilledGapsCount,
+    power,
+    signals,
+  ]);
 
   const handleStep = (step: number) => () => {
     setActiveStep(step);
@@ -233,8 +282,8 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
         return <HelpOutlineIcon fontSize="small" color="disabled" />;
     }
   };
-  
-    // 自定義 Tooltip 組件來處理 hover 事件
+
+  // 自定義 Tooltip 組件來處理 hover 事件
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       // 檢查當前 hover 的位置是否有缺口
@@ -255,25 +304,51 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
       }
 
       return (
-        <div style={{ backgroundColor: "#222", padding: "10px", borderRadius: "4px", border: "1px solid #444", fontSize: "12px" }}>
-            <p style={{ color: "#eee", margin: "0 0 5px 0" }}>{dateFormat(label, Mode.NumberToString)}</p>
-            {payload.map((entry: any, index: number) => {
-                 if(entry.name && entry.name.includes("gap")) return null;
-                 return (
-                    <p key={index} style={{ color: entry.color, margin: 0 }}>
-                        {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value}
-                    </p>
-                 );
-            })}
-             {currentGaps.length > 0 && (
-                <div style={{ marginTop: 8, borderTop: "1px solid #555", paddingTop: 4 }}>
-                    {currentGaps.map(g => (
-                        <p key={g.date} style={{ color: g.type === 'up' ? '#ff5252' : '#69f0ae', margin: 0 }}>
-                            {g.type === 'up' ? '支撐缺口' : '壓力缺口'} {g.size.toFixed(2)} ({g.sizePercent.toFixed(1)}%)
-                        </p>
-                    ))}
-                </div>
-            )}
+        <div
+          style={{
+            backgroundColor: "#222",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #444",
+            fontSize: "12px",
+          }}
+        >
+          <p style={{ color: "#eee", margin: "0 0 5px 0" }}>
+            {dateFormat(label, Mode.NumberToString)}
+          </p>
+          {payload.map((entry: any, index: number) => {
+            if (entry.name && entry.name.includes("gap")) return null;
+            return (
+              <p key={index} style={{ color: entry.color, margin: 0 }}>
+                {entry.name}:{" "}
+                {typeof entry.value === "number"
+                  ? entry.value.toFixed(2)
+                  : entry.value}
+              </p>
+            );
+          })}
+          {currentGaps.length > 0 && (
+            <div
+              style={{
+                marginTop: 8,
+                borderTop: "1px solid #555",
+                paddingTop: 4,
+              }}
+            >
+              {currentGaps.map((g) => (
+                <p
+                  key={g.date}
+                  style={{
+                    color: g.type === "up" ? "#ff5252" : "#69f0ae",
+                    margin: 0,
+                  }}
+                >
+                  {g.type === "up" ? "支撐缺口" : "壓力缺口"}{" "}
+                  {g.size.toFixed(2)} ({g.sizePercent.toFixed(1)}%)
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       );
     }
@@ -284,10 +359,14 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
     return null;
   };
 
-
   if (enhancedChartData.length === 0) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box
+        height="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
         <CircularProgress />
       </Box>
     );
@@ -305,26 +384,40 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
             MA & Gaps Strategy
           </Typography>
         </MuiTooltip>
-        
+
         <Chip
           label={`${score}分 - ${recommendation}`}
           color={score >= 80 ? "success" : score >= 60 ? "warning" : "error"}
           variant="outlined"
           size="small"
         />
-        
+
         <Divider orientation="vertical" flexItem />
 
         {/* Gap Controls in Header */}
         <FormControlLabel
-            control={<Switch size="small" checked={showGaps} onChange={(e) => setShowGaps(e.target.checked)} />}
-            label={<Typography variant="caption">顯示缺口</Typography>}
-            sx={{ mr: 1 }}
+          control={
+            <Switch
+              size="small"
+              checked={showGaps}
+              onChange={(e) => setShowGaps(e.target.checked)}
+            />
+          }
+          label={<Typography variant="caption">顯示缺口</Typography>}
+          sx={{ mr: 1 }}
         />
-         <FormControlLabel
-            control={<Switch size="small" checked={showOnlyUnfilled} onChange={(e) => setShowOnlyUnfilled(e.target.checked)} disabled={!showGaps} color="secondary" />}
-            label={<Typography variant="caption">僅未補</Typography>}
-            sx={{ mr: 1 }}
+        <FormControlLabel
+          control={
+            <Switch
+              size="small"
+              checked={showOnlyUnfilled}
+              onChange={(e) => setShowOnlyUnfilled(e.target.checked)}
+              disabled={!showGaps}
+              color="secondary"
+            />
+          }
+          label={<Typography variant="caption">僅未補</Typography>}
+          sx={{ mr: 1 }}
         />
 
         <Box sx={{ flexGrow: 1 }}>
@@ -352,7 +445,11 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
                 {steps[activeStep]?.description}
               </Typography>
             </Box>
-            <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", md: "block" } }} />
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ display: { xs: "none", md: "block" } }}
+            />
             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
               {steps[activeStep]?.checks.map((check, idx) => (
                 <Chip
@@ -360,7 +457,13 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
                   icon={getStatusIcon(check.status)}
                   label={check.label}
                   variant="outlined"
-                  color={check.status === "pass" ? "success" : check.status === "fail" ? "error" : "default"}
+                  color={
+                    check.status === "pass"
+                      ? "success"
+                      : check.status === "fail"
+                      ? "error"
+                      : "default"
+                  }
                   size="small"
                 />
               ))}
@@ -370,121 +473,214 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
       </Card>
 
       {/* Combined Chart: Price (Main) + Volume (Overlay at bottom) */}
-         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={enhancedChartData} syncId="maSync" margin={{ top: 5, right: 0, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="t" hide />
-            
-            {/* Main Price Axis (Left) */}
-            <YAxis domain={["auto", "auto"]} />
-            
-            {/* Volume Axis (Right, Hidden or Low-profile, Scaled to push bars down) */}
-            <YAxis 
-                yAxisId="volAxis" 
-                orientation="right" 
-                domain={[0, (dataMax: number) => dataMax * 4]} 
-                width={40} 
-                tick={false} 
-                axisLine={false} 
-            />
-            
-            <Tooltip content={<CustomTooltip />} offset={50} />
-            
-             <Line dataKey="h" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none"/>
-             <Line dataKey="c" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none"/>
-             <Line dataKey="l" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none"/>
-             <Line dataKey="o" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none"/>
-            
-            <Customized component={BaseCandlestickRectangle} />
-            
-            {/* Volume Bars (Overlay) */}
-             <Bar 
-                dataKey="v" 
-                yAxisId="volAxis" 
-                name="Volume" 
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart
+          data={enhancedChartData}
+          syncId="maSync"
+          margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+          <XAxis dataKey="t" hide />
+
+          {/* Main Price Axis (Left) */}
+          <YAxis domain={["auto", "auto"]} />
+
+          {/* Volume Axis (Right, Hidden or Low-profile, Scaled to push bars down) */}
+          <YAxis
+            yAxisId="volAxis"
+            orientation="right"
+            domain={[0, (dataMax: number) => dataMax * 4]}
+            width={40}
+            tick={false}
+            axisLine={false}
+          />
+
+          <Tooltip content={<CustomTooltip />} offset={50} />
+
+          <Line
+            dataKey="h"
+            stroke="#fff"
+            opacity={0}
+            dot={false}
+            activeDot={false}
+            legendType="none"
+          />
+          <Line
+            dataKey="c"
+            stroke="#fff"
+            opacity={0}
+            dot={false}
+            activeDot={false}
+            legendType="none"
+          />
+          <Line
+            dataKey="l"
+            stroke="#fff"
+            opacity={0}
+            dot={false}
+            activeDot={false}
+            legendType="none"
+          />
+          <Line
+            dataKey="o"
+            stroke="#fff"
+            opacity={0}
+            dot={false}
+            activeDot={false}
+            legendType="none"
+          />
+
+          <Customized component={BaseCandlestickRectangle} />
+
+          {/* Volume Bars (Overlay) */}
+          <Bar
+            dataKey="v"
+            yAxisId="volAxis"
+            name="Volume"
+            shape={(props: any) => {
+              const { x, y, width, height, payload } = props;
+              const isUp = payload.c > payload.o;
+              return (
+                <rect
+                  x={x}
+                  y={y}
+                  width={width}
+                  height={height}
+                  fill={isUp ? "#f44336" : "#4caf50"}
+                  opacity={0.2}
+                />
+              );
+            }}
+          />
+
+          <Line
+            dataKey="ma5"
+            stroke="#589bf3"
+            dot={false}
+            activeDot={false}
+            strokeWidth={1}
+            name="MA5"
+          />
+          <Line
+            dataKey="ma10"
+            stroke="#b277f2"
+            dot={false}
+            activeDot={false}
+            strokeWidth={1}
+            name="MA10"
+          />
+          <Line
+            dataKey="ma20"
+            stroke="#ff7300"
+            dot={false}
+            activeDot={false}
+            strokeWidth={1.5}
+            name="MA20"
+          />
+          <Line
+            dataKey="ma60"
+            stroke="#63c762"
+            dot={false}
+            activeDot={false}
+            strokeWidth={1}
+            name="MA60"
+          />
+
+          {/* Signal Markers */}
+          {signals.map((signal) => {
+            const isLong = signal.type === "buy";
+            const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
+            const color = isLong ? "#f44336" : "#4caf50";
+
+            return (
+              <ReferenceDot
+                key={signal.t}
+                x={signal.t}
+                y={yPos}
+                r={4}
+                stroke="none"
                 shape={(props: any) => {
-                    const { x, y, width, height, payload } = props;
-                    const isUp = payload.c > payload.o;
-                    return <rect x={x} y={y} width={width} height={height} fill={isUp ? "#f44336" : "#4caf50"} opacity={0.2} />;
-                }} 
-            />
+                  const { cx, cy } = props;
+                  if (!cx || !cy) return <g />;
 
-            <Line dataKey="ma5" stroke="#589bf3" dot={false} activeDot={false} strokeWidth={1} name="MA5" />
-            <Line dataKey="ma10" stroke="#b277f2" dot={false} activeDot={false} strokeWidth={1} name="MA10" />
-            <Line dataKey="ma20" stroke="#ff7300" dot={false} activeDot={false} strokeWidth={1.5} name="MA20" />
-            <Line dataKey="ma60" stroke="#63c762" dot={false} activeDot={false} strokeWidth={1} name="MA60" />
+                  return (
+                    <g>
+                      {isLong ? (
+                        // Long Entry
+                        <>
+                          <path
+                            d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                              cy + 10
+                            } L${cx},${cy} Z`}
+                            fill={color}
+                          />
+                          <text
+                            x={cx}
+                            y={cy + 25}
+                            textAnchor="middle"
+                            fill={color}
+                            fontSize={10}
+                          >
+                            {signal.reason}
+                          </text>
+                        </>
+                      ) : (
+                        // Short Entry
+                        <>
+                          <path
+                            d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                              cy - 10
+                            } L${cx},${cy} Z`}
+                            fill={color}
+                          />
+                          <text
+                            x={cx}
+                            y={cy - 15}
+                            textAnchor="middle"
+                            fill={color}
+                            fontSize={10}
+                          >
+                            {signal.reason}
+                          </text>
+                        </>
+                      )}
+                    </g>
+                  );
+                }}
+              />
+            );
+          })}
 
-             {/* Signal Markers */}
-             {signals.map((signal) => {
-               const isLong = signal.type === "buy";
-               const yPos = isLong ? (signal.price! * 0.99) : (signal.price! * 1.01);
-               const color = isLong ? "#f44336" : "#4caf50";
-               
-               return (
-                 <ReferenceDot
-                   key={signal.t}
-                   x={signal.t}
-                   y={yPos}
-                   r={4}
-                   stroke="none"
-                   shape={(props: any) => {
-                     const { cx, cy } = props;
-                     if (!cx || !cy) return <g />;
-                     
-                     return (
-                       <g>
-                         {isLong ? (
-                           // Long Entry
-                           <>
-                             <path
-                               d={`M${cx - 5},${cy + 10} L${cx + 5},${cy + 10} L${cx},${cy} Z`}
-                               fill={color}
-                             />
-                           </>
-                         ) : (
-                           // Short Entry
-                           <>
-                            <path
-                               d={`M${cx - 5},${cy - 10} L${cx + 5},${cy - 10} L${cx},${cy} Z`}
-                               fill={color}
-                            />
-                           </>
-                         )}
-                       </g>
-                     );
-                   }}
-                 />
-               );
-             })}
-
-            {/* Gap Visualization */}
-            {showGaps && gapLines.map((gap) => [
-                  <Line
-                    key={`gap-upper-${gap.date}`}
-                    dataKey={`gap_upper_${gap.date}`}
-                    stroke={gap.upperLine.stroke}
-                    strokeWidth={gap.upperLine.strokeWidth}
-                    strokeDasharray={gap.upperLine.strokeDasharray}
-                    opacity={gap.upperLine.opacity}
-                    dot={false}
-                    activeDot={false}
-                    legendType="none"
-                  />,
-                  <Line
-                    key={`gap-lower-${gap.date}`}
-                    dataKey={`gap_lower_${gap.date}`}
-                    stroke={gap.lowerLine.stroke}
-                    strokeWidth={gap.lowerLine.strokeWidth}
-                    strokeDasharray={gap.lowerLine.strokeDasharray}
-                    opacity={gap.lowerLine.opacity}
-                    dot={false}
-                    activeDot={false}
-                    legendType="none"
-                  />,
-                ]).flat()}
-
-          </ComposedChart>
-        </ResponsiveContainer>
+          {/* Gap Visualization */}
+          {showGaps &&
+            gapLines
+              .map((gap) => [
+                <Line
+                  key={`gap-upper-${gap.date}`}
+                  dataKey={`gap_upper_${gap.date}`}
+                  stroke={gap.upperLine.stroke}
+                  strokeWidth={gap.upperLine.strokeWidth}
+                  strokeDasharray={gap.upperLine.strokeDasharray}
+                  opacity={gap.upperLine.opacity}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                />,
+                <Line
+                  key={`gap-lower-${gap.date}`}
+                  dataKey={`gap_lower_${gap.date}`}
+                  stroke={gap.lowerLine.stroke}
+                  strokeWidth={gap.lowerLine.strokeWidth}
+                  strokeDasharray={gap.lowerLine.strokeDasharray}
+                  opacity={gap.lowerLine.opacity}
+                  dot={false}
+                  activeDot={false}
+                  legendType="none"
+                />,
+              ])
+              .flat()}
+        </ComposedChart>
+      </ResponsiveContainer>
     </Container>
   );
 }

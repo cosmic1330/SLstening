@@ -70,26 +70,38 @@ interface MrStep {
 
 // Custom Tooltip
 const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ backgroundColor: "#222", padding: "10px", borderRadius: "4px", border: "1px solid #444", fontSize: "12px" }}>
-          <p style={{ color: "#eee", margin: "0 0 5px 0" }}>{label}</p>
-          {payload.map((entry: any) => {
-              // Hide auxiliary areas
-              if (entry.name === "longZone" || entry.name === "shortZone") return null;
-              
-              const val = typeof entry.value === 'number' ? entry.value.toFixed(2) : entry.value;
-              return (
-                <p key={entry.name} style={{ color: entry.color, margin: 0 }}>
-                    {entry.name}: {val}
-                </p>
-              )
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
+  if (active && payload && payload.length) {
+    return (
+      <div
+        style={{
+          backgroundColor: "#222",
+          padding: "10px",
+          borderRadius: "4px",
+          border: "1px solid #444",
+          fontSize: "12px",
+        }}
+      >
+        <p style={{ color: "#eee", margin: "0 0 5px 0" }}>{label}</p>
+        {payload.map((entry: any) => {
+          // Hide auxiliary areas
+          if (entry.name === "longZone" || entry.name === "shortZone")
+            return null;
+
+          const val =
+            typeof entry.value === "number"
+              ? entry.value.toFixed(2)
+              : entry.value;
+          return (
+            <p key={entry.name} style={{ color: entry.color, margin: 0 }}>
+              {entry.name}: {val}
+            </p>
+          );
+        })}
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function MR({ id }: { id?: string }) {
   const deals = useContext(DealsContext);
@@ -97,103 +109,102 @@ export default function MR({ id }: { id?: string }) {
 
   const chartData = useMemo((): MrChartData[] => {
     if (!deals || deals.length === 0) return [];
-    
+
     let rsi_data = rsi.init(deals[0], 5); // RSI Period 5
     let macd_data = macd.init(deals[0]);
-    
+
     const response: MrChartData[] = [];
 
     // First item
     response.push({
       ...deals[0],
-        rsi: rsi_data.rsi || null,
-        osc: macd_data.osc || null,
-        ma20: null,
-        longZone: null,
-        shortZone: null,
-        positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
-        negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
+      rsi: rsi_data.rsi || null,
+      osc: macd_data.osc || null,
+      ma20: null,
+      longZone: null,
+      shortZone: null,
+      positiveOsc: macd_data.osc > 0 ? macd_data.osc : 0,
+      negativeOsc: macd_data.osc < 0 ? macd_data.osc : 0,
     });
 
     for (let i = 1; i < deals.length; i++) {
-        const deal = deals[i];
+      const deal = deals[i];
 
-        // Indicator calc
-        rsi_data = rsi.next(deal, rsi_data, 5);
-        macd_data = macd.next(deal, macd_data);
+      // Indicator calc
+      rsi_data = rsi.next(deal, rsi_data, 5);
+      macd_data = macd.next(deal, macd_data);
 
-        // MA20
-        let ma20: number | null = null;
-        if (i >= 19) {
-            let sumC = 0;
-            for(let j=0; j<20; j++) {
-                sumC += deals[i-j].c || 0;
-            }
-            ma20 = sumC / 20;
+      // MA20
+      let ma20: number | null = null;
+      if (i >= 19) {
+        let sumC = 0;
+        for (let j = 0; j < 20; j++) {
+          sumC += deals[i - j].c || 0;
         }
-        
-        const rsiVal = rsi_data.rsi || 0;
-        const osc = macd_data.osc || 0;
+        ma20 = sumC / 20;
+      }
 
-        // Logic:
-        // Long Zone: RSI > 50 && Osc > 0
-        // Short Zone: RSI < 50 && Osc < 0
-        const isLong = rsiVal > 50 && osc > 0;
-        const isShort = rsiVal < 50 && osc < 0;
-        
-        response.push({
-            ...deal,
-            rsi: rsiVal,
-            osc: osc,
-            ma20,
-            longZone: isLong ? rsiVal : null,
-            shortZone: isShort ? rsiVal : null,
-            positiveOsc: osc > 0 ? osc : 0,
-            negativeOsc: osc < 0 ? osc : 0,
-        });
+      const rsiVal = rsi_data.rsi || 0;
+      const osc = macd_data.osc || 0;
+
+      // Logic:
+      // Long Zone: RSI > 50 && Osc > 0
+      // Short Zone: RSI < 50 && Osc < 0
+      const isLong = rsiVal > 50 && osc > 0;
+      const isShort = rsiVal < 50 && osc < 0;
+
+      response.push({
+        ...deal,
+        rsi: rsiVal,
+        osc: osc,
+        ma20,
+        longZone: isLong ? rsiVal : null,
+        shortZone: isShort ? rsiVal : null,
+        positiveOsc: osc > 0 ? osc : 0,
+        negativeOsc: osc < 0 ? osc : 0,
+      });
     }
     return response.slice(-160);
   }, [deals]);
-  
+
   // Calculate Entry Signals (State Transition)
   const signals = useMemo(() => {
-      const result = [];
-      for(let i=1; i<chartData.length; i++) {
-          const curr = chartData[i];
-          const prev = chartData[i-1];
-          
-          const currLong = (curr.rsi || 0) > 50 && (curr.osc || 0) > 0;
-          const prevLong = (prev.rsi || 0) > 50 && (prev.osc || 0) > 0;
-          
-          const currShort = (curr.rsi || 0) < 50 && (curr.osc || 0) < 0;
-          const prevShort = (prev.rsi || 0) < 50 && (prev.osc || 0) < 0;
+    const result = [];
+    for (let i = 1; i < chartData.length; i++) {
+      const curr = chartData[i];
+      const prev = chartData[i - 1];
 
-          if (currLong && !prevLong) {
-              result.push({ t: curr.t, type: "entry_long", price: curr.c });
-          } else if (currShort && !prevShort) {
-              result.push({ t: curr.t, type: "entry_short", price: curr.c });
-          }
+      const currLong = (curr.rsi || 0) > 50 && (curr.osc || 0) > 0;
+      const prevLong = (prev.rsi || 0) > 50 && (prev.osc || 0) > 0;
+
+      const currShort = (curr.rsi || 0) < 50 && (curr.osc || 0) < 0;
+      const prevShort = (prev.rsi || 0) < 50 && (prev.osc || 0) < 0;
+
+      if (currLong && !prevLong) {
+        result.push({ t: curr.t, type: "entry_long", price: curr.c });
+      } else if (currShort && !prevShort) {
+        result.push({ t: curr.t, type: "entry_short", price: curr.c });
       }
-      return result;
+    }
+    return result;
   }, [chartData]);
-
 
   const { steps, score, recommendation } = useMemo(() => {
     if (chartData.length === 0)
-        return { steps: [], score: 0, recommendation: "" };
+      return { steps: [], score: 0, recommendation: "" };
 
     const current = chartData[chartData.length - 1];
     const prev = chartData[chartData.length - 2] || current;
 
     const isNum = (n: any): n is number => typeof n === "number";
-    
+
     const price = current.c;
     const rsiVal = current.rsi;
     const osc = current.osc;
     const ma20 = current.ma20;
-    
+
     if (!isNum(price) || !isNum(rsiVal) || !isNum(osc)) {
-         return { steps: [], score: 0, recommendation: "Data Error" };
+      return { steps: [], score: 0, recommendation: "Data Error" };
     }
 
     const isLongZone = rsiVal > 50 && osc > 0;
@@ -204,19 +215,18 @@ export default function MR({ id }: { id?: string }) {
 
     // Scoring
     let totalScore = 0;
-    
+
     // 1. Zone Status (40)
     if (isLongZone) totalScore += 40;
     else if (rsiVal > 50 || osc > 0) totalScore += 20; // Partial bull
-    if (isShortZone) totalScore -= 40; 
-    
+    if (isShortZone) totalScore -= 40;
+
     // 2. Trend (20)
     if (trendUp) totalScore += 20;
-    
+
     // 3. Momentum (40)
     if (rsiRising) totalScore += 20;
     if (oscRising) totalScore += 20;
-    
 
     if (totalScore < 0) totalScore = 0;
     if (totalScore > 100) totalScore = 100;
@@ -226,57 +236,64 @@ export default function MR({ id }: { id?: string }) {
     else if (totalScore >= 60) rec = "Buy";
     else if (totalScore <= 20) rec = "Sell";
     else rec = "Hold";
-    
+
     const mrSteps: MrStep[] = [
-        {
-            label: "I. 指標狀態",
-            description: "MR 雙指標 (RSI & MACD)",
-            checks: [
-                {
-                    label: `RSI(5) > 50: ${rsiVal.toFixed(1)}`,
-                    status: rsiVal > 50 ? "pass" : "fail",
-                },
-                {
-                    label: `MACD Osc > 0: ${osc.toFixed(2)}`,
-                    status: osc > 0 ? "pass" : "fail",
-                },
-            ]
-        },
-        {
-            label: "II. 訊號判定",
-            description: "多空區域確認",
-            checks: [
-                {
-                    label: `多方共振 (RSI>50 & Osc>0): ${isLongZone ? "Yes" : "No"}`,
-                    status: isLongZone ? "pass" : "fail"
-                },
-                {
-                    label: `空方共振 (RSI<50 & Osc<0): ${isShortZone ? "Yes" : "No"}`,
-                    status: isShortZone ? "fail" : "pass"
-                }
-            ]
-        },
-        {
-            label: "III. 趨勢與動能",
-            description: "MA20 與 動能方向",
-            checks: [
-                 { label: `價格 > MA20: ${trendUp ? "Yes" : "No"}`, status: trendUp ? "pass" : "fail" },
-                 { label: `RSI 上升中: ${rsiRising ? "Yes" : "No"}`, status: rsiRising ? "pass" : "fail" }
-            ]
-        },
-        {
-            label: "IV. 綜合評估",
-            description: `得分: ${totalScore} - ${rec}`,
-            checks: [
-                { label: `目前建議: ${rec}`, status: totalScore >= 60 ? "pass" : "manual" }
-            ]
-        }
+      {
+        label: "I. 指標狀態",
+        description: "MR 雙指標 (RSI & MACD)",
+        checks: [
+          {
+            label: `RSI(5) > 50: ${rsiVal.toFixed(1)}`,
+            status: rsiVal > 50 ? "pass" : "fail",
+          },
+          {
+            label: `MACD Osc > 0: ${osc.toFixed(2)}`,
+            status: osc > 0 ? "pass" : "fail",
+          },
+        ],
+      },
+      {
+        label: "II. 訊號判定",
+        description: "多空區域確認",
+        checks: [
+          {
+            label: `多方共振 (RSI>50 & Osc>0): ${isLongZone ? "Yes" : "No"}`,
+            status: isLongZone ? "pass" : "fail",
+          },
+          {
+            label: `空方共振 (RSI<50 & Osc<0): ${isShortZone ? "Yes" : "No"}`,
+            status: isShortZone ? "fail" : "pass",
+          },
+        ],
+      },
+      {
+        label: "III. 趨勢與動能",
+        description: "MA20 與 動能方向",
+        checks: [
+          {
+            label: `價格 > MA20: ${trendUp ? "Yes" : "No"}`,
+            status: trendUp ? "pass" : "fail",
+          },
+          {
+            label: `RSI 上升中: ${rsiRising ? "Yes" : "No"}`,
+            status: rsiRising ? "pass" : "fail",
+          },
+        ],
+      },
+      {
+        label: "IV. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
+          },
+        ],
+      },
     ];
 
     return { steps: mrSteps, score: totalScore, recommendation: rec };
-
   }, [chartData]);
-
 
   const handleStep = (step: number) => () => {
     setActiveStep(step);
@@ -313,7 +330,7 @@ export default function MR({ id }: { id?: string }) {
       maxWidth={false}
       sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1 }}
     >
-        <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
+      <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h6" component="div">
             MR Strategy (RSI + MACD)
@@ -387,43 +404,49 @@ export default function MR({ id }: { id?: string }) {
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
             <YAxis domain={["auto", "auto"]} />
-            <YAxis yAxisId="right_dummy" orientation="right" tick={false} axisLine={false} width={40} />
+            <YAxis
+              yAxisId="right_dummy"
+              orientation="right"
+              tick={false}
+              axisLine={false}
+              width={40}
+            />
             <Tooltip content={<CustomTooltip />} offset={50} />
-             <Line
+            <Line
               dataKey="h"
-              stroke="#000"
-              opacity={0} 
+              stroke="#fff"
+              opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Line
               dataKey="c"
-              stroke="#000"
-              opacity={0} 
+              stroke="#fff"
+              opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Line
               dataKey="l"
-              stroke="#000"
-              opacity={0} 
+              stroke="#fff"
+              opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Line
               dataKey="o"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
             <Customized component={BaseCandlestickRectangle} />
-            
-             <Line
+
+            <Line
               dataKey="ma20"
               stroke="#ff9800"
               dot={false}
@@ -432,115 +455,156 @@ export default function MR({ id }: { id?: string }) {
               strokeWidth={1.5}
             />
 
-             {/* Entry Signal Markers */}
-             {signals.map((signal) => {
-               const isLong = signal.type === "entry_long";
-               const yPos = isLong ? (signal.price! * 0.99) : (signal.price! * 1.01);
-               const color = isLong ? "#e26d6d" : "#79e26d";
-               
-               return (
-                 <ReferenceDot
-                   key={signal.t}
-                   x={signal.t}
-                   y={yPos}
-                   r={4}
-                   stroke="none"
-                   shape={(props: any) => {
-                     const { cx, cy } = props;
-                     if (!cx || !cy) return <g />;
-                     
-                     return (
-                       <g>
-                         {isLong ? (
-                           // Long Entry
-                           <>
-                             <path
-                               d={`M${cx - 5},${cy + 10} L${cx + 5},${cy + 10} L${cx},${cy} Z`}
-                               fill={color}
-                             />
-                             <text
-                               x={cx}
-                               y={cy + 22}
-                               textAnchor="middle"
-                               fill={color}
-                               fontSize={11}
-                               fontWeight="bold"
-                             >
-                               買進
-                             </text>
-                           </>
-                         ) : (
-                           // Short Entry
-                           <>
+            {/* Entry Signal Markers */}
+            {signals.map((signal) => {
+              const isLong = signal.type === "entry_long";
+              const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
+              const color = isLong ? "#f44336" : "#4caf50";
+
+              return (
+                <ReferenceDot
+                  key={signal.t}
+                  x={signal.t}
+                  y={yPos}
+                  r={4}
+                  stroke="none"
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    if (!cx || !cy) return <g />;
+
+                    return (
+                      <g>
+                        {isLong ? (
+                          // Long Entry
+                          <>
                             <path
-                               d={`M${cx - 5},${cy - 10} L${cx + 5},${cy - 10} L${cx},${cy} Z`}
-                               fill={color}
+                              d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                                cy + 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
                             />
                             <text
-                               x={cx}
-                               y={cy - 15}
-                               textAnchor="middle"
-                               fill={color}
-                               fontSize={11}
-                               fontWeight="bold"
-                             >
-                               賣出
-                             </text>
-                           </>
-                         )}
-                       </g>
-                     );
-                   }}
-                 />
-               );
-             })}
+                              x={cx}
+                              y={cy + 22}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={11}
+                              fontWeight="bold"
+                            >
+                              買進
+                            </text>
+                          </>
+                        ) : (
+                          // Short Entry
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                                cy - 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                            <text
+                              x={cx}
+                              y={cy - 15}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={11}
+                              fontWeight="bold"
+                            >
+                              賣出
+                            </text>
+                          </>
+                        )}
+                      </g>
+                    );
+                  }}
+                />
+              );
+            })}
           </ComposedChart>
         </ResponsiveContainer>
 
         {/* Combined RSI & MACD Chart (35%) */}
         <ResponsiveContainer width="100%" height="35%">
-             <ComposedChart data={chartData} syncId="mrSync">
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="t" />
-                
-                {/* Left Axis for MACD Osc */}
-                <YAxis yAxisId="left" orientation="left" stroke="#888" fontSize={10} />
-                
-                {/* Right Axis for RSI (0-100) */}
-                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} stroke="#2196f3" fontSize={10} width={40} />
+          <ComposedChart data={chartData} syncId="mrSync">
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="t" />
 
-                <Tooltip content={<CustomTooltip />} offset={50} />
-                
-                <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5}/>
-                <ReferenceLine y={50} yAxisId="right" stroke="#666" strokeDasharray="3 3" opacity={0.5}/>
+            {/* Left Axis for MACD Osc */}
+            <YAxis
+              yAxisId="left"
+              orientation="left"
+              stroke="#888"
+              fontSize={10}
+            />
 
-                 {/* MACD Bars (Left Axis) */}
-                 <Bar yAxisId="left" dataKey="positiveOsc" fill="#f44336" barSize={3} name="Osc +" />
-                 <Bar yAxisId="left" dataKey="negativeOsc" fill="#4caf50" barSize={3} name="Osc -" />
-                 
-                 {/* RSI Zones (Right Axis) */}
-                 <Area
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="longZone"
-                    fill="#ffcdd2" 
-                    stroke="none"
-                    baseValue={50}
-                    opacity={0.3}
-                 />
-                  <Area
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="shortZone"
-                    fill="#c8e6c9"
-                    stroke="none"
-                    baseValue={50}
-                    opacity={0.3}
-                 />
-                 <Line yAxisId="right" dataKey="rsi" stroke="#2196f3" dot={false} strokeWidth={2} name="RSI (5)" />
-             </ComposedChart>
+            {/* Right Axis for RSI (0-100) */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              stroke="#2196f3"
+              fontSize={10}
+              width={40}
+            />
+
+            <Tooltip content={<CustomTooltip />} offset={50} />
+
+            <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5} />
+            <ReferenceLine
+              y={50}
+              yAxisId="right"
+              stroke="#666"
+              strokeDasharray="3 3"
+              opacity={0.5}
+            />
+
+            {/* MACD Bars (Left Axis) */}
+            <Bar
+              yAxisId="left"
+              dataKey="positiveOsc"
+              fill="#f44336"
+              barSize={3}
+              name="Osc +"
+            />
+            <Bar
+              yAxisId="left"
+              dataKey="negativeOsc"
+              fill="#4caf50"
+              barSize={3}
+              name="Osc -"
+            />
+
+            {/* RSI Zones (Right Axis) */}
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="longZone"
+              fill="#ffcdd2"
+              stroke="none"
+              baseValue={50}
+              opacity={0.3}
+            />
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="shortZone"
+              fill="#c8e6c9"
+              stroke="none"
+              baseValue={50}
+              opacity={0.3}
+            />
+            <Line
+              yAxisId="right"
+              dataKey="rsi"
+              stroke="#2196f3"
+              dot={false}
+              strokeWidth={2}
+              name="RSI (5)"
+            />
+          </ComposedChart>
         </ResponsiveContainer>
-
       </Box>
     </Container>
   );

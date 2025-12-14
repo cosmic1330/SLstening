@@ -160,17 +160,15 @@ export default function Kd({ id }: { id?: string }) {
     const isOverbought = kVal > 80 && dVal > 80;
     const goldCross = prevK < prevD && kVal > dVal;
     const deathCross = prevK > prevD && kVal < dVal;
-    
+
     // Check for recent bullish divergence (last 3 candles)
     const recentBullishDiv = signals.some(
       (s) =>
-        s.type === DivergenceSignalType.BULLISH_DIVERGENCE &&
-        s.t === current.t
+        s.type === DivergenceSignalType.BULLISH_DIVERGENCE && s.t === current.t
     );
-     const recentBearishDiv = signals.some(
+    const recentBearishDiv = signals.some(
       (s) =>
-        s.type === DivergenceSignalType.BEARISH_DIVERGENCE &&
-        s.t === current.t
+        s.type === DivergenceSignalType.BEARISH_DIVERGENCE && s.t === current.t
     );
 
     // III. Risk
@@ -187,7 +185,7 @@ export default function Kd({ id }: { id?: string }) {
     else if (goldCross && price > ma) totalScore += 30; // Trend Buy
     else if (recentBullishDiv) totalScore += 30; // Divergence Buy
     else if (kVal > dVal && kVal > prevK) totalScore += 10; // Momentum
-    
+
     if (isOverbought || deathCross || recentBearishDiv) totalScore -= 20;
 
     // 4. Price Action (20)
@@ -388,7 +386,7 @@ export default function Kd({ id }: { id?: string }) {
             />
             <Line
               dataKey="h"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -396,23 +394,23 @@ export default function Kd({ id }: { id?: string }) {
             />
             <Line
               dataKey="l"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
-             <Line
+            <Line
               dataKey="o"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
               legendType="none"
             />
-             <Line
+            <Line
               dataKey="c"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -428,62 +426,64 @@ export default function Kd({ id }: { id?: string }) {
               name="20 MA"
               strokeWidth={1.5}
             />
-            
+
             {/* Divergence Signals on Price Chart */}
-             {signals.map((signal) => {
-               const isBearish = signal.type === DivergenceSignalType.BEARISH_DIVERGENCE;
-               // Calculate y position: slightly above High for bearish, slightly below Low for bullish
-               // We need to look up the price again because signal might only have k/d/t
-               // But we passed {t, h, l ...} to detectKdDivergence? 
-               // Wait, detectKdDivergence output 'signals' only has {t, k, d, type, description}.
-               // We need to find the H or L from chartData.
-               const dataPoint = chartData.find((d) => d.t === signal.t);
-               const yPos = isBearish 
-                 ? (dataPoint?.h || 0) 
-                 : (dataPoint?.l || 0);
+            {signals.map((signal) => {
+              const isBearish =
+                signal.type === DivergenceSignalType.BEARISH_DIVERGENCE;
+              // Calculate y position: slightly above High for bearish, slightly below Low for bullish
+              // We need to look up the price again because signal might only have k/d/t
+              // But we passed {t, h, l ...} to detectKdDivergence?
+              // Wait, detectKdDivergence output 'signals' only has {t, k, d, type, description}.
+              // We need to find the H or L from chartData.
+              const dataPoint = chartData.find((d) => d.t === signal.t);
+              const yPos = isBearish ? dataPoint?.h || 0 : dataPoint?.l || 0;
 
-               return (
-                 <ReferenceDot
-                   key={signal.t}
-                   x={signal.t}
-                   y={yPos}
-                   shape={(props: any) => {
-                     const { cx, cy } = props;
-                     if (!cx || !cy) return <g />;
-                     
-                     return (
-                       <g>
-                         {isBearish ? (
-                            // Down Triangle (Red)
-                           <path
-                             d={`M${cx - 5},${cy - 10} L${cx + 5},${cy - 10} L${cx},${cy} Z`}
-                             fill="#f44336"
-                           />
-                         ) : (
-                            // Up Triangle (Green)
-                           <path
-                             d={`M${cx - 5},${cy + 10} L${cx + 5},${cy + 10} L${cx},${cy} Z`}
-                             fill="#4caf50"
-                           />
-                         )}
-                         <text
-                           x={cx}
-                           y={isBearish ? cy - 15 : cy + 20}
-                           textAnchor="middle"
-                           fill={isBearish ? "#f44336" : "#4caf50"}
-                           fontSize={12}
-                           fontWeight="bold"
-                           dy={isBearish ? 0 : 3}
-                         >
-                           {isBearish ? "頂背離" : "底背離"}
-                         </text>
-                       </g>
-                     );
-                   }}
-                 />
-               );
-             })}
+              return (
+                <ReferenceDot
+                  key={signal.t}
+                  x={signal.t}
+                  y={yPos}
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    if (!cx || !cy) return <g />;
 
+                    return (
+                      <g>
+                        {isBearish ? (
+                          // Down Triangle (Green)
+                          <path
+                            d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                              cy - 10
+                            } L${cx},${cy} Z`}
+                            fill="#4caf50"
+                          />
+                        ) : (
+                          // Up Triangle (Red)
+                          <path
+                            d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                              cy + 10
+                            } L${cx},${cy} Z`}
+                            fill="#f44336"
+                          />
+                        )}
+                        <text
+                          x={cx}
+                          y={isBearish ? cy - 15 : cy + 20}
+                          textAnchor="middle"
+                          fill={isBearish ? "#4caf50" : "#f44336"}
+                          fontSize={12}
+                          fontWeight="bold"
+                          dy={isBearish ? 0 : 3}
+                        >
+                          {isBearish ? "頂背離" : "底背離"}
+                        </text>
+                      </g>
+                    );
+                  }}
+                />
+              );
+            })}
           </ComposedChart>
         </ResponsiveContainer>
 
@@ -525,7 +525,7 @@ export default function Kd({ id }: { id?: string }) {
               strokeWidth={2}
               name="K"
             />
-             <Line
+            <Line
               dataKey="d"
               stroke="#ff9800"
               dot={false}

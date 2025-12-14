@@ -22,6 +22,7 @@ import {
   ComposedChart,
   Customized,
   Line,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -46,6 +47,10 @@ interface MfiChartData
   ma20: number | null;
   ma10?: number | null;
   volMa20?: number | null;
+  buySignal?: number | null;
+  exitSignal?: number | null;
+  buyReason?: string;
+  exitReason?: string;
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -70,7 +75,7 @@ export default function Mfi({ id }: { id?: string }) {
 
     let mfiData = mfi.init(deals[0], 14);
 
-    return deals
+    const initialData = deals
       .map((deal, i) => {
         if (i > 0) {
           mfiData = mfi.next(deal, mfiData, 14);
@@ -109,6 +114,36 @@ export default function Mfi({ id }: { id?: string }) {
         };
       })
       .slice(-180);
+
+    // Second pass for signals (Trend/Turn)
+    const dataWithSignals = initialData.map(
+      (d: MfiChartData, i: number, arr: MfiChartData[]) => {
+        if (i === 0) return d;
+        const prev = arr[i - 1];
+        const currMfi = d.mfi || 50;
+        const prevMfi = prev.mfi || 50;
+
+        let buySignal: number | null = null;
+        let exitSignal: number | null = null;
+        let buyReason: string | undefined;
+        let exitReason: string | undefined;
+
+        // Buy: Oversold (<20) and Turning Up
+        if (prevMfi < 20 && currMfi > prevMfi) {
+          buySignal = d.l ? d.l * 0.98 : null;
+          buyReason = "超賣反轉";
+        }
+        // Sell: Overbought (>80) and Turning Down
+        else if (prevMfi > 80 && currMfi < prevMfi) {
+          exitSignal = d.h ? d.h * 1.02 : null;
+          exitReason = "超買反轉";
+        }
+
+        return { ...d, buySignal, exitSignal, buyReason, exitReason };
+      }
+    );
+
+    return dataWithSignals;
   }, [deals]);
 
   const { steps, score, recommendation } = useMemo(() => {
@@ -353,7 +388,7 @@ export default function Mfi({ id }: { id?: string }) {
             />
             <Line
               dataKey="h"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -361,7 +396,7 @@ export default function Mfi({ id }: { id?: string }) {
             />
             <Line
               dataKey="c"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -369,7 +404,7 @@ export default function Mfi({ id }: { id?: string }) {
             />
             <Line
               dataKey="l"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -377,7 +412,7 @@ export default function Mfi({ id }: { id?: string }) {
             />
             <Line
               dataKey="o"
-              stroke="#000"
+              stroke="#fff"
               opacity={0}
               dot={false}
               activeDot={false}
@@ -393,6 +428,55 @@ export default function Mfi({ id }: { id?: string }) {
               name="20 MA"
               strokeWidth={1.5}
             />
+
+            {chartData.map((d) => {
+              const isBuy = d.buySignal !== null;
+              const isExit = d.exitSignal !== null;
+              if (!isBuy && !isExit) return null;
+
+              const yPos = isBuy ? d.l! * 0.99 : d.h! * 1.01;
+              const color = isBuy ? "#f44336" : "#4caf50";
+
+              return (
+                <ReferenceDot
+                  key={`signal-${d.t}`}
+                  x={d.t}
+                  y={yPos}
+                  r={4}
+                  stroke="none"
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    if (!cx || !cy) return <g />;
+
+                    return (
+                      <g>
+                        {isBuy ? (
+                          // Buy (Red)
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                                cy + 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                          </>
+                        ) : (
+                          // Exit (Green)
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                                cy - 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                          </>
+                        )}
+                      </g>
+                    );
+                  }}
+                />
+              );
+            })}
           </ComposedChart>
         </ResponsiveContainer>
 

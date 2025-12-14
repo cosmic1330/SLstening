@@ -151,8 +151,18 @@ const FullscreenVerticalCarousel: React.FC = () => {
     id === FutureIds.NASDAQ
       ? `https://query1.finance.yahoo.com/v8/finance/chart/${
           FutureIds.NASDAQ
-        }?interval=${perd === UrlTaPerdOptions.Hour ? "1h" : "1d"}&range=${
-          perd === UrlTaPerdOptions.Hour ? "60d" : "300d"
+        }?interval=${
+          perd === UrlTaPerdOptions.Hour
+            ? "1h"
+            : perd === UrlTaPerdOptions.Week
+            ? "1wk"
+            : "1d"
+        }&range=${
+          perd === UrlTaPerdOptions.Hour
+            ? "730d"
+            : perd === UrlTaPerdOptions.Week
+            ? "5y"
+            : "10y"
         }`
       : generateDealDataDownloadUrl({
           type: UrlType.Indicators,
@@ -237,6 +247,21 @@ const FullscreenVerticalCarousel: React.FC = () => {
             }}
           >
             日線圖
+          </Button>
+          <Button
+            color="primary"
+            sx={{
+              backgroundColor: "rgba(255,255,255,0.3)",
+              "&:hover": { backgroundColor: "rgba(255,255,255,0.5)" },
+            }}
+            variant={perd === UrlTaPerdOptions.Week ? "contained" : "text"}
+            disabled={perd === UrlTaPerdOptions.Week}
+            onClick={() => {
+              localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Week);
+              setPerd(UrlTaPerdOptions.Week);
+            }}
+          >
+            週線圖
           </Button>
           <IconButton
             onClick={() => goToSlide(current - 1)}

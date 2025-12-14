@@ -57,6 +57,8 @@ interface IchimokuChartData
   kumo_bear: [number, number] | null;
   buySignal?: number | null;
   exitSignal?: number | null;
+  buyReason?: string;
+  exitReason?: string;
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -73,29 +75,54 @@ interface IchimokuStep {
 }
 
 const BuyArrow = (props: any) => {
-  const { cx, cy } = props;
+  const { cx, cy, payload } = props;
   if (!cx || !cy) return null;
   return (
-    <path
-      d={`M${cx},${cy + 10} L${cx - 6},${cy + 20} L${cx + 6},${cy + 20} Z`}
-      fill="#4caf50"
-      stroke="#2e7d32"
-    />
+    <g>
+      <path
+        d={`M${cx},${cy + 10} L${cx - 6},${cy + 20} L${cx + 6},${cy + 20} Z`}
+        fill="#f44336"
+        stroke="#c62828"
+      />
+      {payload.buyReason && (
+        <text
+          x={cx}
+          y={cy + 35}
+          textAnchor="middle"
+          fill="#f44336"
+          fontSize="10px"
+        >
+          {payload.buyReason}
+        </text>
+      )}
+    </g>
   );
 };
 
 const ExitArrow = (props: any) => {
-  const { cx, cy } = props;
+  const { cx, cy, payload } = props;
   if (!cx || !cy) return null;
   return (
-    <path
-      d={`M${cx},${cy - 10} L${cx - 6},${cy - 20} L${cx + 6},${cy - 20} Z`}
-      fill="#f44336"
-      stroke="#c62828"
-    />
+    <g>
+      <path
+        d={`M${cx},${cy - 10} L${cx - 6},${cy - 20} L${cx + 6},${cy - 20} Z`}
+        fill="#4caf50"
+        stroke="#2e7d32"
+      />
+      {payload.exitReason && (
+        <text
+          x={cx}
+          y={cy - 30}
+          textAnchor="middle"
+          fill="#4caf50"
+          fontSize="10px"
+        >
+          {payload.exitReason}
+        </text>
+      )}
+    </g>
   );
 };
-
 
 export default function Ichimoku({
   id,
@@ -114,7 +141,8 @@ export default function Ichimoku({
     const baseData = ichimoku.calculate(deals);
 
     // Helper: isNum
-    const isNum = (n: number | null | undefined): n is number => typeof n === "number";
+    const isNum = (n: number | null | undefined): n is number =>
+      typeof n === "number";
 
     // 2. Create the final chart data with shifted values for existing data points
     let finalData: Omit<IchimokuChartData, "kumo_bull" | "kumo_bear">[] =
@@ -130,104 +158,143 @@ export default function Ichimoku({
           chikou: sourceForPastChikou ? sourceForPastChikou.c : null,
         };
       });
-      
+
     // --- Signal Logic Iteration ---
     // We need to iterate again to calculate scores for historical points to generate signals.
     // Note: Future Spans logic (Cloud) relies on shifting, so we must be careful with indices.
-    
+
     // We'll calculate signals only for the valid range where we have full Ichimoku data
     // (roughly from index 26/52 onwards depending on strictness).
-    let lastSignalState: 'buy' | 'neutral' | 'sell' = 'neutral';
+    let lastSignalState: "buy" | "neutral" | "sell" = "neutral";
 
     finalData = finalData.map((current, i) => {
-        if (i < 52) return current; // Not enough data for full calc
+      if (i < 52) return current; // Not enough data for full calc
 
-        const prev = finalData[i - 1];
-        
-        // --- Calculate Score for this point 'i' ---
-        // 1. Trend
-        const price = current.c;
-        const cloudTop = isNum(current.senkouA) && isNum(current.senkouB) ? Math.max(current.senkouA, current.senkouB) : null;
-        const prevCloudTop = isNum(prev.senkouA) && isNum(prev.senkouB) ? Math.max(prev.senkouA, prev.senkouB) : null;
-        
-        const trendPriceAboveCloud = isNum(price) && isNum(cloudTop) && price > cloudTop;
-        const trendGreenCloud = isNum(current.senkouA) && isNum(current.senkouB) && current.senkouA > current.senkouB;
-        const trendRisingCloud = isNum(cloudTop) && isNum(prevCloudTop) && cloudTop >= prevCloudTop;
-        
-        // 2. Signal
-        const signalTkCross = isNum(current.tenkan) && isNum(current.kijun) && current.tenkan > current.kijun;
-        const signalCrossAboveCloud = signalTkCross && isNum(cloudTop) && isNum(current.tenkan) && Math.min(current.tenkan!, current.kijun!) > cloudTop!;
-        const signalKijunRising = isNum(current.kijun) && isNum(prev.kijun) && current.kijun! >= prev.kijun!;
-        
-        // 3. Chikou (Compare current C to C 26 periods ago)
-        const pastPriceIndex = i - 26;
-        const pastPrice = pastPriceIndex >= 0 ? finalData[pastPriceIndex].c : null;
-        const chikouAbovePrice = isNum(current.c) && isNum(pastPrice) && current.c > pastPrice;
-        
-        // 4. Future (Check projected cloud at i + 26)
-        // Note: The 'current' data point structure ALREADY contains shifted senkou spans.
-        // BUT, for "Future Green Cloud", we need to look at the cloud 26 days *ahead* of the current price candle.
-        // In our data structure, 'senkouA' at index 'i' corresponds to the cloud *at* price candle 'i'.
-        // So we need to look at senkouA/B at index 'i + 26' (if it exists in our *calculated* baseData before slicing? No, baseData is raw).
-        // Let's approximate: the 'future' cloud spans are actually in baseData at index i.
-        // Because senkouA calculation is: (tenkan + kijun) / 2 shifted forward 26.
-        // So baseData[i].senkouA is the value plotted at T+26.
-        // In our finalData mapping, finalData[i].senkouA comes from baseData[i-26].
-        // So to check "Future Cloud" (at T+26), we look at baseData[i].senkouA.
-        
-        const futureSource = baseData[i]; // This IS the future cloud data relative to price at i
-        const futureCloudGreen = isNum(futureSource.senkouA) && isNum(futureSource.senkouB) && futureSource.senkouA > futureSource.senkouB;
-        
-        // Future Rising: compare baseData[i] cloud top to baseData[i-1] cloud top
-        const prevFutureSource = baseData[i-1];
-        const futureTop = isNum(futureSource.senkouA) && isNum(futureSource.senkouB) ? Math.max(futureSource.senkouA, futureSource.senkouB) : null;
-        const prevFutureTop = isNum(prevFutureSource.senkouA) && isNum(prevFutureSource.senkouB) ? Math.max(prevFutureSource.senkouA, prevFutureSource.senkouB) : null;
-        const futureCloudRising = isNum(futureTop) && isNum(prevFutureTop) && futureTop >= prevFutureTop;
-        
-        // 5. Volume (simplified for historical check - just compare to prev)
-        // Using a proper 20MA for every point is expensive inside this loop, let's simplify to: Vol > Prev Vol or Vol > 0
-        const volumeCheck = isNum(current.v) && isNum(prev.v) && current.v > prev.v;
+      const prev = finalData[i - 1];
 
-        // Sum Score
-        let score = 0;
-        if (trendPriceAboveCloud) score += 10;
-        if (trendGreenCloud) score += 10;
-        if (trendRisingCloud) score += 10;
-        if (signalTkCross) score += 10;
-        if (signalCrossAboveCloud) score += 10;
-        if (signalKijunRising) score += 10;
-        if (chikouAbovePrice) score += 10;
-        if (futureCloudGreen) score += 10;
-        if (futureCloudRising) score += 10;
-        if (volumeCheck) score += 10;
+      // --- Calculate Score for this point 'i' ---
+      // 1. Trend
+      const price = current.c;
+      const cloudTop =
+        isNum(current.senkouA) && isNum(current.senkouB)
+          ? Math.max(current.senkouA, current.senkouB)
+          : null;
+      const prevCloudTop =
+        isNum(prev.senkouA) && isNum(prev.senkouB)
+          ? Math.max(prev.senkouA, prev.senkouB)
+          : null;
 
-        let buySignal: number | null = null;
-        let exitSignal: number | null = null;
+      const trendPriceAboveCloud =
+        isNum(price) && isNum(cloudTop) && price > cloudTop;
+      const trendGreenCloud =
+        isNum(current.senkouA) &&
+        isNum(current.senkouB) &&
+        current.senkouA > current.senkouB;
+      const trendRisingCloud =
+        isNum(cloudTop) && isNum(prevCloudTop) && cloudTop >= prevCloudTop;
 
-        // State Machine Logic
-        if (lastSignalState === 'buy') {
-            // We are currently holding a position. Look for EXIT signals only.
-            // EXIT Logic: Price Closes Below Cloud (Hard Stop / Trend Reversal)
-            if (isNum(price) && isNum(cloudTop) && price < cloudTop) {
-                 exitSignal = (current.h || 0) * 1.02; // Place above high
-                 lastSignalState = 'neutral'; // Reset state
-            }
-        } else {
-            // We are not holding. Look for BUY signals only.
-            // BUY Logic: Score >= 80 (Strong Buy) AND Price must be above Cloud (Basic Trend Req)
-            if (score >= 80 && trendPriceAboveCloud) {
-                buySignal = (current.l || 0) * 0.98; // Place below low
-                lastSignalState = 'buy';
-            }
+      // 2. Signal
+      const signalTkCross =
+        isNum(current.tenkan) &&
+        isNum(current.kijun) &&
+        current.tenkan > current.kijun;
+      const signalCrossAboveCloud =
+        signalTkCross &&
+        isNum(cloudTop) &&
+        isNum(current.tenkan) &&
+        Math.min(current.tenkan!, current.kijun!) > cloudTop!;
+      const signalKijunRising =
+        isNum(current.kijun) &&
+        isNum(prev.kijun) &&
+        current.kijun! >= prev.kijun!;
+
+      // 3. Chikou (Compare current C to C 26 periods ago)
+      const pastPriceIndex = i - 26;
+      const pastPrice =
+        pastPriceIndex >= 0 ? finalData[pastPriceIndex].c : null;
+      const chikouAbovePrice =
+        isNum(current.c) && isNum(pastPrice) && current.c > pastPrice;
+
+      // 4. Future (Check projected cloud at i + 26)
+      // Note: The 'current' data point structure ALREADY contains shifted senkou spans.
+      // BUT, for "Future Green Cloud", we need to look at the cloud 26 days *ahead* of the current price candle.
+      // In our data structure, 'senkouA' at index 'i' corresponds to the cloud *at* price candle 'i'.
+      // So we need to look at senkouA/B at index 'i + 26' (if it exists in our *calculated* baseData before slicing? No, baseData is raw).
+      // Let's approximate: the 'future' cloud spans are actually in baseData at index i.
+      // Because senkouA calculation is: (tenkan + kijun) / 2 shifted forward 26.
+      // So baseData[i].senkouA is the value plotted at T+26.
+      // In our finalData mapping, finalData[i].senkouA comes from baseData[i-26].
+      // So to check "Future Cloud" (at T+26), we look at baseData[i].senkouA.
+
+      const futureSource = baseData[i]; // This IS the future cloud data relative to price at i
+      const futureCloudGreen =
+        isNum(futureSource.senkouA) &&
+        isNum(futureSource.senkouB) &&
+        futureSource.senkouA > futureSource.senkouB;
+
+      // Future Rising: compare baseData[i] cloud top to baseData[i-1] cloud top
+      const prevFutureSource = baseData[i - 1];
+      const futureTop =
+        isNum(futureSource.senkouA) && isNum(futureSource.senkouB)
+          ? Math.max(futureSource.senkouA, futureSource.senkouB)
+          : null;
+      const prevFutureTop =
+        isNum(prevFutureSource.senkouA) && isNum(prevFutureSource.senkouB)
+          ? Math.max(prevFutureSource.senkouA, prevFutureSource.senkouB)
+          : null;
+      const futureCloudRising =
+        isNum(futureTop) && isNum(prevFutureTop) && futureTop >= prevFutureTop;
+
+      // 5. Volume (simplified for historical check - just compare to prev)
+      // Using a proper 20MA for every point is expensive inside this loop, let's simplify to: Vol > Prev Vol or Vol > 0
+      const volumeCheck =
+        isNum(current.v) && isNum(prev.v) && current.v > prev.v;
+
+      // Sum Score
+      let score = 0;
+      if (trendPriceAboveCloud) score += 10;
+      if (trendGreenCloud) score += 10;
+      if (trendRisingCloud) score += 10;
+      if (signalTkCross) score += 10;
+      if (signalCrossAboveCloud) score += 10;
+      if (signalKijunRising) score += 10;
+      if (chikouAbovePrice) score += 10;
+      if (futureCloudGreen) score += 10;
+      if (futureCloudRising) score += 10;
+      if (volumeCheck) score += 10;
+
+      let buySignal: number | null = null;
+      let exitSignal: number | null = null;
+      let buyReason: string | undefined;
+      let exitReason: string | undefined;
+
+      // State Machine Logic
+      if (lastSignalState === "buy") {
+        // We are currently holding a position. Look for EXIT signals only.
+        // EXIT Logic: Price Closes Below Cloud (Hard Stop / Trend Reversal)
+        if (isNum(price) && isNum(cloudTop) && price < cloudTop) {
+          exitSignal = (current.h || 0) * 1.02; // Place above high
+          exitReason = "跌破雲帶";
+          lastSignalState = "neutral"; // Reset state
         }
+      } else {
+        // We are not holding. Look for BUY signals only.
+        // BUY Logic: Score >= 80 (Strong Buy) AND Price must be above Cloud (Basic Trend Req)
+        if (score >= 80 && trendPriceAboveCloud) {
+          buySignal = (current.l || 0) * 0.98; // Place below low
+          buyReason = "高分買進";
+          lastSignalState = "buy";
+        }
+      }
 
-        return {
-            ...current,
-            buySignal,
-            exitSignal
-        };
+      return {
+        ...current,
+        buySignal,
+        exitSignal,
+        buyReason,
+        exitReason,
+      };
     });
-
 
     // 3. Add future data points for the cloud to extend beyond the last price
     const lastDataPoint = baseData[baseData.length - 1];
@@ -286,16 +353,18 @@ export default function Ichimoku({
   }, [deals, perd]);
 
   const { steps, score, recommendation } = useMemo(() => {
-    if (chartData.length === 0) return { steps: [], score: 0, recommendation: "" };
+    if (chartData.length === 0)
+      return { steps: [], score: 0, recommendation: "" };
 
     // Find the index of the last *real* candle (current time)
     // The data includes 26 future points, so we look back from end
     const firstNullIndex = chartData.findIndex((d) => d.c === null);
-    const lastRealIndex = firstNullIndex === -1 ? chartData.length - 1 : firstNullIndex - 1;
-    
+    const lastRealIndex =
+      firstNullIndex === -1 ? chartData.length - 1 : firstNullIndex - 1;
+
     // Safety check if lastRealIndex is valid
     if (lastRealIndex < 0 || lastRealIndex >= chartData.length) {
-         return { steps: [], score: 0, recommendation: "Error" };
+      return { steps: [], score: 0, recommendation: "Error" };
     }
 
     const current = chartData[lastRealIndex];
@@ -349,9 +418,7 @@ export default function Ichimoku({
         : "fail";
 
     const signalKijunRising: CheckStatus =
-      isNum(current.kijun) &&
-      isNum(prev.kijun) &&
-      current.kijun >= prev.kijun
+      isNum(current.kijun) && isNum(prev.kijun) && current.kijun >= prev.kijun
         ? "pass"
         : "fail";
 
@@ -360,8 +427,7 @@ export default function Ichimoku({
     // The value of chikou at (lastRealIndex) is effectively current.c
     // We compare current.c to the price at (lastRealIndex - 26)
     const pastPriceIndex = lastRealIndex - 26;
-    const pastPrice =
-      pastPriceIndex >= 0 ? chartData[pastPriceIndex].c : null;
+    const pastPrice = pastPriceIndex >= 0 ? chartData[pastPriceIndex].c : null;
 
     const chikouAbovePrice: CheckStatus =
       isNum(current.c) && isNum(pastPrice) && current.c > pastPrice
@@ -401,35 +467,42 @@ export default function Ichimoku({
     let volSum = 0;
     let count = 0;
     for (let i = 0; i < volMaPeriod; i++) {
-        const idx = lastRealIndex - i;
-        if (idx >= 0 && isNum(chartData[idx].v)) {
-            volSum += chartData[idx].v!;
-            count++;
-        }
+      const idx = lastRealIndex - i;
+      if (idx >= 0 && isNum(chartData[idx].v)) {
+        volSum += chartData[idx].v!;
+        count++;
+      }
     }
     const volMa = count > 0 ? volSum / count : 0;
-    
-    const volumeCheck: CheckStatus = isNum(current.v) && current.v > volMa ? "pass" : "fail";
+
+    const volumeCheck: CheckStatus =
+      isNum(current.v) && current.v > volMa ? "pass" : "fail";
 
     // Price Levels for Reference
     const kijunPrice = isNum(current.kijun) ? current.kijun.toFixed(2) : "N/A";
-    const cloudBottom = isNum(current.senkouA) && isNum(current.senkouB) 
-        ? Math.min(current.senkouA, current.senkouB).toFixed(2) 
+    const cloudBottom =
+      isNum(current.senkouA) && isNum(current.senkouB)
+        ? Math.min(current.senkouA, current.senkouB).toFixed(2)
         : "N/A";
 
     // Scoring
     let totalScore = 0;
     const autoChecks = [
-        trendPriceAboveCloud, trendGreenCloud, trendRisingCloud,
-        signalTkCross, signalCrossAboveCloud, signalKijunRising,
-        chikouAbovePrice,
-        futureCloudGreen, futureCloudRising,
-        volumeCheck
+      trendPriceAboveCloud,
+      trendGreenCloud,
+      trendRisingCloud,
+      signalTkCross,
+      signalCrossAboveCloud,
+      signalKijunRising,
+      chikouAbovePrice,
+      futureCloudGreen,
+      futureCloudRising,
+      volumeCheck,
     ];
-    
+
     // 10 checks, 10 points each -> 100 max
-    autoChecks.forEach(status => {
-        if (status === 'pass') totalScore += 10;
+    autoChecks.forEach((status) => {
+      if (status === "pass") totalScore += 10;
     });
 
     let rec = "Reject";
@@ -437,13 +510,15 @@ export default function Ichimoku({
     else if (totalScore >= 60) rec = "Watch";
     else rec = "Reject";
 
-
     const resultSteps: IchimokuStep[] = [
       {
         label: "A. 趨勢確認",
         description: "K 線 vs 雲區 (Trend Filter)",
         checks: [
-          { label: "價格站在雲上 (Trend > Cloud)", status: trendPriceAboveCloud },
+          {
+            label: "價格站在雲上 (Trend > Cloud)",
+            status: trendPriceAboveCloud,
+          },
           { label: "雲為綠色 (Bullish Kumo)", status: trendGreenCloud },
           { label: "雲呈現上升角度 (Upward Slope)", status: trendRisingCloud },
         ],
@@ -453,7 +528,10 @@ export default function Ichimoku({
         description: "TK Cross (短中期動能)",
         checks: [
           { label: "Tenkan > Kijun (黃金交叉)", status: signalTkCross },
-          { label: "交叉點位於雲上 (Strong Signal)", status: signalCrossAboveCloud },
+          {
+            label: "交叉點位於雲上 (Strong Signal)",
+            status: signalCrossAboveCloud,
+          },
           { label: "Kijun-sen 保持向上或持平", status: signalKijunRising },
         ],
       },
@@ -461,16 +539,16 @@ export default function Ichimoku({
         label: "C. 動能確認",
         description: "Chikou Span (延遲線)",
         checks: [
-            { label: "滯後線 > 26 天前價格", status: chikouAbovePrice },
-            { label: "26 根 K 棒內無明顯阻力", status: "manual" }
+          { label: "滯後線 > 26 天前價格", status: chikouAbovePrice },
+          { label: "26 根 K 棒內無明顯阻力", status: "manual" },
         ],
       },
       {
         label: "D. 未來結構",
         description: "Future Kumo (前瞻)",
         checks: [
-            { label: "未來雲為綠色", status: futureCloudGreen },
-            { label: "未來雲角度向上", status: futureCloudRising }
+          { label: "未來雲為綠色", status: futureCloudGreen },
+          { label: "未來雲角度向上", status: futureCloudRising },
         ],
       },
       {
@@ -511,27 +589,36 @@ export default function Ichimoku({
   const showVolume = activeStep >= 4;
 
   if (chartData.length === 0) {
-      return (
-          <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
-              <CircularProgress />
-          </Box>
-      );
+    return (
+      <Box
+        height="100vh"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <Container component="main" maxWidth={false} sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1 }}>
+    <Container
+      component="main"
+      maxWidth={false}
+      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1 }}
+    >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h6" component="div">
             Ichimoku Ultimate
           </Typography>
         </MuiTooltip>
-        
-        <Chip 
-            label={`${score}分 - ${recommendation}`} 
-            color={score >= 80 ? "success" : score >= 60 ? "warning" : "error"} 
-            variant="outlined"
-            size="small"
+
+        <Chip
+          label={`${score}分 - ${recommendation}`}
+          color={score >= 80 ? "success" : score >= 60 ? "warning" : "error"}
+          variant="outlined"
+          size="small"
         />
 
         <Divider orientation="vertical" flexItem />
@@ -549,63 +636,132 @@ export default function Ichimoku({
       </Stack>
 
       {/* Checklist Card */}
-      <Card variant="outlined" sx={{ mb: 1, bgcolor: 'background.default' }}>
-        <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems="center">
-             <Box sx={{ minWidth: 200, flexShrink: 0 }}>
-               <Typography variant="subtitle1" color="primary" fontWeight="bold">
-                 {steps[activeStep]?.description}
-               </Typography>
-             </Box>
-             <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
-             <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                {steps[activeStep]?.checks.map((check, idx) => (
-                  <Chip
-                    key={idx}
-                    icon={getStatusIcon(check.status)}
-                    label={check.label}
-                    variant="outlined"
-                    color={check.status === 'pass' ? 'success' : check.status === 'fail' ? 'error' : 'default'}
-                    size="small"
-                  />
-                ))}
-             </Stack>
+      <Card variant="outlined" sx={{ mb: 1, bgcolor: "background.default" }}>
+        <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems="center"
+          >
+            <Box sx={{ minWidth: 200, flexShrink: 0 }}>
+              <Typography variant="subtitle1" color="primary" fontWeight="bold">
+                {steps[activeStep]?.description}
+              </Typography>
+            </Box>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ display: { xs: "none", md: "block" } }}
+            />
+            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+              {steps[activeStep]?.checks.map((check, idx) => (
+                <Chip
+                  key={idx}
+                  icon={getStatusIcon(check.status)}
+                  label={check.label}
+                  variant="outlined"
+                  color={
+                    check.status === "pass"
+                      ? "success"
+                      : check.status === "fail"
+                      ? "error"
+                      : "default"
+                  }
+                  size="small"
+                />
+              ))}
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
 
       <Box sx={{ flexGrow: 1, minHeight: 0 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" />
             <YAxis domain={["auto", "auto"]} />
-            <YAxis yAxisId="right" orientation="right" domain={[0, (dataMax: number) => dataMax * 4]} hide={!showVolume} />
-            
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={[0, (dataMax: number) => dataMax * 4]}
+              hide={!showVolume}
+            />
+
             <Tooltip
               offset={50}
-              contentStyle={{ backgroundColor: "#222", border: "none", borderRadius: 4 }}
+              contentStyle={{
+                backgroundColor: "#222",
+                border: "none",
+                borderRadius: 4,
+              }}
               itemStyle={{ fontSize: 12 }}
               labelStyle={{ color: "#aaa", marginBottom: 5 }}
             />
 
             {/* Candles - Always first for BaseCandlestickRectangle stability */}
-            <Line dataKey="h" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none" />
-            <Line dataKey="c" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none" />
-            <Line dataKey="l" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none" />
-            <Line dataKey="o" stroke="#000" opacity={0} dot={false} activeDot={false} legendType="none" />
+            <Line
+              dataKey="h"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="c"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="l"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="o"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
             <Customized component={BaseCandlestickRectangle} />
 
             {/* Volume - Rendered after candles */}
             {showVolume && (
-               <Bar dataKey="v" yAxisId="right" fill="#3f51b5" opacity={0.3} name="Volume" barSize={10} />
+              <Bar
+                dataKey="v"
+                yAxisId="right"
+                fill="#90caf9"
+                opacity={0.3}
+                name="Volume"
+                barSize={10}
+              />
             )}
 
             {/* Signals */}
             {activeStep >= 4 && (
               <>
-                <Scatter dataKey="buySignal" shape={<BuyArrow />} legendType="none" />
-                <Scatter dataKey="exitSignal" shape={<ExitArrow />} legendType="none" />
+                <Scatter
+                  dataKey="buySignal"
+                  shape={<BuyArrow />}
+                  legendType="none"
+                />
+                <Scatter
+                  dataKey="exitSignal"
+                  shape={<ExitArrow />}
+                  legendType="none"
+                />
               </>
             )}
 

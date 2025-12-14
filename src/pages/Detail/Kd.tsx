@@ -393,6 +393,14 @@ export default function Kd({ id }: { id?: string }) {
               legendType="none"
             />
             <Line
+              dataKey="c"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
               dataKey="l"
               stroke="#fff"
               opacity={0}
@@ -402,14 +410,6 @@ export default function Kd({ id }: { id?: string }) {
             />
             <Line
               dataKey="o"
-              stroke="#fff"
-              opacity={0}
-              dot={false}
-              activeDot={false}
-              legendType="none"
-            />
-            <Line
-              dataKey="c"
               stroke="#fff"
               opacity={0}
               dot={false}

@@ -5,7 +5,11 @@
       "register": "註冊",
       "signIn": "登入",
       "email": "電子郵件",
-      "password": "密碼"
+      "password": "密碼",
+      "welcomeBack": "歡迎回來",
+      "enterCredentials": "請輸入您的帳號密碼以繼續",
+      "signingIn": "登入中",
+      "or": "或"
     },
     "Register": {
       "register": "註冊",

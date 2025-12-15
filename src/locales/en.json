@@ -5,7 +5,11 @@
       "register":"Register",
       "signIn":"Sign In",
       "email":"Email",
-      "password":"Password"
+      "password":"Password",
+      "welcomeBack": "Welcome Back",
+      "enterCredentials": "Enter your credentials to continue",
+      "signingIn": "Signing in...",
+      "or": "OR"
     },
     "Register": {
       "register": "Register",

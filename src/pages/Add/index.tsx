@@ -1,4 +1,4 @@
-import { Box, Button, Container as MuiContainer, Stack, Typography, createTheme, ThemeProvider, styled, alpha } from "@mui/material";
+import { Box, Button, Container as MuiContainer, Stack, Typography, createTheme, ThemeProvider, styled } from "@mui/material";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback } from "react";
@@ -46,7 +46,7 @@ const GlassCard = styled(Box)(({ theme }) => ({
 }));
 
 // Custom Button
-const GradientButton = styled(Button)(({ theme }) => ({
+const GradientButton = styled(Button)(() => ({
   borderRadius: "12px",
   background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   textTransform: "none",

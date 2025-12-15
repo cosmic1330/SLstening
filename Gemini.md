@@ -1,5 +1,4 @@
 # SLstening 專案總覽
-
 這是一個使用 Tauri、React、TypeScript 和 Vite 建立的桌面股票分析應用程式。它提供了一套完整的工具，讓使用者可以追蹤、分析和篩選股票。
 
 **詳細的說明文件位於各個子資料夾下的 `Gemini.md` 檔案中。**
@@ -43,3 +42,6 @@
 - `npm run app`: 在開發模式下執行完整的 Tauri 應用程式。
 - `npm run build`: 建構前端應用程式。
 - `npm run build_app`: 建構生產環境的 Tauri 應用程式。
+
+## 限制
+- 我希望你提供implementation_plan.md的內容是中文

@@ -1,4 +1,4 @@
-import { Button, Grid, Box as MuiBox, styled, Typography } from "@mui/material";
+import { Box, Button, Grid, Box as MuiBox, styled, Typography } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { useMemo } from "react";
 import useDeals from "../../hooks/useDeals";
@@ -15,13 +15,43 @@ import VolumeRatio from "./Items/VolumeRatio";
 import TickChart from "./TickChart";
 import Title from "./Title";
 
-const Box = styled(MuiBox)`
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 1);
-  padding: 1rem;
-  border-radius: 0.8rem;
-  color: #fff;
-`;
+const GlassCard = styled(MuiBox)(({ theme }) => ({
+  background: "rgba(30, 30, 40, 0.6)",
+  backdropFilter: "blur(12px)",
+  WebkitBackdropFilter: "blur(12px)",
+  borderRadius: "16px",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  boxShadow: "0 4px 20px 0 rgba(0, 0, 0, 0.2)",
+  padding: theme.spacing(2),
+  color: "#fff",
+  transition: "all 0.2s ease-in-out",
+  marginTop: theme.spacing(2),
+  position: "relative",
+  overflow: "hidden",
+  
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: "0 8px 30px 0 rgba(0, 0, 0, 0.3)",
+    background: "rgba(35, 35, 50, 0.7)",
+    border: "1px solid rgba(255, 255, 255, 0.12)",
+  },
+}));
+
+const StockButton = styled(Button)(() => ({
+  borderRadius: "8px",
+  background: "rgba(255, 255, 255, 0.1)",
+  backdropFilter: "blur(4px)",
+  color: "white",
+  textTransform: "none",
+  fontWeight: 600,
+  minWidth: "auto",
+  padding: "4px 12px",
+  border: "1px solid rgba(255, 255, 255, 0.05)",
+  "&:hover": {
+    background: "rgba(255, 255, 255, 0.2)",
+  },
+}));
+
 export default function StockBox({
   stock,
   canDelete,
@@ -81,20 +111,21 @@ export default function StockBox({
   }, [deals, avgDaysVolume]);
 
   return (
-    <Box mt={2} sx={{ border: "1px solid #fff", color: "#fff" }}>
-      <Grid container alignItems="center" mb={1}>
+    <GlassCard>
+      <Grid container alignItems="center" mb={1.5} justifyContent="space-between">
         <Grid size={5}>
-          <Button
-            variant="contained"
+          <StockButton
             size="small"
-            color="info"
             onClick={async (e) => {
               e.stopPropagation();
               await open(url);
             }}
+            startIcon={
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>{stock.id}</Typography>
+            }
           >
-            {stock.id} {name}
-          </Button>
+           {name}
+          </StockButton>
         </Grid>
         <Grid size={7}>
           <Title
@@ -106,7 +137,8 @@ export default function StockBox({
           />
         </Grid>
       </Grid>
-      <Grid container alignItems="center" mb={1}>
+      
+      <Grid container alignItems="flex-start" spacing={1} mb={1}>
         <Grid size={3}>
           <Ma5
             {...{
@@ -133,12 +165,12 @@ export default function StockBox({
         </Grid>
         <Grid size={3}>
           <Typography
-            variant="body2"
-            gutterBottom
+            variant="caption"
             component="div"
-            color="#fff"
+            color="rgba(255,255,255,0.6)"
             textAlign="center"
             noWrap
+            sx={{ mb: 0.5 }}
           >
             昨日低
           </Typography>
@@ -146,33 +178,40 @@ export default function StockBox({
             variant="body2"
             color={
               deals.length > 0 && lastPrice < deals[deals.length - 2].l
-                ? "#e58282"
+                ? "#ff6b6b"
                 : "#fff"
             }
-            fontWeight="bold"
+            fontWeight="600"
             textAlign="center"
           >
             {deals.length > 0 && deals[deals.length - 2].l}
           </Typography>
         </Grid>
+         <Grid size={3}>
+           <AvgPrice {...{ lastPrice, tickDeals }} />
+         </Grid>
+         
+         {/* Second Row of Data */}
+         
         <Grid size={3}>
-          <AvgPrice {...{ lastPrice, tickDeals }} />
-        </Grid>
-
+           <Volume {...{ deals }} />
+         </Grid>
         <Grid size={3}>
-          <Volume {...{ deals }} />
-        </Grid>
+           <PreVolume {...{ deals }} />
+         </Grid>
         <Grid size={3}>
-          <PreVolume {...{ deals }} />
-        </Grid>
+           <VolumeEstimated {...{ deals, estimatedVolume }} />
+         </Grid>
         <Grid size={3}>
-          <VolumeEstimated {...{ deals, estimatedVolume }} />
-        </Grid>
-        <Grid size={3}>
-          <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
-        </Grid>
+           <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
+         </Grid>
       </Grid>
-      {tickDeals && <TickChart {...{ tickDeals }} />}
-    </Box>
+      
+      {tickDeals && (
+        <Box sx={{ mt: 1, borderRadius: "8px", overflow: "hidden" }}>
+            <TickChart {...{ tickDeals }} />
+        </Box>
+      )}
+    </GlassCard>
   );
 }

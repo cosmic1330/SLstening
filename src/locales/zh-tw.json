@@ -22,8 +22,8 @@
       "close": "關閉",
       "add": "加入",
       "download": "下載中...",
-      "notFoundOptions": "沒有選項嗎? 點我載入",
-      "selectStock": "選擇加入股票",
+      "notFoundOptions": "沒有選項? 下載",
+      "selectStock": "股票代碼",
       "required": "股票代號是必填項目",
       "pattern": "股票代號格式不正確",
       "noStock": "請輸入股票代碼"

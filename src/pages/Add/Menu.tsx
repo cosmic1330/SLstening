@@ -2,9 +2,45 @@ import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Control, Controller, FieldErrors } from "react-hook-form";
 import type FormData from "./type";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, styled, alpha } from "@mui/material";
 import useStocksStore from "../../store/Stock.store";
 import { t } from "i18next";
+
+// Custom Styled TextField (Shared style)
+const CustomTextField = styled(TextField)(({ theme }) => ({
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "12px",
+    backgroundColor: alpha(theme.palette.common.white, 0.03),
+    transition: "all 0.2s ease",
+    "& fieldset": {
+      borderColor: "rgba(255, 255, 255, 0.1)",
+    },
+    "&:hover fieldset": {
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    "&.Mui-focused fieldset": {
+      borderColor: theme.palette.primary.main,
+      borderWidth: "1px",
+    },
+    "&.Mui-focused": {
+      backgroundColor: alpha(theme.palette.common.white, 0.05),
+      transform: "translateY(-1px)",
+    },
+  },
+  "& .MuiInputLabel-root": {
+    color: alpha(theme.palette.common.white, 0.6),
+  },
+  "& .MuiInputLabel-root.Mui-focused": {
+    color: theme.palette.primary.main,
+  },
+  "& input": {
+    color: theme.palette.common.white,
+  },
+  // Ensure autocomplete popup icon is white
+  "& .MuiSvgIcon-root": {
+      color: "rgba(255,255,255,0.7)",
+  }
+}));
 
 export default function Menu({
   control,
@@ -45,7 +81,7 @@ export default function Menu({
               field.onChange(newValue);
             }}
             fullWidth
-            renderInput={(params) => <TextField {...params} label= {t("Pages.Add.selectStock")} />}
+            renderInput={(params) => <CustomTextField {...params} label= {t("Pages.Add.selectStock")} variant="outlined" />}
           />
         )}
       />

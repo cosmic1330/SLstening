@@ -450,237 +450,242 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
               flexItem
               sx={{ display: { xs: "none", md: "block" } }}
             />
-            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-              {steps[activeStep]?.checks.map((check, idx) => (
-                <Chip
-                  key={idx}
-                  icon={getStatusIcon(check.status)}
-                  label={check.label}
-                  variant="outlined"
-                  color={
-                    check.status === "pass"
-                      ? "success"
-                      : check.status === "fail"
-                      ? "error"
-                      : "default"
-                  }
-                  size="small"
-                />
-              ))}
-            </Stack>
+            <Box sx={{ flexGrow: 1 }}>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {steps[activeStep]?.checks.map((check, idx) => (
+                  <Chip
+                    key={idx}
+                    icon={getStatusIcon(check.status)}
+                    label={check.label}
+                    variant="outlined"
+                    color={
+                      check.status === "pass"
+                        ? "success"
+                        : check.status === "fail"
+                        ? "error"
+                        : "default"
+                    }
+                    size="small"
+                    sx={{ my: 0.5 }}
+                  />
+                ))}
+              </Stack>
+            </Box>
           </Stack>
         </CardContent>
       </Card>
 
       {/* Combined Chart: Price (Main) + Volume (Overlay at bottom) */}
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
-          data={enhancedChartData}
-          syncId="maSync"
-          margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-          <XAxis dataKey="t" hide />
+      <Box sx={{ flexGrow: 1, minHeight: 0, width: "100%" }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={enhancedChartData}
+            syncId="maSync"
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="t" hide />
 
-          {/* Main Price Axis (Left) */}
-          <YAxis domain={["auto", "auto"]} />
+            {/* Main Price Axis (Left) */}
+            <YAxis domain={["auto", "auto"]} />
 
-          {/* Volume Axis (Right, Hidden or Low-profile, Scaled to push bars down) */}
-          <YAxis
-            yAxisId="volAxis"
-            orientation="right"
-            domain={[0, (dataMax: number) => dataMax * 4]}
-            width={40}
-            tick={false}
-            axisLine={false}
-          />
+            {/* Volume Axis (Right, Hidden or Low-profile, Scaled to push bars down) */}
+            <YAxis
+              yAxisId="volAxis"
+              orientation="right"
+              domain={[0, (dataMax: number) => dataMax * 4]}
+              width={40}
+              tick={false}
+              axisLine={false}
+            />
 
-          <Tooltip content={<CustomTooltip />} offset={50} />
+            <Tooltip content={<CustomTooltip />} offset={50} />
 
-          <Line
-            dataKey="h"
-            stroke="#fff"
-            opacity={0}
-            dot={false}
-            activeDot={false}
-            legendType="none"
-          />
-          <Line
-            dataKey="c"
-            stroke="#fff"
-            opacity={0}
-            dot={false}
-            activeDot={false}
-            legendType="none"
-          />
-          <Line
-            dataKey="l"
-            stroke="#fff"
-            opacity={0}
-            dot={false}
-            activeDot={false}
-            legendType="none"
-          />
-          <Line
-            dataKey="o"
-            stroke="#fff"
-            opacity={0}
-            dot={false}
-            activeDot={false}
-            legendType="none"
-          />
+            <Line
+              dataKey="h"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="c"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="l"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
+            <Line
+              dataKey="o"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+            />
 
-          <Customized component={BaseCandlestickRectangle} />
+            <Customized component={BaseCandlestickRectangle} />
 
-          {/* Volume Bars (Overlay) */}
-          <Bar
-            dataKey="v"
-            yAxisId="volAxis"
-            name="Volume"
-            shape={(props: any) => {
-              const { x, y, width, height, payload } = props;
-              const isUp = payload.c > payload.o;
+            {/* Volume Bars (Overlay) */}
+            <Bar
+              dataKey="v"
+              yAxisId="volAxis"
+              name="Volume"
+              shape={(props: any) => {
+                const { x, y, width, height, payload } = props;
+                const isUp = payload.c > payload.o;
+                return (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill={isUp ? "#f44336" : "#4caf50"}
+                    opacity={0.2}
+                  />
+                );
+              }}
+            />
+
+            <Line
+              dataKey="ma5"
+              stroke="#589bf3"
+              dot={false}
+              activeDot={false}
+              strokeWidth={1}
+              name="MA5"
+            />
+            <Line
+              dataKey="ma10"
+              stroke="#b277f2"
+              dot={false}
+              activeDot={false}
+              strokeWidth={1}
+              name="MA10"
+            />
+            <Line
+              dataKey="ma20"
+              stroke="#ff7300"
+              dot={false}
+              activeDot={false}
+              strokeWidth={1.5}
+              name="MA20"
+            />
+            <Line
+              dataKey="ma60"
+              stroke="#63c762"
+              dot={false}
+              activeDot={false}
+              strokeWidth={1}
+              name="MA60"
+            />
+
+            {/* Signal Markers */}
+            {signals.map((signal) => {
+              const isLong = signal.type === "buy";
+              const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
+              const color = isLong ? "#f44336" : "#4caf50";
+
               return (
-                <rect
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  fill={isUp ? "#f44336" : "#4caf50"}
-                  opacity={0.2}
+                <ReferenceDot
+                  key={signal.t}
+                  x={signal.t}
+                  y={yPos}
+                  r={4}
+                  stroke="none"
+                  shape={(props: any) => {
+                    const { cx, cy } = props;
+                    if (!cx || !cy) return <g />;
+
+                    return (
+                      <g>
+                        {isLong ? (
+                          // Long Entry
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                                cy + 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                            <text
+                              x={cx}
+                              y={cy + 25}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={10}
+                            >
+                              {signal.reason}
+                            </text>
+                          </>
+                        ) : (
+                          // Short Entry
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                                cy - 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                            <text
+                              x={cx}
+                              y={cy - 15}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={10}
+                            >
+                              {signal.reason}
+                            </text>
+                          </>
+                        )}
+                      </g>
+                    );
+                  }}
                 />
               );
-            }}
-          />
+            })}
 
-          <Line
-            dataKey="ma5"
-            stroke="#589bf3"
-            dot={false}
-            activeDot={false}
-            strokeWidth={1}
-            name="MA5"
-          />
-          <Line
-            dataKey="ma10"
-            stroke="#b277f2"
-            dot={false}
-            activeDot={false}
-            strokeWidth={1}
-            name="MA10"
-          />
-          <Line
-            dataKey="ma20"
-            stroke="#ff7300"
-            dot={false}
-            activeDot={false}
-            strokeWidth={1.5}
-            name="MA20"
-          />
-          <Line
-            dataKey="ma60"
-            stroke="#63c762"
-            dot={false}
-            activeDot={false}
-            strokeWidth={1}
-            name="MA60"
-          />
-
-          {/* Signal Markers */}
-          {signals.map((signal) => {
-            const isLong = signal.type === "buy";
-            const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
-            const color = isLong ? "#f44336" : "#4caf50";
-
-            return (
-              <ReferenceDot
-                key={signal.t}
-                x={signal.t}
-                y={yPos}
-                r={4}
-                stroke="none"
-                shape={(props: any) => {
-                  const { cx, cy } = props;
-                  if (!cx || !cy) return <g />;
-
-                  return (
-                    <g>
-                      {isLong ? (
-                        // Long Entry
-                        <>
-                          <path
-                            d={`M${cx - 5},${cy + 10} L${cx + 5},${
-                              cy + 10
-                            } L${cx},${cy} Z`}
-                            fill={color}
-                          />
-                          <text
-                            x={cx}
-                            y={cy + 25}
-                            textAnchor="middle"
-                            fill={color}
-                            fontSize={10}
-                          >
-                            {signal.reason}
-                          </text>
-                        </>
-                      ) : (
-                        // Short Entry
-                        <>
-                          <path
-                            d={`M${cx - 5},${cy - 10} L${cx + 5},${
-                              cy - 10
-                            } L${cx},${cy} Z`}
-                            fill={color}
-                          />
-                          <text
-                            x={cx}
-                            y={cy - 15}
-                            textAnchor="middle"
-                            fill={color}
-                            fontSize={10}
-                          >
-                            {signal.reason}
-                          </text>
-                        </>
-                      )}
-                    </g>
-                  );
-                }}
-              />
-            );
-          })}
-
-          {/* Gap Visualization */}
-          {showGaps &&
-            gapLines
-              .map((gap) => [
-                <Line
-                  key={`gap-upper-${gap.date}`}
-                  dataKey={`gap_upper_${gap.date}`}
-                  stroke={gap.upperLine.stroke}
-                  strokeWidth={gap.upperLine.strokeWidth}
-                  strokeDasharray={gap.upperLine.strokeDasharray}
-                  opacity={gap.upperLine.opacity}
-                  dot={false}
-                  activeDot={false}
-                  legendType="none"
-                />,
-                <Line
-                  key={`gap-lower-${gap.date}`}
-                  dataKey={`gap_lower_${gap.date}`}
-                  stroke={gap.lowerLine.stroke}
-                  strokeWidth={gap.lowerLine.strokeWidth}
-                  strokeDasharray={gap.lowerLine.strokeDasharray}
-                  opacity={gap.lowerLine.opacity}
-                  dot={false}
-                  activeDot={false}
-                  legendType="none"
-                />,
-              ])
-              .flat()}
-        </ComposedChart>
-      </ResponsiveContainer>
+            {/* Gap Visualization */}
+            {showGaps &&
+              gapLines
+                .map((gap) => [
+                  <Line
+                    key={`gap-upper-${gap.date}`}
+                    dataKey={`gap_upper_${gap.date}`}
+                    stroke={gap.upperLine.stroke}
+                    strokeWidth={gap.upperLine.strokeWidth}
+                    strokeDasharray={gap.upperLine.strokeDasharray}
+                    opacity={gap.upperLine.opacity}
+                    dot={false}
+                    activeDot={false}
+                    legendType="none"
+                  />,
+                  <Line
+                    key={`gap-lower-${gap.date}`}
+                    dataKey={`gap_lower_${gap.date}`}
+                    stroke={gap.lowerLine.stroke}
+                    strokeWidth={gap.lowerLine.strokeWidth}
+                    strokeDasharray={gap.lowerLine.strokeDasharray}
+                    opacity={gap.lowerLine.opacity}
+                    dot={false}
+                    activeDot={false}
+                    legendType="none"
+                  />,
+                ])
+                .flat()}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
     </Container>
   );
 }

@@ -1,5 +1,19 @@
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
-import { Box, Button, IconButton, styled, Stack, createTheme, ThemeProvider } from "@mui/material";
+import {
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  DragIndicator,
+  UnfoldLess,
+  UnfoldMore,
+} from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  IconButton,
+  styled,
+  Stack,
+  createTheme,
+  ThemeProvider,
+} from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
@@ -9,6 +23,7 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
@@ -41,16 +56,19 @@ const PageContainer = styled(Box)`
   overflow: hidden;
   position: relative;
   background-color: #0f1214;
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,25%,1) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,25%,1) 0, transparent 50%),
+  background-image: radial-gradient(
+      at 0% 0%,
+      hsla(253, 16%, 7%, 1) 0,
+      transparent 50%
+    ),
+    radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
   background-size: 100% 100%, 100% 100%, 100% 100%, 200px 200px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
 `;
 
-const GlassBar = styled(Box)(({ theme }) => ({
+const GlassBar = styled(motion.div)(({ theme }) => ({
   position: "absolute",
   right: theme.spacing(2),
   top: "50%",
@@ -69,60 +87,62 @@ const GlassBar = styled(Box)(({ theme }) => ({
 }));
 
 const ControlButton = styled(Button, {
-    shouldForwardProp: (prop) => prop !== "active"
+  shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ active }) => ({
-    minWidth: "auto",
-    padding: "6px 12px",
-    borderRadius: "8px",
-    color: active ? "#fff" : "rgba(255, 255, 255, 0.6)",
-    backgroundColor: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
-    border: active ? "1px solid rgba(255, 255, 255, 0.1)" : "1px solid transparent",
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    "&:hover": {
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
-        color: "#fff",
-    },
+  minWidth: "auto",
+  padding: "6px 12px",
+  borderRadius: "8px",
+  color: active ? "#fff" : "rgba(255, 255, 255, 0.6)",
+  backgroundColor: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
+  border: active
+    ? "1px solid rgba(255, 255, 255, 0.1)"
+    : "1px solid transparent",
+  fontSize: "0.75rem",
+  fontWeight: 600,
+  "&:hover": {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    color: "#fff",
+  },
 }));
 
 const NavIconButton = styled(IconButton)(() => ({
-    color: "rgba(255, 255, 255, 0.7)",
-    border: "1px solid rgba(255, 255, 255, 0.08)",
-    borderRadius: "8px",
-    padding: "6px",
-    "&:hover": {
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
-        color: "#fff",
-    },
+  color: "rgba(255, 255, 255, 0.7)",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  borderRadius: "8px",
+  padding: "6px",
+  "&:hover": {
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    color: "#fff",
+  },
 }));
 
 // Create a dark theme instance
 const darkTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
     primary: {
-      main: '#90caf9',
+      main: "#90caf9",
     },
     background: {
-      default: 'transparent',
-      paper: 'rgba(30, 30, 40, 0.6)',
+      default: "transparent",
+      paper: "rgba(30, 30, 40, 0.6)",
     },
     text: {
-        primary: '#ffffff',
-        secondary: 'rgba(255, 255, 255, 0.7)',
-    }
+      primary: "#ffffff",
+      secondary: "rgba(255, 255, 255, 0.7)",
+    },
   },
   components: {
-      MuiCard: {
-          styleOverrides: {
-              root: {
-                  backgroundColor: 'rgba(30, 30, 40, 0.6)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-              }
-          }
-      }
-  }
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "rgba(30, 30, 40, 0.6)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+        },
+      },
+    },
+  },
 });
 
 const FullscreenVerticalCarousel: React.FC = () => {
@@ -133,6 +153,8 @@ const FullscreenVerticalCarousel: React.FC = () => {
       UrlTaPerdOptions.Hour
   );
   const { id } = useParams();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const pageRef = useRef(null);
 
   // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
@@ -283,17 +305,17 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-        <PageContainer>
+      <PageContainer ref={pageRef}>
         <DealsContext.Provider value={deals}>
-            <AnimatePresence custom={direction(current)} mode="wait">
+          <AnimatePresence custom={direction(current)} mode="wait">
             <motion.div
-                key={slides[current].id}
-                custom={direction(current)}
-                variants={slideVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                style={{
+              key={slides[current].id}
+              custom={direction(current)}
+              variants={slideVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              style={{
                 position: "absolute",
                 top: 0,
                 left: 0,
@@ -302,58 +324,148 @@ const FullscreenVerticalCarousel: React.FC = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                }}
+              }}
             >
-                <Suspense fallback={<div>Loading...</div>}>
+              <Suspense fallback={<div>Loading...</div>}>
                 {slides[current].content}
-                </Suspense>
+              </Suspense>
             </motion.div>
-            </AnimatePresence>
+          </AnimatePresence>
 
-            <GlassBar>
-                <Stack spacing={1}>
-                    {/* Navigation Arrows */}
-                    <NavIconButton onClick={() => goToSlide(current - 1)} size="small">
-                        <KeyboardArrowUp fontSize="small" />
-                    </NavIconButton>
-                    <NavIconButton onClick={() => goToSlide(current + 1)} size="small">
-                        <KeyboardArrowDown fontSize="small" />
-                    </NavIconButton>
+          <GlassBar
+            drag
+            dragMomentum={false}
+            dragConstraints={pageRef}
+            initial={{ x: 0, opacity: 0.9 }}
+            whileHover={{ opacity: 1 }}
+            animate={{
+              width: isCollapsed ? "auto" : "auto",
+              transition: { type: "spring", stiffness: 300, damping: 30 },
+            }}
+          >
+            <Stack spacing={1} alignItems="center">
+              {/* Drag Handle */}
+              <Box
+                sx={{
+                  cursor: "grab",
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  py: 0.5,
+                }}
+              >
+                <DragIndicator
+                  style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}
+                />
+              </Box>
 
-                    <Box sx={{ my: 0.5, height: "1px", backgroundColor: "rgba(255,255,255,0.1)" }} />
+              {/* Collapse Toggle */}
+              <IconButton
+                onClick={() => setIsCollapsed(!isCollapsed)}
+                size="small"
+                sx={{
+                  p: 0.5,
+                  color: "rgba(255,255,255,0.5)",
+                  "&:hover": {
+                    color: "#fff",
+                    bgcolor: "rgba(255,255,255,0.1)",
+                  },
+                }}
+              >
+                {isCollapsed ? (
+                  <UnfoldMore fontSize="small" />
+                ) : (
+                  <UnfoldLess fontSize="small" />
+                )}
+              </IconButton>
 
-                    {/* Time Period Controls */}
-                    <ControlButton
-                        active={perd === UrlTaPerdOptions.Hour}
-                        onClick={() => {
-                            localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Hour);
-                            setPerd(UrlTaPerdOptions.Hour);
-                        }}
-                    >
-                        小時
-                    </ControlButton>
-                    <ControlButton
-                        active={perd === UrlTaPerdOptions.Day}
-                        onClick={() => {
-                            localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Day);
-                            setPerd(UrlTaPerdOptions.Day);
-                        }}
-                    >
-                        日線
-                    </ControlButton>
-                    <ControlButton
-                        active={perd === UrlTaPerdOptions.Week}
-                        onClick={() => {
-                            localStorage.setItem("detail:perd:type", UrlTaPerdOptions.Week);
-                            setPerd(UrlTaPerdOptions.Week);
-                        }}
-                    >
-                        週線
-                    </ControlButton>
-                </Stack>
-            </GlassBar>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: "20px",
+                      height: "1px",
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      my: 0.5,
+                    }}
+                  />
+
+                  {/* Navigation Arrows */}
+                  <NavIconButton
+                    onClick={() => goToSlide(current - 1)}
+                    size="small"
+                  >
+                    <KeyboardArrowUp fontSize="small" />
+                  </NavIconButton>
+                  <NavIconButton
+                    onClick={() => goToSlide(current + 1)}
+                    size="small"
+                  >
+                    <KeyboardArrowDown fontSize="small" />
+                  </NavIconButton>
+
+                  <Box
+                    sx={{
+                      width: "20px",
+                      height: "1px",
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      my: 0.5,
+                    }}
+                  />
+
+                  {/* Time Period Controls */}
+                  <ControlButton
+                    active={perd === UrlTaPerdOptions.Hour}
+                    onClick={() => {
+                      localStorage.setItem(
+                        "detail:perd:type",
+                        UrlTaPerdOptions.Hour
+                      );
+                      setPerd(UrlTaPerdOptions.Hour);
+                    }}
+                  >
+                    小時
+                  </ControlButton>
+                  <ControlButton
+                    active={perd === UrlTaPerdOptions.Day}
+                    onClick={() => {
+                      localStorage.setItem(
+                        "detail:perd:type",
+                        UrlTaPerdOptions.Day
+                      );
+                      setPerd(UrlTaPerdOptions.Day);
+                    }}
+                  >
+                    日線
+                  </ControlButton>
+                  <ControlButton
+                    active={perd === UrlTaPerdOptions.Week}
+                    onClick={() => {
+                      localStorage.setItem(
+                        "detail:perd:type",
+                        UrlTaPerdOptions.Week
+                      );
+                      setPerd(UrlTaPerdOptions.Week);
+                    }}
+                  >
+                    週線
+                  </ControlButton>
+                </motion.div>
+              )}
+            </Stack>
+          </GlassBar>
         </DealsContext.Provider>
-        </PageContainer>
+      </PageContainer>
     </ThemeProvider>
   );
 };

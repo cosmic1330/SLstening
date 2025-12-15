@@ -786,7 +786,7 @@ export default function Ichimoku({
                   type="monotone"
                   dataKey="senkouA"
                   stroke="rgba(244, 67, 54, 0.6)"
-                  strokeWidth={1}
+                  strokeWidth={2}
                   dot={false}
                   name="Senkou A"
                 />
@@ -794,7 +794,7 @@ export default function Ichimoku({
                   type="monotone"
                   dataKey="senkouB"
                   stroke="rgba(76, 175, 80, 0.6)"
-                  strokeWidth={1}
+                  strokeWidth={2}
                   dot={false}
                   name="Senkou B"
                 />
@@ -808,15 +808,15 @@ export default function Ichimoku({
                   type="monotone"
                   dataKey="tenkan"
                   stroke="#29b6f6"
-                  strokeWidth={1.5}
+                  strokeWidth={1}
                   dot={false}
                   name="Tenkan-sen (轉換)"
                 />
                 <Line
                   type="monotone"
                   dataKey="kijun"
-                  stroke="#ef5350"
-                  strokeWidth={1.5}
+                  stroke="#efaa50"
+                  strokeWidth={2}
                   dot={false}
                   name="Kijun-sen (基準)"
                 />
@@ -829,7 +829,7 @@ export default function Ichimoku({
                 type="monotone"
                 dataKey="chikou"
                 stroke="#bdbdbd"
-                strokeWidth={1.5}
+                strokeWidth={1}
                 strokeDasharray="5 5"
                 dot={false}
                 name="Chikou Span (滯後)"

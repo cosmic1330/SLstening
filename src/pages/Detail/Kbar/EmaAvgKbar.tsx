@@ -346,8 +346,8 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div">
-            AvgMa Strategy (Professional)
+          <Typography variant="h6" component="div" color="white">
+            EMA Strategy
           </Typography>
         </MuiTooltip>
 

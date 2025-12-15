@@ -380,8 +380,8 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id="strategy" />} arrow>
-          <Typography variant="h6" component="div">
-            MA & Gaps Strategy
+          <Typography variant="h6" component="div" color="white">
+            MA
           </Typography>
         </MuiTooltip>
 

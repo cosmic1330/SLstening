@@ -2,10 +2,10 @@ import {
   Box,
   CircularProgress,
   Container,
-  Divider,
   Stack,
   Tooltip as MuiTooltip,
   Typography,
+  Chip,
 } from "@mui/material";
 import { useContext, useMemo } from "react";
 import {
@@ -65,11 +65,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div
         style={{
-          backgroundColor: "#222",
-          border: "1px solid #444",
+          backgroundColor: "rgba(20, 20, 30, 0.9)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          backdropFilter: "blur(4px)",
           borderRadius: 8,
           boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
-          padding: "10px",
+          padding: "12px",
           textAlign: "left",
         }}
       >
@@ -81,7 +82,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             fontWeight: "bold",
           }}
         >
-          時間: {dateStr}
+          {dateStr}
         </p>
 
         {data.signalReason && (
@@ -90,7 +91,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               marginTop: 8,
               marginBottom: 8,
               padding: "4px 8px",
-              backgroundColor: "#e3f2fd",
+              backgroundColor: "rgba(33, 150, 243, 0.2)",
               borderRadius: 4,
               borderLeft: "4px solid #2196f3",
             }}
@@ -98,7 +99,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <Typography
               variant="body2"
               fontWeight="bold"
-              color="#0d47a1"
+              color="#64b5f6"
               style={{ whiteSpace: "pre-wrap" }}
             >
               {data.signalReason}
@@ -198,9 +199,8 @@ export default function Obv() {
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        p: 2,
-        bgcolor: "#f5f5f5",
-        overflow: "hidden", // Prevent window scroll
+        pt: 1,
+        // Removed bgcolor="#f5f5f5" to allow global dark theme to show through
       }}
     >
       {/* Header Section */}
@@ -214,14 +214,22 @@ export default function Obv() {
           title="On-Balance Volume (OBV) Professional Dashboard"
           arrow
         >
-          <Typography variant="h5" component="h1" fontWeight="bold">
+          <Typography variant="h6" component="h1" fontWeight="bold" color="text.primary">
             OBV 智能分析儀表板
           </Typography>
         </MuiTooltip>
+        
+        {/* Added Chip for consistency with MaKbar layout feeling */}
+        <Chip 
+            label="Volume Analysis" 
+            size="small" 
+            variant="outlined" 
+            color="primary"
+            sx={{ borderColor: 'rgba(255,255,255,0.2)' }}
+        />
+
         <Box sx={{ flexGrow: 1 }} />
       </Stack>
-
-      <Divider sx={{ mb: 2 }} />
 
       {/* Content Area */}
       <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "hidden" }}>
@@ -230,17 +238,26 @@ export default function Obv() {
             data={chartData}
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-            <XAxis dataKey="t" tickFormatter={formatDateTick} />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
+            <XAxis 
+                dataKey="t" 
+                tickFormatter={formatDateTick} 
+                tick={{ fill: 'rgba(255,255,255,0.7)' }}
+                stroke="rgba(255,255,255,0.3)"
+            />
             <YAxis
               orientation="left"
               domain={["auto", "auto"]}
               tickFormatter={(val) => val.toFixed(2)}
+              tick={{ fill: 'rgba(255,255,255,0.7)' }}
+              stroke="rgba(255,255,255,0.3)"
             />
             <YAxis
               yAxisId="right"
               orientation="right"
               domain={["auto", "auto"]}
+              tick={{ fill: 'rgba(255,255,255,0.7)' }}
+              stroke="rgba(255,255,255,0.3)"
             />
             <RechartsTooltip content={<CustomTooltip />} />
 
@@ -298,6 +315,7 @@ export default function Obv() {
               strokeWidth={1}
               dot={false}
               name="BB Upper"
+              opacity={0.5}
             />
             <Line
               dataKey="bbLower"
@@ -306,6 +324,7 @@ export default function Obv() {
               strokeWidth={1}
               dot={false}
               name="BB Lower"
+              opacity={0.5}
             />
 
             {/* 

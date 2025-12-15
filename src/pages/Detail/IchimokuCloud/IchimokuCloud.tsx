@@ -609,8 +609,8 @@ export default function Ichimoku({
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div">
-            Ichimoku Ultimate
+          <Typography variant="h6" component="div" color="white">
+            Ichimoku
           </Typography>
         </MuiTooltip>
 

@@ -401,8 +401,8 @@ export default function Bollean({ id }: { id?: string }) {
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div">
-            Bollinger Professional
+          <Typography variant="h6" component="div" color="white">
+            Bolling
           </Typography>
         </MuiTooltip>
 

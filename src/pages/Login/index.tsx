@@ -3,11 +3,9 @@ import {
   Container as MuiContainer,
   styled,
   ThemeProvider,
-  Box,
 } from "@mui/material";
 import Version from "../../components/Version";
 import Content from "./Content";
-import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 const Container = styled(MuiContainer)`
   min-height: 100vh;
@@ -37,9 +35,6 @@ const Login = () => {
       })}
     >
       <Container>
-        <Box sx={{ position: "absolute", top: 24, right: 24, color: "white" }}>
-            <LanguageSwitcher />
-        </Box>
         <Version />
         <Content />
       </Container>

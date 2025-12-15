@@ -9,7 +9,7 @@ import {
   alpha,
   Divider,
   Alert,
-  Collapse,
+  Collapse
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { error } from "@tauri-apps/plugin-log";
@@ -19,6 +19,7 @@ import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
 import { useTranslation } from "react-i18next";
 import GoogleOauthButton from "../../components/GoogleOauthButton";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 // Glassmorphism Card Component
 const GlassCard = styled(Box)(({ theme }) => ({
@@ -36,7 +37,7 @@ const GlassCard = styled(Box)(({ theme }) => ({
   alignItems: "center",
   gap: theme.spacing(3),
   transition: "transform 0.2s ease-in-out",
-  
+
   // RWD adjustments
   [theme.breakpoints.down("sm")]: {
     padding: theme.spacing(3),
@@ -72,19 +73,19 @@ const CustomTextField = styled(TextField)(({ theme }) => ({
     },
     // Smaller input on small screens
     [theme.breakpoints.down("sm")]: {
-        "& input": {
-            padding: "10px 14px", 
-        }
-    }
+      "& input": {
+        padding: "10px 14px",
+      },
+    },
   },
   "& .MuiInputLabel-root": {
     color: alpha(theme.palette.common.white, 0.6),
     [theme.breakpoints.down("sm")]: {
-        fontSize: "0.875rem",
-        transform: "translate(14px, 12px) scale(1)",
-        "&.MuiInputLabel-shrink": {
-             transform: "translate(14px, -9px) scale(0.75)",
-        }
+      fontSize: "0.875rem",
+      transform: "translate(14px, 12px) scale(1)",
+      "&.MuiInputLabel-shrink": {
+        transform: "translate(14px, -9px) scale(0.75)",
+      },
     },
   },
   "& .MuiInputLabel-root.Mui-focused": {
@@ -144,43 +145,53 @@ const Content = () => {
 
   return (
     <GlassCard>
+      <Box sx={{ position: "absolute", top: 24, right: 24, color: "white" }}>
+        <LanguageSwitcher />
+      </Box>
       <Box mb={1} textAlign="center">
-         {/* Logo placeholder - using text if image not ideal, but keeping image for now */}
-         <img 
-            src="icon.png" 
-            alt="logo" 
-            style={{ 
-              width: "80px", 
-              marginBottom: "8px", 
-              filter: "drop-shadow(0 0 10px rgba(255,255,255,0.2))" 
-            }} 
-         />
-         <Typography variant="h5" fontWeight="700" color="white" gutterBottom>
-           {t("Pages.Login.welcomeBack")}
-         </Typography>
-         <Typography variant="body2" color="rgba(255,255,255,0.5)">
-           {t("Pages.Login.enterCredentials")}
-         </Typography>
+        {/* Logo placeholder - using text if image not ideal, but keeping image for now */}
+        <img
+          src="icon.png"
+          alt="logo"
+          style={{
+            width: "80px",
+            marginBottom: "8px",
+            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.2))",
+          }}
+        />
+        <Typography variant="h5" fontWeight="700" color="white" gutterBottom>
+          {t("Pages.Login.welcomeBack")}
+        </Typography>
+        <Typography variant="body2" color="rgba(255,255,255,0.5)">
+          {t("Pages.Login.enterCredentials")}
+        </Typography>
       </Box>
 
-      <Box width="100%" component="form" onSubmit={(e) => { e.preventDefault(); signIn(); }}>
+      <Box
+        width="100%"
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          signIn();
+        }}
+      >
         <Collapse in={!!errorMsg}>
-           <Alert 
-             severity="error" 
-             sx={{ 
-               mb: 2, 
-               borderRadius: "12px",
-               backgroundColor: "rgba(211, 47, 47, 0.15)", // Transparent red
-               color: "#ffcdd2",
-               border: "1px solid rgba(239, 83, 80, 0.3)",
-               "& .MuiAlert-icon": {
-                 color: "#ef5350" // Light red icon
-               }
-             }}
-             onClose={() => setErrorMsg("")}
-           >
-             {errorMsg}
-           </Alert>
+          <Alert
+            severity="error"
+            sx={{
+              mb: 2,
+              borderRadius: "12px",
+              backgroundColor: "rgba(211, 47, 47, 0.15)", // Transparent red
+              color: "#ffcdd2",
+              border: "1px solid rgba(239, 83, 80, 0.3)",
+              "& .MuiAlert-icon": {
+                color: "#ef5350", // Light red icon
+              },
+            }}
+            onClose={() => setErrorMsg("")}
+          >
+            {errorMsg}
+          </Alert>
         </Collapse>
 
         <Stack spacing={2.5}>
@@ -206,11 +217,11 @@ const Content = () => {
           />
         </Stack>
 
-        <Stack 
-          direction="row" 
-          alignItems="center" 
-          justifyContent="space-between" 
-          mt={1.5} 
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          mt={1.5}
           mb={3}
         >
           <Stack direction="row" alignItems="center">
@@ -249,24 +260,24 @@ const Content = () => {
             "&:hover": {
               background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
               boxShadow: "0 6px 20px rgba(100, 100, 255, 0.4)",
-            }
+            },
           }}
         >
           {loading ? t("Pages.Login.signingIn") : t("Pages.Login.signIn")}
         </Button>
 
         <Box my={2} display="flex" alignItems="center">
-            <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
-            <Typography variant="caption" color="rgba(255,255,255,0.4)" mx={2}>
-                {t("Pages.Login.or")}
-            </Typography>
-            <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
+          <Typography variant="caption" color="rgba(255,255,255,0.4)" mx={2}>
+            {t("Pages.Login.or")}
+          </Typography>
+          <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
         </Box>
 
         <Stack spacing={1}>
-           <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
-           
-           <Button
+          <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
+
+          <Button
             onClick={register}
             disabled={loading}
             fullWidth
@@ -276,8 +287,8 @@ const Content = () => {
               textTransform: "none",
               "&:hover": {
                 color: "white",
-                background: "rgba(255,255,255,0.05)"
-              }
+                background: "rgba(255,255,255,0.05)",
+              },
             }}
           >
             {t("Pages.Login.register")}

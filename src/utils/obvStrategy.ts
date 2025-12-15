@@ -55,14 +55,10 @@ export const calculateObvSignals = (deals: TaType): ObvSignal[] => {
   // 2. Calculate Indicators
   // Price MAs
   const ma20 = calculateSMA(closes, 20);
-  const ma50 = calculateSMA(closes, 50);
 
   // OBV MA (Signal Line)
   const obvMa20 = calculateSMA(obvValues, 20);
 
-  // Other Filters
-  const rsi14 = calculateRSI(closes, 14);
-  const bb20 = calculateBollingerBands(closes, 20, 2);
 
   const signals: ObvSignal[] = [];
   let position: "LONG" | "SHORT" | "NONE" = "NONE";

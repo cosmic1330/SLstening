@@ -1,8 +1,6 @@
 import { TaType } from "../types";
 import {
   calculateSMA,
-  calculateRSI,
-  calculateBollingerBands,
 } from "./technicalIndicators";
 import obvTool from "../cls_tools/obv";
 

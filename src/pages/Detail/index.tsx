@@ -70,8 +70,8 @@ const PageContainer = styled(Box)`
 
 const GlassBar = styled(motion.div)(({ theme }) => ({
   position: "absolute",
-  right: theme.spacing(2),
-  top: "50%",
+  left: theme.spacing(0),
+  top: "20%",
   transform: "translateY(-50%)",
   background: "rgba(30, 30, 40, 0.6)",
   backdropFilter: "blur(12px)",
@@ -153,7 +153,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       UrlTaPerdOptions.Hour
   );
   const { id } = useParams();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const pageRef = useRef(null);
 
   // slides 需依賴 perd，移到 useMemo 內
@@ -373,11 +373,23 @@ const FullscreenVerticalCarousel: React.FC = () => {
                 }}
               >
                 {isCollapsed ? (
-                  <UnfoldMore fontSize="small" />
+                    <UnfoldMore fontSize="small" />
                 ) : (
                   <UnfoldLess fontSize="small" />
                 )}
               </IconButton>
+              {isCollapsed && (<Box 
+                sx={{ 
+                  fontSize: '10px', 
+                  color: '#90caf9', 
+                  fontWeight: 'bold',
+                  writingMode: 'vertical-rl',
+                  textOrientation: 'upright',
+                  letterSpacing: '2px'
+                }}
+              >
+                {perd === UrlTaPerdOptions.Hour ? "小時" : perd === UrlTaPerdOptions.Week ? "週線" : "日線"}
+              </Box>)}
 
               {!isCollapsed && (
                 <motion.div

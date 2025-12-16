@@ -1,7 +1,7 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
-import useTwseDeals from "../../../hooks/useTwseDeals";
+import useOtcDeals from "../../../hooks/useOtcDeals";
 import { FutureIds } from "../../../types";
 import TickChart from "../../../components/CommonChart/TickChart";
 
@@ -18,7 +18,7 @@ export default function OtcBox() {
     name: "櫃買指數",
     group: "大盤",
   });
-  const { deals, tickDeals } = useTwseDeals();
+  const { deals, tickDeals } = useOtcDeals();
   return (
     <Box my={2} color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>

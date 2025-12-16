@@ -18,7 +18,11 @@ export default async function getDbInstance(): Promise<Database> {
   // 3. 發起新的連線請求
   pendingPromise = (async () => {
     try {
-      const db = await Database.load('postgres://root:secret@yangjuiyu.tplinkdns.com:5432/app');
+      const connectionString = import.meta.env.VITE_DATABASE_URL;
+      if (!connectionString) {
+        throw new Error('VITE_DATABASE_URL environment variable is not defined');
+      }
+      const db = await Database.load(connectionString);
       dbInstance = db; // 連線成功，儲存實例
       return db;
     } catch (error) {

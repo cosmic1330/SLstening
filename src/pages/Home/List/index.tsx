@@ -10,6 +10,7 @@ import TwseBox from "./twse";
 import WtxBox from "./wtx";
 import CnnBox from "./cnn";
 import OtcBox from "./otc";
+import MmBox from "./mm";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -45,6 +46,9 @@ function List() {
         <Grid container spacing={2}> 
           <Grid size={12}>  
             <CnnBox />
+          </Grid>
+          <Grid size={12}>  
+            <MmBox />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <NasdaqBox />

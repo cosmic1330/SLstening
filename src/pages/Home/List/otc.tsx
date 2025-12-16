@@ -12,10 +12,10 @@ const Box = styled(MuiBox)`
   border-radius: 0.8rem;
   color: #fff;
 `;
-export default function TwseBox() {
+export default function OtcBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
-    id: FutureIds.TWSE,
-    name: "加權指數",
+    id: FutureIds.OTC,
+    name: "櫃買指數",
     group: "大盤",
   });
   const { deals, tickDeals } = useTwseDeals();
@@ -28,7 +28,7 @@ export default function TwseBox() {
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography variant="button">加權指數</Typography>
+            <Typography variant="button">櫃買指數</Typography>
             <Stack
               direction="row"
               alignItems="center"

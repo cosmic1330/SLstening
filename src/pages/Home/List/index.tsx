@@ -8,6 +8,8 @@ import useStocksStore from "../../../store/Stock.store";
 import NasdaqBox from "./nasdaq";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
+import CnnBox from "./cnn";
+import OtcBox from "./otc";
 
 function List() {
   const { stocks, reload } = useStocksStore();
@@ -39,9 +41,11 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
+        <CnnBox />
         <NasdaqBox />
         <WtxBox />
         <TwseBox />
+        <OtcBox />
         {stocks.length === 0 ? (
           <Button fullWidth variant="contained" onClick={openAddWindow}>
             新增第一筆追蹤

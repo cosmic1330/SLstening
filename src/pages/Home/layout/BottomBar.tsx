@@ -37,7 +37,7 @@ const GlassDock = styled(Box)(() => ({
 
 const NavButton = styled(IconButton, {
   shouldForwardProp: (prop) => prop !== "active",
-})<{ active?: boolean }>(({ theme, active }) => ({
+})<{ active?: boolean }>(({ active }) => ({
   color: active ? "#60a5fa" : "rgba(255, 255, 255, 0.5)",
   transition: "all 0.2s ease",
   padding: "10px",
@@ -54,7 +54,7 @@ const NavButton = styled(IconButton, {
   }
 }));
 
-const CenterFab = styled(IconButton)(({ theme }) => ({
+const CenterFab = styled(IconButton)(() => ({
   position: "absolute",
   top: -25,
   left: "50%",

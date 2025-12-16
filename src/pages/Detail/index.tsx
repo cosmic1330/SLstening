@@ -351,7 +351,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
                   display: "flex",
                   justifyContent: "center",
                   width: "100%",
-                  py: 0.5,
+                  py: 0.2,
                 }}
               >
                 <DragIndicator

@@ -112,7 +112,7 @@ export default function StockBox({
 
   return (
     <GlassCard>
-      <Grid container alignItems="center" mb={1.5} justifyContent="space-between">
+      <Grid container alignItems="center" justifyContent="space-between">
         <Grid size={5}>
           <StockButton
             size="small"

@@ -22,7 +22,7 @@ export default function WtxBox() {
   const { deals } = useWtxDeals();
 
   return (
-    <Box my={2} color="#fff" border="1px solid #fff">
+    <Box color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>
         <Grid size={12}>{deals && <MakChart deals={deals} />}</Grid>
         <Grid size={12}>

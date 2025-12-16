@@ -26,7 +26,7 @@ export default function CnnBox() {
   };
 
   return (
-    <Box my={2} onClick={handleClick}>
+    <Box onClick={handleClick}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Stack direction="row" alignItems="center" spacing={1}>
           <SpeedIcon />

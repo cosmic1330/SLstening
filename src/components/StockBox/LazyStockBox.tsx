@@ -10,7 +10,6 @@ const StyledBox = styled(Box)`
   padding: 1rem;
   border-radius: 0.8rem;
   color: #fff;
-  margin-top: 1rem;
 `;
 
 interface LazyStockBoxProps {
@@ -43,7 +42,7 @@ export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
     // 不可見時顯示骨架屏，不進行任何 API 請求
     return (
       <StyledBox>
-        <Grid container alignItems="center" mb={1}>
+        <Grid container alignItems="center">
           <Grid size={5}>
             <Skeleton
               variant="rectangular"

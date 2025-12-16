@@ -20,7 +20,7 @@ export default function OtcBox() {
   });
   const { deals, tickDeals } = useOtcDeals();
   return (
-    <Box my={2} color="#fff" border="1px solid #fff">
+    <Box color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>
         <Grid size={12}>
           <Stack

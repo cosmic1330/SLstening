@@ -1,4 +1,4 @@
-import { Box, Button, Container } from "@mui/material";
+import { Box, Button, Container, Grid } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { useEffect } from "react";
@@ -41,17 +41,30 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
-        <CnnBox />
-        <NasdaqBox />
-        <WtxBox />
-        <TwseBox />
-        <OtcBox />
+       
+        <Grid container spacing={2}> 
+          <Grid size={12}>  
+            <CnnBox />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <NasdaqBox />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <WtxBox />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <TwseBox />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <OtcBox />
+          </Grid>
+        </Grid>
         {stocks.length === 0 ? (
           <Button fullWidth variant="contained" onClick={openAddWindow}>
             新增第一筆追蹤
           </Button>
         ) : (
-          <Box mt={2} mb={"80px"}>
+          <Box mt={2}>
             {stocks.length > 0 && (
               <VirtualizedStockList
                 stocks={stocks}

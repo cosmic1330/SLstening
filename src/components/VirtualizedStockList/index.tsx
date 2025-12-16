@@ -1,5 +1,5 @@
-import { Box } from "@mui/material";
-import { useCallback, useState } from "react";
+import { Box, useTheme, useMediaQuery, Grid } from "@mui/material";
+import { useCallback, useState, useMemo } from "react";
 import { FixedSizeList as List } from "react-window";
 import { StockStoreType } from "../../types";
 import DebugInfo from "../DebugInfo";
@@ -10,54 +10,71 @@ interface VirtualizedStockListProps {
   height: number;
   width?: number | string;
   itemHeight: number;
-  showDebug?: boolean; // 添加調試選項
+  showDebug?: boolean;
 }
 
 export default function VirtualizedStockList({
   stocks,
   height,
   width = "calc(100% - 8px)",
-  itemHeight = 200, // StockBox 的估計高度
-  showDebug = false, // 默認不顯示調試信息
+  itemHeight = 250,
+  showDebug = false,
 }: VirtualizedStockListProps) {
   const [visibleStartIndex, setVisibleStartIndex] = useState(0);
   const [visibleStopIndex, setVisibleStopIndex] = useState(0);
+  const theme = useTheme();
+  
+  // RWD Breakpoints
+  const isSm = useMediaQuery(theme.breakpoints.up('sm'));
+  const isMd = useMediaQuery(theme.breakpoints.up('md'));
+  
+  // Calculate columns based on breakpoint
+  const columns = useMemo(() => {
+    if (isMd) return 3;
+    if (isSm) return 2;
+    return 1;
+  }, [isMd, isSm]);
 
-  // 計算哪些項目應該被認為是"可見的" - 只有真正在可視區域內的才算可見
+  const rowCount = Math.ceil(stocks.length / columns);
+
+  // Calculate visibility based on rows
   const isItemVisible = useCallback(
     (index: number) => {
-      // 不使用緩衝區域，只有真正可見的項目才加載
-      return index >= visibleStartIndex && index <= visibleStopIndex;
+       const rowIndex = Math.floor(index / columns);
+       return rowIndex >= visibleStartIndex && rowIndex <= visibleStopIndex;
     },
-    [visibleStartIndex, visibleStopIndex]
+    [visibleStartIndex, visibleStopIndex, columns]
   );
 
   const Row = useCallback(
     ({ index, style }: { index: number; style: React.CSSProperties }) => {
-      const stock = stocks[index];
-      if (!stock) {
-        return (
-          <Box
-            style={{
-              height: itemHeight,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-            }}
-          >
-            Loading...
-          </Box>
-        );
+      const startIndex = index * columns;
+      const rowStocks = [];
+      
+      for (let i = 0; i < columns; i++) {
+        const stockIndex = startIndex + i;
+        if (stockIndex < stocks.length) {
+            rowStocks.push({ stock: stocks[stockIndex], index: stockIndex });
+        }
+      }
+
+      if (rowStocks.length === 0) {
+         return null;
       }
 
       return (
         <Box style={style}>
-          <LazyStockBox stock={stock} isVisible={isItemVisible(index)} />
+          <Grid container spacing={1} sx={{ height: '100%', px: 1 }}>
+            {rowStocks.map(({ stock, index: stockIndex }) => (
+                <Grid size={12 / columns} key={stock.id}>
+                    <LazyStockBox stock={stock} isVisible={isItemVisible(stockIndex)} />
+                </Grid>
+            ))}
+          </Grid>
         </Box>
       );
     },
-    [stocks, isItemVisible, itemHeight]
+    [stocks, isItemVisible, columns]
   );
 
   const onItemsRendered = useCallback(
@@ -86,11 +103,10 @@ export default function VirtualizedStockList({
       <Box
         sx={{
           "& > div": {
-            // 隱藏滾動條但保持滾動功能
-            scrollbarWidth: "none", // Firefox
-            msOverflowStyle: "none", // IE and Edge
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
             "&::-webkit-scrollbar": {
-              display: "none", // WebKit 瀏覽器
+              display: "none",
             },
           },
         }}
@@ -98,7 +114,7 @@ export default function VirtualizedStockList({
         <List
           height={height}
           width={width}
-          itemCount={stocks.length}
+          itemCount={rowCount}
           itemSize={itemHeight}
           onItemsRendered={onItemsRendered}
         >

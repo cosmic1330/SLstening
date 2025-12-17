@@ -36,6 +36,7 @@ import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { UrlTaPerdOptions } from "../../../types";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
+import formatDateTime from "../../../utils/formatDateTime";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 // Define the structure for the chart data, including Ichimoku values
@@ -122,6 +123,82 @@ const ExitArrow = (props: any) => {
       )}
     </g>
   );
+};
+
+const getNextTradingTime = (
+  currentDate: Date,
+  perd: UrlTaPerdOptions
+): Date => {
+  const nextDate = new Date(currentDate);
+
+  if (perd === UrlTaPerdOptions.Hour) {
+    const h = nextDate.getHours();
+    const m = nextDate.getMinutes();
+
+    // Sequence: 10:00 -> 11:00 -> 12:00 -> 13:00 -> 13:30 -> Next Day 10:00
+    if (h < 10) {
+      nextDate.setHours(10, 0, 0, 0);
+    } else if (h === 10) {
+      nextDate.setHours(11, 0, 0, 0);
+    } else if (h === 11) {
+      nextDate.setHours(12, 0, 0, 0);
+    } else if (h === 12) {
+      nextDate.setHours(13, 0, 0, 0);
+    } else if (h === 13 && m < 30) {
+      nextDate.setHours(13, 30, 0, 0);
+    } else {
+      // 13:30 or later -> Next Day 10:00
+      nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setHours(10, 0, 0, 0);
+    }
+
+    // Skip Weekends
+    const day = nextDate.getDay();
+    if (day === 6) {
+      // Saturday -> Monday
+      nextDate.setDate(nextDate.getDate() + 2);
+    } else if (day === 0) {
+      // Sunday -> Monday
+      nextDate.setDate(nextDate.getDate() + 1);
+    }
+  } else if (perd === UrlTaPerdOptions.Day) {
+    nextDate.setDate(nextDate.getDate() + 1);
+    const day = nextDate.getDay();
+    if (day === 6) {
+      nextDate.setDate(nextDate.getDate() + 2);
+    } else if (day === 0) {
+      nextDate.setDate(nextDate.getDate() + 1);
+    }
+  } else if (perd === UrlTaPerdOptions.Week) {
+    nextDate.setDate(nextDate.getDate() + 7);
+    const day = nextDate.getDay();
+    if (day !== 5) {
+      // Align to Friday (5)
+      const daysToAdd = (5 - day + 7) % 7;
+      nextDate.setDate(nextDate.getDate() + daysToAdd);
+    }
+  }
+
+  return nextDate;
+};
+
+const parseTradeTime = (t: number, perd: UrlTaPerdOptions): Date => {
+  const s = t.toString();
+  if (perd === UrlTaPerdOptions.Hour && s.length >= 10) {
+    // YYYYMMDDHHmm
+    const year = parseInt(s.substring(0, 4));
+    const month = parseInt(s.substring(4, 6)) - 1;
+    const day = parseInt(s.substring(6, 8));
+    const hour = parseInt(s.substring(8, 10));
+    const min = parseInt(s.substring(10, 12));
+    return new Date(year, month, day, hour, min);
+  } else {
+    // YYYYMMDD
+    const year = parseInt(s.substring(0, 4));
+    const month = parseInt(s.substring(4, 6)) - 1;
+    const day = parseInt(s.substring(6, 8));
+    return new Date(year, month, day);
+  }
 };
 
 export default function Ichimoku({
@@ -299,15 +376,11 @@ export default function Ichimoku({
     // 3. Add future data points for the cloud to extend beyond the last price
     const lastDataPoint = baseData[baseData.length - 1];
     if (lastDataPoint) {
-      for (let i = 1; i <= 26; i++) {
-        const futureDate = new Date(
-          dateFormat(lastDataPoint.t, Mode.NumberToTimeStamp)
-        );
-        if (perd === UrlTaPerdOptions.Hour) {
-          futureDate.setHours(futureDate.getHours() + i);
-        } else if (perd === UrlTaPerdOptions.Day) {
-          futureDate.setDate(futureDate.getDate() + i);
-        }
+        let currentDate = parseTradeTime(lastDataPoint.t as number, perd);
+
+        for (let i = 1; i <= 26; i++) {
+          currentDate = getNextTradingTime(currentDate, perd);
+
 
         const sourceIndex = baseData.length - 27 + i;
         const sourceForFutureSpans =
@@ -316,7 +389,10 @@ export default function Ichimoku({
             : null;
 
         finalData.push({
-          t: dateFormat(futureDate.getTime(), Mode.TimeStampToNumber),
+          t:
+            perd === UrlTaPerdOptions.Hour
+              ? formatDateTime(currentDate.getTime())
+              : dateFormat(currentDate.getTime(), Mode.TimeStampToNumber),
           o: null,
           h: null,
           l: null,

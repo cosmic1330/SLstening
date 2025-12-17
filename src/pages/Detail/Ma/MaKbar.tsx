@@ -72,7 +72,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
 
   // Gap Detection
   const { gapsWithFillStatus, unfilledGaps, recentGaps, unfilledGapsCount } =
-    useGapDetection(deals.slice(-160), 1.0);
+    useGapDetection(deals.slice(-160), 0.7);
 
   // Gap Visualization Data
   const { gapLines, enhancedChartData } = useGapVisualization({

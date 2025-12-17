@@ -314,7 +314,9 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
           }}
         >
           <p style={{ color: "#eee", margin: "0 0 5px 0" }}>
-            {dateFormat(label, Mode.NumberToString)}
+            {perd === UrlTaPerdOptions.Hour
+              ? label
+              : dateFormat(label, Mode.NumberToString)}
           </p>
           {payload.map((entry: any, index: number) => {
             if (entry.name && entry.name.includes("gap")) return null;

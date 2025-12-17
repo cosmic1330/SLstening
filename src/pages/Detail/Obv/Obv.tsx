@@ -135,9 +135,14 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Obv() {
-  // Zoom Control
+  const fullDeals = useContext(DealsContext);
+  // Zoom & Pan Control
   const [visibleCount, setVisibleCount] = useState(150);
+  const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const lastX = useRef(0);
+  const startOffset = useRef(0);
 
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -153,7 +158,7 @@ export default function Obv() {
       setVisibleCount((prev) => {
         const next = prev + delta * step;
         const minBars = 30; // Minimum bars to show
-        const maxBars = 1000; // Max bars
+        const maxBars = fullDeals.length > 0 ? fullDeals.length : 1000;
         
         if (next < minBars) return minBars;
         if (next > maxBars) return maxBars;
@@ -161,14 +166,64 @@ export default function Obv() {
       });
     };
 
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      lastX.current = e.clientX;
+      startOffset.current = rightOffset;
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      
+      const deltaX = e.clientX - lastX.current;
+      const sensitivity = visibleCount / (container.clientWidth || 500); 
+      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
+      
+      if (barDelta === 0) return;
+
+      setRightOffset((prev) => {
+        let next = prev + barDelta;
+        if (next < 0) next = 0;
+        const maxOffset = Math.max(0, fullDeals.length - visibleCount); 
+        if (next > maxOffset) next = maxOffset;
+        return next;
+      });
+      
+      lastX.current = e.clientX;
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
     container.addEventListener("wheel", handleWheel, { passive: false });
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, []);
+  }, [fullDeals.length, visibleCount, rightOffset]);
+
+  // Safety Clamp: Ensure rightOffset stays valid if deals/visibleCount change
+  useEffect(() => {
+    const maxOffset = Math.max(0, fullDeals.length - visibleCount);
+    if (rightOffset > maxOffset) {
+      setRightOffset(maxOffset);
+    }
+  }, [fullDeals.length, visibleCount, rightOffset]);
 
   // Use slice instead of splice to avoid mutating the context array
-  const deals = useContext(DealsContext).slice(-visibleCount);
+  const deals = fullDeals.slice(
+    -(visibleCount + rightOffset), 
+    rightOffset === 0 ? undefined : -rightOffset
+  );
 
   const signals = useMemo(() => {
     if (!deals || deals.length === 0) return [];

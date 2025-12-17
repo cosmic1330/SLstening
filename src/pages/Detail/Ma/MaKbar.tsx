@@ -58,9 +58,14 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
-  // Zoom Control
+  // Zoom & Pan Control
   const [visibleCount, setVisibleCount] = useState(160);
+  const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const lastX = useRef(0);
+  const startOffset = useRef(0);
+
 
   // Gap Controls
   const [showGaps, setShowGaps] = useState(true);
@@ -97,20 +102,67 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
       });
     };
 
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      lastX.current = e.clientX;
+      startOffset.current = rightOffset;
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      
+      const deltaX = e.clientX - lastX.current;
+      const sensitivity = visibleCount / (container.clientWidth || 500); 
+      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
+      
+      if (barDelta === 0) return;
+
+      setRightOffset((prev) => {
+        let next = prev + barDelta;
+        if (next < 0) next = 0;
+        const maxOffset = Math.max(0, chartData.length - visibleCount); 
+        if (next > maxOffset) next = maxOffset;
+        return next;
+      });
+      
+      lastX.current = e.clientX;
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
     container.addEventListener("wheel", handleWheel, { passive: false });
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [chartData.length]);
+  }, [chartData.length, visibleCount, rightOffset]);
+
+  // Apply slice to chartData for rendering
+  const slicedChartData = useMemo(() => {
+    const end = rightOffset === 0 ? undefined : -rightOffset;
+    const start = -(visibleCount + rightOffset);
+    return chartData.slice(start, end);
+  }, [chartData, visibleCount, rightOffset]);
 
   // Gap Detection
   const { gapsWithFillStatus, unfilledGaps, recentGaps, unfilledGapsCount } =
-    useGapDetection(deals.slice(-visibleCount), 0.7);
+    useGapDetection(slicedChartData, 0.7);
+
 
   // Gap Visualization Data
   const { gapLines, enhancedChartData } = useGapVisualization({
     gaps: showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus,
-    chartData: chartData.slice(-visibleCount),
+    chartData: slicedChartData,
     isVisible: showGaps,
     highlightedGapDate: hoveredGapDate,
   });

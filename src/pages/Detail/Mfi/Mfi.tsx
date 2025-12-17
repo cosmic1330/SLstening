@@ -70,9 +70,14 @@ export default function Mfi({ id }: { id?: string }) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
-  // Zoom Control
+  // Zoom & Pan Control
   const [visibleCount, setVisibleCount] = useState(180);
+  const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const lastX = useRef(0);
+  const startOffset = useRef(0);
+
 
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -96,11 +101,50 @@ export default function Mfi({ id }: { id?: string }) {
       });
     };
 
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      lastX.current = e.clientX;
+      startOffset.current = rightOffset;
+      e.preventDefault();
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+      
+      const deltaX = e.clientX - lastX.current;
+      const sensitivity = visibleCount / (container.clientWidth || 500); 
+      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
+      
+      if (barDelta === 0) return;
+
+      setRightOffset((prev) => {
+        let next = prev + barDelta;
+        if (next < 0) next = 0;
+        const maxOffset = Math.max(0, deals.length - visibleCount); 
+        if (next > maxOffset) next = maxOffset;
+        return next;
+      });
+      
+      lastX.current = e.clientX;
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+    };
+
     container.addEventListener("wheel", handleWheel, { passive: false });
+    container.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
     return () => {
       container.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [deals.length]);
+  }, [deals.length, visibleCount, rightOffset]);
 
   const chartData = useMemo((): MfiChartData[] => {
     if (!deals || deals.length === 0) return [];
@@ -145,7 +189,10 @@ export default function Mfi({ id }: { id?: string }) {
           volMa20,
         };
       })
-      .slice(-visibleCount);
+      .slice(
+        -(visibleCount + rightOffset), 
+        rightOffset === 0 ? undefined : -rightOffset
+      );
 
     // Second pass for signals (Trend/Turn)
     const dataWithSignals = initialData.map(
@@ -176,7 +223,7 @@ export default function Mfi({ id }: { id?: string }) {
     );
 
     return dataWithSignals;
-  }, [deals, visibleCount]);
+  }, [deals, visibleCount, rightOffset]);
 
   const { steps, score, recommendation } = useMemo(() => {
     if (chartData.length === 0)

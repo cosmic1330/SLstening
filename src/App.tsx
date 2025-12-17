@@ -8,14 +8,6 @@ import Detail from "./pages/Detail/index";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Schoice from "./pages/Schoice";
-import Backtest from "./pages/Schoice/Backtest";
-import Favorite from "./pages/Schoice/Favorite";
-import Fundamental from "./pages/Schoice/Fundamental";
-import PromptAdd from "./pages/Schoice/PromptAdd";
-import PromptEdit from "./pages/Schoice/PromptEdit";
-import PromptList from "./pages/Schoice/PromptList";
-import Trash from "./pages/Schoice/Trash";
 import useStocksStore from "./store/Stock.store";
 
 // 懶加載組件
@@ -24,7 +16,7 @@ const List = lazy(() => import("./pages/Home/List"));
 const RedBall = lazy(() => import("./pages/Home/RedBall"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
 
-function App() {
+function App() {``
   const { reload } = useStocksStore();
 
   useEffect(() => {
@@ -38,17 +30,6 @@ function App() {
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
           <Route path="add" element={<Add />} />
-          <Route path="schoice" element={<Schoice />}>
-            <Route index element={<PromptList />} />
-            <Route path="favorite" element={<Favorite />} />
-            <Route path="add" element={<PromptAdd />} />
-            <Route path="edit/:id" element={<PromptEdit />} />
-            <Route path="setting" element={<Setting />} />
-            <Route path="trash" element={<Trash />} />
-            <Route path="backtest" element={<Backtest />} />
-            <Route path="fundamental" element={<Fundamental />} />
-            <Route path="*" element={<Navigate to="/schoice" />} />
-          </Route>
           <Route path="detail/:id" element={<Detail />} />
           <Route path="dashboard" element={<Home />}>
             <Route

@@ -11,7 +11,6 @@ import {
   Tooltip,
   Typography,
   styled,
-  useTheme,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { useMemo } from "react";
@@ -31,7 +30,7 @@ import DailyLow from "./Items/DailyLow";
 import TickChart from "./TickChart";
 
 // Premium Card Styling
-const StyledCard = styled(Box)(({ theme }) => ({
+const StyledCard = styled(Box)(() => ({
   position: "relative",
   background: "rgba(30, 30, 35, 0.6)", // Darker, more transparent base
   backdropFilter: "blur(24px) saturate(180%)", // Heavy blur & saturation for premium glass
@@ -60,7 +59,7 @@ const StyledCard = styled(Box)(({ theme }) => ({
 }));
 
 // Action buttons container
-const ActionButtons = styled(Stack)(({ theme }) => ({
+const ActionButtons = styled(Stack)(() => ({
   position: "absolute",
   top: 12,
   right: 12,
@@ -85,7 +84,7 @@ const ActionBtn = styled(IconButton)(({ theme }) => ({
 }));
 
 // Metric Container with subtle separation
-const MetricBox = styled(Box)(({ theme }) => ({
+const MetricBox = styled(Box)(() => ({
   padding: "4px 8px",
   borderRadius: "12px",
   transition: "background 0.2s",
@@ -94,7 +93,7 @@ const MetricBox = styled(Box)(({ theme }) => ({
   },
 }));
 
-const GlowEffect = styled(Box)(({ theme }) => ({
+const GlowEffect = styled(Box)(() => ({
   position: "absolute",
   top: "-50%",
   left: "-50%",
@@ -116,7 +115,6 @@ export interface StockBoxProps {
 }
 
 export default function StockBox({ stock, enabled = true }: StockBoxProps) {
-  const theme = useTheme();
   // Using the Hook with enabled capabilities
   const { deals, name, tickDeals } = useConditionalDeals(stock.id, enabled);
 

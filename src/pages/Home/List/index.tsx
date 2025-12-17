@@ -59,21 +59,16 @@ function List() {
             <OtcBox />
           </Grid>
         </Grid>
-        {stocks.length === 0 ? (
-          <Button fullWidth variant="contained" onClick={openAddWindow}>
-            新增第一筆追蹤
-          </Button>
-        ) : (
-          <Box mt={2}>
-            {stocks.length > 0 && (
-              <VirtualizedStockList
-                stocks={stocks}
-                height={window.innerHeight}
-                itemHeight={380} // 根據實際 StockBox 高度調整
-              />
-            )}
-          </Box>
-        )}
+        
+        <Box mt={2}>
+          {stocks.length > 0 && (
+            <VirtualizedStockList
+              stocks={stocks}
+              height={window.innerHeight}
+              itemHeight={380} // 根據實際 StockBox 高度調整
+            />
+          )}
+        </Box>
       </Box>
     </Container>
   );

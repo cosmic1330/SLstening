@@ -2,6 +2,7 @@ import AnalyticsIcon from "@mui/icons-material/Analytics";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Box,
   Divider,
@@ -17,6 +18,7 @@ import { useMemo } from "react";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useMaDeduction from "../../hooks/useMaDeduction";
+import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
@@ -139,6 +141,13 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
     group: stock.group,
   });
 
+  const removeStock = useStocksStore((state) => state.remove);
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeStock(stock.id);
+  };
+
   // TradingView Link
   const url =
     stock.type === "上市"
@@ -235,6 +244,21 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
             }}
           >
             <AnalyticsIcon fontSize="small" />
+          </ActionBtn>
+        </Tooltip>
+        <Tooltip title="Delete Stock" arrow>
+          <ActionBtn
+            size="small"
+            color="error"
+            onClick={handleDelete}
+            sx={{
+              "&:hover": {
+                backgroundColor: "rgba(244, 67, 54, 0.8)",
+                borderColor: "#ef5350",
+              },
+            }}
+          >
+            <DeleteIcon fontSize="small" />
           </ActionBtn>
         </Tooltip>
       </ActionButtons>

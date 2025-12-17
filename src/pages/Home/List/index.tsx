@@ -1,9 +1,8 @@
-import { Box, Button, Container, Grid } from "@mui/material";
+import { Box, Container, Grid } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { useEffect } from "react";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
-import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 import useStocksStore from "../../../store/Stock.store";
 import NasdaqBox from "./nasdaq";
 import TwseBox from "./twse";
@@ -14,7 +13,6 @@ import MmBox from "./mm";
 
 function List() {
   const { stocks, reload } = useStocksStore();
-  const { openAddWindow } = useAddWebviewWindow();
 
   useEffect(() => {
     // 监听股票添加事件

@@ -14,7 +14,7 @@ export default function PreVolume({ deals }: { deals: TaType }) {
       >
         昨日量
       </Typography>
-      <Typography variant="body2" fontWeight="bold" textAlign="center">
+      <Typography variant="body2" fontWeight="bold" textAlign="center" color="#fff">
         {deals.length > 0 && deals[deals.length - 2].v}
       </Typography>
     </Box>

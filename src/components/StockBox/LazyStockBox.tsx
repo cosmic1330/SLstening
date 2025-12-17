@@ -2,7 +2,7 @@ import { Box, Grid, Skeleton, Typography, styled } from "@mui/material";
 import { useMemo } from "react";
 import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
-import ConditionalStockBox from "./ConditionalStockBox";
+import StockBox from "./index";
 
 const StyledBox = styled(Box)`
   background-color: rgba(0, 0, 0, 0.3);
@@ -100,7 +100,7 @@ export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
 
   // 只有真正可見時才渲染實際的 StockBox 並啟用 API 請求
   return (
-    <ConditionalStockBox
+    <StockBox
       stock={stock}
       canDelete={canDelete}
       canAdd={canAdd}

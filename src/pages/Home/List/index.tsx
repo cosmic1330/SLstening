@@ -42,12 +42,11 @@ function List() {
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
-       
-        <Grid container spacing={2}> 
-          <Grid size={12}>  
+        <Grid container spacing={2}>
+          <Grid size={12}>
             <CnnBox />
           </Grid>
-          <Grid size={12}>  
+          <Grid size={12}>
             <MmBox />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
@@ -73,7 +72,7 @@ function List() {
               <VirtualizedStockList
                 stocks={stocks}
                 height={viewportHeight}
-                itemHeight={250} // 根據實際 StockBox 高度調整
+                itemHeight={380} // 根據實際 StockBox 高度調整
               />
             )}
           </Box>

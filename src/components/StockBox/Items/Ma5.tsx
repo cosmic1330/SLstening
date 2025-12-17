@@ -1,4 +1,4 @@
-import { Box, Grid, Tooltip, Typography } from "@mui/material";
+import { Box, Grid, Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 
 function TooltipConent({
@@ -17,17 +17,18 @@ function TooltipConent({
   ma5_tomorrow_deduction_time: string;
 }) {
   return (
-    <Box>
-      <Grid container>
+    <Box sx={{ p: 1, minWidth: 200 }}>
+      <Grid container spacing={1}>
         <Grid size={6}>
           <Typography variant="body2" color="#fff">
-            ma5
+            MA5
           </Typography>
         </Grid>
-        <Grid size={6}>
+        <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5 ? "#fff" : "#e58282"}
+            color={lastPrice > ma5 ? "#4caf50" : "#ef5350"}
+            fontWeight="bold"
           >
             {ma5}
           </Typography>
@@ -35,43 +36,36 @@ function TooltipConent({
 
         <Grid size={6}>
           <Typography variant="body2" color="#fff">
-            ma5扣抵
+            Deduction
           </Typography>
         </Grid>
-        <Grid size={6}>
+        <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5_deduction_value ? "#fff" : "#e58282"}
+            color={lastPrice > ma5_deduction_value ? "#4caf50" : "#ef5350"}
           >
             {ma5_deduction_value}
           </Typography>
-          <Typography
-            variant="body2"
-            color={lastPrice > ma5_deduction_value ? "#fff" : "#e58282"}
-          >
-            {ma5_deduction_time}
+          <Typography variant="caption" color="text.secondary" display="block">
+             {ma5_deduction_time}
           </Typography>
         </Grid>
+
         <Grid size={6}>
-          <Typography variant="body2" color="#fff">
-            明日ma5扣抵
+          <Typography variant="caption" color="#fff">
+            T-Deduction
           </Typography>
         </Grid>
-        <Grid size={6}>
+        <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
             color={
-              lastPrice > ma5_tomorrow_deduction_value ? "#fff" : "#e58282"
+              lastPrice > ma5_tomorrow_deduction_value ? "#4caf50" : "#ef5350"
             }
           >
             {ma5_tomorrow_deduction_value}
           </Typography>
-          <Typography
-            variant="body2"
-            color={
-              lastPrice > ma5_tomorrow_deduction_value ? "#fff" : "#e58282"
-            }
-          >
+          <Typography variant="caption" color="text.secondary" display="block">
             {ma5_tomorrow_deduction_time}
           </Typography>
         </Grid>
@@ -104,40 +98,35 @@ export default function Ma5({
       return true;
     return false;
   }, [ma5_deduction_value, ma5_tomorrow_deduction_value, lastPrice, ma5]);
+
   return (
-    <Box>
-      <Typography
-        variant="body2"
-        gutterBottom
-        component="div"
-        color="#fff"
-        textAlign="center"
-      >
-        ma5
-      </Typography>
-      <Tooltip
-        title={
-          <TooltipConent
-            {...{
-              lastPrice,
-              ma5,
-              ma5_deduction_value,
-              ma5_tomorrow_deduction_value,
-              ma5_deduction_time,
-              ma5_tomorrow_deduction_time,
-            }}
-          />
-        }
-      >
+    <Tooltip
+      title={
+        <TooltipConent
+          {...{
+            lastPrice,
+            ma5,
+            ma5_deduction_value,
+            ma5_tomorrow_deduction_value,
+            ma5_deduction_time,
+            ma5_tomorrow_deduction_time,
+          }}
+        />
+      }
+      arrow
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
+        <Typography variant="caption" color="text.secondary" fontWeight={600} color="#fff">
+          MA5
+        </Typography>
         <Typography
           variant="body2"
-          color={check ? "#fff" : "#e58282"}
-          fontWeight="bold"
-          textAlign="center"
+          color={check ? "#4caf50" : "#ef5350"}
+          fontWeight="700"
         >
           {ma5}
         </Typography>
-      </Tooltip>
-    </Box>
+      </Stack>
+    </Tooltip>
   );
 }

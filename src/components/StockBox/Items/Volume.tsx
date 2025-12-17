@@ -14,7 +14,7 @@ export default function Volume({ deals }: { deals: TaType }) {
       >
         成交量
       </Typography>
-      <Typography variant="body2" fontWeight="bold" textAlign="center">
+      <Typography variant="body2" fontWeight="bold" textAlign="center" color="#fff">
         {deals.length > 0 && deals[deals.length - 1].v}
       </Typography>
     </Box>

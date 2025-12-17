@@ -12,10 +12,9 @@ export default function AvgPrice({
   const { avgPrice, color } = useMemo(() => {
     if (tickDeals) {
       const avgPrice =
-        Math.round(
-          tickDeals.avgPrices[tickDeals.avgPrices.length - 1] * 100
-        ) / 100;
-      const color = lastPrice > avgPrice ? "#fff" : "#e58282";
+        Math.round(tickDeals.avgPrices[tickDeals.avgPrices.length - 1] * 100) /
+        100;
+      const color = lastPrice > avgPrice ? "#ef5350" : "#4caf50";
       return {
         avgPrice,
         color,
@@ -27,15 +26,16 @@ export default function AvgPrice({
     };
   }, [tickDeals, lastPrice]);
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
-      <Typography variant="caption" color="text.secondary" fontWeight={600} color="#fff">
+    <Stack
+      direction="row"
+      justifyContent="space-between"
+      alignItems="center"
+      width="100%"
+    >
+      <Typography variant="caption" fontWeight={600} color="#fff">
         日均
       </Typography>
-      <Typography
-        variant="body2"
-        color={color}
-        fontWeight="bold"
-      >
+      <Typography variant="body2" color={color} fontWeight="bold">
         {avgPrice}
       </Typography>
     </Stack>

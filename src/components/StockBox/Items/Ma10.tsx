@@ -27,7 +27,7 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma10 ? "#4caf50" : "#ef5350"}
+            color={lastPrice > ma10 ? "#ef5350" : "#4caf50"}
             fontWeight="bold"
           >
             {ma10}
@@ -42,7 +42,7 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma10_deduction_value ? "#4caf50" : "#ef5350"}
+            color={lastPrice > ma10_deduction_value ? "#ef5350" : "#4caf50"}
           >
             {ma10_deduction_value}
           </Typography>
@@ -60,7 +60,7 @@ function TooltipConent({
           <Typography
             variant="body2"
             color={
-              lastPrice > ma10_tomorrow_deduction_value ? "#4caf50" : "#ef5350"
+              lastPrice > ma10_tomorrow_deduction_value ? "#ef5350" : "#4caf50"
             }
           >
             {ma10_tomorrow_deduction_value}
@@ -115,13 +115,18 @@ export default function Ma10({
       }
       arrow
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
-        <Typography variant="caption" color="text.secondary" fontWeight={600} color="#fff">
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        width="100%"
+      >
+        <Typography variant="caption" fontWeight={600} color="#fff">
           MA10
         </Typography>
         <Typography
           variant="body2"
-          color={check ? "#4caf50" : "#ef5350"}
+          color={check ? "#ef5350" : "#4caf50"}
           fontWeight="700"
         >
           {ma10}

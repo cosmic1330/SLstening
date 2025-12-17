@@ -26,9 +26,9 @@ export default function VolumeEstimated({
         <Typography
           variant="body2"
           color={
-            deals.length > 0 && estimatedVolume < deals[deals.length - 2].v
-              ? "#e58282"
-              : "#fff"
+            deals.length > 0 && estimatedVolume > deals[deals.length - 2].v
+              ? "#ef5350"
+              : "#4caf50"
           }
           fontWeight="bold"
           textAlign="center"

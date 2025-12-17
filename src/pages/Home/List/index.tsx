@@ -36,9 +36,6 @@ function List() {
     };
   }, []);
 
-  // 計算可用的視窗高度（扣除標題、標籤和邊距）
-  const viewportHeight = window.innerHeight - (stocks.length > 0 ? 200 : 150);
-
   return (
     <Container component="main">
       <Box mt={2} mb={"80px"}>
@@ -71,7 +68,7 @@ function List() {
             {stocks.length > 0 && (
               <VirtualizedStockList
                 stocks={stocks}
-                height={viewportHeight}
+                height={window.innerHeight}
                 itemHeight={380} // 根據實際 StockBox 高度調整
               />
             )}

@@ -61,9 +61,7 @@ function VolumeRatioTooltip({ ratio }: VolumeTooltipBoxProps) {
       <Typography variant="subtitle2">
         {section.label}（{section.title}）
       </Typography>
-      <Typography variant="body2">
-        {section.desc}
-      </Typography>
+      <Typography variant="body2">{section.desc}</Typography>
     </Box>
   );
 }
@@ -94,7 +92,7 @@ export default function VolumeRatio({
       <Tooltip title={<VolumeRatioTooltip ratio={ratio} />}>
         <Typography
           variant="body2"
-          color={ratio > 5 ? "#e58282" : "#fff"}
+          color={ratio >= 1 ? "#ef5350" : "#4caf50"}
           fontWeight="bold"
           textAlign="center"
         >

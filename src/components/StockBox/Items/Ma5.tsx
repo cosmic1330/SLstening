@@ -27,7 +27,7 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5 ? "#4caf50" : "#ef5350"}
+            color={lastPrice > ma5 ? "#ef5350" : "#4caf50"}
             fontWeight="bold"
           >
             {ma5}
@@ -42,12 +42,12 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5_deduction_value ? "#4caf50" : "#ef5350"}
+            color={lastPrice > ma5_deduction_value ? "#ef5350" : "#4caf50"}
           >
             {ma5_deduction_value}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-             {ma5_deduction_time}
+            {ma5_deduction_time}
           </Typography>
         </Grid>
 
@@ -60,7 +60,7 @@ function TooltipConent({
           <Typography
             variant="body2"
             color={
-              lastPrice > ma5_tomorrow_deduction_value ? "#4caf50" : "#ef5350"
+              lastPrice > ma5_tomorrow_deduction_value ? "#ef5350" : "#4caf50"
             }
           >
             {ma5_tomorrow_deduction_value}
@@ -115,13 +115,18 @@ export default function Ma5({
       }
       arrow
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" width="100%">
-        <Typography variant="caption" color="text.secondary" fontWeight={600} color="#fff">
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        width="100%"
+      >
+        <Typography variant="caption" fontWeight={600} color="#fff">
           MA5
         </Typography>
         <Typography
           variant="body2"
-          color={check ? "#4caf50" : "#ef5350"}
+          color={check ? "#ef5350" : "#4caf50"}
           fontWeight="700"
         >
           {ma5}

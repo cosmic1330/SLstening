@@ -13,7 +13,7 @@ import {
   Chip,
   CircularProgress,
 } from "@mui/material";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useMemo, useState, useRef, useEffect } from "react";
 import {
   Bar,
   ComposedChart,
@@ -119,6 +119,38 @@ const ExitArrow = (props: any) => {
 export default function Bollean({ id }: { id?: string }) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
+
+  // Zoom Control
+  const [visibleCount, setVisibleCount] = useState(180);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const delta = Math.sign(e.deltaY);
+      const step = 4;
+
+      setVisibleCount((prev) => {
+        const next = prev + delta * step;
+        const minBars = 30;
+        const maxBars = deals.length > 0 ? deals.length : 1000;
+        
+        if (next < minBars) return minBars;
+        if (next > maxBars) return maxBars;
+        return next;
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, [deals.length]);
 
   const chartData = useMemo((): BolleanChartData[] => {
     if (!deals || deals.length === 0) return [];
@@ -235,8 +267,8 @@ export default function Bollean({ id }: { id?: string }) {
           exitReason,
         };
       })
-      .slice(-180);
-  }, [deals]);
+      .slice(-visibleCount);
+  }, [deals, visibleCount]);
 
   const { steps, score, recommendation } = useMemo(() => {
     if (chartData.length === 0)
@@ -397,7 +429,7 @@ export default function Bollean({ id }: { id?: string }) {
     <Container
       component="main"
       maxWidth={false}
-      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1 }}
+      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
@@ -466,7 +498,10 @@ export default function Bollean({ id }: { id?: string }) {
         </CardContent>
       </Card>
 
-      <Box sx={{ flexGrow: 1, minHeight: 0 }}>
+      <Box 
+        ref={chartContainerRef}
+        sx={{ flexGrow: 1, minHeight: 0 }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}

@@ -7,7 +7,7 @@ import {
   Typography,
   Chip,
 } from "@mui/material";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState, useRef, useEffect } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -135,8 +135,40 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function Obv() {
+  // Zoom Control
+  const [visibleCount, setVisibleCount] = useState(150);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = chartContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const delta = Math.sign(e.deltaY);
+      const step = 4;
+
+      setVisibleCount((prev) => {
+        const next = prev + delta * step;
+        const minBars = 30; // Minimum bars to show
+        const maxBars = 1000; // Max bars
+        
+        if (next < minBars) return minBars;
+        if (next > maxBars) return maxBars;
+        return next;
+      });
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   // Use slice instead of splice to avoid mutating the context array
-  const deals = useContext(DealsContext).slice(-150);
+  const deals = useContext(DealsContext).slice(-visibleCount);
 
   const signals = useMemo(() => {
     if (!deals || deals.length === 0) return [];
@@ -200,6 +232,8 @@ export default function Obv() {
         display: "flex",
         flexDirection: "column",
         pt: 1,
+        px: 2,
+        pb: 1
         // Removed bgcolor="#f5f5f5" to allow global dark theme to show through
       }}
     >
@@ -232,7 +266,10 @@ export default function Obv() {
       </Stack>
 
       {/* Content Area */}
-      <Box sx={{ flexGrow: 1, minHeight: 0, overflow: "hidden" }}>
+      <Box 
+        ref={chartContainerRef}
+        sx={{ flexGrow: 1, minHeight: 0, overflow: "hidden" }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}

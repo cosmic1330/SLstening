@@ -11,7 +11,6 @@ import Register from "./pages/Register";
 import useStocksStore from "./store/Stock.store";
 
 // 懶加載組件
-const TurnoverRate = lazy(() => import("./pages/Home/TurnoverRate"));
 const List = lazy(() => import("./pages/Home/List"));
 const RedBall = lazy(() => import("./pages/Home/RedBall"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
@@ -53,14 +52,6 @@ function App() {``
               element={
                 <Suspense fallback={<div>載入中...</div>}>
                   <RedBall />
-                </Suspense>
-              }
-            />
-            <Route
-              path="turnoverRate"
-              element={
-                <Suspense fallback={<div>載入中...</div>}>
-                  <TurnoverRate />
                 </Suspense>
               }
             />

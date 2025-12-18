@@ -117,7 +117,7 @@ export default function BottomBar() {
         <AddCircleRoundedIcon />
       </CenterFab>
 
-      <Tooltip title="趨勢" arrow>
+      <Tooltip title="週轉上漲股" arrow>
         <NavButton 
             active={isActive("/dashboard/redball")}
             onClick={() => navigate("/dashboard/redball")}
@@ -126,10 +126,9 @@ export default function BottomBar() {
         </NavButton>
       </Tooltip>
       
-      <Tooltip title="匯率" arrow>
+      <Tooltip title="斗內我" arrow>
          <NavButton 
-            active={isActive("/dashboard/turnoverRate")}
-            onClick={() => navigate("/dashboard/turnoverRate")}
+            disabled
         >
             <CurrencyExchangeIcon />
         </NavButton>

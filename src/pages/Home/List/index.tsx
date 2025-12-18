@@ -11,8 +11,11 @@ import CnnBox from "./cnn";
 import OtcBox from "./otc";
 import MmBox from "./mm";
 
+import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
+
 function List() {
   const { stocks, reload } = useStocksStore();
+  const marketVisibility = useShowMarketInfo();
 
   useEffect(() => {
     // 监听股票添加事件
@@ -38,26 +41,38 @@ function List() {
     <Container component="main">
       <Box mt={2} mb={"80px"}>
         <Grid container spacing={2}>
-          <Grid size={12}>
-            <CnnBox />
-          </Grid>
-          <Grid size={12}>
-            <MmBox />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <NasdaqBox />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <WtxBox />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <TwseBox />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-            <OtcBox />
-          </Grid>
+          {marketVisibility.cnn && (
+            <Grid size={12}>
+              <CnnBox />
+            </Grid>
+          )}
+          {marketVisibility.mm && (
+            <Grid size={12}>
+              <MmBox />
+            </Grid>
+          )}
+          {marketVisibility.nasdaq && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <NasdaqBox />
+            </Grid>
+          )}
+          {marketVisibility.wtx && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <WtxBox />
+            </Grid>
+          )}
+          {marketVisibility.twse && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <TwseBox />
+            </Grid>
+          )}
+          {marketVisibility.otc && (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+              <OtcBox />
+            </Grid>
+          )}
         </Grid>
-        
+
         <Box mt={2}>
           {stocks.length > 0 && (
             <VirtualizedStockList

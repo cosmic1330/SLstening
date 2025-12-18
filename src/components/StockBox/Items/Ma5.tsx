@@ -53,7 +53,7 @@ function TooltipConent({
 
         <Grid size={6}>
           <Typography variant="caption" color="#fff">
-            T-Deduction
+            Tomorrow-Deduction
           </Typography>
         </Grid>
         <Grid size={6} textAlign="right">

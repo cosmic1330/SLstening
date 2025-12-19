@@ -745,7 +745,6 @@ export default function Obv() {
                   y={yPos}
                   r={4}
                   stroke="none"
-                  alwaysShow
                   shape={(props: any) => {
                     const { cx, cy } = props;
                     if (!cx || !cy) return <g />;

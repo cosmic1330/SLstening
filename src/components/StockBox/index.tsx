@@ -22,7 +22,7 @@ import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
-import Ma10 from "./Items/Ma10";
+import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
 import PreVolume from "./Items/PreVolume";
 import Volume from "./Items/Volume";
@@ -127,11 +127,11 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
     ma5_deduction_value,
     ma5_tomorrow_deduction_value,
     ma5_tomorrow_deduction_time,
-    ma10,
-    ma10_deduction_time,
-    ma10_deduction_value,
-    ma10_tomorrow_deduction_value,
-    ma10_tomorrow_deduction_time,
+    ma20,
+    ma20_deduction_time,
+    ma20_deduction_value,
+    ma20_tomorrow_deduction_value,
+    ma20_tomorrow_deduction_time,
   } = useMaDeduction(deals);
 
   // Detail Window Opener
@@ -346,14 +346,14 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
                 />
               </MetricBox>
               <MetricBox>
-                <Ma10
+                <Ma20
                   {...{
-                    ma10,
+                    ma20,
                     lastPrice,
-                    ma10_deduction_time,
-                    ma10_deduction_value,
-                    ma10_tomorrow_deduction_time,
-                    ma10_tomorrow_deduction_value,
+                    ma20_deduction_time,
+                    ma20_deduction_value,
+                    ma20_tomorrow_deduction_time,
+                    ma20_tomorrow_deduction_value,
                   }}
                 />
               </MetricBox>

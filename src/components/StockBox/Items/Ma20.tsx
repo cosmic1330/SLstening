@@ -3,34 +3,34 @@ import { useMemo } from "react";
 
 function TooltipConent({
   lastPrice,
-  ma10,
-  ma10_deduction_value,
-  ma10_tomorrow_deduction_value,
-  ma10_deduction_time,
-  ma10_tomorrow_deduction_time,
+  ma20,
+  ma20_deduction_value,
+  ma20_tomorrow_deduction_value,
+  ma20_deduction_time,
+  ma20_tomorrow_deduction_time,
 }: {
   lastPrice: number;
-  ma10: number;
-  ma10_deduction_value: number;
-  ma10_tomorrow_deduction_value: number;
-  ma10_deduction_time: string;
-  ma10_tomorrow_deduction_time: string;
+  ma20: number;
+  ma20_deduction_value: number;
+  ma20_tomorrow_deduction_value: number;
+  ma20_deduction_time: string;
+  ma20_tomorrow_deduction_time: string;
 }) {
   return (
     <Box sx={{ p: 1, minWidth: 200 }}>
       <Grid container spacing={1}>
         <Grid size={6}>
           <Typography variant="caption" color="rgba(255,255,255,0.7)">
-            MA10
+            MA20
           </Typography>
         </Grid>
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma10 ? "#ef5350" : "#4caf50"}
+            color={lastPrice > ma20 ? "#ef5350" : "#4caf50"}
             fontWeight="bold"
           >
-            {ma10}
+            {ma20}
           </Typography>
         </Grid>
 
@@ -42,12 +42,12 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma10_deduction_value ? "#ef5350" : "#4caf50"}
+            color={lastPrice > ma20_deduction_value ? "#ef5350" : "#4caf50"}
           >
-            {ma10_deduction_value}
+            {ma20_deduction_value}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            {ma10_deduction_time}
+            {ma20_deduction_time}
           </Typography>
         </Grid>
 
@@ -60,13 +60,13 @@ function TooltipConent({
           <Typography
             variant="body2"
             color={
-              lastPrice > ma10_tomorrow_deduction_value ? "#ef5350" : "#4caf50"
+              lastPrice > ma20_tomorrow_deduction_value ? "#ef5350" : "#4caf50"
             }
           >
-            {ma10_tomorrow_deduction_value}
+            {ma20_tomorrow_deduction_value}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            {ma10_tomorrow_deduction_time}
+            {ma20_tomorrow_deduction_time}
           </Typography>
         </Grid>
       </Grid>
@@ -74,30 +74,30 @@ function TooltipConent({
   );
 }
 
-export default function Ma10({
+export default function Ma20({
   lastPrice,
-  ma10,
-  ma10_deduction_value,
-  ma10_tomorrow_deduction_value,
-  ma10_deduction_time,
-  ma10_tomorrow_deduction_time,
+  ma20,
+  ma20_deduction_value,
+  ma20_tomorrow_deduction_value,
+  ma20_deduction_time,
+  ma20_tomorrow_deduction_time,
 }: {
   lastPrice: number;
-  ma10: number;
-  ma10_deduction_value: number;
-  ma10_tomorrow_deduction_value: number;
-  ma10_deduction_time: string;
-  ma10_tomorrow_deduction_time: string;
+  ma20: number;
+  ma20_deduction_value: number;
+  ma20_tomorrow_deduction_value: number;
+  ma20_deduction_time: string;
+  ma20_tomorrow_deduction_time: string;
 }) {
   const check = useMemo(() => {
     if (
-      lastPrice > ma10_deduction_value &&
-      lastPrice > ma10_tomorrow_deduction_value &&
-      lastPrice > ma10
+      lastPrice > ma20_deduction_value &&
+      lastPrice > ma20_tomorrow_deduction_value &&
+      lastPrice > ma20
     )
       return true;
     return false;
-  }, [ma10_deduction_value, ma10_tomorrow_deduction_value, lastPrice, ma10]);
+  }, [ma20_deduction_value, ma20_tomorrow_deduction_value, lastPrice, ma20]);
 
   return (
     <Tooltip
@@ -105,11 +105,11 @@ export default function Ma10({
         <TooltipConent
           {...{
             lastPrice,
-            ma10,
-            ma10_deduction_value,
-            ma10_tomorrow_deduction_value,
-            ma10_deduction_time,
-            ma10_tomorrow_deduction_time,
+            ma20,
+            ma20_deduction_value,
+            ma20_tomorrow_deduction_value,
+            ma20_deduction_time,
+            ma20_tomorrow_deduction_time,
           }}
         />
       }
@@ -122,14 +122,14 @@ export default function Ma10({
         width="100%"
       >
         <Typography variant="caption" fontWeight={600} color="#fff">
-          MA10
+          MA20
         </Typography>
         <Typography
           variant="body2"
           color={check ? "#ef5350" : "#4caf50"}
           fontWeight="700"
         >
-          {ma10}
+          {ma20}
         </Typography>
       </Stack>
     </Tooltip>

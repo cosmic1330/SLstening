@@ -54,18 +54,29 @@ interface StrategyStep {
   checks: StepCheck[];
 }
 
-export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
+export default function MaKbar({
+  perd,
+  visibleCount,
+  setVisibleCount,
+  rightOffset,
+  setRightOffset,
+}: {
+  perd: UrlTaPerdOptions;
+  visibleCount: number;
+  setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
+  rightOffset: number;
+  setRightOffset: React.Dispatch<React.SetStateAction<number>>;
+}) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
   // Zoom & Pan Control
-  const [visibleCount, setVisibleCount] = useState(160);
-  const [rightOffset, setRightOffset] = useState(0);
+  // const [visibleCount, setVisibleCount] = useState(160);
+  // const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastX = useRef(0);
   const startOffset = useRef(0);
-
 
   // Gap Controls
   const [showGaps, setShowGaps] = useState(true);
@@ -95,7 +106,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
         const next = prev + delta * step;
         const minBars = 30;
         const maxBars = chartData.length > 0 ? chartData.length : 1000;
-        
+
         if (next < minBars) return minBars;
         if (next > maxBars) return maxBars;
         return next;
@@ -112,21 +123,21 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       e.preventDefault();
-      
+
       const deltaX = e.clientX - lastX.current;
-      const sensitivity = visibleCount / (container.clientWidth || 500); 
-      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
-      
+      const sensitivity = visibleCount / (container.clientWidth || 500);
+      const barDelta = Math.round(deltaX * sensitivity * 1.5);
+
       if (barDelta === 0) return;
 
       setRightOffset((prev) => {
         let next = prev + barDelta;
         if (next < 0) next = 0;
-        const maxOffset = Math.max(0, chartData.length - visibleCount); 
+        const maxOffset = Math.max(0, chartData.length - visibleCount);
         if (next > maxOffset) next = maxOffset;
         return next;
       });
-      
+
       lastX.current = e.clientX;
     };
 
@@ -157,7 +168,6 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
   // Gap Detection
   const { gapsWithFillStatus, unfilledGaps, recentGaps, unfilledGapsCount } =
     useGapDetection(slicedChartData, 0.7);
-
 
   // Gap Visualization Data
   const { gapLines, enhancedChartData } = useGapVisualization({
@@ -463,7 +473,14 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
     <Container
       component="main"
       maxWidth={false}
-      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        pt: 1,
+        px: 2,
+        pb: 1,
+      }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id="strategy" />} arrow>
@@ -563,7 +580,7 @@ export default function MaKbar({ perd }: { perd: UrlTaPerdOptions }) {
       </Card>
 
       {/* Combined Chart: Price (Main) + Volume (Overlay at bottom) */}
-      <Box 
+      <Box
         ref={chartContainerRef}
         sx={{ flexGrow: 1, minHeight: 0, width: "100%" }}
       >

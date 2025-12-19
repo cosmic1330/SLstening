@@ -156,44 +156,108 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const pageRef = useRef(null);
 
+  // Shared zoom and pan state
+  const [visibleCount, setVisibleCount] = useState(180);
+  const [rightOffset, setRightOffset] = useState(0);
+
   // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
     () => [
       {
         id: "bollean",
-        content: <Bollean />,
+        content: (
+          <Bollean
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
       {
         id: "ma_k",
-        content: <MaKbar perd={perd} />,
+        content: (
+          <MaKbar
+            perd={perd}
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
-      { id: "avg_k", content: <AvgMaKbar /> },
       {
-        id: "mj",
-        content: <MJ />,
-      },
-      {
-        id: "mr",
-        content: <MR />,
-      },
-      {
-        id: "kd",
-        content: <Kd />,
+        id: "ema",
+        content: (
+          <AvgMaKbar
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
       {
         id: "obv",
-        content: <Obv />,
+        content: (
+          <Obv
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
+      },
+      {
+        id: "mj",
+        content: (
+          <MJ
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
+      },
+      {
+        id: "mr",
+        content: (
+          <MR
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
+      },
+      {
+        id: "kd",
+        content: (
+          <Kd
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
       {
         id: "mfi",
-        content: <Mfi />,
+        content: (
+          <Mfi
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
       {
         id: "ichimoku_cloud",
         content: <IchimokuCloud perd={perd} />,
       },
     ],
-    [perd]
+    [perd, visibleCount, rightOffset]
   );
 
   const goToSlide = useCallback((index: number) => {
@@ -373,23 +437,29 @@ const FullscreenVerticalCarousel: React.FC = () => {
                 }}
               >
                 {isCollapsed ? (
-                    <UnfoldMore fontSize="small" />
+                  <UnfoldMore fontSize="small" />
                 ) : (
                   <UnfoldLess fontSize="small" />
                 )}
               </IconButton>
-              {isCollapsed && (<Box 
-                sx={{ 
-                  fontSize: '10px', 
-                  color: '#90caf9', 
-                  fontWeight: 'bold',
-                  writingMode: 'vertical-rl',
-                  textOrientation: 'upright',
-                  letterSpacing: '2px'
-                }}
-              >
-                {perd === UrlTaPerdOptions.Hour ? "小時" : perd === UrlTaPerdOptions.Week ? "週線" : "日線"}
-              </Box>)}
+              {isCollapsed && (
+                <Box
+                  sx={{
+                    fontSize: "10px",
+                    color: "#90caf9",
+                    fontWeight: "bold",
+                    writingMode: "vertical-rl",
+                    textOrientation: "upright",
+                    letterSpacing: "2px",
+                  }}
+                >
+                  {perd === UrlTaPerdOptions.Hour
+                    ? "小時"
+                    : perd === UrlTaPerdOptions.Week
+                    ? "週線"
+                    : "日線"}
+                </Box>
+              )}
 
               {!isCollapsed && (
                 <motion.div

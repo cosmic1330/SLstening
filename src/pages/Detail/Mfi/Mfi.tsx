@@ -66,18 +66,27 @@ interface MfiStep {
   checks: StepCheck[];
 }
 
-export default function Mfi({ id }: { id?: string }) {
+export default function Mfi({
+  id,
+  visibleCount,
+  setVisibleCount,
+  rightOffset,
+  setRightOffset,
+}: {
+  id?: string;
+  visibleCount: number;
+  setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
+  rightOffset: number;
+  setRightOffset: React.Dispatch<React.SetStateAction<number>>;
+}) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
   // Zoom & Pan Control
-  const [visibleCount, setVisibleCount] = useState(180);
-  const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastX = useRef(0);
   const startOffset = useRef(0);
-
 
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -94,7 +103,7 @@ export default function Mfi({ id }: { id?: string }) {
         const next = prev + delta * step;
         const minBars = 30;
         const maxBars = deals.length > 0 ? deals.length : 1000;
-        
+
         if (next < minBars) return minBars;
         if (next > maxBars) return maxBars;
         return next;
@@ -111,21 +120,21 @@ export default function Mfi({ id }: { id?: string }) {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       e.preventDefault();
-      
+
       const deltaX = e.clientX - lastX.current;
-      const sensitivity = visibleCount / (container.clientWidth || 500); 
-      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
-      
+      const sensitivity = visibleCount / (container.clientWidth || 500);
+      const barDelta = Math.round(deltaX * sensitivity * 1.5);
+
       if (barDelta === 0) return;
 
       setRightOffset((prev) => {
         let next = prev + barDelta;
         if (next < 0) next = 0;
-        const maxOffset = Math.max(0, deals.length - visibleCount); 
+        const maxOffset = Math.max(0, deals.length - visibleCount);
         if (next > maxOffset) next = maxOffset;
         return next;
       });
-      
+
       lastX.current = e.clientX;
     };
 
@@ -190,7 +199,7 @@ export default function Mfi({ id }: { id?: string }) {
         };
       })
       .slice(
-        -(visibleCount + rightOffset), 
+        -(visibleCount + rightOffset),
         rightOffset === 0 ? undefined : -rightOffset
       );
 
@@ -379,7 +388,14 @@ export default function Mfi({ id }: { id?: string }) {
     <Container
       component="main"
       maxWidth={false}
-      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        pt: 1,
+        px: 2,
+        pb: 1,
+      }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
@@ -448,10 +464,7 @@ export default function Mfi({ id }: { id?: string }) {
         </CardContent>
       </Card>
 
-      <Box 
-        ref={chartContainerRef}
-        sx={{ flexGrow: 1, minHeight: 0 }}
-      >
+      <Box ref={chartContainerRef} sx={{ flexGrow: 1, minHeight: 0 }}>
         {/* Price Chart */}
         <ResponsiveContainer width="100%" height="60%">
           <ComposedChart data={chartData} syncId="mfiSync">

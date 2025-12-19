@@ -72,13 +72,25 @@ interface SignalPoint extends AvgMaChartData {
   subType: "trend" | "rebound"; // trend = with MA60, rebound = against MA60
 }
 
-export default function AvgMaKbar({ id }: { id?: string }) {
+export default function AvgMaKbar({
+  id,
+  visibleCount,
+  setVisibleCount,
+  rightOffset,
+  setRightOffset,
+}: {
+  id?: string;
+  visibleCount: number;
+  setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
+  rightOffset: number;
+  setRightOffset: React.Dispatch<React.SetStateAction<number>>;
+}) {
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
   // Zoom & Pan Control
-  const [visibleCount, setVisibleCount] = useState(160);
-  const [rightOffset, setRightOffset] = useState(0);
+  // const [visibleCount, setVisibleCount] = useState(160);
+  // const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const lastX = useRef(0);

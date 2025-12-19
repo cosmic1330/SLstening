@@ -23,6 +23,7 @@ import {
   Customized,
   Line,
   ReferenceDot,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -32,6 +33,7 @@ import {
 import ema from "../../../cls_tools/ema";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import { calculateDMI } from "../../../utils/technicalIndicators";
 import Fundamental from "../Tooltip/Fundamental";
 
 interface AvgMaChartData
@@ -47,6 +49,9 @@ interface AvgMaChartData
   ema10: number | null;
   ma60: number | null;
   volMa20?: number | null;
+  diPlus: number | null;
+  diMinus: number | null;
+  adx: number | null;
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -79,7 +84,6 @@ export default function AvgMaKbar({ id }: { id?: string }) {
   const lastX = useRef(0);
   const startOffset = useRef(0);
 
-
   useEffect(() => {
     const container = chartContainerRef.current;
     if (!container) return;
@@ -95,7 +99,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         const next = prev + delta * step;
         const minBars = 30;
         const maxBars = deals.length > 0 ? deals.length : 1000;
-        
+
         if (next < minBars) return minBars;
         if (next > maxBars) return maxBars;
         return next;
@@ -112,21 +116,21 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging.current) return;
       e.preventDefault();
-      
+
       const deltaX = e.clientX - lastX.current;
-      const sensitivity = visibleCount / (container.clientWidth || 500); 
-      const barDelta = Math.round(deltaX * sensitivity * 1.5); 
-      
+      const sensitivity = visibleCount / (container.clientWidth || 500);
+      const barDelta = Math.round(deltaX * sensitivity * 1.5);
+
       if (barDelta === 0) return;
 
       setRightOffset((prev) => {
         let next = prev + barDelta;
         if (next < 0) next = 0;
-        const maxOffset = Math.max(0, deals.length - visibleCount); 
+        const maxOffset = Math.max(0, deals.length - visibleCount);
         if (next > maxOffset) next = maxOffset;
         return next;
       });
-      
+
       lastX.current = e.clientX;
     };
 
@@ -190,10 +194,24 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         ema10: ema10_data.ema || null,
         ma60,
         volMa20,
+        diPlus: null,
+        diMinus: null,
+        adx: null,
       });
     }
-    return response.slice(
-      -(visibleCount + rightOffset), 
+
+    // DMI calculation
+    const { diPlus, diMinus, adx } = calculateDMI(deals, 14);
+
+    const finalData = response.map((d, i) => ({
+      ...d,
+      diPlus: diPlus[i],
+      diMinus: diMinus[i],
+      adx: adx[i],
+    }));
+
+    return finalData.slice(
+      -(visibleCount + rightOffset),
       rightOffset === 0 ? undefined : -rightOffset
     );
   }, [deals, visibleCount, rightOffset]);
@@ -304,6 +322,11 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     // 4. Momentum (K strength) (20)
     if (price > ema5) totalScore += 20;
 
+    // 5. DMI (30) - Bonus
+    const isUptrend =
+      (current.diPlus || 0) > (current.diMinus || 0) && (current.adx || 0) > 20;
+    if (isUptrend) totalScore += 10;
+
     if (totalScore < 0) totalScore = 0;
     if (totalScore > 100) totalScore = 100;
 
@@ -329,7 +352,22 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         ],
       },
       {
-        label: "II. 進場訊號",
+        label: "II. 趨勢強度 (DMI)",
+        description: "ADX 與 DI 方向",
+        checks: [
+          {
+            label: `ADX 強度 (>20): ${(current.adx || 0).toFixed(1)}`,
+            status: (current.adx || 0) > 20 ? "pass" : "fail",
+          },
+          {
+            label: "多頭趨勢 (DI+ > DI-)",
+            status:
+              (current.diPlus || 0) > (current.diMinus || 0) ? "pass" : "fail",
+          },
+        ],
+      },
+      {
+        label: "III. 進場訊號",
         description: "交叉與型態",
         checks: [
           {
@@ -360,7 +398,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         ],
       },
       {
-        label: "III. 動能確認",
+        label: "IV. 動能確認",
         description: "量價與均線",
         checks: [
           {
@@ -374,7 +412,7 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         ],
       },
       {
-        label: "IV. 綜合評估",
+        label: "V. 綜合評估",
         description: `得分: ${totalScore} - ${rec}`,
         checks: [
           {
@@ -421,7 +459,14 @@ export default function AvgMaKbar({ id }: { id?: string }) {
     <Container
       component="main"
       maxWidth={false}
-      sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}
+      sx={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        pt: 1,
+        px: 2,
+        pb: 1,
+      }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
@@ -451,24 +496,17 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         </Box>
       </Stack>
 
-      <Card variant="outlined" sx={{ mb: 1, bgcolor: "background.default" }}>
-        <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
+      <Card variant="outlined" sx={{ bgcolor: "background.default" }}>
+        <CardContent>
           <Stack
             direction={{ xs: "column", md: "row" }}
-            spacing={2}
+            spacing={1}
             alignItems="center"
           >
-            <Box sx={{ minWidth: 200, flexShrink: 0 }}>
-              <Typography variant="subtitle1" color="primary" fontWeight="bold">
-                {steps[activeStep]?.description}
-              </Typography>
-            </Box>
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ display: { xs: "none", md: "block" } }}
-            />
-            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+            <Typography variant="subtitle2" color="primary" fontWeight="bold">
+              {steps[activeStep]?.description}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {steps[activeStep]?.checks.map((check, idx) => (
                 <Chip
                   key={idx}
@@ -490,9 +528,9 @@ export default function AvgMaKbar({ id }: { id?: string }) {
         </CardContent>
       </Card>
 
-      <Box 
+      <Box
         ref={chartContainerRef}
-        sx={{ flexGrow: 1, minHeight: 0 }}
+        sx={{ flexGrow: 1, minHeight: 0, height: "70%" }}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} syncId="avgSync">
@@ -647,6 +685,58 @@ export default function AvgMaKbar({ id }: { id?: string }) {
                 />
               );
             })}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </Box>
+
+      {/* DMI Chart Section */}
+      <Box sx={{ height: "20%", minHeight: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} syncId="avgSync">
+            <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
+            <XAxis dataKey="t" hide />
+            <YAxis
+              domain={[0, 60]}
+              tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 10 }}
+              stroke="rgba(255,255,255,0.3)"
+              label={{
+                value: "DMI",
+                angle: -90,
+                position: "insideLeft",
+                fill: "#999",
+                fontSize: 10,
+              }}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "rgba(20, 20, 30, 0.9)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: 4,
+              }}
+              itemStyle={{ fontSize: 11 }}
+            />
+            <ReferenceLine y={20} stroke="#666" strokeDasharray="3 3" />
+            <Line
+              dataKey="adx"
+              stroke="#ffeb3b"
+              strokeWidth={2}
+              dot={false}
+              name="ADX"
+            />
+            <Line
+              dataKey="diPlus"
+              stroke="#ff4d4f"
+              strokeWidth={1}
+              dot={false}
+              name="DI+"
+            />
+            <Line
+              dataKey="diMinus"
+              stroke="#52c41a"
+              strokeWidth={1}
+              dot={false}
+              name="DI-"
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

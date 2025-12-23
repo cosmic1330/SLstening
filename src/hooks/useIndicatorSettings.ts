@@ -8,6 +8,7 @@ export interface IndicatorSettings {
   boll: number;
   kd: number;
   mfi: number;
+  rsi: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   boll: 20,
   kd: 9,
   mfi: 14,
+  rsi: 5,
 };
 
 export default function useIndicatorSettings() {

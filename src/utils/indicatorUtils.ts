@@ -1,9 +1,10 @@
-import { IndicatorSettings } from "../hooks/useIndicatorSettings";
-import { TaType } from "../types";
-import ma from "../cls_tools/ma";
 import boll from "../cls_tools/boll";
 import kd from "../cls_tools/kd";
-import mfi from "../cls_tools/mfi";
+import ma from "../cls_tools/ma";
+import macd from "../cls_tools/macd";
+import rsi from "../cls_tools/rsi";
+import { IndicatorSettings } from "../hooks/useIndicatorSettings";
+import { TaType } from "../types";
 
 export interface EnhancedDealData {
   t: number;
@@ -24,7 +25,9 @@ export interface EnhancedDealData {
   bandWidth: number | null;
   k: number | null;
   d: number | null;
-  mfi: number | null;
+  j: number | null;
+  rsi: number | null;
+  osc: number | null;
   trend: string;
 }
 
@@ -44,7 +47,8 @@ export function calculateIndicators(
   let ma60Data = ma.init(deals[0], settings.ma60);
   let bollData = boll.init(deals[0]);
   let kdData = kd.init(deals[0], settings.kd);
-  let mfiData = mfi.init(deals[0], settings.mfi);
+  let rsiData = rsi.init(deals[0], settings.rsi);
+  let macdData = macd.init(deals[0]);
 
   return deals.map((deal, i) => {
     if (i > 0) {
@@ -54,7 +58,8 @@ export function calculateIndicators(
       ma60Data = ma.next(deal, ma60Data, settings.ma60);
       bollData = boll.next(deal, bollData, settings.boll);
       kdData = kd.next(deal, kdData, settings.kd);
-      mfiData = mfi.next(deal, mfiData, settings.mfi);
+      rsiData = rsi.next(deal, rsiData, settings.rsi);
+      macdData = macd.next(deal, macdData);
     }
 
     const ma5 = ma5Data.ma || null;
@@ -106,7 +111,9 @@ export function calculateIndicators(
       bandWidth,
       k: kdData.k || null,
       d: kdData.d || null,
-      mfi: (mfiData as any).mfi || null,
+      j: kdData.j || null,
+      rsi: rsiData.rsi || null,
+      osc: macdData.osc || null,
       trend,
     };
   });

@@ -17,8 +17,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
-import { calculateIndicators } from "../../../utils/indicatorUtils";
 import {
   CartesianGrid,
   ComposedChart,
@@ -31,6 +29,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import mfi from "../../../cls_tools/mfi";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import Fundamental from "../Tooltip/Fundamental";
@@ -80,7 +79,6 @@ export default function Mfi({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -160,36 +158,78 @@ export default function Mfi({
   const chartData = useMemo((): MfiChartData[] => {
     if (!deals || deals.length === 0) return [];
 
-    const initialData = calculateIndicators(deals, settings).splice(
-      -(visibleCount + rightOffset),
-      rightOffset === 0 ? undefined : -rightOffset
-    );
+    let mfiData = mfi.init(deals[0], 14);
+
+    const initialData = deals
+      .map((deal, i) => {
+        if (i > 0) {
+          mfiData = mfi.next(deal, mfiData, 14);
+        }
+
+        // Simple SMA 20 for Price and Volume
+        let ma20: number | null = null;
+        let ma10: number | null = null;
+        let volMa20: number | null = null;
+
+        if (i >= 19) {
+          let sumC = 0;
+          let sumV = 0;
+          for (let j = 0; j < 20; j++) {
+            sumC += deals[i - j].c || 0;
+            sumV += deals[i - j].v || 0;
+          }
+          ma20 = sumC / 20;
+          volMa20 = sumV / 20;
+        }
+
+        if (i >= 9) {
+          let sumC = 0;
+          for (let j = 0; j < 10; j++) {
+            sumC += deals[i - j].c || 0;
+          }
+          ma10 = sumC / 10;
+        }
+
+        return {
+          ...deal,
+          mfi: mfiData.mfi,
+          ma20,
+          ma10,
+          volMa20,
+        };
+      })
+      .slice(
+        -(visibleCount + rightOffset),
+        rightOffset === 0 ? undefined : -rightOffset
+      );
 
     // Second pass for signals (Trend/Turn)
-    const dataWithSignals: MfiChartData[] = initialData.map((d, i, arr) => {
-      if (i === 0) return d;
-      const prev = arr[i - 1];
-      const currMfi = d.mfi || 50;
-      const prevMfi = prev.mfi || 50;
+    const dataWithSignals = initialData.map(
+      (d: MfiChartData, i: number, arr: MfiChartData[]) => {
+        if (i === 0) return d;
+        const prev = arr[i - 1];
+        const currMfi = d.mfi || 50;
+        const prevMfi = prev.mfi || 50;
 
-      let buySignal: number | null = null;
-      let exitSignal: number | null = null;
-      let buyReason: string | undefined;
-      let exitReason: string | undefined;
+        let buySignal: number | null = null;
+        let exitSignal: number | null = null;
+        let buyReason: string | undefined;
+        let exitReason: string | undefined;
 
-      // Buy: Oversold (<20) and Turning Up
-      if (prevMfi < 20 && currMfi > prevMfi) {
-        buySignal = d.l ? d.l * 0.98 : null;
-        buyReason = "超賣反轉";
+        // Buy: Oversold (<20) and Turning Up
+        if (prevMfi < 20 && currMfi > prevMfi) {
+          buySignal = d.l ? d.l * 0.98 : null;
+          buyReason = "超賣反轉";
+        }
+        // Sell: Overbought (>80) and Turning Down
+        else if (prevMfi > 80 && currMfi < prevMfi) {
+          exitSignal = d.h ? d.h * 1.02 : null;
+          exitReason = "超買反轉";
+        }
+
+        return { ...d, buySignal, exitSignal, buyReason, exitReason };
       }
-      // Sell: Overbought (>80) and Turning Down
-      else if (prevMfi > 80 && currMfi < prevMfi) {
-        exitSignal = d.h ? d.h * 1.02 : null;
-        exitReason = "超買反轉";
-      }
-
-      return { ...d, buySignal, exitSignal, buyReason, exitReason };
-    });
+    );
 
     return dataWithSignals;
   }, [deals, visibleCount, rightOffset]);
@@ -265,7 +305,7 @@ export default function Mfi({
             status: isVolStable ? "pass" : "fail",
           },
           {
-            label: `趨勢方向 (MA${settings.ma20}): ${trendStatus}`,
+            label: `趨勢方向 (MA20): ${trendStatus}`,
             status: maRising ? "pass" : "manual",
           },
           { label: "波動度正常 (ATR)", status: "manual" },
@@ -480,7 +520,7 @@ export default function Mfi({
               stroke="#ff9800"
               dot={false}
               activeDot={false}
-              name={`${settings.ma20} MA`}
+              name="20 MA"
               strokeWidth={1.5}
             />
 

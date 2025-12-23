@@ -10,6 +10,8 @@ export interface IndicatorSettings {
   mfi: number;
   rsi: number;
   ma240: number;
+  emaShort: number;
+  emaLong: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -22,6 +24,8 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   mfi: 14,
   rsi: 5,
   ma240: 240,
+  emaShort: 5,
+  emaLong: 10,
 };
 
 export default function useIndicatorSettings() {

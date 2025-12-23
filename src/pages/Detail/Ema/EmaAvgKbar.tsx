@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
   CartesianGrid,
   ComposedChart,
@@ -31,6 +32,7 @@ import {
   ZAxis,
 } from "recharts";
 import ema from "../../../cls_tools/ema";
+import ma from "../../../cls_tools/ma";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import { calculateDMI } from "../../../utils/technicalIndicators";
@@ -85,6 +87,7 @@ export default function AvgMaKbar({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -166,8 +169,9 @@ export default function AvgMaKbar({
   const chartData = useMemo((): AvgMaChartData[] => {
     if (!deals || deals.length === 0) return [];
 
-    let ema5_data = ema.init(deals[0], 5);
-    let ema10_data = ema.init(deals[0], 10);
+    let ema5_data = ema.init(deals[0], settings.emaShort);
+    let ema10_data = ema.init(deals[0], settings.emaLong);
+    let ma60_data = ma.init(deals[0], settings.ma60);
 
     const response: AvgMaChartData[] = [];
 
@@ -176,19 +180,11 @@ export default function AvgMaKbar({
 
       // EMA calc
       if (i > 0) {
-        ema5_data = ema.next(deal, ema5_data, 5);
-        ema10_data = ema.next(deal, ema10_data, 10);
+        ema5_data = ema.next(deal, ema5_data, settings.emaShort);
+        ema10_data = ema.next(deal, ema10_data, settings.emaLong);
+        ma60_data = ma.next(deal, ma60_data, settings.ma60);
       }
 
-      // MA60 calc
-      let ma60: number | null = null;
-      if (i >= 59) {
-        let sumC = 0;
-        for (let j = 0; j < 60; j++) {
-          sumC += deals[i - j].c || 0;
-        }
-        ma60 = sumC / 60;
-      }
 
       // Vol MA20
       let volMa20: number | null = null;
@@ -204,7 +200,7 @@ export default function AvgMaKbar({
         ...deal,
         ema5: ema5_data.ema || null,
         ema10: ema10_data.ema || null,
-        ma60,
+        ma60: ma60_data.ma || null,
         volMa20,
         diPlus: null,
         diMinus: null,
@@ -358,7 +354,9 @@ export default function AvgMaKbar({
             status: aboveLifeLine ? "pass" : "fail",
           },
           {
-            label: `EMA5 > EMA10 (短線趨勢): ${trendUp ? "Yes" : "No"}`,
+            label: `EMA${settings.emaShort} > EMA${
+              settings.emaLong
+            } (短線趨勢): ${trendUp ? "Yes" : "No"}`,
             status: trendUp ? "pass" : "fail",
           },
         ],
@@ -601,7 +599,7 @@ export default function AvgMaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={2}
-              name="EMA 5"
+              name={`EMA ${settings.emaShort}`}
             />
             <Line
               dataKey="ema10"
@@ -609,15 +607,15 @@ export default function AvgMaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={2}
-              name="EMA 10"
+              name={`EMA ${settings.emaLong}`}
             />
             <Line
               dataKey="ma60"
               stroke="#9c27b0"
               dot={false}
               activeDot={false}
-              strokeWidth={3}
-              name="MA 60 (生命線)"
+              strokeWidth={2}
+              name={`MA ${settings.ma60}`}
               opacity={0.6}
             />
 

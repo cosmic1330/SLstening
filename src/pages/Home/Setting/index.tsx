@@ -31,6 +31,8 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
 import useStocksStore from "../../../store/Stock.store";
+import IndicatorSettingsSection from "./IndicatorSettingsSection";
+import StyledListSubheader from "./StyledListSubheader";
 // Important: Make sure this path is correct or hardcode the version
 import pkg from "../../../../package.json";
 
@@ -67,15 +69,6 @@ const GlassCard = styled(Paper)(({ theme }) => ({
   boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
   overflow: "hidden",
   marginTop: theme.spacing(2),
-}));
-
-const StyledListSubheader = styled(Typography)(({ theme }) => ({
-  padding: theme.spacing(3, 3, 1, 3),
-  color: "#90caf9",
-  fontWeight: 700,
-  fontSize: "0.75rem",
-  letterSpacing: "0.1rem",
-  textTransform: "uppercase",
 }));
 
 function Setting() {
@@ -286,6 +279,37 @@ function Setting() {
               />
             </ListItem>
 
+            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 44 }}>
+                <BugReportIcon sx={{ color: "#fbbf24" }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="開發者模式"
+                secondary="顯示內部除錯資訊"
+                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                secondaryTypographyProps={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: "0.75rem",
+                }}
+              />
+              <ListItemSecondaryAction>
+                <Switch
+                  checked={debugMode}
+                  onChange={handleDebugModeChange}
+                  sx={{
+                    "& .MuiSwitch-switchBase.Mui-checked": { color: "#fbbf24" },
+                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                      backgroundColor: "#fbbf24",
+                    },
+                  }}
+                />
+              </ListItemSecondaryAction>
+            </ListItem>
+
+            <Divider sx={{ mx: 2, mb: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+
             {/* Granular market settings */}
             <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
               <Grid container spacing={1}>
@@ -339,34 +363,7 @@ function Setting() {
               </Grid>
             </Box>
 
-            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
-
-            <ListItem>
-              <ListItemIcon sx={{ minWidth: 44 }}>
-                <BugReportIcon sx={{ color: "#fbbf24" }} />
-              </ListItemIcon>
-              <ListItemText
-                primary="開發者模式"
-                secondary="顯示內部除錯資訊"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
-                secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
-                  fontSize: "0.75rem",
-                }}
-              />
-              <ListItemSecondaryAction>
-                <Switch
-                  checked={debugMode}
-                  onChange={handleDebugModeChange}
-                  sx={{
-                    "& .MuiSwitch-switchBase.Mui-checked": { color: "#fbbf24" },
-                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                      backgroundColor: "#fbbf24",
-                    },
-                  }}
-                />
-              </ListItemSecondaryAction>
-            </ListItem>
+            <IndicatorSettingsSection />
           </List>
         </GlassCard>
 

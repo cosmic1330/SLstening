@@ -17,6 +17,8 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import useIndicatorSettings from "../../hooks/useIndicatorSettings";
+import { calculateIndicators } from "../../utils/indicatorUtils";
 import {
   CartesianGrid,
   ComposedChart,
@@ -29,7 +31,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import kd from "../../cls_tools/kd";
 import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../context/DealsContext";
 import { DivergenceSignalType } from "../../types";
@@ -77,6 +78,7 @@ export default function Kd({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -154,44 +156,11 @@ export default function Kd({
   }, [deals.length, visibleCount, rightOffset]);
 
   const chartData = useMemo((): KdChartData[] => {
-    if (!deals || deals.length === 0) return [];
-
-    let kdData = kd.init(deals[0], 9);
-
-    return deals
-      .map((deal, i) => {
-        if (i > 0) {
-          kdData = kd.next(deal, kdData, 9);
-        }
-
-        // Simple SMA 20 for Price and Volume
-        let ma20: number | null = null;
-        let volMa20: number | null = null;
-
-        if (i >= 19) {
-          let sumC = 0;
-          let sumV = 0;
-          for (let j = 0; j < 20; j++) {
-            sumC += deals[i - j].c || 0;
-            sumV += deals[i - j].v || 0;
-          }
-          ma20 = sumC / 20;
-          volMa20 = sumV / 20;
-        }
-
-        return {
-          ...deal,
-          k: kdData.k,
-          d: kdData.d,
-          ma20,
-          volMa20,
-        };
-      })
-      .slice(
-        -(visibleCount + rightOffset),
-        rightOffset === 0 ? undefined : -rightOffset
-      );
-  }, [deals, visibleCount, rightOffset]);
+    return calculateIndicators(deals, settings).splice(
+      -(visibleCount + rightOffset),
+      rightOffset === 0 ? undefined : -rightOffset
+    ) as KdChartData[];
+  }, [deals, settings, visibleCount, rightOffset]);
 
   const signals = useMemo(() => {
     // We need to convert chartData back to the format detectKdDivergence expects if possible,
@@ -297,7 +266,7 @@ export default function Kd({
             status: isVolStable ? "pass" : "fail",
           },
           {
-            label: `趨勢方向 (MA20): ${trendStatus}`,
+            label: `趨勢方向 (MA${settings.ma20}): ${trendStatus}`,
             status: maRising ? "pass" : "manual",
           },
           { label: "波動度正常 (ATR)", status: "manual" },
@@ -518,7 +487,7 @@ export default function Kd({
               stroke="#ff9800"
               dot={false}
               activeDot={false}
-              name="20 MA"
+              name={`${settings.ma20} MA`}
               strokeWidth={1.5}
             />
 

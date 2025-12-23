@@ -21,6 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
   Bar,
   CartesianGrid,
@@ -33,6 +34,7 @@ import {
   YAxis,
   ReferenceDot,
 } from "recharts";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import { useGapDetection } from "../../../hooks/useGapDetection";
@@ -67,6 +69,7 @@ export default function MaKbar({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -85,10 +88,15 @@ export default function MaKbar({
     undefined
   );
 
-  const { trends: chartData, power } = useMarketAnalysis({
+  const { power } = useMarketAnalysis({
     ta: deals,
     perd,
   });
+
+  // Re-calculate indicators based on custom settings
+  const chartData = useMemo(() => {
+    return calculateIndicators(deals, settings);
+  }, [deals, settings]);
 
   // Handle Zoom (Wheel)
   useEffect(() => {
@@ -302,11 +310,11 @@ export default function MaKbar({
         description: `MA 排列: ${trend}`,
         checks: [
           {
-            label: "均線多頭排列",
+            label: `均線多頭排列 (${settings.ma5}>${settings.ma10}>${settings.ma20}>${settings.ma60})`,
             status: isBullish ? "pass" : isBearish ? "fail" : "manual",
           },
           {
-            label: `MA5 > MA20: ${maStackOk}`,
+            label: `MA${settings.ma5} > MA${settings.ma20}: ${maStackOk}`,
             status: maStackOk ? "pass" : "fail",
           },
         ],
@@ -670,7 +678,7 @@ export default function MaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={1}
-              name="MA5"
+              name={`MA${settings.ma5}`}
             />
             <Line
               dataKey="ma10"
@@ -678,7 +686,7 @@ export default function MaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={1}
-              name="MA10"
+              name={`MA${settings.ma10}`}
             />
             <Line
               dataKey="ma20"
@@ -686,7 +694,7 @@ export default function MaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={1.5}
-              name="MA20"
+              name={`MA${settings.ma20}`}
             />
             <Line
               dataKey="ma60"
@@ -694,7 +702,7 @@ export default function MaKbar({
               dot={false}
               activeDot={false}
               strokeWidth={1}
-              name="MA60"
+              name={`MA${settings.ma60}`}
             />
 
             {/* Signal Markers */}

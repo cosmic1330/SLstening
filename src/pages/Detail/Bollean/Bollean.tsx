@@ -14,6 +14,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
   Bar,
   ComposedChart,
@@ -26,7 +27,7 @@ import {
   CartesianGrid,
   Scatter,
 } from "recharts";
-import boll from "../../../cls_tools/boll";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 import { DealsContext } from "../../../context/DealsContext";
 import Fundamental from "../Tooltip/Fundamental";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
@@ -129,6 +130,7 @@ export default function Bollean({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -208,31 +210,8 @@ export default function Bollean({
   const chartData = useMemo((): BolleanChartData[] => {
     if (!deals || deals.length === 0) return [];
 
-    let boll_data = boll.init(deals[0]);
-
-    // Initial pass: Calculate Bands
-    const baseData = deals.map((deal, i) => {
-      if (i > 0) {
-        boll_data = boll.next(deal, boll_data, 20);
-      }
-
-      const ub = boll_data.bollUb || null;
-      const ma = boll_data.bollMa || null;
-      const lb = boll_data.bollLb || null;
-
-      let bandWidth = null;
-      if (ub !== null && lb !== null && ma !== null && ma !== 0) {
-        bandWidth = (ub - lb) / ma;
-      }
-
-      return {
-        ...deal,
-        bollUb: ub,
-        bollMa: ma,
-        bollLb: lb,
-        bandWidth,
-      };
-    });
+    // Initial pass: Calculate Bands using centralized utility
+    const baseData = calculateIndicators(deals, settings);
 
     // Second pass: Calculate Signals & Logic
     let lastSignalState: "buy" | "neutral" = "neutral";
@@ -242,7 +221,7 @@ export default function Bollean({
 
     return baseData
       .map((d, i) => {
-        if (i < 20) return d; // Skip initial stabilization
+        if (i < settings.boll) return d; // Skip initial stabilization
 
         const prev = baseData[i - 1];
 
@@ -254,10 +233,10 @@ export default function Bollean({
 
         if (
           !isNum(price) ||
-          !isNum(ub) ||
-          !isNum(lb) ||
-          !isNum(ma) ||
-          !isNum(width)
+          ub === null ||
+          lb === null ||
+          ma === null ||
+          width === null
         )
           return d;
 
@@ -639,7 +618,7 @@ export default function Bollean({
               strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name="20 MA (Mid)"
+              name={`${settings.boll} MA (Mid)`}
             />
             <Line
               dataKey="bollUb"

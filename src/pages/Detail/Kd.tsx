@@ -18,7 +18,10 @@ import {
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
 import useIndicatorSettings from "../../hooks/useIndicatorSettings";
-import { calculateIndicators } from "../../utils/indicatorUtils";
+import {
+  calculateIndicators,
+  EnhancedDealData,
+} from "../../utils/indicatorUtils";
 import {
   CartesianGrid,
   ComposedChart,
@@ -37,19 +40,8 @@ import { DivergenceSignalType } from "../../types";
 import detectKdDivergence from "../../utils/detectKdDivergence";
 import Fundamental from "./Tooltip/Fundamental";
 
-interface KdChartData
-  extends Partial<{
-    t: number | string;
-    o: number | null;
-    h: number | null;
-    l: number | null;
-    c: number | null;
-    v: number | null;
-  }> {
-  k: number | null;
-  d: number | null;
-  ma20: number | null;
-  volMa20?: number | null;
+interface KdChartData extends Partial<EnhancedDealData> {
+  // signals and other properties if needed
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -156,7 +148,7 @@ export default function Kd({
   }, [deals.length, visibleCount, rightOffset]);
 
   const chartData = useMemo((): KdChartData[] => {
-    return calculateIndicators(deals, settings).splice(
+    return calculateIndicators(deals, settings).slice(
       -(visibleCount + rightOffset),
       rightOffset === 0 ? undefined : -rightOffset
     ) as KdChartData[];
@@ -168,11 +160,11 @@ export default function Kd({
     // detectKdDivergence expects {t, h, l, k, d}.
     // We can map from chartData which has all of these.
     const inputForDivergence = chartData.map((d) => ({
-      t: typeof d.t === "string" ? 0 : (d.t as number), // Assuming safe cast or ignored if not relevant
-      h: d.h || 0,
-      l: d.l || 0,
-      k: d.k || 0,
-      d: d.d || 0,
+      t: d.t as number,
+      h: d.h as number,
+      l: d.l as number,
+      k: d.k as number,
+      d: d.d as number,
     }));
     return detectKdDivergence(inputForDivergence);
   }, [chartData]);

@@ -66,14 +66,14 @@ export function calculateIndicators(
       macdData = macd.next(deal, macdData);
     }
 
-    const ma5 = ma5Data.ma || null;
-    const ma10 = ma10Data.ma || null;
-    const ma20 = ma20Data.ma || null;
-    const ma60 = ma60Data.ma || null;
+    const ma5 = ma5Data.ma ? ma5Data.ma : null;
+    const ma10 = ma10Data.ma ? ma10Data.ma : null;
+    const ma20 = ma20Data.ma ? ma20Data.ma : null;
+    const ma60 = ma60Data.ma ? ma60Data.ma : null;
 
-    const bollMa = bollData.bollMa || null;
-    const bollUb = bollData.bollUb || null;
-    const bollLb = bollData.bollLb || null;
+    const bollMa = bollData.bollMa ? bollData.bollMa : null;
+    const bollUb = bollData.bollUb ? bollData.bollUb : null;
+    const bollLb = bollData.bollLb ? bollData.bollLb : null;
 
     let bandWidth = null;
     if (bollUb !== null && bollLb !== null && bollMa !== null && bollMa !== 0) {
@@ -113,12 +113,12 @@ export function calculateIndicators(
       bollUb,
       bollLb,
       bandWidth,
-      k: kdData.k || null,
-      d: kdData.d || null,
-      j: kdData.j || null,
-      rsi: rsiData.rsi || null,
-      mfi: mfiData.mfi || null,
-      osc: macdData.osc || null,
+      k: kdData.k ? kdData.k : null,
+      d: kdData.d ? kdData.d : null,
+      j: kdData.j ? kdData.j : null,
+      rsi: rsiData.rsi ? rsiData.rsi : null,
+      mfi: mfiData.mfi ? mfiData.mfi : null,
+      osc: macdData.osc ? macdData.osc : null,
       trend,
     };
   });

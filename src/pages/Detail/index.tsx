@@ -4,6 +4,7 @@ import {
   DragIndicator,
   UnfoldLess,
   UnfoldMore,
+  ShowChart,
 } from "@mui/icons-material";
 import {
   Box,
@@ -458,6 +459,95 @@ const FullscreenVerticalCarousel: React.FC = () => {
                     : perd === UrlTaPerdOptions.Week
                     ? "週線"
                     : "日線"}
+                </Box>
+              )}
+
+              {isCollapsed && (
+                <Box
+                  sx={{
+                    position: "relative",
+                    "&:hover .chart-list": {
+                      display: "flex",
+                      opacity: 1,
+                      transform: "translateX(0)",
+                    },
+                  }}
+                >
+                  <IconButton
+                    size="small"
+                    sx={{
+                      color: "rgba(255,255,255,0.5)",
+                      "&:hover": { color: "#fff" },
+                    }}
+                  >
+                    <ShowChart fontSize="small" />
+                  </IconButton>
+                  <Box
+                    className="chart-list"
+                    sx={{
+                      position: "absolute",
+                      left: "100%",
+                      top: 0,
+                      display: "none",
+                      opacity: 0,
+                      transition: "all 0.2s ease-in-out",
+                      zIndex: 100,
+                      whiteSpace: "nowrap",
+                      // 增加一個透明的 padding-left 作為 bridge，避免鼠標移入時中斷
+                      pl: "20px",
+                      ml: "-15px",
+                    }}
+                  >
+                    <Stack
+                      spacing={0.5}
+                      sx={{
+                        backgroundColor: "rgba(30, 30, 40, 0.9)",
+                        borderRadius: "8px",
+                        p: 0.5,
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
+                      }}
+                    >
+                      {[
+                        { label: "布林", idx: 0 },
+                        { label: "MA", idx: 1 },
+                        { label: "EMA", idx: 2 },
+                        { label: "OBV", idx: 3 },
+                        { label: "MJ", idx: 4 },
+                        { label: "MR", idx: 5 },
+                        { label: "KD", idx: 6 },
+                        { label: "MFI", idx: 7 },
+                        { label: "一目", idx: 8 },
+                      ].map((opt) => (
+                        <Button
+                          key={opt.idx}
+                          size="small"
+                          onClick={() => goToSlide(opt.idx)}
+                          sx={{
+                            minWidth: "80px",
+                            justifyContent: "flex-start",
+                            color:
+                              current === opt.idx
+                                ? "#fff"
+                                : "rgba(255, 255, 255, 0.6)",
+                            bgcolor:
+                              current === opt.idx
+                                ? "rgba(255, 255, 255, 0.1)"
+                                : "transparent",
+                            fontSize: "10px",
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: "4px",
+                            "&:hover": {
+                              bgcolor: "rgba(255, 255, 255, 0.15)",
+                              color: "#fff",
+                            },
+                          }}
+                        >
+                          {opt.label}
+                        </Button>
+                      ))}
+                    </Stack>
+                  </Box>
                 </Box>
               )}
 

@@ -14,7 +14,7 @@ export default function AvgPrice({
       const avgPrice =
         Math.round(tickDeals.avgPrices[tickDeals.avgPrices.length - 1] * 100) /
         100;
-      const color = lastPrice > avgPrice ? "#ef5350" : "#4caf50";
+      const color = lastPrice > avgPrice ? "#fff" : "#4caf50";
       return {
         avgPrice,
         color,

@@ -27,7 +27,7 @@ export default function VolumeEstimated({
           variant="body2"
           color={
             deals.length > 0 && estimatedVolume > deals[deals.length - 2].v
-              ? "#ef5350"
+              ? "#fff"
               : "#4caf50"
           }
           fontWeight="bold"

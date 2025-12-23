@@ -27,7 +27,7 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5 ? "#ef5350" : "#4caf50"}
+            color={lastPrice > ma5 ? "#fff" : "#4caf50"}
             fontWeight="bold"
           >
             {ma5}
@@ -42,7 +42,7 @@ function TooltipConent({
         <Grid size={6} textAlign="right">
           <Typography
             variant="body2"
-            color={lastPrice > ma5_deduction_value ? "#ef5350" : "#4caf50"}
+            color={lastPrice > ma5_deduction_value ? "#fff" : "#4caf50"}
           >
             {ma5_deduction_value}
           </Typography>
@@ -60,7 +60,7 @@ function TooltipConent({
           <Typography
             variant="body2"
             color={
-              lastPrice > ma5_tomorrow_deduction_value ? "#ef5350" : "#4caf50"
+              lastPrice > ma5_tomorrow_deduction_value ? "#fff" : "#4caf50"
             }
           >
             {ma5_tomorrow_deduction_value}
@@ -126,7 +126,7 @@ export default function Ma5({
         </Typography>
         <Typography
           variant="body2"
-          color={check ? "#ef5350" : "#4caf50"}
+          color={check ? "#fff" : "#4caf50"}
           fontWeight="700"
         >
           {ma5}

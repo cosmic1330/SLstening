@@ -92,7 +92,7 @@ export default function VolumeRatio({
       <Tooltip title={<VolumeRatioTooltip ratio={ratio} />}>
         <Typography
           variant="body2"
-          color={ratio >= 1 ? "#ef5350" : "#4caf50"}
+          color={ratio >= 1 ? "#fff" : "#4caf50"}
           fontWeight="bold"
           textAlign="center"
         >

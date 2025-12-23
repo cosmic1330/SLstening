@@ -1,20 +1,4 @@
-import {
-  KeyboardArrowDown,
-  KeyboardArrowUp,
-  DragIndicator,
-  UnfoldLess,
-  UnfoldMore,
-  ShowChart,
-} from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  IconButton,
-  styled,
-  Stack,
-  createTheme,
-  ThemeProvider,
-} from "@mui/material";
+import { Box, styled, createTheme, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
@@ -48,8 +32,7 @@ const MJ = lazy(() => import("./MJ"));
 const MR = lazy(() => import("./MR"));
 const Kd = lazy(() => import("./Kd"));
 const Mfi = lazy(() => import("./Mfi/Mfi"));
-
-// --- Styled Components ---
+import GlassBar from "./GlassBar";
 
 const PageContainer = styled(Box)`
   width: 100vw;
@@ -69,53 +52,7 @@ const PageContainer = styled(Box)`
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
 `;
 
-const GlassBar = styled(motion.div)(({ theme }) => ({
-  position: "absolute",
-  left: theme.spacing(0),
-  top: "20%",
-  transform: "translateY(-50%)",
-  background: "rgba(30, 30, 40, 0.6)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  borderRadius: "16px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
-  padding: theme.spacing(1.5),
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing(1),
-  zIndex: 10,
-}));
-
-const ControlButton = styled(Button, {
-  shouldForwardProp: (prop) => prop !== "active",
-})<{ active?: boolean }>(({ active }) => ({
-  minWidth: "auto",
-  padding: "6px 12px",
-  borderRadius: "8px",
-  color: active ? "#fff" : "rgba(255, 255, 255, 0.6)",
-  backgroundColor: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
-  border: active
-    ? "1px solid rgba(255, 255, 255, 0.1)"
-    : "1px solid transparent",
-  fontSize: "0.75rem",
-  fontWeight: 600,
-  "&:hover": {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    color: "#fff",
-  },
-}));
-
-const NavIconButton = styled(IconButton)(() => ({
-  color: "rgba(255, 255, 255, 0.7)",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  borderRadius: "8px",
-  padding: "6px",
-  "&:hover": {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    color: "#fff",
-  },
-}));
+// --- Styled Components ---
 
 // Create a dark theme instance
 const darkTheme = createTheme({
@@ -322,7 +259,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
     });
 
     return () => {
-      unlisten.then((fn) => fn()); // 清理监听器
+      unlisten.then((fn: any) => fn()); // 清理监听器
     };
   }, []);
 
@@ -398,244 +335,14 @@ const FullscreenVerticalCarousel: React.FC = () => {
           </AnimatePresence>
 
           <GlassBar
-            drag
-            dragMomentum={false}
-            dragConstraints={pageRef}
-            initial={{ x: 0, opacity: 0.9 }}
-            whileHover={{ opacity: 1 }}
-            animate={{
-              width: isCollapsed ? "auto" : "auto",
-              transition: { type: "spring", stiffness: 300, damping: 30 },
-            }}
-          >
-            <Stack spacing={1} alignItems="center">
-              {/* Drag Handle */}
-              <Box
-                sx={{
-                  cursor: "grab",
-                  display: "flex",
-                  justifyContent: "center",
-                  width: "100%",
-                  py: 0.2,
-                }}
-              >
-                <DragIndicator
-                  style={{ fontSize: 16, color: "rgba(255,255,255,0.3)" }}
-                />
-              </Box>
-
-              {/* Collapse Toggle */}
-              <IconButton
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                size="small"
-                sx={{
-                  p: 0.5,
-                  color: "rgba(255,255,255,0.5)",
-                  "&:hover": {
-                    color: "#fff",
-                    bgcolor: "rgba(255,255,255,0.1)",
-                  },
-                }}
-              >
-                {isCollapsed ? (
-                  <UnfoldMore fontSize="small" />
-                ) : (
-                  <UnfoldLess fontSize="small" />
-                )}
-              </IconButton>
-              {isCollapsed && (
-                <Box
-                  sx={{
-                    fontSize: "10px",
-                    color: "#90caf9",
-                    fontWeight: "bold",
-                    writingMode: "vertical-rl",
-                    textOrientation: "upright",
-                    letterSpacing: "2px",
-                  }}
-                >
-                  {perd === UrlTaPerdOptions.Hour
-                    ? "小時"
-                    : perd === UrlTaPerdOptions.Week
-                    ? "週線"
-                    : "日線"}
-                </Box>
-              )}
-
-              {isCollapsed && (
-                <Box
-                  sx={{
-                    position: "relative",
-                    "&:hover .chart-list": {
-                      display: "flex",
-                      opacity: 1,
-                      transform: "translateX(0)",
-                    },
-                  }}
-                >
-                  <IconButton
-                    size="small"
-                    sx={{
-                      color: "rgba(255,255,255,0.5)",
-                      "&:hover": { color: "#fff" },
-                    }}
-                  >
-                    <ShowChart fontSize="small" />
-                  </IconButton>
-                  <Box
-                    className="chart-list"
-                    sx={{
-                      position: "absolute",
-                      left: "100%",
-                      top: 0,
-                      display: "none",
-                      opacity: 0,
-                      transition: "all 0.2s ease-in-out",
-                      zIndex: 100,
-                      whiteSpace: "nowrap",
-                      // 增加一個透明的 padding-left 作為 bridge，避免鼠標移入時中斷
-                      pl: "20px",
-                      ml: "-15px",
-                    }}
-                  >
-                    <Stack
-                      spacing={0.5}
-                      sx={{
-                        backgroundColor: "rgba(30, 30, 40, 0.9)",
-                        borderRadius: "8px",
-                        p: 0.5,
-                        border: "1px solid rgba(255, 255, 255, 0.08)",
-                      }}
-                    >
-                      {[
-                        { label: "布林", idx: 0 },
-                        { label: "MA", idx: 1 },
-                        { label: "EMA", idx: 2 },
-                        { label: "OBV", idx: 3 },
-                        { label: "MJ", idx: 4 },
-                        { label: "MR", idx: 5 },
-                        { label: "KD", idx: 6 },
-                        { label: "MFI", idx: 7 },
-                        { label: "一目", idx: 8 },
-                      ].map((opt) => (
-                        <Button
-                          key={opt.idx}
-                          size="small"
-                          onClick={() => goToSlide(opt.idx)}
-                          sx={{
-                            minWidth: "80px",
-                            justifyContent: "flex-start",
-                            color:
-                              current === opt.idx
-                                ? "#fff"
-                                : "rgba(255, 255, 255, 0.6)",
-                            bgcolor:
-                              current === opt.idx
-                                ? "rgba(255, 255, 255, 0.1)"
-                                : "transparent",
-                            fontSize: "10px",
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: "4px",
-                            "&:hover": {
-                              bgcolor: "rgba(255, 255, 255, 0.15)",
-                              color: "#fff",
-                            },
-                          }}
-                        >
-                          {opt.label}
-                        </Button>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Box>
-              )}
-
-              {!isCollapsed && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    alignItems: "center",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: "20px",
-                      height: "1px",
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                      my: 0.5,
-                    }}
-                  />
-
-                  {/* Navigation Arrows */}
-                  <NavIconButton
-                    onClick={() => goToSlide(current - 1)}
-                    size="small"
-                  >
-                    <KeyboardArrowUp fontSize="small" />
-                  </NavIconButton>
-                  <NavIconButton
-                    onClick={() => goToSlide(current + 1)}
-                    size="small"
-                  >
-                    <KeyboardArrowDown fontSize="small" />
-                  </NavIconButton>
-
-                  <Box
-                    sx={{
-                      width: "20px",
-                      height: "1px",
-                      backgroundColor: "rgba(255,255,255,0.1)",
-                      my: 0.5,
-                    }}
-                  />
-
-                  {/* Time Period Controls */}
-                  <ControlButton
-                    active={perd === UrlTaPerdOptions.Hour}
-                    onClick={() => {
-                      localStorage.setItem(
-                        "detail:perd:type",
-                        UrlTaPerdOptions.Hour
-                      );
-                      setPerd(UrlTaPerdOptions.Hour);
-                    }}
-                  >
-                    小時
-                  </ControlButton>
-                  <ControlButton
-                    active={perd === UrlTaPerdOptions.Day}
-                    onClick={() => {
-                      localStorage.setItem(
-                        "detail:perd:type",
-                        UrlTaPerdOptions.Day
-                      );
-                      setPerd(UrlTaPerdOptions.Day);
-                    }}
-                  >
-                    日線
-                  </ControlButton>
-                  <ControlButton
-                    active={perd === UrlTaPerdOptions.Week}
-                    onClick={() => {
-                      localStorage.setItem(
-                        "detail:perd:type",
-                        UrlTaPerdOptions.Week
-                      );
-                      setPerd(UrlTaPerdOptions.Week);
-                    }}
-                  >
-                    週線
-                  </ControlButton>
-                </motion.div>
-              )}
-            </Stack>
-          </GlassBar>
+            perd={perd}
+            setPerd={setPerd}
+            isCollapsed={isCollapsed}
+            setIsCollapsed={setIsCollapsed}
+            current={current}
+            goToSlide={goToSlide}
+            pageRef={pageRef}
+          />
         </DealsContext.Provider>
       </PageContainer>
     </ThemeProvider>

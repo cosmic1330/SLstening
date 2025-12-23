@@ -18,6 +18,7 @@ export interface EnhancedDealData {
   ma10: number | null;
   ma20: number | null;
   ma60: number | null;
+  ma240: number | null;
   volMa10: number | null;
   volMa20: number | null;
   bollMa: number | null;
@@ -47,6 +48,7 @@ export function calculateIndicators(
   let ma10Data = ma.init(deals[0], settings.ma10);
   let ma20Data = ma.init(deals[0], settings.ma20);
   let ma60Data = ma.init(deals[0], settings.ma60);
+  let ma240Data = ma.init(deals[0], settings.ma240);
   let bollData = boll.init(deals[0]);
   let kdData = kd.init(deals[0], settings.kd);
   let rsiData = rsi.init(deals[0], settings.rsi);
@@ -59,6 +61,7 @@ export function calculateIndicators(
       ma10Data = ma.next(deal, ma10Data, settings.ma10);
       ma20Data = ma.next(deal, ma20Data, settings.ma20);
       ma60Data = ma.next(deal, ma60Data, settings.ma60);
+      ma240Data = ma.next(deal, ma240Data, settings.ma240);
       bollData = boll.next(deal, bollData, settings.boll);
       kdData = kd.next(deal, kdData, settings.kd);
       rsiData = rsi.next(deal, rsiData, settings.rsi);
@@ -70,6 +73,7 @@ export function calculateIndicators(
     const ma10 = ma10Data.ma ? ma10Data.ma : null;
     const ma20 = ma20Data.ma ? ma20Data.ma : null;
     const ma60 = ma60Data.ma ? ma60Data.ma : null;
+    const ma240 = ma240Data.ma ? ma240Data.ma : null;
 
     const bollMa = bollData.bollMa ? bollData.bollMa : null;
     const bollUb = bollData.bollUb ? bollData.bollUb : null;
@@ -96,9 +100,11 @@ export function calculateIndicators(
     }
 
     let trend = "震盪";
-    if (ma5 && ma10 && ma20 && ma60) {
-      if (ma5 > ma10 && ma10 > ma20 && ma20 > ma60) trend = "多頭";
-      else if (ma5 < ma10 && ma10 < ma20 && ma20 < ma60) trend = "空頭";
+    if (ma5 && ma10 && ma20 && ma60 && ma240) {
+      if (ma5 > ma10 && ma10 > ma20 && ma20 > ma60 && ma60 > ma240)
+        trend = "多頭";
+      else if (ma5 < ma10 && ma10 < ma20 && ma20 < ma60 && ma60 < ma240)
+        trend = "空頭";
     }
 
     return {
@@ -107,6 +113,7 @@ export function calculateIndicators(
       ma10,
       ma20,
       ma60,
+      ma240,
       volMa10,
       volMa20,
       bollMa,

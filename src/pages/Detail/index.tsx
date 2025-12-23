@@ -21,16 +21,16 @@ import {
   IndicatorsDateTimeType,
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
-import AvgMaKbar from "./Kbar/EmaAvgKbar";
+import AvgMaKbar from "./Ema/EmaAvgKbar";
 import Bollean from "./Bollean/Bollean";
 
 // lazy load components
 const MaKbar = lazy(() => import("./Ma/MaKbar"));
 const Obv = lazy(() => import("./Obv/Obv"));
 const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
-const MJ = lazy(() => import("./MJ"));
-const MR = lazy(() => import("./MR"));
-const Kd = lazy(() => import("./Kd"));
+const MJ = lazy(() => import("./Mj/MJ"));
+const MR = lazy(() => import("./Mr/MR"));
+const Kd = lazy(() => import("./Kd/Kd"));
 const Mfi = lazy(() => import("./Mfi/Mfi"));
 import GlassBar from "./GlassBar";
 

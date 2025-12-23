@@ -17,12 +17,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../hooks/useIndicatorSettings";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
-  calculateIndicators,
-  EnhancedDealData,
-} from "../../utils/indicatorUtils";
-import {
+  Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -34,14 +32,27 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
-import { DealsContext } from "../../context/DealsContext";
-import { DivergenceSignalType } from "../../types";
-import detectKdDivergence from "../../utils/detectKdDivergence";
-import Fundamental from "./Tooltip/Fundamental";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
+import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import { DealsContext } from "../../../context/DealsContext";
+import Fundamental from "../Tooltip/Fundamental";
 
-interface KdChartData extends Partial<EnhancedDealData> {
-  // signals and other properties if needed
+interface MjChartData
+  extends Partial<{
+    t: number | string;
+    o: number | null;
+    h: number | null;
+    l: number | null;
+    c: number | null;
+    v: number | null;
+  }> {
+  j: number | null;
+  osc: number | null;
+  ma20: number | null;
+  longZone: number | null; // For Area chart
+  shortZone: number | null; // For Area chart
+  positiveOsc: number | null;
+  negativeOsc: number | null;
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -51,13 +62,13 @@ interface StepCheck {
   status: CheckStatus;
 }
 
-interface KdStep {
+interface MjStep {
   label: string;
   description: string;
   checks: StepCheck[];
 }
 
-export default function Kd({
+export default function MJ({
   id,
   visibleCount,
   setVisibleCount,
@@ -70,8 +81,8 @@ export default function Kd({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
+  const { settings } = useIndicatorSettings();
   const [activeStep, setActiveStep] = useState(0);
 
   // Zoom & Pan Control
@@ -147,26 +158,55 @@ export default function Kd({
     };
   }, [deals.length, visibleCount, rightOffset]);
 
-  const chartData = useMemo((): KdChartData[] => {
-    return calculateIndicators(deals, settings).slice(
-      -(visibleCount + rightOffset),
-      rightOffset === 0 ? undefined : -rightOffset
-    ) as KdChartData[];
-  }, [deals, settings, visibleCount, rightOffset]);
+  const chartData = useMemo((): MjChartData[] => {
+    const data = calculateIndicators(deals, settings);
 
+    return data
+      .map((item) => {
+        const { j, osc } = item;
+
+        // Logic from original file:
+        // Long: J > 50 && Osc > 0
+        // Short: J < 50 && Osc < 0
+        const isLong = (j || 0) > 50 && (osc || 0) > 0;
+        const isShort = (j || 0) < 50 && (osc || 0) < 0;
+
+        return {
+          ...item,
+          j,
+          osc,
+          longZone: isLong ? j : null,
+          shortZone: isShort ? j : null,
+          positiveOsc: (osc || 0) > 0 ? osc : 0,
+          negativeOsc: (osc || 0) < 0 ? osc : 0,
+        };
+      })
+      .slice(
+        -(visibleCount + rightOffset),
+        rightOffset === 0 ? undefined : -rightOffset
+      );
+  }, [deals, visibleCount, rightOffset, settings]);
+
+  // Calculate Entry Signals (State Transition)
   const signals = useMemo(() => {
-    // We need to convert chartData back to the format detectKdDivergence expects if possible,
-    // or just run it on the source deals slice if needed.
-    // detectKdDivergence expects {t, h, l, k, d}.
-    // We can map from chartData which has all of these.
-    const inputForDivergence = chartData.map((d) => ({
-      t: d.t as number,
-      h: d.h as number,
-      l: d.l as number,
-      k: d.k as number,
-      d: d.d as number,
-    }));
-    return detectKdDivergence(inputForDivergence);
+    const result = [];
+    for (let i = 1; i < chartData.length; i++) {
+      const curr = chartData[i];
+      const prev = chartData[i - 1];
+
+      const currLong = (curr.j || 0) > 50 && (curr.osc || 0) > 0;
+      const prevLong = (prev.j || 0) > 50 && (prev.osc || 0) > 0;
+
+      const currShort = (curr.j || 0) < 50 && (curr.osc || 0) < 0;
+      const prevShort = (prev.j || 0) < 50 && (prev.osc || 0) < 0;
+
+      if (currLong && !prevLong) {
+        result.push({ t: curr.t, type: "entry_long", price: curr.c });
+      } else if (currShort && !prevShort) {
+        result.push({ t: curr.t, type: "entry_short", price: curr.c });
+      }
+    }
+    return result;
   }, [chartData]);
 
   const { steps, score, recommendation } = useMemo(() => {
@@ -179,119 +219,87 @@ export default function Kd({
     const isNum = (n: any): n is number => typeof n === "number";
 
     const price = current.c;
-    const kVal = current.k;
-    const dVal = current.d;
-    const ma = current.ma20;
-    const vol = current.v;
-    const volMa = current.volMa20;
-    const prevK = prev.k || 0;
-    const prevD = prev.d || 0;
+    const j = current.j;
+    const osc = current.osc;
+    const ma20 = current.ma20;
 
-    if (
-      !isNum(price) ||
-      !isNum(kVal) ||
-      !isNum(dVal) ||
-      !isNum(ma) ||
-      !isNum(vol) ||
-      !isNum(volMa)
-    ) {
+    if (!isNum(price) || !isNum(j) || !isNum(osc)) {
       return { steps: [], score: 0, recommendation: "Data Error" };
     }
 
-    // I. Regime
-    const volRatio = vol / volMa;
-    const isVolStable = volRatio > 0.6;
-    const maRising = ma > (prev.ma20 || 0);
-    const trendStatus = maRising ? "Uptrend" : "Downtrend/Flat";
+    const isLongZone = j > 50 && osc > 0;
+    const isShortZone = j < 50 && osc < 0;
+    const trendUp = isNum(ma20) && price > ma20;
+    const jRising = j > (prev.j || 0);
+    const oscRising = osc > (prev.osc || 0);
 
-    // II. Entry
-    const isOversold = kVal < 20 && dVal < 20;
-    const isOverbought = kVal > 80 && dVal > 80;
-    const goldCross = prevK < prevD && kVal > dVal;
-    const deathCross = prevK > prevD && kVal < dVal;
-
-    // Check for recent bullish divergence (last 3 candles)
-    const recentBullishDiv = signals.some(
-      (s) =>
-        s.type === DivergenceSignalType.BULLISH_DIVERGENCE && s.t === current.t
-    );
-    const recentBearishDiv = signals.some(
-      (s) =>
-        s.type === DivergenceSignalType.BEARISH_DIVERGENCE && s.t === current.t
-    );
-
-    // III. Risk
-    const stopLoss = (price * 0.97).toFixed(2); // 3% trail
-
-    // Score
+    // Scoring
     let totalScore = 0;
-    // 1. Volume (20)
-    if (isVolStable) totalScore += 20;
+
+    // 1. Zone Status (40)
+    if (isLongZone) totalScore += 40;
+    else if (j > 50 || osc > 0) totalScore += 20; // Partial bull
+    if (isShortZone) totalScore -= 40;
+
     // 2. Trend (20)
-    if (maRising || price > ma) totalScore += 20;
-    // 3. KD Position (40)
-    if (isOversold && goldCross) totalScore += 40; // Strong buy
-    else if (goldCross && price > ma) totalScore += 30; // Trend Buy
-    else if (recentBullishDiv) totalScore += 30; // Divergence Buy
-    else if (kVal > dVal && kVal > prevK) totalScore += 10; // Momentum
+    if (trendUp) totalScore += 20;
 
-    if (isOverbought || deathCross || recentBearishDiv) totalScore -= 20;
-
-    // 4. Price Action (20)
-    if (price > (current.o || 0)) totalScore += 20;
+    // 3. Momentum (40)
+    if (jRising) totalScore += 20;
+    if (oscRising) totalScore += 20;
 
     if (totalScore < 0) totalScore = 0;
+    if (totalScore > 100) totalScore = 100;
 
-    let rec = "Reject";
+    let rec = "Neutral";
     if (totalScore >= 80) rec = "Strong Buy";
-    else if (totalScore >= 60) rec = "Watch";
-    else if (deathCross || isOverbought) rec = "Sell/Exit";
-    else rec = "Neutral";
+    else if (totalScore >= 60) rec = "Buy";
+    else if (totalScore <= 20) rec = "Sell";
+    else rec = "Hold";
 
-    const kdSteps: KdStep[] = [
+    // const stopLoss = (price * 0.95).toFixed(2);
+
+    const mjSteps: MjStep[] = [
       {
-        label: "I. 市場環境",
-        description: "流動性與趨勢 (Regime)",
+        label: "I. 指標狀態",
+        description: "MJ 雙指標共振",
         checks: [
           {
-            label: `成交量穩定 (>60% MA): ${(volRatio * 100).toFixed(0)}%`,
-            status: isVolStable ? "pass" : "fail",
+            label: `KD-J 線 > 50: ${j.toFixed(1)}`,
+            status: j > 50 ? "pass" : "fail",
           },
           {
-            label: `趨勢方向 (MA${settings.ma20}): ${trendStatus}`,
-            status: maRising ? "pass" : "manual",
-          },
-          { label: "波動度正常 (ATR)", status: "manual" },
-        ],
-      },
-      {
-        label: "II. 入場條件",
-        description: "交叉與背離 (Entry)",
-        checks: [
-          {
-            label: `KD 黃金交叉: ${goldCross ? "Yes" : "No"}`,
-            status: goldCross ? "pass" : "fail",
-          },
-          {
-            label: `超賣區 (<20): ${isOversold ? "Yes" : "No"}`,
-            status: isOversold ? "pass" : "fail",
-          },
-          {
-            label: `底背離信號: ${recentBullishDiv ? "Yes" : "No"}`,
-            status: recentBullishDiv ? "pass" : "manual",
+            label: `MACD Osc > 0: ${osc.toFixed(2)}`,
+            status: osc > 0 ? "pass" : "fail",
           },
         ],
       },
       {
-        label: "III. 風險控管",
-        description: "停損與部位 (Risk)",
+        label: "II. 訊號判定",
+        description: "多空區域確認",
         checks: [
-          { label: `建議停損: ${stopLoss}`, status: "manual" },
           {
-            label: "KD 極端值減倉 (>85)",
-            status: kVal > 85 ? "fail" : "pass",
+            label: `多方共振 (J>50 & Osc>0): ${isLongZone ? "Yes" : "No"}`,
+            status: isLongZone ? "pass" : "fail",
           },
-          { label: "死亡交叉警示", status: deathCross ? "fail" : "pass" },
+          {
+            label: `空方共振 (J<50 & Osc<0): ${isShortZone ? "Yes" : "No"}`,
+            status: isShortZone ? "fail" : "pass",
+          },
+        ],
+      },
+      {
+        label: "III. 趨勢與動能",
+        description: "MA20 與 動能方向",
+        checks: [
+          {
+            label: `價格 > MA20: ${trendUp ? "Yes" : "No"}`,
+            status: trendUp ? "pass" : "fail",
+          },
+          {
+            label: `J線 上升中: ${jRising ? "Yes" : "No"}`,
+            status: jRising ? "pass" : "fail",
+          },
         ],
       },
       {
@@ -299,20 +307,15 @@ export default function Kd({
         description: `得分: ${totalScore} - ${rec}`,
         checks: [
           {
-            label: "趨勢動能強 (K > D)",
-            status: kVal > dVal ? "pass" : "fail",
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
           },
-          {
-            label: "無頂部背離",
-            status: recentBearishDiv ? "fail" : "pass",
-          },
-          { label: "量價配合", status: isVolStable ? "pass" : "manual" },
         ],
       },
     ];
 
-    return { steps: kdSteps, score: totalScore, recommendation: rec };
-  }, [chartData, signals]);
+    return { steps: mjSteps, score: totalScore, recommendation: rec };
+  }, [chartData]);
 
   const handleStep = (step: number) => () => {
     setActiveStep(step);
@@ -359,7 +362,7 @@ export default function Kd({
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h6" component="div" color="white">
-            KD
+            MJ
           </Typography>
         </MuiTooltip>
 
@@ -424,12 +427,19 @@ export default function Kd({
       </Card>
 
       <Box ref={chartContainerRef} sx={{ flexGrow: 1, minHeight: 0 }}>
-        {/* Price Chart */}
-        <ResponsiveContainer width="100%" height="60%">
-          <ComposedChart data={chartData} syncId="kdSync">
+        {/* Main Price Chart (65%) */}
+        <ResponsiveContainer width="100%" height="65%">
+          <ComposedChart data={chartData} syncId="mjSync">
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
             <YAxis domain={["auto", "auto"]} />
+            <YAxis
+              yAxisId="right_dummy"
+              orientation="right"
+              tick={false}
+              axisLine={false}
+              width={40}
+            />
             <Tooltip
               offset={50}
               contentStyle={{
@@ -479,61 +489,70 @@ export default function Kd({
               stroke="#ff9800"
               dot={false}
               activeDot={false}
-              name={`${settings.ma20} MA`}
+              name="20 MA"
               strokeWidth={1.5}
             />
 
-            {/* Divergence Signals on Price Chart */}
+            {/* Signal Markers */}
             {signals.map((signal) => {
-              const isBearish =
-                signal.type === DivergenceSignalType.BEARISH_DIVERGENCE;
-              // Calculate y position: slightly above High for bearish, slightly below Low for bullish
-              // We need to look up the price again because signal might only have k/d/t
-              // But we passed {t, h, l ...} to detectKdDivergence?
-              // Wait, detectKdDivergence output 'signals' only has {t, k, d, type, description}.
-              // We need to find the H or L from chartData.
-              const dataPoint = chartData.find((d) => d.t === signal.t);
-              const yPos = isBearish ? dataPoint?.h || 0 : dataPoint?.l || 0;
+              const isLong = signal.type === "entry_long";
+              const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
+              const color = isLong ? "#f44336" : "#4caf50";
 
               return (
                 <ReferenceDot
                   key={signal.t}
                   x={signal.t}
                   y={yPos}
+                  r={4}
+                  stroke="none"
                   shape={(props: any) => {
                     const { cx, cy } = props;
                     if (!cx || !cy) return <g />;
 
                     return (
                       <g>
-                        {isBearish ? (
-                          // Down Triangle (Green)
-                          <path
-                            d={`M${cx - 5},${cy - 10} L${cx + 5},${
-                              cy - 10
-                            } L${cx},${cy} Z`}
-                            fill="#4caf50"
-                          />
+                        {isLong ? (
+                          // Long Entry
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy + 10} L${cx + 5},${
+                                cy + 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                            <text
+                              x={cx}
+                              y={cy + 22}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={11}
+                              fontWeight="bold"
+                            >
+                              買進
+                            </text>
+                          </>
                         ) : (
-                          // Up Triangle (Red)
-                          <path
-                            d={`M${cx - 5},${cy + 10} L${cx + 5},${
-                              cy + 10
-                            } L${cx},${cy} Z`}
-                            fill="#f44336"
-                          />
+                          // Short Entry
+                          <>
+                            <path
+                              d={`M${cx - 5},${cy - 10} L${cx + 5},${
+                                cy - 10
+                              } L${cx},${cy} Z`}
+                              fill={color}
+                            />
+                            <text
+                              x={cx}
+                              y={cy - 15}
+                              textAnchor="middle"
+                              fill={color}
+                              fontSize={11}
+                              fontWeight="bold"
+                            >
+                              賣出
+                            </text>
+                          </>
                         )}
-                        <text
-                          x={cx}
-                          y={isBearish ? cy - 15 : cy + 20}
-                          textAnchor="middle"
-                          fill={isBearish ? "#4caf50" : "#f44336"}
-                          fontSize={12}
-                          fontWeight="bold"
-                          dy={isBearish ? 0 : 3}
-                        >
-                          {isBearish ? "頂背離" : "底背離"}
-                        </text>
                       </g>
                     );
                   }}
@@ -543,51 +562,87 @@ export default function Kd({
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* KD Chart */}
-        <ResponsiveContainer width="100%" height="40%">
-          <ComposedChart data={chartData} syncId="kdSync">
+        {/* Combined J-Line & MACD Chart (35%) */}
+        <ResponsiveContainer width="100%" height="35%">
+          <ComposedChart data={chartData} syncId="mjSync">
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" />
-            <YAxis domain={[0, 100]} ticks={[0, 20, 50, 80, 100]} />
+
+            {/* Left Axis for MACD Osc */}
+            <YAxis
+              yAxisId="left"
+              orientation="left"
+              stroke="#888"
+              fontSize={10}
+            />
+
+            {/* Right Axis for J-Line (0-100) */}
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              domain={[0, 100]}
+              ticks={[0, 25, 50, 75, 100]}
+              stroke="#2196f3"
+              fontSize={10}
+              width={40}
+            />
+
             <Tooltip
               offset={50}
-              contentStyle={{
-                backgroundColor: "#222",
-                border: "none",
-                borderRadius: 4,
-              }}
-              itemStyle={{ fontSize: 12 }}
-              labelStyle={{ color: "#aaa", marginBottom: 5 }}
+              contentStyle={{ backgroundColor: "#222", border: "none" }}
             />
-            <ReferenceLine
-              y={80}
-              stroke="#f44336"
-              strokeDasharray="3 3"
-              label={{ value: "Overbought", fill: "#f44336", fontSize: 10 }}
-            />
-            <ReferenceLine
-              y={20}
-              stroke="#4caf50"
-              strokeDasharray="3 3"
-              label={{ value: "Oversold", fill: "#4caf50", fontSize: 10 }}
-            />
-            <ReferenceLine y={50} stroke="#666" strokeDasharray="3 3" />
 
+            <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5} />
+            <ReferenceLine
+              y={50}
+              yAxisId="right"
+              stroke="#666"
+              strokeDasharray="3 3"
+              opacity={0.5}
+            />
+
+            {/* MACD Bars (Left Axis) */}
+            <Bar
+              yAxisId="left"
+              dataKey="positiveOsc"
+              fill="#f44336"
+              barSize={3}
+              name="Osc +"
+            />
+            <Bar
+              yAxisId="left"
+              dataKey="negativeOsc"
+              fill="#4caf50"
+              barSize={3}
+              name="Osc -"
+            />
+
+            {/* J Line Zones (Right Axis) */}
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="longZone"
+              fill="#ffcdd2"
+              stroke="none"
+              baseValue={50}
+              opacity={0.3}
+            />
+            <Area
+              yAxisId="right"
+              type="monotone"
+              dataKey="shortZone"
+              fill="#c8e6c9"
+              stroke="none"
+              baseValue={50}
+              opacity={0.3}
+            />
             <Line
-              dataKey="k"
+              yAxisId="right"
+              dataKey="j"
               stroke="#2196f3"
               dot={false}
-              activeDot={false}
               strokeWidth={2}
-              name="K"
-            />
-            <Line
-              dataKey="d"
-              stroke="#ff9800"
-              dot={false}
-              activeDot={false}
-              strokeWidth={2}
-              name="D"
+              name="J Line"
             />
           </ComposedChart>
         </ResponsiveContainer>

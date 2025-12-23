@@ -66,6 +66,7 @@ export default function IndicatorSettingsSection() {
     { key: "ma10", label: "MA 中 (10)" },
     { key: "ma20", label: "MA 長 (20)" },
     { key: "ma60", label: "MA 季 (60)" },
+    { key: "ma240", label: "MA 年 (240)" },
     { key: "boll", label: "布林 (20)" },
     { key: "kd", label: "KD (9)" },
     { key: "mfi", label: "MFI (14)" },

@@ -242,10 +242,11 @@ export default function MaKbar({
     const trend = current.trend as string;
     const ma5 = current.ma5;
     const ma20 = current.ma20;
+    const ma240 = current.ma240;
 
     const isNum = (n: any): n is number => typeof n === "number";
 
-    if (!isNum(price) || !isNum(ma5) || !isNum(ma20)) {
+    if (!isNum(price) || !isNum(ma5) || !isNum(ma20) || !isNum(ma240)) {
       return { steps: [], score: 0, recommendation: "Data Error" };
     }
 
@@ -310,7 +311,7 @@ export default function MaKbar({
         description: `MA 排列: ${trend}`,
         checks: [
           {
-            label: `均線多頭排列 (${settings.ma5}>${settings.ma10}>${settings.ma20}>${settings.ma60})`,
+            label: `均線多頭排列 (${settings.ma5}>${settings.ma10}>${settings.ma20}>${settings.ma60}>${settings.ma240})`,
             status: isBullish ? "pass" : isBearish ? "fail" : "manual",
           },
           {
@@ -515,7 +516,7 @@ export default function MaKbar({
               onChange={(e) => setShowGaps(e.target.checked)}
             />
           }
-          label={<Typography variant="caption">顯示缺口</Typography>}
+          label={<Typography variant="caption" color="white">顯示缺口</Typography>}
           sx={{ mr: 1 }}
         />
         <FormControlLabel
@@ -528,7 +529,7 @@ export default function MaKbar({
               color="secondary"
             />
           }
-          label={<Typography variant="caption">僅未補</Typography>}
+          label={<Typography variant="caption" color="white">僅未補</Typography>}
           sx={{ mr: 1 }}
         />
 
@@ -703,6 +704,15 @@ export default function MaKbar({
               activeDot={false}
               strokeWidth={1}
               name={`MA${settings.ma60}`}
+            />
+            <Line
+              dataKey="ma240"
+              stroke="#9e9e9e"
+              dot={false}
+              activeDot={false}
+              strokeWidth={1}
+              strokeDasharray="5 5"
+              name={`MA${settings.ma240}`}
             />
 
             {/* Signal Markers */}

@@ -17,7 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../hooks/useIndicatorSettings";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
   Area,
   Bar,
@@ -32,10 +32,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { calculateIndicators } from "../../utils/indicatorUtils";
-import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
-import { DealsContext } from "../../context/DealsContext";
-import Fundamental from "./Tooltip/Fundamental";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
+import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import { DealsContext } from "../../../context/DealsContext";
+import Fundamental from "../Tooltip/Fundamental";
 
 interface MrChartData
   extends Partial<{

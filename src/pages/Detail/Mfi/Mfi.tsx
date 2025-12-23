@@ -29,24 +29,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import mfi from "../../../cls_tools/mfi";
+import {
+  calculateIndicators,
+  EnhancedDealData,
+} from "../../../utils/indicatorUtils";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import Fundamental from "../Tooltip/Fundamental";
 
-interface MfiChartData
-  extends Partial<{
-    t: number | string;
-    o: number | null;
-    h: number | null;
-    l: number | null;
-    c: number | null;
-    v: number | null;
-  }> {
-  mfi: number | null;
-  ma20: number | null;
-  ma10?: number | null;
-  volMa20?: number | null;
+interface MfiChartData extends Partial<EnhancedDealData> {
   buySignal?: number | null;
   exitSignal?: number | null;
   buyReason?: string;
@@ -80,6 +72,7 @@ export default function Mfi({
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const deals = useContext(DealsContext);
+  const { settings } = useIndicatorSettings();
   const [activeStep, setActiveStep] = useState(0);
 
   // Zoom & Pan Control
@@ -158,50 +151,12 @@ export default function Mfi({
   const chartData = useMemo((): MfiChartData[] => {
     if (!deals || deals.length === 0) return [];
 
-    let mfiData = mfi.init(deals[0], 14);
+    const enhancedData = calculateIndicators(deals, settings);
 
-    const initialData = deals
-      .map((deal, i) => {
-        if (i > 0) {
-          mfiData = mfi.next(deal, mfiData, 14);
-        }
-
-        // Simple SMA 20 for Price and Volume
-        let ma20: number | null = null;
-        let ma10: number | null = null;
-        let volMa20: number | null = null;
-
-        if (i >= 19) {
-          let sumC = 0;
-          let sumV = 0;
-          for (let j = 0; j < 20; j++) {
-            sumC += deals[i - j].c || 0;
-            sumV += deals[i - j].v || 0;
-          }
-          ma20 = sumC / 20;
-          volMa20 = sumV / 20;
-        }
-
-        if (i >= 9) {
-          let sumC = 0;
-          for (let j = 0; j < 10; j++) {
-            sumC += deals[i - j].c || 0;
-          }
-          ma10 = sumC / 10;
-        }
-
-        return {
-          ...deal,
-          mfi: mfiData.mfi,
-          ma20,
-          ma10,
-          volMa20,
-        };
-      })
-      .slice(
-        -(visibleCount + rightOffset),
-        rightOffset === 0 ? undefined : -rightOffset
-      );
+    const initialData = enhancedData.slice(
+      -(visibleCount + rightOffset),
+      rightOffset === 0 ? undefined : -rightOffset
+    );
 
     // Second pass for signals (Trend/Turn)
     const dataWithSignals = initialData.map(
@@ -232,7 +187,7 @@ export default function Mfi({
     );
 
     return dataWithSignals;
-  }, [deals, visibleCount, rightOffset]);
+  }, [deals, settings, visibleCount, rightOffset]);
 
   const { steps, score, recommendation } = useMemo(() => {
     if (chartData.length === 0)

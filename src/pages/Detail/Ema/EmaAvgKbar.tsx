@@ -36,7 +36,6 @@ import ma from "../../../cls_tools/ma";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import { calculateDMI } from "../../../utils/technicalIndicators";
-import Fundamental from "../Tooltip/Fundamental";
 
 interface AvgMaChartData
   extends Partial<{
@@ -184,7 +183,6 @@ export default function AvgMaKbar({
         ema10_data = ema.next(deal, ema10_data, settings.emaLong);
         ma60_data = ma.next(deal, ma60_data, settings.ma60);
       }
-
 
       // Vol MA20
       let volMa20: number | null = null;
@@ -479,11 +477,9 @@ export default function AvgMaKbar({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div" color="white">
-            EMA
-          </Typography>
-        </MuiTooltip>
+        <Typography variant="h6" component="div" color="white">
+          EMA
+        </Typography>
 
         <Chip
           label={`${score}分 - ${recommendation}`}

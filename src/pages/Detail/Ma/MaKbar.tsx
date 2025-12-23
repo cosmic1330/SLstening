@@ -41,7 +41,6 @@ import { useGapDetection } from "../../../hooks/useGapDetection";
 import { useGapVisualization } from "../../../hooks/useGapVisualization";
 import useMarketAnalysis from "../../../hooks/useMarketAnalysis";
 import { UrlTaPerdOptions } from "../../../types";
-import Fundamental from "../Tooltip/Fundamental";
 
 type CheckStatus = "pass" | "fail" | "manual";
 
@@ -492,11 +491,9 @@ export default function MaKbar({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title={<Fundamental id="strategy" />} arrow>
-          <Typography variant="h6" component="div" color="white">
-            MA
-          </Typography>
-        </MuiTooltip>
+        <Typography variant="h6" component="div" color="white">
+          MA
+        </Typography>
 
         <Chip
           label={`${score}分 - ${recommendation}`}
@@ -516,7 +513,11 @@ export default function MaKbar({
               onChange={(e) => setShowGaps(e.target.checked)}
             />
           }
-          label={<Typography variant="caption" color="white">顯示缺口</Typography>}
+          label={
+            <Typography variant="caption" color="white">
+              顯示缺口
+            </Typography>
+          }
           sx={{ mr: 1 }}
         />
         <FormControlLabel
@@ -529,7 +530,11 @@ export default function MaKbar({
               color="secondary"
             />
           }
-          label={<Typography variant="caption" color="white">僅未補</Typography>}
+          label={
+            <Typography variant="caption" color="white">
+              僅未補
+            </Typography>
+          }
           sx={{ mr: 1 }}
         />
 

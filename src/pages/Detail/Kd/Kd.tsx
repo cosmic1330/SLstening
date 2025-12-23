@@ -38,7 +38,6 @@ import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCan
 import { DealsContext } from "../../../context/DealsContext";
 import { DivergenceSignalType } from "../../../types";
 import detectKdDivergence from "../../../utils/detectKdDivergence";
-import Fundamental from "../Tooltip/Fundamental";
 
 interface KdChartData extends Partial<EnhancedDealData> {
   // signals and other properties if needed
@@ -357,11 +356,9 @@ export default function Kd({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div" color="white">
-            KD
-          </Typography>
-        </MuiTooltip>
+        <Typography variant="h6" component="div" color="white">
+          KD
+        </Typography>
 
         <Chip
           label={`${score}分 - ${recommendation}`}

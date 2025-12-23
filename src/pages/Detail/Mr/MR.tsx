@@ -35,7 +35,6 @@ import {
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
-import Fundamental from "../Tooltip/Fundamental";
 
 interface MrChartData
   extends Partial<{
@@ -393,11 +392,9 @@ export default function MR({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div" color="white">
-            MR
-          </Typography>
-        </MuiTooltip>
+        <Typography variant="h6" component="div" color="white">
+          MR
+        </Typography>
 
         <Chip
           label={`${score}分 - ${recommendation}`}

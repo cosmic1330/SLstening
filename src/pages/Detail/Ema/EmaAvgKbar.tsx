@@ -9,15 +9,13 @@ import {
   CircularProgress,
   Container,
   Divider,
-  Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
   Stepper,
   Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -35,6 +33,7 @@ import ema from "../../../cls_tools/ema";
 import ma from "../../../cls_tools/ma";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import { calculateDMI } from "../../../utils/technicalIndicators";
 
 interface AvgMaChartData
@@ -74,13 +73,11 @@ interface SignalPoint extends AvgMaChartData {
 }
 
 export default function AvgMaKbar({
-  id,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
-  id?: string;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;

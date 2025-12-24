@@ -1,39 +1,39 @@
+import CancelIcon from "@mui/icons-material/Cancel";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   Box,
-  Container,
-  Divider,
-  Tooltip as MuiTooltip,
-  Stack,
-  Typography,
-  Stepper,
-  Step,
-  StepButton,
   Card,
   CardContent,
   Chip,
   CircularProgress,
+  Container,
+  Divider,
+  Tooltip as MuiTooltip,
+  Stack,
+  Step,
+  StepButton,
+  Stepper,
+  Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
+  CartesianGrid,
   ComposedChart,
   Customized,
   Line,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Scatter,
 } from "recharts";
-import { calculateIndicators } from "../../../utils/indicatorUtils";
-import { DealsContext } from "../../../context/DealsContext";
-import Fundamental from "../Tooltip/Fundamental";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
+import Fundamental from "../Tooltip/Fundamental";
 
 interface BolleanChartData
   extends Partial<{

@@ -1,4 +1,4 @@
-import { Box, styled, createTheme, ThemeProvider } from "@mui/material";
+import { Box, createTheme, styled, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
@@ -7,8 +7,8 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useState,
   useRef,
+  useState,
 } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
@@ -21,8 +21,9 @@ import {
   IndicatorsDateTimeType,
 } from "../../utils/analyzeIndicatorsData";
 import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
-import AvgMaKbar from "./Ema/EmaAvgKbar";
 import Bollean from "./Bollean/Bollean";
+import AvgMaKbar from "./Ema/EmaAvgKbar";
+import GlassBar from "./GlassBar";
 
 // lazy load components
 const MaKbar = lazy(() => import("./Ma/MaKbar"));
@@ -32,7 +33,6 @@ const MJ = lazy(() => import("./Mj/MJ"));
 const MR = lazy(() => import("./Mr/MR"));
 const Kd = lazy(() => import("./Kd/Kd"));
 const Mfi = lazy(() => import("./Mfi/Mfi"));
-import GlassBar from "./GlassBar";
 
 const PageContainer = styled(Box)`
   width: 100vw;

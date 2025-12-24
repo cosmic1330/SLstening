@@ -12,35 +12,34 @@ import {
   Container,
   Divider,
   FormControlLabel,
-  Switch,
-  Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
   Stepper,
+  Switch,
   Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
   Line,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  ReferenceDot,
 } from "recharts";
-import { calculateIndicators } from "../../../utils/indicatorUtils";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import { useGapDetection } from "../../../hooks/useGapDetection";
 import { useGapVisualization } from "../../../hooks/useGapVisualization";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import useMarketAnalysis from "../../../hooks/useMarketAnalysis";
 import { UrlTaPerdOptions } from "../../../types";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 
 type CheckStatus = "pass" | "fail" | "manual";
 

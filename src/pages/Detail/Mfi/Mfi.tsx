@@ -15,7 +15,7 @@ import {
   Stepper,
   Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -28,13 +28,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
   calculateIndicators,
   EnhancedDealData,
 } from "../../../utils/indicatorUtils";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
-import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
-import { DealsContext } from "../../../context/DealsContext";
 
 interface MfiChartData extends Partial<EnhancedDealData> {
   buySignal?: number | null;

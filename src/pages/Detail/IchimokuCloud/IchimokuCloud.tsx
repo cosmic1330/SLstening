@@ -1,41 +1,41 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   Box,
-  Container,
-  Divider,
-  Stack,
-  Typography,
-  Stepper,
-  Step,
-  StepButton,
   Card,
   CardContent,
   Chip,
   CircularProgress,
+  Container,
+  Divider,
+  Stack,
+  Step,
+  StepButton,
+  Stepper,
+  Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   Bar,
+  CartesianGrid,
   ComposedChart,
   Customized,
   Line,
   ResponsiveContainer,
+  Scatter,
   Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Scatter,
 } from "recharts";
-import ichimoku from "./ichimoku";
-import { DealsContext } from "../../../context/DealsContext";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
+import { DealsContext } from "../../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../../types";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import CancelIcon from "@mui/icons-material/Cancel";
 import formatDateTime from "../../../utils/formatDateTime";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import ichimoku from "./ichimoku";
 
 // Define the structure for the chart data, including Ichimoku values
 interface IchimokuChartData

@@ -9,15 +9,13 @@ import {
   CircularProgress,
   Container,
   Divider,
-  Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
   Stepper,
   Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   Bar,
@@ -32,9 +30,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { calculateIndicators } from "../../../utils/indicatorUtils";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 
 interface MrChartData
   extends Partial<{
@@ -105,13 +104,11 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function MR({
-  id,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
-  id?: string;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;

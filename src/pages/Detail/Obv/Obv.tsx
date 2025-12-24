@@ -9,11 +9,11 @@ import {
   CircularProgress,
   Container,
   Divider,
+  Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
   Stepper,
-  Tooltip as MuiTooltip,
   Typography,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -22,10 +22,10 @@ import {
   ComposedChart,
   Customized,
   Line,
+  Tooltip as RechartsTooltip,
   ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
-  Tooltip as RechartsTooltip,
   XAxis,
   YAxis,
 } from "recharts";

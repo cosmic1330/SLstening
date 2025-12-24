@@ -15,12 +15,7 @@ import {
   Stepper,
   Typography,
 } from "@mui/material";
-import { useContext, useMemo, useState, useRef, useEffect } from "react";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
-import {
-  calculateIndicators,
-  EnhancedDealData,
-} from "../../../utils/indicatorUtils";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
   ComposedChart,
@@ -35,8 +30,13 @@ import {
 } from "recharts";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import { DivergenceSignalType } from "../../../types";
 import detectKdDivergence from "../../../utils/detectKdDivergence";
+import {
+  calculateIndicators,
+  EnhancedDealData,
+} from "../../../utils/indicatorUtils";
 
 interface KdChartData extends Partial<EnhancedDealData> {
   // signals and other properties if needed

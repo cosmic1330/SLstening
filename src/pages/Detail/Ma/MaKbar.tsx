@@ -555,40 +555,30 @@ export default function MaKbar({
         <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
           <Stack
             direction={{ xs: "column", md: "row" }}
-            spacing={2}
+            spacing={1}
             alignItems="center"
           >
-            <Box sx={{ minWidth: 200, flexShrink: 0 }}>
-              <Typography variant="subtitle1" color="primary" fontWeight="bold">
-                {steps[activeStep]?.description}
-              </Typography>
-            </Box>
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ display: { xs: "none", md: "block" } }}
-            />
-            <Box sx={{ flexGrow: 1 }}>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {steps[activeStep]?.checks.map((check, idx) => (
-                  <Chip
-                    key={idx}
-                    icon={getStatusIcon(check.status)}
-                    label={check.label}
-                    variant="outlined"
-                    color={
-                      check.status === "pass"
-                        ? "success"
-                        : check.status === "fail"
-                        ? "error"
-                        : "default"
-                    }
-                    size="small"
-                    sx={{ my: 0.5 }}
-                  />
-                ))}
-              </Stack>
-            </Box>
+            <Typography variant="subtitle2" color="primary" fontWeight="bold">
+              {steps[activeStep]?.description}
+            </Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {steps[activeStep]?.checks.map((check, idx) => (
+                <Chip
+                  key={idx}
+                  icon={getStatusIcon(check.status)}
+                  label={check.label}
+                  variant="outlined"
+                  color={
+                    check.status === "pass"
+                      ? "success"
+                      : check.status === "fail"
+                      ? "error"
+                      : "default"
+                  }
+                  size="small"
+                />
+              ))}
+            </Stack>
           </Stack>
         </CardContent>
       </Card>

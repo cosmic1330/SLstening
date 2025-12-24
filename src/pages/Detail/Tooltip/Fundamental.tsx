@@ -59,32 +59,25 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     fetchData();
   }, [id]);
 
-  const formatValue = (
-    value: any | [any, any],
+  const formatSingleValue = (
+    val: any,
     suffix: string = "",
     decimals: number = 2
   ) => {
-    if (Array.isArray(value)) {
-      const [first, second] = value;
-      const formattedFirst =
-        first === null || first === undefined || first === "" || isNaN(first)
-          ? "N/A"
-          : Number(first).toFixed(decimals);
-      const formattedSecond =
-        second === null ||
-        second === undefined ||
-        second === "" ||
-        isNaN(second)
-          ? "N/A"
-          : Number(second).toFixed(decimals);
-      return `${formattedFirst}${suffix} / ${formattedSecond}${suffix}`;
-    }
-
-    if (value === null || value === undefined || value === "" || isNaN(value)) {
+    if (val === null || val === undefined || val === "" || isNaN(val)) {
       return "N/A";
     }
-    const numValue = Number(value);
-    return `${numValue.toFixed(decimals)}${suffix}`;
+    return `${Number(val).toFixed(decimals)}${suffix}`;
+  };
+
+  const getNumberColor = (val: any) => {
+    if (val === null || val === undefined || val === "" || isNaN(val)) {
+      return "inherit";
+    }
+    const num = Number(val);
+    if (num > 0) return "#fff"; 
+    if (num < 0) return "#52c41a"; // 空頭/負數顯綠色
+    return "inherit";
   };
 
   const MetricItem = ({
@@ -107,18 +100,38 @@ export default function Fundamental({ id }: { id: string | undefined }) {
         mb: 0.3,
       }}
     >
-      <Typography variant="caption" sx={{ fontSize: "0.7rem" }}>
+      <Typography
+        variant="caption"
+        sx={{ fontSize: "0.7rem", color: "text.secondary" }}
+      >
         {label}:
       </Typography>
       <Typography
         variant="caption"
+        component="div"
         sx={{
           fontWeight: "medium",
           fontSize: "0.7rem",
           ...(flex ? {} : { display: "block", mt: 0.2 }),
         }}
       >
-        {formatValue(value, suffix, decimals)}
+        {Array.isArray(value) ? (
+          <Box component="span" sx={{ display: "inline-flex", gap: 0.5 }}>
+            <Box component="span" sx={{ color: getNumberColor(value[0]) }}>
+              {formatSingleValue(value[0], suffix, decimals)}
+            </Box>
+            <Box component="span" sx={{ color: "text.disabled" }}>
+              /
+            </Box>
+            <Box component="span" sx={{ color: getNumberColor(value[1]) }}>
+              {formatSingleValue(value[1], suffix, decimals)}
+            </Box>
+          </Box>
+        ) : (
+          <Box component="span" sx={{ color: getNumberColor(value) }}>
+            {formatSingleValue(value, suffix, decimals)}
+          </Box>
+        )}
       </Typography>
     </Box>
   );

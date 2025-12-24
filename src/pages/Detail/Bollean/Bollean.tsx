@@ -17,6 +17,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router";
 import {
   Bar,
   CartesianGrid,
@@ -118,13 +119,11 @@ const ExitArrow = (props: any) => {
 };
 
 export default function Bollean({
-  id,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
-  id?: string;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;
@@ -133,6 +132,7 @@ export default function Bollean({
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
+  const { id } = useParams();
 
   // Zoom & Pan Control
   const chartContainerRef = useRef<HTMLDivElement>(null);

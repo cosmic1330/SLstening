@@ -180,7 +180,7 @@ export default function Kd({
     const price = current.c;
     const kVal = current.k;
     const dVal = current.d;
-    const ma = current.ma20;
+    const bollMa = current.bollMa;
     const vol = current.v;
     const volMa = current.volMa20;
     const prevK = prev.k || 0;
@@ -190,7 +190,7 @@ export default function Kd({
       !isNum(price) ||
       !isNum(kVal) ||
       !isNum(dVal) ||
-      !isNum(ma) ||
+      !isNum(bollMa) ||
       !isNum(vol) ||
       !isNum(volMa)
     ) {
@@ -200,8 +200,8 @@ export default function Kd({
     // I. Regime
     const volRatio = vol / volMa;
     const isVolStable = volRatio > 0.6;
-    const maRising = ma > (prev.ma20 || 0);
-    const trendStatus = maRising ? "Uptrend" : "Downtrend/Flat";
+    const bollMaRising = bollMa > (prev.bollMa || 0);
+    const trendStatus = bollMaRising ? "Uptrend" : "Downtrend/Flat";
 
     // II. Entry
     const isOversold = kVal < 20 && dVal < 20;
@@ -227,10 +227,10 @@ export default function Kd({
     // 1. Volume (20)
     if (isVolStable) totalScore += 20;
     // 2. Trend (20)
-    if (maRising || price > ma) totalScore += 20;
+    if (bollMaRising || price > bollMa) totalScore += 20;
     // 3. KD Position (40)
     if (isOversold && goldCross) totalScore += 40; // Strong buy
-    else if (goldCross && price > ma) totalScore += 30; // Trend Buy
+    else if (goldCross && price > bollMa) totalScore += 30; // Trend Buy
     else if (recentBullishDiv) totalScore += 30; // Divergence Buy
     else if (kVal > dVal && kVal > prevK) totalScore += 10; // Momentum
 
@@ -257,8 +257,8 @@ export default function Kd({
             status: isVolStable ? "pass" : "fail",
           },
           {
-            label: `趨勢方向 (MA${settings.ma20}): ${trendStatus}`,
-            status: maRising ? "pass" : "manual",
+            label: `趨勢方向 (中軌): ${trendStatus}`,
+            status: bollMaRising ? "pass" : "manual",
           },
           { label: "波動度正常 (ATR)", status: "manual" },
         ],
@@ -472,12 +472,28 @@ export default function Kd({
             <Customized component={BaseCandlestickRectangle} />
 
             <Line
-              dataKey="ma20"
-              stroke="#ff9800"
+              dataKey="bollMa"
+              stroke="#2196f3"
+              strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name={`${settings.ma20} MA`}
-              strokeWidth={1.5}
+              name={`${settings.boll} MA (Mid)`}
+            />
+            <Line
+              dataKey="bollUb"
+              stroke="#ff9800"
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+              name="Upper Band"
+            />
+            <Line
+              dataKey="bollLb"
+              stroke="#ff9800"
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+              name="Lower Band"
             />
 
             {/* Divergence Signals on Price Chart */}

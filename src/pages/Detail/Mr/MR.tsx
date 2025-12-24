@@ -47,7 +47,9 @@ interface MrChartData
   }> {
   rsi: number | null;
   osc: number | null;
-  ma20: number | null;
+  bollMa: number | null;
+  bollUb: number | null;
+  bollLb: number | null;
   longZone: number | null; // For Area chart
   shortZone: number | null; // For Area chart
   positiveOsc: number | null;
@@ -255,15 +257,15 @@ export default function MR({
     const price = current.c;
     const rsiVal = current.rsi;
     const osc = current.osc;
-    const ma20 = current.ma20;
+    const bollMa = current.bollMa;
 
-    if (!isNum(price) || !isNum(rsiVal) || !isNum(osc)) {
+    if (!isNum(price) || !isNum(rsiVal) || !isNum(osc) || !isNum(bollMa)) {
       return { steps: [], score: 0, recommendation: "Data Error" };
     }
 
     const isLongZone = rsiVal > 50 && osc > 0;
     const isShortZone = rsiVal < 50 && osc < 0;
-    const trendUp = isNum(ma20) && price > ma20;
+    const trendUp = price > bollMa;
     const rsiRising = rsiVal > (prev.rsi || 0);
     const oscRising = osc > (prev.osc || 0);
 
@@ -325,7 +327,7 @@ export default function MR({
         description: "MA20 與 動能方向",
         checks: [
           {
-            label: `價格 > MA20: ${trendUp ? "Yes" : "No"}`,
+            label: `價格 > 中軌: ${trendUp ? "Yes" : "No"}`,
             status: trendUp ? "pass" : "fail",
           },
           {
@@ -506,12 +508,28 @@ export default function MR({
             <Customized component={BaseCandlestickRectangle} />
 
             <Line
-              dataKey="ma20"
-              stroke="#ff9800"
+              dataKey="bollMa"
+              stroke="#2196f3"
+              strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name="20 MA"
-              strokeWidth={1.5}
+              name={`${settings.boll} MA (Mid)`}
+            />
+            <Line
+              dataKey="bollUb"
+              stroke="#ff9800"
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+              name="Upper Band"
+            />
+            <Line
+              dataKey="bollLb"
+              stroke="#ff9800"
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+              name="Lower Band"
             />
 
             {/* Entry Signal Markers */}

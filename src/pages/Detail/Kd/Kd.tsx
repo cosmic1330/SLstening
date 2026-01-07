@@ -592,7 +592,7 @@ export default function Kd({
         </ResponsiveContainer>
 
         {/* KD Chart */}
-        <ResponsiveContainer width="100%" height="40%">
+        <ResponsiveContainer width="100%" height="35%">
           <ComposedChart
             data={chartData}
             syncId="kdSync"

@@ -3,15 +3,22 @@ import {
   BugReport as BugReportIcon,
   CloudDownload as DownloadIcon,
   DeleteForever as ResetIcon,
-  Layers as TopIcon,
   Settings as SettingsIcon,
+  Sync as SyncIcon,
+  Layers as TopIcon,
 } from "@mui/icons-material";
 import {
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
+  FormControlLabel,
   Grid,
   IconButton,
   List,
@@ -21,9 +28,9 @@ import {
   ListItemText,
   Paper,
   Stack,
+  styled,
   Switch,
   Typography,
-  styled,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { sendNotification } from "@tauri-apps/plugin-notification";
@@ -72,9 +79,15 @@ const GlassCard = styled(Paper)(({ theme }) => ({
 }));
 
 function Setting() {
-  const { factory_reset } = useStocksStore();
+  const { factory_reset, fetchSupabaseWatchStock, addStocks } =
+    useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   const navigate = useNavigate();
+
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncDialogOpen, setSyncDialogOpen] = useState(false);
+  const [pendingStocks, setPendingStocks] = useState<any[]>([]);
+  const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true"
@@ -144,6 +157,53 @@ function Setting() {
     }
   }, [factory_reset]);
 
+  const handleFetchSupabase = useCallback(async () => {
+    try {
+      setSyncLoading(true);
+      const newStocks = await fetchSupabaseWatchStock();
+      if (newStocks.length === 0) {
+        sendNotification({ title: "同步", body: "沒有缺少的股票需要同步" });
+      } else {
+        setPendingStocks(newStocks);
+        setSelectedStocks(newStocks.map((s) => s.id));
+        setSyncDialogOpen(true);
+      }
+    } catch (e) {
+      console.error(e);
+      sendNotification({ title: "錯誤", body: "同步失敗" });
+    } finally {
+      setSyncLoading(false);
+    }
+  }, [fetchSupabaseWatchStock]);
+
+  const handleConfirmSync = useCallback(async () => {
+    const stocksToAdd = pendingStocks.filter((s) =>
+      selectedStocks.includes(s.id)
+    );
+    if (stocksToAdd.length > 0) {
+      await addStocks(stocksToAdd);
+      sendNotification({
+        title: "同步成功",
+        body: `已新增 ${stocksToAdd.length} 檔股票`,
+      });
+    }
+    setSyncDialogOpen(false);
+  }, [pendingStocks, selectedStocks, addStocks]);
+
+  const handleToggleSelectAll = () => {
+    if (selectedStocks.length === pendingStocks.length) {
+      setSelectedStocks([]);
+    } else {
+      setSelectedStocks(pendingStocks.map((s) => s.id));
+    }
+  };
+
+  const handleToggleStock = (id: string) => {
+    setSelectedStocks((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
   return (
     <PageContainer>
       <Container maxWidth="sm" sx={{ pt: 4 }}>
@@ -200,6 +260,46 @@ function Setting() {
                     <CircularProgress size={16} color="inherit" />
                   ) : (
                     "更新"
+                  )}
+                </Button>
+              </ListItemSecondaryAction>
+            </ListItem>
+
+            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 44 }}>
+                <SyncIcon sx={{ color: "#34d399" }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="同步Schoice自選股票"
+                secondary="加入雲端自選股票列表"
+                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                secondaryTypographyProps={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: "0.75rem",
+                }}
+              />
+              <ListItemSecondaryAction>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleFetchSupabase}
+                  disabled={syncLoading}
+                  sx={{
+                    borderRadius: "10px",
+                    borderColor: "rgba(52, 211, 153, 0.4)",
+                    color: "#34d399",
+                    "&:hover": {
+                      borderColor: "#34d399",
+                      background: "rgba(52, 211, 153, 0.1)",
+                    },
+                  }}
+                >
+                  {syncLoading ? (
+                    <CircularProgress size={16} color="inherit" />
+                  ) : (
+                    "同步"
                   )}
                 </Button>
               </ListItemSecondaryAction>
@@ -308,7 +408,9 @@ function Setting() {
               </ListItemSecondaryAction>
             </ListItem>
 
-            <Divider sx={{ mx: 2, mb: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+            <Divider
+              sx={{ mx: 2, mb: 2, borderColor: "rgba(255,255,255,0.05)" }}
+            />
 
             {/* Granular market settings */}
             <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
@@ -394,6 +496,91 @@ function Setting() {
           </Box>
         </Stack>
       </Container>
+
+      <Dialog
+        open={syncDialogOpen}
+        onClose={() => setSyncDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            background: "rgba(30, 30, 40, 0.95)",
+            backdropFilter: "blur(20px)",
+            borderRadius: "24px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            color: "white",
+            minWidth: "320px",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 800 }}>同步缺少的股票</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  size="small"
+                  checked={selectedStocks.length === pendingStocks.length}
+                  indeterminate={
+                    selectedStocks.length > 0 &&
+                    selectedStocks.length < pendingStocks.length
+                  }
+                  onChange={handleToggleSelectAll}
+                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                />
+              }
+              label={
+                <Typography
+                  variant="body2"
+                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                >
+                  全選
+                </Typography>
+              }
+            />
+          </Box>
+          <List dense sx={{ maxHeight: "300px", overflow: "auto" }}>
+            {pendingStocks.map((stock) => (
+              <ListItem key={stock.id} disablePadding>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={selectedStocks.includes(stock.id)}
+                      onChange={() => handleToggleStock(stock.id)}
+                      sx={{ color: "rgba(255,255,255,0.7)" }}
+                    />
+                  }
+                  label={
+                    <Typography variant="body2">
+                      {stock.id} - {stock.name}
+                    </Typography>
+                  }
+                  sx={{ width: "100%", ml: 0 }}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </DialogContent>
+        <DialogActions sx={{ p: 3 }}>
+          <Button
+            onClick={() => setSyncDialogOpen(false)}
+            sx={{ color: "rgba(255,255,255,0.5)" }}
+          >
+            取消
+          </Button>
+          <Button
+            onClick={handleConfirmSync}
+            variant="contained"
+            disabled={selectedStocks.length === 0}
+            sx={{
+              borderRadius: "12px",
+              background: "#34d399",
+              "&:hover": { background: "#10b981" },
+            }}
+          >
+            確認新增 ({selectedStocks.length})
+          </Button>
+        </DialogActions>
+      </Dialog>
     </PageContainer>
   );
 }

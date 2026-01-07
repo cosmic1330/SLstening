@@ -16,6 +16,8 @@ interface StocksState {
   clear: () => Promise<void>;
   update_menu: (stocks: StockStoreType[]) => Promise<void>;
   factory_reset: () => Promise<void>;
+  fetchSupabaseWatchStock: () => Promise<StockStoreType[]>;
+  addStocks: (stocks: StockStoreType[]) => Promise<void>;
 }
 
 const useStocksStore = create<StocksState>((set, get) => ({
@@ -73,6 +75,50 @@ const useStocksStore = create<StocksState>((set, get) => ({
   factory_reset: async () => {
     const store = await Store.load("settings.json");
     await store.clear();
+  },
+  fetchSupabaseWatchStock: async () => {
+    const { supabase } = await import("../supabase");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data: watchStocks, error } = await supabase
+      .from("watch_stock")
+      .select("stock_id")
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error fetching watch_stock:", error);
+      return [];
+    }
+
+    const { stocks, menu } = get();
+    // Filter out stocks that already exist in the local store
+    // And map them with name/group/type from the menu
+    const newStocks = (watchStocks || [])
+      .map((ws: any) => {
+        const menuStock = menu.find((s) => s.id === ws.stock_id);
+        return {
+          id: ws.stock_id,
+          name: menuStock?.name || "Unknown",
+          group: menuStock?.group || "",
+          type: menuStock?.type || "",
+        };
+      })
+      .filter((ws) => !stocks.some((existing) => existing.id === ws.id));
+
+    return newStocks;
+  },
+  addStocks: async (newStocks: StockStoreType[]) => {
+    const currentStocks = get().stocks;
+    const updatedStocks = [...currentStocks, ...newStocks];
+    const store = await Store.load("settings.json");
+    await store.set("stocks", updatedStocks);
+    await store.save();
+    set(() => ({
+      stocks: updatedStocks,
+    }));
   },
 }));
 

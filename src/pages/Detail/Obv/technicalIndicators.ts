@@ -1,4 +1,4 @@
-import { TaType } from "../types";
+import { TaType } from "../../../types";
 
 export const calculateSMA = (
   data: number[],

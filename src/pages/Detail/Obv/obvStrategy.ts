@@ -1,6 +1,6 @@
-import { TaType } from "../types";
-import { calculateSMA, calculateDMI } from "./technicalIndicators";
-import obvTool from "../cls_tools/obv";
+import obvTool from "../../../cls_tools/obv";
+import { TaType } from "../../../types";
+import { calculateDMI, calculateSMA } from "./technicalIndicators";
 
 export type SignalType =
   | "LONG_ENTRY"

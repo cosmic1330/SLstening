@@ -32,12 +32,12 @@ import {
 import obvTool from "../../../cls_tools/obv";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
-import { calculateObvSignals } from "../../../utils/obvStrategy";
+import { calculateObvSignals } from "./obvStrategy";
 import {
   calculateBollingerBands,
   calculateDMI,
   calculateSMA,
-} from "../../../utils/technicalIndicators";
+} from "./technicalIndicators";
 
 // Types
 interface ObvChartData

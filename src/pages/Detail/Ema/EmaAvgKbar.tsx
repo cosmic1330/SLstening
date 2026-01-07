@@ -34,7 +34,7 @@ import ma from "../../../cls_tools/ma";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
-import { calculateDMI } from "../../../utils/technicalIndicators";
+import { calculateDMI } from "../Obv/technicalIndicators";
 
 interface AvgMaChartData
   extends Partial<{

@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Container,
   Divider,
+  Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
@@ -397,9 +398,11 @@ export default function Mfi({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="h6" component="div" color="white">
-          MFI
-        </Typography>
+        <MuiTooltip title="MFI 較敏感，MACD 較穩重。兩者結合可減少 MFI 頻繁震盪產生的雜訊。\n 價格是否觸碰布林軌道邊界?MACD 是否出現轉向交叉? 有的話可信度越高">
+          <Typography variant="h6" component="div" color="white">
+            MFI
+          </Typography>
+        </MuiTooltip>
 
         <Chip
           label={`${score}分 - ${recommendation}`}

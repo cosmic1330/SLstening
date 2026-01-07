@@ -35,6 +35,7 @@ import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCan
 import { DealsContext } from "../../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../../types";
 import formatDateTime from "../../../utils/formatDateTime";
+import ChartTooltip from "../Tooltip/ChartTooltip";
 import ichimoku from "./ichimoku";
 
 // Define the structure for the chart data, including Ichimoku values
@@ -847,16 +848,7 @@ export default function Ichimoku({ perd }: { perd: UrlTaPerdOptions }) {
               hide
             />
 
-            <Tooltip
-              offset={50}
-              contentStyle={{
-                backgroundColor: "#222",
-                border: "none",
-                borderRadius: 4,
-              }}
-              itemStyle={{ fontSize: 12 }}
-              labelStyle={{ color: "#aaa", marginBottom: 5 }}
-            />
+            <Tooltip content={<ChartTooltip />} offset={50} />
 
             {/* Candles - Always first for BaseCandlestickRectangle stability */}
             <Line

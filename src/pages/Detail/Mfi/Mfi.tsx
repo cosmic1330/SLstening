@@ -39,6 +39,7 @@ import {
   calculateIndicators,
   EnhancedDealData,
 } from "../../../utils/indicatorUtils";
+import ChartTooltip from "../Tooltip/ChartTooltip";
 
 interface MfiChartData extends Partial<EnhancedDealData> {
   buySignal?: number | null;
@@ -485,16 +486,7 @@ export default function Mfi({
               axisLine={false}
               width={0}
             />
-            <Tooltip
-              offset={50}
-              contentStyle={{
-                backgroundColor: "#222",
-                border: "none",
-                borderRadius: 4,
-              }}
-              itemStyle={{ fontSize: 12 }}
-              labelStyle={{ color: "#aaa", marginBottom: 5 }}
-            />
+            <Tooltip content={<ChartTooltip />} offset={50} />
             <Line
               dataKey="h"
               stroke="#fff"
@@ -654,16 +646,7 @@ export default function Mfi({
               width={0}
             />
 
-            <Tooltip
-              offset={50}
-              contentStyle={{
-                backgroundColor: "#222",
-                border: "none",
-                borderRadius: 4,
-              }}
-              itemStyle={{ fontSize: 12 }}
-              labelStyle={{ color: "#aaa", marginBottom: 5 }}
-            />
+            <Tooltip content={<ChartTooltip />} offset={50} />
 
             <ReferenceLine
               y={80}
@@ -723,27 +706,6 @@ export default function Mfi({
               activeDot={false}
               strokeWidth={2}
               name="MFI"
-            />
-
-            <Line
-              dataKey="macdDif"
-              yAxisId="left"
-              stroke="#9c27b0"
-              dot={false}
-              activeDot={false}
-              strokeWidth={1}
-              name="DIF"
-              opacity={0.7}
-            />
-            <Line
-              dataKey="macdDem"
-              yAxisId="left"
-              stroke="#ff9800"
-              dot={false}
-              activeDot={false}
-              strokeWidth={1}
-              name="DEM"
-              opacity={0.7}
             />
           </ComposedChart>
         </ResponsiveContainer>

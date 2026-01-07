@@ -542,20 +542,25 @@ export default function Bollean({
         </CardContent>
       </Card>
 
-      <Box ref={chartContainerRef} sx={{ flexGrow: 1, minHeight: 0 }}>
+      <Box
+        ref={chartContainerRef}
+        sx={{ flexGrow: 1, minHeight: 0, width: "100%" }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={chartData}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="t" />
+            <XAxis dataKey="t" hide />
             <YAxis domain={["auto", "auto"]} />
             <YAxis
               yAxisId="right"
               orientation="right"
               domain={[0, (dataMax: number) => dataMax * 4]}
-              hide={activeStep === 1}
+              width={0}
+              tick={false}
+              axisLine={false}
             />
 
             <Tooltip

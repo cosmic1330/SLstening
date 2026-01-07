@@ -739,7 +739,7 @@ export default function MaKbar({
               yAxisId="volAxis"
               orientation="right"
               domain={[0, (dataMax: number) => dataMax * 4]}
-              width={40}
+              width={0}
               tick={false}
               axisLine={false}
             />

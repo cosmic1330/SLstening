@@ -1,59 +1,68 @@
-# OBV.DMI 交易策略說明
+OBV 動能趨勢策略與圖表標註規範 (v2.0)
+適用週期: 60 分鐘 (短線波段)
+核心邏輯: 箱型理論 + OBV 能量潮 + 趨勢過濾 + 攻擊量能
 
-本策略結合了 **能量潮指標 (OBV)** 與 **動向指標 (DMI)**，旨在捕捉量價同步的趨勢並利用背離訊號尋找反轉點。
+1. 指標參數設定 (Indicator Setup)
+   在圖表運算前，請先定義以下變數：
 
-## 1. 核心指標與週期
+Price Trend (價格趨勢):
 
-- **價格均線**: 20日簡單移動平均線 (MA20)。
-- **OBV 指標**: 計算累積成交量，並搭配 **OBV MA20** (訊號線) 判斷動能。
-- **DMI (14)**: 包含 `+DI`, `-DI` 及 `ADX`。
-    - `ADX > 20`: 代表趨勢成形。
-    - `+DI > -DI`: 多頭占優。
-    - `-DI > +DI`: 空頭占優。
+- Price_MA: 60MA (20MA 作為短線參考)。
+- Resistance (箱頂): 近 20 根 K 棒的最高價。
+- Support (箱底): 近 20 根 K 棒的最低價。
+- Box_Width (箱體寬度): (Resistance - Support) / AveragePrice < 2% (定義為窄幅盤整)。
 
----
+OBV Trend (籌碼動能):
 
-## 2. 進場訊號 (Entry Signals)
+- OBV_Value: 當前 K 棒的 OBV 值。
+- OBV_MA: OBV 的 20MA (平滑波動)。
+- OBV_Slope: OBV 曲線的斜率 (OBV_Value - Previous_OBV)。
 
-### 做多進場 (LONG_ENTRY)
-1. **OBV 黃金交叉**: OBV 由下往上穿越其 MA20，且價格位於 MA20 之上。
-    - *邏輯*: 量能轉強且趨勢確認。
-2. **量價底背離**: 價格創新低，但 OBV 未創新低，且 `+DI > -DI`。
-    - *邏輯*: 賣壓耗盡，量能先行回升，預示反轉。
-3. **OBV 創新高**: OBV 與價格同步創下近期 (20日) 新高，且 DMI 為多頭趨勢。
-    - *邏輯*: 強勢突破。
+Volume Filter (攻擊量):
 
-### 做空進場 (SHORT_ENTRY)
-1. **OBV 死亡交叉**: OBV 由上往下穿越其 MA20，且價格位於 MA20 之下。
-    - *邏輯*: 量能潰散且趨勢轉淡。
-2. **量價頂背離**: 價格創新高，但 OBV 未創新高，且 `-DI > +DI`。
-    - *邏輯*: 推升動能不足，預示多頭陷阱。
+- Vol_MA: 成交量的 20MA。
+- Breakout_Vol: 當前成交量 > Vol_MA \* 1.5 (確認具備攻擊性)。
 
----
+2. 圖表標註邏輯 (Annotation Logic)
+   訊號優先權：A (假突破) > D (轉弱/止損) > B (真突破) > C (吸籌)
 
-## 3. 出場訊號 (Exit Signals)
+A. ⚠️ 假突破 (Fake Breakout) —— 賣出/減碼訊號
+邏輯描述：價格突破箱頂，但 OBV 未創高且量能不足。
+判斷條件:
 
-### 多單出場 (LONG_EXIT)
-- **趨勢轉弱**: OBV 死亡交叉其 MA20。
-- **移動止損**: 價格跌破 MA20 的 98%。
-- **趨勢反轉**: DMI 轉為空頭 (`-DI` 穿越 `+DI`)。
+1. Close > Resistance (突破箱型)。
+2. OBV_Value < 近 20 根 OBV 最高點。
+3. (可選) 長上影線或收盤價回落至箱內。
+   圖表標註: ▼ 或 ⚠️ | 文字: Fake Breakout (背離) | 顏色: 紅色
 
-### 空單回補 (SHORT_EXIT)
-- **趨勢轉強**: OBV 黃金交叉其 MA20。
-- **止損**: 價格突破 MA20 的 102%。
-- **趨勢反轉**: DMI 轉為多頭 (`+DI` 穿越 `-DI`)。
+B. 🚀 真突破 (True Breakout) —— 強力進場訊號
+邏輯描述：價格站穩 60MA，帶量突破箱頂，且 OBV 同步轉強。
+判斷條件:
 
----
+1. Close > Resistance。
+2. Close > Price_MA (60MA)。
+3. Volume > Vol_MA \* 1.5 (攻擊量)。
+4. OBV_Value > OBV_MA 且 OBV_Slope > 0。
+   圖表標註: ▲ 或 🚀 | 文字: Buy (量價齊揚) | 顏色: 金色/綠色
 
-## 4. 綜合評分系統 (UI Scoring)
+C. 🔍 主力吸籌 (Accumulation) —— 潛在機會
+邏輯描述：處於窄幅盤整 (Box_Width < 2%)，且 OBV 底底高。
+判斷條件:
 
-系統會即時計算 0-100 的綜合分數：
-- **趨勢強度 (30分)**: 根據 DMI 方向及 ADX 強度給分。
-- **量能動力 (30分)**: OBV 是否高於其均線或持續上升。
-- **價格行為 (20分)**: 價格與 MA20 的相對位置。
-- **動能增強 (20分)**: ADX 是否上升且大於 20。
+1. Box_Width < 2% (窄幅)。
+2. Close < Resistance (尚未突破)。
+3. OBV 呈現 Swing Higher Lows (最近一個局部低點大於前一個)。
+   圖表標註: ● 或 ⚡ | 文字: 吸籌中 | 顏色: 藍色
 
-**建議級別**:
-- `> 80`: 強力買入 (Strong Buy)
-- `> 60`: 買入 (Buy)
-- `< 30`: 賣出 (Sell)
+D. 🛑 出場/止損警訊 (Exit/Stop Loss)
+邏輯描述：動能消失或跌破關鍵支撐。
+判斷條件:
+
+- 轉弱 (Weakness): Close > Price_MA 但 OBV < OBV_MA。
+- 止損 (Stop Loss): Price < 前一波訊號 (如 True Breakout) 的 K 棒低點，或 Price < Price_MA 且 OBV 死叉。
+  圖表標註: X | 文字: 趨勢轉弱 / 止損 | 顏色: 灰色/橘色
+
+3. 視覺化改進建議
+
+- OBV Histogram (能量柱): 繪製 OBV - OBV_MA，用於觀察動能正負切換。
+- 止損線: 在 True Breakout 發生後，可於圖表繪製一條虛線作為移動止損參考位。

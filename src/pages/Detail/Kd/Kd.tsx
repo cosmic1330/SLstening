@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -419,13 +420,28 @@ export default function Kd({
         </CardContent>
       </Card>
 
-      <Box ref={chartContainerRef} sx={{ flexGrow: 1, minHeight: 0 }}>
+      <Box
+        ref={chartContainerRef}
+        sx={{ flexGrow: 1, minHeight: 0, width: "100%" }}
+      >
         {/* Price Chart */}
         <ResponsiveContainer width="100%" height="60%">
-          <ComposedChart data={chartData} syncId="kdSync">
+          <ComposedChart
+            data={chartData}
+            syncId="kdSync"
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
             <YAxis domain={["auto", "auto"]} />
+            <YAxis
+              yAxisId="volAxis"
+              orientation="right"
+              domain={[0, (dataMax: number) => dataMax * 4]}
+              tick={false}
+              axisLine={false}
+              width={0}
+            />
             <Tooltip
               offset={50}
               contentStyle={{
@@ -469,6 +485,26 @@ export default function Kd({
               legendType="none"
             />
             <Customized component={BaseCandlestickRectangle} />
+
+            <Bar
+              dataKey="v"
+              yAxisId="volAxis"
+              name="Volume"
+              shape={(props: any) => {
+                const { x, y, width, height, payload } = props;
+                const isUp = payload.c > payload.o;
+                return (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill={isUp ? "#f44336" : "#4caf50"}
+                    opacity={0.2}
+                  />
+                );
+              }}
+            />
 
             <Line
               dataKey="bollMa"
@@ -557,9 +593,13 @@ export default function Kd({
 
         {/* KD Chart */}
         <ResponsiveContainer width="100%" height="40%">
-          <ComposedChart data={chartData} syncId="kdSync">
+          <ComposedChart
+            data={chartData}
+            syncId="kdSync"
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-            <XAxis dataKey="t" />
+            <XAxis dataKey="t" hide />
             <YAxis domain={[0, 100]} ticks={[0, 20, 50, 80, 100]} />
             <Tooltip
               offset={50}

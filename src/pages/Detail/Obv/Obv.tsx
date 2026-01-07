@@ -887,7 +887,7 @@ export default function Obv({
               {chartData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={(entry.obvHist || 0) >= 0 ? "#52c41a" : "#ff4d4f"}
+                  fill={(entry.obvHist || 0) >= 0 ? "#f44336" : "#52c41a"}
                   fillOpacity={0.3}
                 />
               ))}

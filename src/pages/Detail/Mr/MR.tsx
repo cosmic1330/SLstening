@@ -118,6 +118,15 @@ export default function MR({
   const { settings } = useIndicatorSettings();
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   // const [visibleCount, setVisibleCount] = useState(160);
   // const [rightOffset, setRightOffset] = useState(0);
@@ -292,7 +301,17 @@ export default function MR({
 
     const mrSteps: MrStep[] = [
       {
-        label: "I. 指標狀態",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
+          },
+        ],
+      },
+      {
+        label: "II. 指標狀態",
         description: "MR 雙指標 (RSI & MACD)",
         checks: [
           {
@@ -306,7 +325,7 @@ export default function MR({
         ],
       },
       {
-        label: "II. 訊號判定",
+        label: "III. 訊號判定",
         description: "多空區域確認",
         checks: [
           {
@@ -320,7 +339,7 @@ export default function MR({
         ],
       },
       {
-        label: "III. 趨勢與動能",
+        label: "IV. 趨勢與動能",
         description: "MA20 與 動能方向",
         checks: [
           {
@@ -330,16 +349,6 @@ export default function MR({
           {
             label: `RSI 上升中: ${rsiRising ? "Yes" : "No"}`,
             status: rsiRising ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "IV. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: `目前建議: ${rec}`,
-            status: totalScore >= 60 ? "pass" : "manual",
           },
         ],
       },

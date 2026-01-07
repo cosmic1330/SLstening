@@ -70,6 +70,15 @@ export default function Kd({
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -246,7 +255,22 @@ export default function Kd({
 
     const kdSteps: KdStep[] = [
       {
-        label: "I. 市場環境",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: "趨勢動能強 (K > D)",
+            status: kVal > dVal ? "pass" : "fail",
+          },
+          {
+            label: "無頂部背離",
+            status: recentBearishDiv ? "fail" : "pass",
+          },
+          { label: "量價配合", status: isVolStable ? "pass" : "manual" },
+        ],
+      },
+      {
+        label: "II. 市場環境",
         description: "流動性與趨勢 (Regime)",
         checks: [
           {
@@ -261,7 +285,7 @@ export default function Kd({
         ],
       },
       {
-        label: "II. 入場條件",
+        label: "III. 入場條件",
         description: "交叉與背離 (Entry)",
         checks: [
           {
@@ -279,7 +303,7 @@ export default function Kd({
         ],
       },
       {
-        label: "III. 風險控管",
+        label: "IV. 風險控管",
         description: "停損與部位 (Risk)",
         checks: [
           { label: `建議停損: ${stopLoss}`, status: "manual" },
@@ -288,21 +312,6 @@ export default function Kd({
             status: kVal > 85 ? "fail" : "pass",
           },
           { label: "死亡交叉警示", status: deathCross ? "fail" : "pass" },
-        ],
-      },
-      {
-        label: "IV. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: "趨勢動能強 (K > D)",
-            status: kVal > dVal ? "pass" : "fail",
-          },
-          {
-            label: "無頂部背離",
-            status: recentBearishDiv ? "fail" : "pass",
-          },
-          { label: "量價配合", status: isVolStable ? "pass" : "manual" },
         ],
       },
     ];

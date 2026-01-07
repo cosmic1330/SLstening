@@ -209,6 +209,15 @@ export default function Obv({
   const fullDeals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 3); // 3 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   // const [visibleCount, setVisibleCount] = useState(150);
   // const [rightOffset, setRightOffset] = useState(0);
@@ -403,7 +412,25 @@ export default function Obv({
 
     const analysisSteps: AnalysisStep[] = [
       {
-        label: "I. 趨勢強度 (DMI)",
+        label: "I. 綜合訊號",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: "價格 > MA20",
+            status: priceAboveMa ? "pass" : "fail",
+          },
+          {
+            label: "與前日相比走勢一致",
+            status:
+              (current.c || 0) > (prev.c || 0) ===
+              (current.obv || 0) > (prev.obv || 0)
+                ? "pass"
+                : "fail",
+          },
+        ],
+      },
+      {
+        label: "II. 趨勢強度 (DMI)",
         description: "ADX 與 DI 方向",
         checks: [
           {
@@ -422,7 +449,7 @@ export default function Obv({
         ],
       },
       {
-        label: "II. 量能分析 (OBV)",
+        label: "III. 量能分析 (OBV)",
         description: "OBV 趨勢確認",
         checks: [
           {
@@ -432,24 +459,6 @@ export default function Obv({
           {
             label: "OBV 創新高",
             status: "manual", // Hard to check purely on last bar without lookback context here
-          },
-        ],
-      },
-      {
-        label: "III. 綜合訊號",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: "價格 > MA20",
-            status: priceAboveMa ? "pass" : "fail",
-          },
-          {
-            label: "與前日相比走勢一致",
-            status:
-              (current.c || 0) > (prev.c || 0) ===
-              (current.obv || 0) > (prev.obv || 0)
-                ? "pass"
-                : "fail",
           },
         ],
       },

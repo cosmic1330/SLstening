@@ -83,6 +83,15 @@ export default function MJ({
   const { settings } = useIndicatorSettings();
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -259,7 +268,17 @@ export default function MJ({
 
     const mjSteps: MjStep[] = [
       {
-        label: "I. 指標狀態",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
+          },
+        ],
+      },
+      {
+        label: "II. 指標狀態",
         description: "MJ 雙指標共振",
         checks: [
           {
@@ -273,7 +292,7 @@ export default function MJ({
         ],
       },
       {
-        label: "II. 訊號判定",
+        label: "III. 訊號判定",
         description: "多空區域確認",
         checks: [
           {
@@ -287,7 +306,7 @@ export default function MJ({
         ],
       },
       {
-        label: "III. 趨勢與動能",
+        label: "IV. 趨勢與動能",
         description: "MA20 與 動能方向",
         checks: [
           {
@@ -297,16 +316,6 @@ export default function MJ({
           {
             label: `J線 上升中: ${jRising ? "Yes" : "No"}`,
             status: jRising ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "IV. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: `目前建議: ${rec}`,
-            status: totalScore >= 60 ? "pass" : "manual",
           },
         ],
       },

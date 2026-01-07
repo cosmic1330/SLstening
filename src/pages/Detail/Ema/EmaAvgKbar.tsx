@@ -87,6 +87,15 @@ export default function AvgMaKbar({
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 5); // 5 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   // const [visibleCount, setVisibleCount] = useState(160);
   // const [rightOffset, setRightOffset] = useState(0);
@@ -341,7 +350,17 @@ export default function AvgMaKbar({
 
     const avgSteps: AvgMaStep[] = [
       {
-        label: "I. 趨勢判斷",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: `目前建議: ${rec}`,
+            status: totalScore >= 60 ? "pass" : "manual",
+          },
+        ],
+      },
+      {
+        label: "II. 趨勢判斷",
         description: "多空生命線 (MA60)",
         checks: [
           {
@@ -357,7 +376,7 @@ export default function AvgMaKbar({
         ],
       },
       {
-        label: "II. 趨勢強度 (DMI)",
+        label: "III. 趨勢強度 (DMI)",
         description: "ADX 與 DI 方向",
         checks: [
           {
@@ -372,7 +391,7 @@ export default function AvgMaKbar({
         ],
       },
       {
-        label: "III. 進場訊號",
+        label: "IV. 進場訊號",
         description: "交叉與型態",
         checks: [
           {
@@ -403,7 +422,7 @@ export default function AvgMaKbar({
         ],
       },
       {
-        label: "IV. 動能確認",
+        label: "V. 動能確認",
         description: "量價與均線",
         checks: [
           {
@@ -413,16 +432,6 @@ export default function AvgMaKbar({
           {
             label: `成交量 > 均量: ${volOk ? "Yes" : "No"}`,
             status: volOk ? "pass" : "manual",
-          },
-        ],
-      },
-      {
-        label: "V. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: `目前建議: ${rec}`,
-            status: totalScore >= 60 ? "pass" : "manual",
           },
         ],
       },

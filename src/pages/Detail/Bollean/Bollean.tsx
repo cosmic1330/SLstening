@@ -132,6 +132,15 @@ export default function Bollean({
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
   const { id } = useParams();
 
   // Zoom & Pan Control
@@ -368,7 +377,16 @@ export default function Bollean({
 
     const bolleanSteps: BolleanStep[] = [
       {
-        label: "I. 市場環境",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          { label: "趨勢明確 (MA斜率)", status: maRising ? "pass" : "fail" },
+          { label: "成交量配合", status: volSpike ? "pass" : "manual" },
+          { label: "無假突破跡象", status: "manual" },
+        ],
+      },
+      {
+        label: "II. 市場環境",
         description: "波動度與趨勢 (Macro & Regime)",
         checks: [
           {
@@ -388,7 +406,7 @@ export default function Bollean({
         ],
       },
       {
-        label: "II. 入場條件",
+        label: "III. 入場條件",
         description: "多/空策略與突破 (Entry)",
         checks: [
           {
@@ -406,7 +424,7 @@ export default function Bollean({
         ],
       },
       {
-        label: "III. 風險控管",
+        label: "IV. 風險控管",
         description: "停損與部位 (Risk Control)",
         checks: [
           { label: `建議停損位: ${stopLoss} (中軌)`, status: "manual" },
@@ -415,15 +433,6 @@ export default function Bollean({
             status: isWide ? "fail" : "pass",
           },
           { label: "單筆風險 < 1.5%", status: "manual" },
-        ],
-      },
-      {
-        label: "IV. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          { label: "趨勢明確 (MA斜率)", status: maRising ? "pass" : "fail" },
-          { label: "成交量配合", status: volSpike ? "pass" : "manual" },
-          { label: "無假突破跡象", status: "manual" },
         ],
       },
     ];
@@ -546,7 +555,7 @@ export default function Bollean({
               yAxisId="right"
               orientation="right"
               domain={[0, (dataMax: number) => dataMax * 4]}
-              hide={activeStep < 1}
+              hide={activeStep === 1}
             />
 
             <Tooltip
@@ -594,7 +603,7 @@ export default function Bollean({
             />
             <Customized component={BaseCandlestickRectangle} />
 
-            {activeStep >= 1 && (
+            {(activeStep === 0 || activeStep === 2) && (
               <Bar
                 dataKey="v"
                 yAxisId="right"
@@ -631,7 +640,7 @@ export default function Bollean({
             />
 
             {/* Signals */}
-            {activeStep >= 1 && (
+            {(activeStep === 0 || activeStep === 2) && (
               <>
                 <Scatter
                   dataKey="buySignal"

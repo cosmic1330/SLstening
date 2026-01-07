@@ -71,6 +71,15 @@ export default function Mfi({
   const { settings } = useIndicatorSettings();
   const [activeStep, setActiveStep] = useState(0);
 
+  useEffect(() => {
+    const handleSwitchStep = () => {
+      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
+    };
+    window.addEventListener("detail-switch-step", handleSwitchStep);
+    return () =>
+      window.removeEventListener("detail-switch-step", handleSwitchStep);
+  }, []);
+
   // Zoom & Pan Control
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -248,7 +257,19 @@ export default function Mfi({
 
     const mfiSteps: MfiStep[] = [
       {
-        label: "I. 市場環境",
+        label: "I. 綜合評估",
+        description: `得分: ${totalScore} - ${rec}`,
+        checks: [
+          {
+            label: "趨勢動能強 (MFI > 50 & Rising)",
+            status: mfiVal > 50 && mfiRising ? "pass" : "fail",
+          },
+          { label: "無頂部背離 (Bearish Div)", status: "manual" },
+          { label: "量價配合", status: isVolStable ? "pass" : "manual" },
+        ],
+      },
+      {
+        label: "II. 市場環境",
         description: "流動性與趨勢 (Regime)",
         checks: [
           {
@@ -263,7 +284,7 @@ export default function Mfi({
         ],
       },
       {
-        label: "II. 入場條件",
+        label: "III. 入場條件",
         description: "超賣反轉或動能 (Entry)",
         checks: [
           {
@@ -278,7 +299,7 @@ export default function Mfi({
         ],
       },
       {
-        label: "III. 風險控管",
+        label: "IV. 風險控管",
         description: "停損與部位 (Risk)",
         checks: [
           { label: `建議停損: ${stopLoss}`, status: "manual" },
@@ -287,18 +308,6 @@ export default function Mfi({
             status: mfiVal < 15 || mfiVal > 85 ? "fail" : "pass",
           },
           { label: "單筆風險 < 1.2%", status: "manual" },
-        ],
-      },
-      {
-        label: "IV. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: "趨勢動能強 (MFI > 50 & Rising)",
-            status: mfiVal > 50 && mfiRising ? "pass" : "fail",
-          },
-          { label: "無頂部背離 (Bearish Div)", status: "manual" },
-          { label: "量價配合", status: isVolStable ? "pass" : "manual" },
         ],
       },
     ];

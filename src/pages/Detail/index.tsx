@@ -98,6 +98,11 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState(180);
   const [rightOffset, setRightOffset] = useState(0);
 
+  const handleSetPerd = useCallback((newPerd: UrlTaPerdOptions) => {
+    localStorage.setItem("detail:perd:type", newPerd);
+    setPerd(newPerd);
+  }, []);
+
   // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
     () => [
@@ -224,10 +229,46 @@ const FullscreenVerticalCarousel: React.FC = () => {
     [current, scrolling, goToSlide]
   );
 
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (scrolling) return;
+
+      if (e.key === "ArrowUp") {
+        goToSlide(current - 1);
+      } else if (e.key === "ArrowDown") {
+        goToSlide(current + 1);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        const options = [
+          UrlTaPerdOptions.Hour,
+          UrlTaPerdOptions.Day,
+          UrlTaPerdOptions.Week,
+        ];
+        const idx = options.indexOf(perd);
+        if (e.key === "ArrowLeft") {
+          if (idx > 0) {
+            handleSetPerd(options[idx - 1]);
+          }
+        } else if (e.key === "ArrowRight") {
+          if (idx < options.length - 1) {
+            handleSetPerd(options[idx + 1]);
+          }
+        }
+      } else if (e.key === " ") {
+        e.preventDefault(); // Prevent page scroll
+        window.dispatchEvent(new CustomEvent("detail-switch-step"));
+      }
+    },
+    [current, scrolling, goToSlide, perd, handleSetPerd]
+  );
+
   useEffect(() => {
     window.addEventListener("wheel", handleWheel, { passive: true });
-    return () => window.removeEventListener("wheel", handleWheel);
-  }, [handleWheel]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleWheel, handleKeyDown]);
 
   const slideVariants: Variants = {
     initial: (direction: number) => ({

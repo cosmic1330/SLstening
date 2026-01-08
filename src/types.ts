@@ -286,3 +286,10 @@ export type RecentFundamentalTableType = {
   revenue_recent_m4_yoy: number | null;
   revenue_recent_m4_name: string | null;
 };
+
+export type CheckStatus = "pass" | "fail" | "manual";
+
+export interface StepCheck {
+  label: string;
+  status: CheckStatus;
+}

@@ -1,4 +1,4 @@
-import { Box, Typography, Grid, styled } from "@mui/material";
+import { Box, Grid, styled, Typography } from "@mui/material";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import StyledListSubheader from "./StyledListSubheader";
 
@@ -72,6 +72,8 @@ export default function IndicatorSettingsSection() {
     { key: "boll", label: "布林 (20)" },
     { key: "kd", label: "KD (9)" },
     { key: "mfi", label: "MFI (14)" },
+    { key: "cmf", label: "CMF (21)" },
+    { key: "cmfEma", label: "CMF EMA (5)" },
   ] as const;
 
   return (

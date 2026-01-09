@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@ch20026103/anysis':
-        specifier: 0.0.19
-        version: 0.0.19
+        specifier: 0.0.20-alpha.0
+        version: 0.0.20-alpha.0
       '@emotion/react':
         specifier: ^11.14.0
         version: 11.14.0(@types/react@18.3.23)(react@18.3.1)
@@ -229,8 +229,8 @@ packages:
     resolution: {integrity: sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==}
     engines: {node: '>=6.9.0'}
 
-  '@ch20026103/anysis@0.0.19':
-    resolution: {integrity: sha512-RqxtSQUsrlTaZ6nPjN6XHVScchZ9es1v7+p5NjRdny01vpfgCXVhYAvGk+rYlncBSOJiasLPIOW3se+3aKorrA==}
+  '@ch20026103/anysis@0.0.20-alpha.0':
+    resolution: {integrity: sha512-fZYQf+BX8W9tUMAsSz7w4WgtCa/KSR5Ok6HDUpoxoaLY7TezoFpCWWt844JD8OH2T+PWQnxqpzCZB5mssU8g0A==}
 
   '@emotion/babel-plugin@11.13.5':
     resolution: {integrity: sha512-pxHCpT2ex+0q+HH91/zsdHkw/lXd468DIN2zvfvLtPKLLMo6gQj7oLObq8PhkrxOZb/gGCq03S3Z7PDhS8pduQ==}
@@ -1606,7 +1606,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.27.1
 
-  '@ch20026103/anysis@0.0.19': {}
+  '@ch20026103/anysis@0.0.20-alpha.0': {}
 
   '@emotion/babel-plugin@11.13.5':
     dependencies:

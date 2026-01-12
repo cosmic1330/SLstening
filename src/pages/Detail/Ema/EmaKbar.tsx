@@ -32,7 +32,7 @@ import {
 } from "recharts";
 import dmi from "../../../cls_tools/dmi";
 import ema from "../../../cls_tools/ema";
-import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import ChartTooltip from "../Tooltip/ChartTooltip";
@@ -592,7 +592,7 @@ export default function AvgMaKbar({
               legendType="none"
             />
 
-            <Customized component={BaseCandlestickRectangle} />
+            <Customized component={AvgCandlestickRectangle} />
 
             {/* Volume Bars (Overlay) */}
             <Bar

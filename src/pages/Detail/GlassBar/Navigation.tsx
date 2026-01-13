@@ -1,5 +1,6 @@
 import {
   DragIndicator,
+  HelpOutline,
   KeyboardArrowDown,
   KeyboardArrowUp,
   UnfoldLess,
@@ -14,6 +15,7 @@ interface NavigationProps {
   setIsCollapsed: (collapsed: boolean) => void;
   current: number;
   goToSlide: (index: number) => void;
+  onOpenDoc: () => void;
 }
 
 const Navigation: React.FC<NavigationProps> = ({
@@ -21,6 +23,7 @@ const Navigation: React.FC<NavigationProps> = ({
   setIsCollapsed,
   current,
   goToSlide,
+  onOpenDoc,
 }) => {
   return (
     <>
@@ -57,6 +60,22 @@ const Navigation: React.FC<NavigationProps> = ({
         ) : (
           <UnfoldLess fontSize="small" />
         )}
+      </IconButton>
+
+      {/* Info/Help Button */}
+      <IconButton
+        onClick={onOpenDoc}
+        size="small"
+        sx={{
+          p: 0.5,
+          color: "primary.main",
+          "&:hover": {
+            color: "#fff",
+            bgcolor: "rgba(144, 202, 249, 0.1)",
+          },
+        }}
+      >
+        <HelpOutline fontSize="small" />
       </IconButton>
 
       {!isCollapsed && (

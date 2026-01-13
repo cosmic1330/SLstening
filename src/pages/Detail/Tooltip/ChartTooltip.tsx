@@ -93,6 +93,58 @@ const ChartTooltip = ({
           </div>
         )}
 
+        {/* Ichimoku Combined Analysis (Historical & Future) */}
+        {(data.currentStatus || data.futureTrend) && (
+          <div
+            style={{
+              marginTop: 8,
+              marginBottom: 8,
+              padding: "8px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
+              borderRadius: 4,
+              border: `1px ${
+                data.isFuture ? "dashed" : "solid"
+              } rgba(255, 255, 255, 0.2)`,
+            }}
+          >
+            <Typography
+              variant="caption"
+              display="block"
+              style={{
+                color: "#90caf9",
+                fontWeight: "bold",
+                marginBottom: 4,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
+              一目均衡表：{data.isFuture ? "未來預測" : "當前狀態"}
+            </Typography>
+            <Typography
+              variant="body2"
+              fontWeight="bold"
+              style={{
+                color:
+                  data.currentStatus?.includes("看多") ||
+                  data.currentStatus?.includes("偏多") ||
+                  data.futureTrend?.includes("多頭")
+                    ? "#ff4d4f"
+                    : data.currentStatus?.includes("看空") ||
+                      data.currentStatus?.includes("偏空") ||
+                      data.futureTrend?.includes("空頭")
+                    ? "#52c41a"
+                    : "#fff",
+                marginBottom: 2,
+              }}
+            >
+              {data.isFuture ? data.futureTrend : data.currentStatus}
+            </Typography>
+            <Typography variant="caption" style={{ color: "#bbb" }}>
+              {data.isFuture ? data.futureReason : data.thicknessStatus}
+            </Typography>
+          </div>
+        )}
+
         {sortedPayload.map((entry: any, index: number) => {
           // Filter out internal/invisible items or secondary signal indicators
           if (hideKeys.includes(entry.dataKey)) return null;

@@ -17,6 +17,7 @@ interface ChartTooltipProps {
   hideKeys?: string[];
   dateFormatter?: (tick: number | string) => string;
   sortKeys?: string[];
+  showIchimoku?: boolean;
 }
 
 const ChartTooltip = ({
@@ -26,6 +27,7 @@ const ChartTooltip = ({
   showSignals = true,
   hideKeys = [],
   dateFormatter = formatDateTick,
+  showIchimoku = true,
 }: ChartTooltipProps) => {
   if (active && payload && payload.length && label !== undefined) {
     const data = payload[0].payload;
@@ -94,7 +96,7 @@ const ChartTooltip = ({
         )}
 
         {/* Ichimoku Combined Analysis (Historical & Future) */}
-        {(data.currentStatus || data.futureTrend) && (
+        {showIchimoku && (data.currentStatus || data.futureTrend) && (
           <div
             style={{
               marginTop: 8,

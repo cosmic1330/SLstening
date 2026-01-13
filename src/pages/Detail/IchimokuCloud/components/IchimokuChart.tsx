@@ -481,7 +481,11 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                 fill: "#9c27b0",
               }}
             />
-            <RechartsTooltip content={<ChartTooltip showSignals={false} />} />
+            <RechartsTooltip
+              content={
+                <ChartTooltip showSignals={false} showIchimoku={false} />
+              }
+            />
 
             <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
             <ReferenceLine

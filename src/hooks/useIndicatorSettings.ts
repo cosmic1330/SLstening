@@ -9,6 +9,7 @@ export interface IndicatorSettings {
   kd: number;
   mfi: number;
   rsi: number;
+  ma120: number;
   ma240: number;
   emaShort: number;
   emaLong: number;
@@ -25,6 +26,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   kd: 9,
   mfi: 14,
   rsi: 5,
+  ma120: 120,
   ma240: 240,
   emaShort: 5,
   emaLong: 10,

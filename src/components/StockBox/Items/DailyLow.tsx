@@ -10,13 +10,15 @@ export default function DailyLow({
   lastPrice: number;
 }) {
   const { low, color } = useMemo(() => {
-    if (deals.length > 0) {
+    if (deals.length >= 2) {
       const low = deals[deals.length - 2].l;
       const color = lastPrice < low ? "#4caf50" : "#fff";
       return { low, color };
     }
-    return { low: "--", color: "#fff" };
+    return { low: null, color: "#fff" };
   }, [deals, lastPrice]);
+
+  if (low === null) return null;
 
   return (
     <Stack

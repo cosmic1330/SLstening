@@ -10,10 +10,9 @@ export default function AvgPrice({
   tickDeals: TickDealsType | null;
 }) {
   const { avgPrice, color } = useMemo(() => {
-    if (tickDeals) {
-      const avgPrice =
-        Math.round(tickDeals.avgPrices[tickDeals.avgPrices.length - 1] * 100) /
-        100;
+    if (tickDeals && tickDeals.avgPrices && tickDeals.avgPrices.length > 0) {
+      const avgPriceValue = tickDeals.avgPrices[tickDeals.avgPrices.length - 1];
+      const avgPrice = Math.round(avgPriceValue * 100) / 100;
       const color = lastPrice > avgPrice ? "#fff" : "#4caf50";
       return {
         avgPrice,
@@ -25,6 +24,9 @@ export default function AvgPrice({
       color: "#fff",
     };
   }, [tickDeals, lastPrice]);
+
+  if (avgPrice === null) return null;
+
   return (
     <Stack
       direction="row"

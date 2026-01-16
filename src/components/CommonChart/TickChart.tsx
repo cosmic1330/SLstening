@@ -10,15 +10,32 @@ import {
 import { TickDealsType } from "../../types";
 import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
-export default function TickChart({ tickDeals }: { tickDeals:  Omit<TickDealsType, "id">  }) {
+export default function TickChart({
+  tickDeals,
+}: {
+  tickDeals: Omit<TickDealsType, "id">;
+}) {
   const data = useMemo(() => {
     const currentProgress = getTimeProgressPercent(tickDeals.ts);
-    const totalCount = Math.ceil(
+    if (currentProgress <= 0 || tickDeals.closes.length === 0) {
+      return tickDeals.closes.map((close, i) => ({
+        close,
+        avgPrice: tickDeals.avgPrices[i],
+      }));
+    }
+
+    let totalCount = Math.ceil(
       tickDeals.closes.length / (currentProgress / 100)
     );
+
+    // Limit totalCount to prevent crashes if currentProgress is very small
+    if (!Number.isFinite(totalCount) || totalCount > 1000) {
+      totalCount = Math.max(tickDeals.closes.length, 270); // 270 is typical 1m bars in a day, just a fallback
+    }
+
     const res = [];
     for (let i = 0; i < totalCount; i++) {
-      if (tickDeals.closes[i]) {
+      if (i < tickDeals.closes.length) {
         const close = tickDeals.closes[i];
         const avgPrice = tickDeals.avgPrices[i];
         res.push({ close, avgPrice });
@@ -34,12 +51,14 @@ export default function TickChart({ tickDeals }: { tickDeals:  Omit<TickDealsTyp
       <ResponsiveContainer>
         <LineChart data={data}>
           <YAxis domain={["dataMin", "dataMax"]} hide />
-          <ReferenceLine
-            y={tickDeals.previousClose}
-            stroke="#63c762"
-            strokeWidth={1.5}
-            ifOverflow="extendDomain"
-          />
+          {Number.isFinite(tickDeals.previousClose) && (
+            <ReferenceLine
+              y={tickDeals.previousClose}
+              stroke="#63c762"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+          )}
           <Line
             type="monotone"
             dataKey={"avgPrice"}

@@ -1,8 +1,8 @@
 import AnalyticsIcon from "@mui/icons-material/Analytics";
+import DeleteIcon from "@mui/icons-material/Delete";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import DeleteIcon from "@mui/icons-material/Delete";
 import {
   Box,
   Divider,
@@ -22,13 +22,13 @@ import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
+import DailyLow from "./Items/DailyLow";
 import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
 import PreVolume from "./Items/PreVolume";
 import Volume from "./Items/Volume";
 import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
-import DailyLow from "./Items/DailyLow";
 import TickChart from "./TickChart";
 
 // Premium Card Styling
@@ -180,7 +180,7 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
       return estimateVolume({
         currentVolume: deals[deals.length - 1].v,
         currentTime: new Date(),
-        previousDayVolume: deals[deals.length - 2].v,
+        previousDayVolume: deals[deals.length - 2]?.v,
         avg5DaysVolume: avgDaysVolume,
       });
     }

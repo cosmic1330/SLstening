@@ -69,11 +69,12 @@ export default function useConditionalDeals(
       const highs = data[0].chart.indicators.quote[0].high.filter(
         (item: number | null) => item !== null
       );
-      const changePercent = data[0].chart.quote.changePercent;
-      const price = data[0].chart.quote.price;
-      const previousClose = data[0].chart.quote.previousClose;
+      const quote = data[0]?.chart?.quote || {};
+      const changePercent = quote.changePercent;
+      const price = quote.price;
+      const previousClose = quote.previousClose;
       let pre = 0;
-      const avgPrices = highs.map((item: number, index: number) => {
+      const avgPrices = (highs || []).map((item: number, index: number) => {
         pre += item;
         return pre / (index + 1);
       });

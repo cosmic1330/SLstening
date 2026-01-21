@@ -117,7 +117,7 @@ export default function BottomBar() {
         <AddCircleRoundedIcon />
       </CenterFab>
 
-      <Tooltip title="週轉上漲股" arrow>
+      <Tooltip title="系統推薦股" arrow>
         <NavButton 
             active={isActive("/dashboard/redball")}
             onClick={() => navigate("/dashboard/redball")}

@@ -10,7 +10,7 @@ import {
 import { TickDealsType } from "../../types";
 import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
-export default function TickChart({ tickDeals }: { tickDeals: TickDealsType }) {
+export default function StockTickChart({ tickDeals }: { tickDeals: TickDealsType }) {
   const data = useMemo(() => {
     const res = [];
     try {

@@ -2,16 +2,16 @@ import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
-import { DealTableType, TickDealsType } from "../types";
+import { DealTableType, FutureIds, TickDealsType } from "../types";
 
 export default function useTwseDeals() {
   const { data: tickData, mutate: mutateTickDeals } = useSWR(
     `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;autoRefresh=1743165248883;symbols=%5B%22%5ETWII%22%5D;type=tick?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=4ls9nghjud5o5&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
-    tauriFetcher
+    tauriFetcher,
   );
   const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
     `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
-    tauriFetcher
+    tauriFetcher,
   );
 
   // 檢查當前時間是否在台灣時間 8:00 AM 到 1:30 PM 之間
@@ -45,10 +45,10 @@ export default function useTwseDeals() {
       if (!tickData) throw new Error("tickData is null");
       const data = JSON.parse(tickData);
       const closes = data[0].chart.indicators.quote[0].close.filter(
-        (item: number | null) => item !== null
+        (item: number | null) => item !== null,
       );
       const highs = data[0].chart.indicators.quote[0].high.filter(
-        (item: number | null) => item !== null
+        (item: number | null) => item !== null,
       );
       const changePercent = data[0].chart.quote.changePercent;
       const price = data[0].chart.quote.price;
@@ -61,7 +61,8 @@ export default function useTwseDeals() {
       });
 
       let ts = data[0].chart.quote.refreshedTs;
-      const res: Omit<TickDealsType, "id"> & { volume: number } = {
+      const res: TickDealsType = {
+        id: FutureIds.TWSE,
         ts,
         price,
         avgPrices,

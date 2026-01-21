@@ -1,20 +1,28 @@
+import { TrendingUp as TrendingIcon } from "@mui/icons-material";
 import {
   Box,
   CircularProgress,
   Container,
+  Paper,
+  Stack,
+  styled,
   Tab,
   Tabs,
   Typography,
-  styled,
-  Paper,
-  Stack,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import { useDebugMode } from "../../../hooks/useDebugMode";
-import { StockStoreType } from "../../../types";
-import { TrendingUp as TrendingIcon } from "@mui/icons-material";
+import RedBallCard from "./components/RedBallCard";
+
+type CsvStockType = {
+  id: string;
+  name: string;
+  list: string;
+  type: string;
+  group: string;
+};
 
 // --- Styled Components ---
 
@@ -24,15 +32,16 @@ const PageContainer = styled(Box)`
   overflow: hidden;
   position: relative;
   background-color: #0f1214;
-  background-image: radial-gradient(
-      at 0% 0%,
-      hsla(253, 16%, 7%, 1) 0,
-      transparent 50%
-    ),
+  background-image:
+    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
     radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
     radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 100% 100%, 100% 100%, 100% 100%, 200px 200px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    200px 200px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
   color: white;
   display: flex;
@@ -70,36 +79,37 @@ const StyledTab = styled(Tab)(({ theme }) => ({
   },
 }));
 
-function csvToStockStore(csv: string): (StockStoreType & { list: string })[] {
+function csvToStockStore(csv: string): CsvStockType[] {
   const lines = csv.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
   const headers = lines[0].split(",");
 
-  return lines.slice(1).map((line) => {
-    const values = line.split(",");
-    const record: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      record[headers[i] || h] = values[i];
-    });
+  return lines
+    .slice(1)
+    .filter((line) => line.trim() && line.includes(","))
+    .map((line) => {
+      const values = line.split(",");
+      const record: Record<string, string> = {};
+      headers.forEach((h, i) => {
+        record[headers[i] || h] = values[i];
+      });
 
-    return {
-      id: record["stock_id"],
-      name: record["stock_name"],
-      group: record["industry_group"],
-      type: record["market_type"],
-      list: record["list"],
-    };
-  });
+      return {
+        id: (record["stock_id"] || "").trim(),
+        name: (record["stock_name"] || "").trim(),
+        list: (record["list"] || "").trim(),
+        type: (record["type"] || "").trim(),
+        group: (record["list"] || "").trim(),
+      };
+    })
+    .filter((stock) => stock.id);
 }
 
 export default function RedBall() {
   const [loading, setLoading] = useState(true);
-  const [stocks, setStocks] = useState<(StockStoreType & { list: string })[]>(
-    []
-  );
+  const [stocks, setStocks] = useState<CsvStockType[]>([]);
   const [selectedList, setSelectedList] = useState<string>("");
-  const [filteredStocks, setFilteredStocks] = useState<
-    (StockStoreType & { list: string })[]
-  >([]);
+  const [filteredStocks, setFilteredStocks] = useState<CsvStockType[]>([]);
   const [availableLists, setAvailableLists] = useState<string[]>([]);
 
   const isDebugMode = useDebugMode();
@@ -116,7 +126,7 @@ export default function RedBall() {
         setStocks(data);
 
         const uniqueLists = Array.from(
-          new Set(data.map((stock) => stock.list).filter(Boolean))
+          new Set(data.map((stock) => stock.list).filter(Boolean)),
         ) as string[];
         const sortedLists = uniqueLists.sort((a, b) => Number(a) - Number(b));
         setAvailableLists(sortedLists);
@@ -168,7 +178,7 @@ export default function RedBall() {
               sx={{ letterSpacing: "-0.5px" }}
               color="#fff"
             >
-              週轉上漲股
+              系統推薦股
             </Typography>
           </Stack>
 
@@ -217,13 +227,16 @@ export default function RedBall() {
             </Stack>
           </Box>
         ) : (
-          <Container maxWidth="lg" sx={{ height: "100%", pt: 2, pb: 10 }}>
+          <Container maxWidth="lg" sx={{ height: "100%", pt: 1, pb: 10 }}>
             {filteredStocks.length > 0 && (
               <VirtualizedStockList
-                stocks={filteredStocks}
-                height={window.innerHeight - 180}
-                itemHeight={380}
+                stocks={filteredStocks as any}
+                height={window.innerHeight - 170}
+                itemHeight={340}
                 showDebug={isDebugMode}
+                renderItem={(stock, isVisible) => (
+                  <RedBallCard stock={stock} isVisible={isVisible} />
+                )}
               />
             )}
           </Container>

@@ -2,8 +2,6 @@ import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, Typography } from "@mui/material";
 import { useMemo } from "react";
-import useIndicatorSettings from "../../hooks/useIndicatorSettings";
-import { calculateIndicators } from "../../utils/indicatorUtils";
 import {
   ComposedChart,
   Customized,
@@ -16,7 +14,9 @@ import {
   ZAxis,
 } from "recharts";
 import BaseCandlestickRectangle from "../../components/RechartCustoms/BaseCandlestickRectangle";
+import useIndicatorSettings from "../../hooks/useIndicatorSettings";
 import { DealTableType } from "../../types";
+import { calculateIndicators } from "../../utils/indicatorUtils";
 
 // 自訂 Tooltip 元件，顯示 t 及所有 payload
 function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {
@@ -24,14 +24,14 @@ function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {
   // 取出 t
   const t = dateFormat(
     new Date(payload[0]?.payload?.t * 1000).getTime(),
-    Mode.TimeStampToString
+    Mode.TimeStampToString,
   );
   return (
     <Box sx={{ color: "#222", background: "#fff", p: 1, borderRadius: 1 }}>
       <Typography>t: {t}</Typography>
       {payload
         .filter((item) =>
-          ["c", "ma5", "ma10", "ma20"].includes(item.dataKey as string)
+          ["c", "ma5", "ma10", "ma20"].includes(item.dataKey as string),
         )
         .map((item) => (
           <Typography key={item.dataKey} style={{ color: item.color }}>
@@ -44,12 +44,14 @@ function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {
 
 export default function MakChart({
   deals,
+  height = 120,
 }: {
   deals: {
     data: (Omit<DealTableType, "stock_id" | "t"> & { t: number })[];
     change: any;
     price: any;
   };
+  height?: number;
 }) {
   const { settings } = useIndicatorSettings();
   const data = useMemo(() => {
@@ -57,7 +59,7 @@ export default function MakChart({
   }, [deals.data, settings]);
 
   return (
-    <Box height={120}>
+    <Box height={height}>
       <ResponsiveContainer>
         <ComposedChart data={data}>
           <XAxis hide />

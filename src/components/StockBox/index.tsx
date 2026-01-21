@@ -29,7 +29,7 @@ import PreVolume from "./Items/PreVolume";
 import Volume from "./Items/Volume";
 import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
-import TickChart from "./TickChart";
+import StockTickChart from "./StockTickChart";
 
 // Premium Card Styling
 const StyledCard = styled(Box)(() => ({
@@ -409,7 +409,7 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
         }}
       >
         {tickDeals ? (
-          <TickChart tickDeals={tickDeals} />
+          <StockTickChart tickDeals={tickDeals} />
         ) : (
           <Box
             display="flex"

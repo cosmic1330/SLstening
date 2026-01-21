@@ -112,6 +112,7 @@ export type TickDealsType = {
   changePercent: number;
   closes: number[];
   previousClose: number;
+  volume?: number;
 };
 
 export type TimeSharingDealTableType = {

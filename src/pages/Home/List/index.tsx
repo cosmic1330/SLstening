@@ -2,14 +2,15 @@ import { Box, Container, Grid } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
 import { useEffect } from "react";
+import { STOCK_BOX_HEIGHT } from "../../../components/StockBox";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import useStocksStore from "../../../store/Stock.store";
+import CnnBox from "./cnn";
+import MmBox from "./mm";
 import NasdaqBox from "./nasdaq";
+import OtcBox from "./otc";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
-import CnnBox from "./cnn";
-import OtcBox from "./otc";
-import MmBox from "./mm";
 
 import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
 
@@ -78,7 +79,7 @@ function List() {
             <VirtualizedStockList
               stocks={stocks}
               height={window.innerHeight}
-              itemHeight={380} // 根據實際 StockBox 高度調整
+              itemHeight={STOCK_BOX_HEIGHT}
             />
           )}
         </Box>

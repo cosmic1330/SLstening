@@ -18,7 +18,7 @@ export default function VirtualizedStockList({
   stocks,
   height,
   width = "calc(100% - 8px)",
-  itemHeight = 250,
+  itemHeight = 400,
   showDebug = false,
   renderItem,
 }: VirtualizedStockListProps) {
@@ -65,10 +65,18 @@ export default function VirtualizedStockList({
       }
 
       return (
-        <Box style={style}>
-          <Grid container spacing={1} sx={{ px: 1, py: 1 }}>
+        <Box style={{ ...style, overflow: "hidden" }}>
+          <Grid
+            container
+            spacing={1}
+            sx={{ px: 1, py: 1, height: "100%", boxSizing: "border-box" }}
+          >
             {rowStocks.map(({ stock, index: stockIndex }) => (
-              <Grid size={12 / columns} key={stock.id}>
+              <Grid
+                size={12 / columns}
+                key={stock.id}
+                sx={{ height: "100%", boxSizing: "border-box" }}
+              >
                 {renderItem ? (
                   renderItem(stock, isItemVisible(stockIndex))
                 ) : (

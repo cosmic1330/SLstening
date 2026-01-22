@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import { useDebugMode } from "../../../hooks/useDebugMode";
-import RedBallCard from "./components/RedBallCard";
+import RedBallCard, { RED_BALL_CARD_HEIGHT } from "./components/RedBallCard";
 
 type CsvStockType = {
   id: string;
@@ -232,7 +232,7 @@ export default function RedBall() {
               <VirtualizedStockList
                 stocks={filteredStocks as any}
                 height={window.innerHeight - 170}
-                itemHeight={340}
+                itemHeight={RED_BALL_CARD_HEIGHT}
                 showDebug={isDebugMode}
                 renderItem={(stock, isVisible) => (
                   <RedBallCard stock={stock} isVisible={isVisible} />

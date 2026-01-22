@@ -24,6 +24,8 @@ import useStocksStore from "../../../../store/Stock.store";
 import { StockStoreType, TaType } from "../../../../types";
 import estimateVolume from "../../../../utils/estimateVolume";
 
+export const RED_BALL_CARD_HEIGHT = 360; // 統一管理推薦股卡片高度
+
 // --- Styled Components ---
 
 const CardContainer = styled(Paper)(() => ({

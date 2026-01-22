@@ -10,6 +10,10 @@ const StyledBox = styled(Box)`
   padding: 1rem;
   border-radius: 0.8rem;
   color: #fff;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 `;
 
 interface LazyStockBoxProps {
@@ -28,7 +32,7 @@ export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
     }
 
     const isMonitored = monitoredStocks.some(
-      (monitoredStock) => monitoredStock.id === stock.id
+      (monitoredStock) => monitoredStock.id === stock.id,
     );
     return {
       canDelete: isMonitored,

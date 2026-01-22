@@ -31,6 +31,8 @@ import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
 
+export const STOCK_BOX_HEIGHT = 420; // 統一管理卡片高度
+
 // Premium Card Styling
 const StyledCard = styled(Box)(() => ({
   position: "relative",
@@ -43,6 +45,10 @@ const StyledCard = styled(Box)(() => ({
   overflow: "hidden",
   cursor: "pointer",
   transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)", // Bouncy spring effect
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  boxSizing: "border-box",
   "&:hover": {
     transform: "translateY(-6px) scale(1.02)",
     background: "rgba(40, 40, 45, 0.75)",
@@ -193,15 +199,15 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
   const mainColor = isPositive
     ? "#FF5252" // Red accent
     : isNegative
-    ? "#69F0AE" // Green accent
-    : "#B0B0B0"; // Grey
+      ? "#69F0AE" // Green accent
+      : "#B0B0B0"; // Grey
 
   // Dynamic Glow Color based on trend
   const glowColor = isPositive
     ? "radial-gradient(circle at 80% 20%, rgba(255, 82, 82, 0.15) 0%, transparent 50%)"
     : isNegative
-    ? "radial-gradient(circle at 80% 20%, rgba(105, 240, 174, 0.15) 0%, transparent 50%)"
-    : "radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)";
+      ? "radial-gradient(circle at 80% 20%, rgba(105, 240, 174, 0.15) 0%, transparent 50%)"
+      : "radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)";
 
   return (
     <StyledCard onClick={openDetailWindow}>

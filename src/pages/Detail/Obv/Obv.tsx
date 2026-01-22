@@ -586,6 +586,7 @@ export default function Obv({
               opacity={0}
               dot={false}
               legendType="none"
+              name="高"
             />
             <Line
               dataKey="c"
@@ -593,6 +594,7 @@ export default function Obv({
               opacity={0}
               dot={false}
               legendType="none"
+              name="收"
             />
             <Line
               dataKey="l"
@@ -600,6 +602,7 @@ export default function Obv({
               opacity={0}
               dot={false}
               legendType="none"
+              name="低"
             />
             <Line
               dataKey="o"
@@ -607,6 +610,7 @@ export default function Obv({
               opacity={0}
               dot={false}
               legendType="none"
+              name="開"
             />
 
             {/* Price Indicators */}

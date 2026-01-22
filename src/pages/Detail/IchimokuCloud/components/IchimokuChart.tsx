@@ -228,6 +228,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               opacity={0}
               dot={false}
               legendType="none"
+              name="高"
             />
             <Line
               dataKey="c"
@@ -235,6 +236,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               opacity={0}
               dot={false}
               legendType="none"
+              name="收"
             />
             <Line
               dataKey="l"
@@ -242,6 +244,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               opacity={0}
               dot={false}
               legendType="none"
+              name="低"
             />
             <Line
               dataKey="o"
@@ -249,8 +252,8 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               opacity={0}
               dot={false}
               legendType="none"
+              name="開"
             />
-
             {/* Ichimoku Lines */}
             <Line
               dataKey="tenkan"
@@ -482,9 +485,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               }}
             />
             <RechartsTooltip
-              content={
-                <ChartTooltip showSignals={false} showIchimoku={false} />
-              }
+              content={<ChartTooltip showSignals={true} showIchimoku={false} />}
             />
 
             <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />

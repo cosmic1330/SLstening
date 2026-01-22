@@ -28,6 +28,27 @@ export const RED_BALL_CARD_HEIGHT = 360; // 統一管理推薦股卡片高度
 
 // --- Styled Components ---
 
+const ActionBtn = styled(IconButton)(() => ({
+  padding: 4,
+  background: "rgba(0,0,0,0.3)",
+  color: "rgba(255, 255, 255, 0.5)",
+  "&:hover": {
+    background: "#ef4444",
+    color: "white",
+  },
+}));
+
+const ActionButtons = styled(Stack)(() => ({
+  position: "absolute",
+  top: 8,
+  right: 8,
+  zIndex: 10,
+  opacity: 0,
+  transform: "translateX(10px)",
+  transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+  pointerEvents: "none",
+}));
+
 const CardContainer = styled(Paper)(() => ({
   background: "rgba(25, 27, 35, 0.7)",
   backdropFilter: "blur(20px)",
@@ -44,23 +65,11 @@ const CardContainer = styled(Paper)(() => ({
     background: "rgba(35, 37, 45, 0.9)",
     borderColor: "rgba(239, 68, 68, 0.4)",
     boxShadow: "0 12px 24px rgba(0, 0, 0, 0.3)",
-  },
-}));
-
-const ActionButtons = styled(Stack)(() => ({
-  position: "absolute",
-  top: 8,
-  right: 8,
-  zIndex: 10,
-}));
-
-const ActionBtn = styled(IconButton)(() => ({
-  padding: 4,
-  background: "rgba(0,0,0,0.3)",
-  color: "rgba(255, 255, 255, 0.5)",
-  "&:hover": {
-    background: "#ef4444",
-    color: "white",
+    "& .action-buttons": {
+      opacity: 1,
+      transform: "translateX(0)",
+      pointerEvents: "auto",
+    },
   },
 }));
 
@@ -203,7 +212,7 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
   return (
     <CardContainer onClick={openDetailWindow}>
       {/* Mini Actions */}
-      <ActionButtons direction="row" spacing={0.5}>
+      <ActionButtons direction="row" spacing={0.5} className="action-buttons">
         {!isTracking && (
           <Tooltip title="加入追蹤" arrow>
             <ActionBtn

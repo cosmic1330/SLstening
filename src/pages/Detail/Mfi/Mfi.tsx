@@ -541,6 +541,7 @@ export default function Mfi({
               dot={false}
               activeDot={false}
               legendType="none"
+              name="高"
             />
             <Line
               dataKey="c"
@@ -549,6 +550,7 @@ export default function Mfi({
               dot={false}
               activeDot={false}
               legendType="none"
+              name="收"
             />
             <Line
               dataKey="l"
@@ -557,6 +559,7 @@ export default function Mfi({
               dot={false}
               activeDot={false}
               legendType="none"
+              name="低"
             />
             <Line
               dataKey="o"
@@ -565,6 +568,7 @@ export default function Mfi({
               dot={false}
               activeDot={false}
               legendType="none"
+              name="開"
             />
             <Customized component={BaseCandlestickRectangle} />
 

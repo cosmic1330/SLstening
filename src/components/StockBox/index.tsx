@@ -30,6 +30,7 @@ import Volume from "./Items/Volume";
 import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
+import Ma10 from "./Items/Ma10";
 
 export const STOCK_BOX_HEIGHT = 420; // 統一管理卡片高度
 
@@ -133,6 +134,11 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
     ma5_deduction_value,
     ma5_tomorrow_deduction_value,
     ma5_tomorrow_deduction_time,
+    ma10,
+    ma10_deduction_time,
+    ma10_deduction_value,
+    ma10_tomorrow_deduction_value,
+    ma10_tomorrow_deduction_time,
     ma20,
     ma20_deduction_time,
     ma20_deduction_value,
@@ -368,10 +374,19 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
 
           <Grid size={{ xs: 6 }}>
             <MetricBox>
-              <AvgPrice {...{ lastPrice, tickDeals }} />
+              <Ma10
+                {...{
+                  ma10,
+                  lastPrice,
+                  ma10_deduction_time,
+                  ma10_deduction_value,
+                  ma10_tomorrow_deduction_time,
+                  ma10_tomorrow_deduction_value,
+                }}
+              />
             </MetricBox>
             <MetricBox>
-              <DailyLow {...{ deals, lastPrice }} />
+              <AvgPrice {...{ lastPrice, tickDeals }} />
             </MetricBox>
           </Grid>
 

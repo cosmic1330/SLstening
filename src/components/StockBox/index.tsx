@@ -22,7 +22,7 @@ import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
-import DailyLow from "./Items/DailyLow";
+import Ma10 from "./Items/Ma10";
 import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
 import PreVolume from "./Items/PreVolume";
@@ -30,7 +30,6 @@ import Volume from "./Items/Volume";
 import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
-import Ma10 from "./Items/Ma10";
 
 export const STOCK_BOX_HEIGHT = 420; // 統一管理卡片高度
 

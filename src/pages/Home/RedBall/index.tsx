@@ -79,19 +79,38 @@ const StyledTab = styled(Tab)(({ theme }) => ({
   },
 }));
 
+function parseCsvLine(line: string): string[] {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
 function csvToStockStore(csv: string): CsvStockType[] {
   const lines = csv.trim().split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",");
+  const headers = parseCsvLine(lines[0]);
 
   return lines
     .slice(1)
     .filter((line) => line.trim() && line.includes(","))
     .map((line) => {
-      const values = line.split(",");
+      const values = parseCsvLine(line);
       const record: Record<string, string> = {};
       headers.forEach((h, i) => {
-        record[headers[i] || h] = values[i];
+        record[h] = values[i] || "";
       });
 
       return {
@@ -99,7 +118,7 @@ function csvToStockStore(csv: string): CsvStockType[] {
         name: (record["stock_name"] || "").trim(),
         list: (record["list"] || "").trim(),
         type: (record["type"] || "").trim(),
-        group: (record["list"] || "").trim(),
+        group: (record["group"] || "").trim(),
       };
     })
     .filter((stock) => stock.id);

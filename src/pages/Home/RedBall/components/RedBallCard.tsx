@@ -301,24 +301,33 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
 
         <Divider sx={{ borderColor: "rgba(255,255,255,0.06)", mb: 1 }} />
 
-        {/* Reason Chip */}
-        <Box sx={{ mb: 1 }}>
-          <Typography
-            sx={{
-              display: "inline-block",
-              background: "rgba(239, 68, 68, 0.1)",
-              color: "#ef4444",
-              fontSize: 10,
-              fontWeight: 800,
-              px: 1,
-              py: 0.2,
-              borderRadius: 1,
-              border: "1px solid rgba(239, 68, 68, 0.2)",
-            }}
-          >
-            {recommendationReason}
-          </Typography>
-        </Box>
+        {/* Reason chips */}
+        <Stack
+          direction="row"
+          spacing={0.5}
+          flexWrap="wrap"
+          useFlexGap
+          sx={{ mb: 1 }}
+        >
+          {recommendationReason.split(/[,]/).map((reason, index) => (
+            <Typography
+              key={index}
+              sx={{
+                display: "inline-block",
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "#ef4444",
+                fontSize: 10,
+                fontWeight: 800,
+                px: 1,
+                py: 0.2,
+                borderRadius: 1,
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+              }}
+            >
+              {reason.trim()}
+            </Typography>
+          ))}
+        </Stack>
 
         {/* Dense Metrics */}
         <Stack spacing={0.2} sx={{ mb: 1 }}>

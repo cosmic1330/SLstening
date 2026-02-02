@@ -6,7 +6,7 @@ import { DealTableType, FutureIds } from "../types";
 
 export default function useNasdaqDeals() {
   const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${FutureIds.NASDAQ}?interval=1d&range=200d`,
+    `https://query1.finance.yahoo.com/v8/finance/chart/${FutureIds.NASDAQ_FUTURE}?interval=1d&range=200d`,
     tauriFetcher
   );
 

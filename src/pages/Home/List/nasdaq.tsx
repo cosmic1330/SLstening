@@ -15,8 +15,8 @@ const Box = styled(MuiBox)`
 
 export default function NasdaqBox() {
   const { openDetailWindow } = useDetailWebviewWindow({
-    id: FutureIds.NASDAQ,
-    name: "納斯達克指數",
+    id: FutureIds.NASDAQ_FUTURE,
+    name: "納斯達克期貨",
     group: "期貨",
   });
   const { deals } = useNasdaqDeals();
@@ -31,7 +31,7 @@ export default function NasdaqBox() {
             alignItems="center"
             justifyContent="space-between"
           >
-            <Typography variant="button">納斯達克指數</Typography>
+            <Typography variant="button">納斯達克期貨</Typography>
             <Stack
               direction="row"
               alignItems="center"

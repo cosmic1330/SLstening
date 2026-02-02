@@ -335,9 +335,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
   }, []);
 
   const { data } = useSWR(
-    id === FutureIds.NASDAQ
+    id === FutureIds.NASDAQ_FUTURE
       ? `https://query1.finance.yahoo.com/v8/finance/chart/${
-          FutureIds.NASDAQ
+          FutureIds.NASDAQ_FUTURE
         }?interval=${
           perd === UrlTaPerdOptions.Hour
             ? "1h"
@@ -361,7 +361,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
   const deals = useMemo(() => {
     if (!data || !id || typeof data !== "string") return [];
-    return id === FutureIds.NASDAQ
+    return id === FutureIds.NASDAQ_FUTURE
       ? analyzeNasdaqIndicatorsData(
           data,
           perd === UrlTaPerdOptions.Hour

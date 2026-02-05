@@ -295,3 +295,9 @@ export interface StepCheck {
   label: string;
   status: CheckStatus;
 }
+
+export interface CategoryType {
+  id: string; // Unique ID (e.g., timestamp or UUID)
+  name: string; // Display name (e.g., "重電")
+  stockIds: string[]; // List of stock IDs in this category
+}

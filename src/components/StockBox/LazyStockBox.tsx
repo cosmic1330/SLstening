@@ -19,14 +19,21 @@ const StyledBox = styled(Box)`
 interface LazyStockBoxProps {
   stock: StockStoreType;
   isVisible: boolean;
+  canDelete?: boolean;
+  onRemove?: () => void;
 }
 
-export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
+export default function LazyStockBox({
+  stock,
+  isVisible,
+  canDelete: forcedCanDelete,
+  onRemove,
+}: LazyStockBoxProps) {
   // 取得監測中的股票列表
   const { stocks: monitoredStocks } = useStocksStore();
 
   // 只有在可見時才計算監測狀態（效能優化）
-  const { canDelete, canAdd } = useMemo(() => {
+  const { canDelete: calculatedCanDelete, canAdd } = useMemo(() => {
     if (!isVisible) {
       return { canDelete: false, canAdd: false };
     }
@@ -39,6 +46,9 @@ export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
       canAdd: !isMonitored,
     };
   }, [isVisible, monitoredStocks, stock.id]);
+
+  const finalCanDelete =
+    forcedCanDelete !== undefined ? forcedCanDelete : calculatedCanDelete;
   // 直接根據 isVisible 來決定是否加載數據
   // 不再使用 shouldLoad 狀態，確保只有可見時才請求
 
@@ -106,9 +116,10 @@ export default function LazyStockBox({ stock, isVisible }: LazyStockBoxProps) {
   return (
     <StockBox
       stock={stock}
-      canDelete={canDelete}
+      canDelete={finalCanDelete}
       canAdd={canAdd}
       enabled={true}
+      onRemove={onRemove}
     />
   );
 }

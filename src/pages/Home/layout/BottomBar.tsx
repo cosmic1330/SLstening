@@ -1,7 +1,7 @@
 
 import AddCircleRoundedIcon from "@mui/icons-material/AddCircleRounded";
 import BuildIcon from "@mui/icons-material/Build";
-import CurrencyExchangeIcon from "@mui/icons-material/CurrencyExchange";
+import CategoryIcon from '@mui/icons-material/Category';
 import HomeIcon from "@mui/icons-material/Home";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import { Box, IconButton,  styled, Tooltip } from "@mui/material"; // Import Tooltip
@@ -126,11 +126,12 @@ export default function BottomBar() {
         </NavButton>
       </Tooltip>
       
-      <Tooltip title="斗內我" arrow>
+      <Tooltip title="分類" arrow>
          <NavButton 
-            disabled
+            active={isActive("/dashboard/category")}
+            onClick={() => navigate("/dashboard/category")}
         >
-            <CurrencyExchangeIcon />
+            <CategoryIcon />
         </NavButton>
       </Tooltip>
     </GlassDock>

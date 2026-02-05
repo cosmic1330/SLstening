@@ -1,4 +1,5 @@
 import AnalyticsIcon from "@mui/icons-material/Analytics";
+import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import TrendingDownIcon from "@mui/icons-material/TrendingDown";
@@ -120,9 +121,15 @@ export interface StockBoxProps {
   canDelete?: boolean; // Kept for interface compatibility, logic handled internally if needed
   canAdd?: boolean; // Kept for interface compatibility
   enabled?: boolean;
+  onRemove?: () => void;
 }
 
-export default function StockBox({ stock, enabled = true }: StockBoxProps) {
+export default function StockBox({
+  stock,
+  enabled = true,
+  canDelete = true,
+  onRemove,
+}: StockBoxProps) {
   // Using the Hook with enabled capabilities
   const { deals, name, tickDeals } = useConditionalDeals(stock.id, enabled);
 
@@ -257,21 +264,42 @@ export default function StockBox({ stock, enabled = true }: StockBoxProps) {
             <AnalyticsIcon fontSize="small" />
           </ActionBtn>
         </Tooltip>
-        <Tooltip title="Delete Stock" arrow>
-          <ActionBtn
-            size="small"
-            color="error"
-            onClick={handleDelete}
-            sx={{
-              "&:hover": {
-                backgroundColor: "rgba(244, 67, 54, 0.8)",
-                borderColor: "#ef5350",
-              },
-            }}
-          >
-            <DeleteIcon fontSize="small" />
-          </ActionBtn>
-        </Tooltip>
+        {onRemove && (
+          <Tooltip title="從此分類移除" arrow>
+            <ActionBtn
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              sx={{
+                "&:hover": {
+                  backgroundColor: "rgba(244, 67, 54, 0.8)",
+                  borderColor: "#ef5350",
+                },
+              }}
+            >
+              <CloseIcon fontSize="small" />
+            </ActionBtn>
+          </Tooltip>
+        )}
+        {canDelete && (
+          <Tooltip title="Delete Stock" arrow>
+            <ActionBtn
+              size="small"
+              color="error"
+              onClick={handleDelete}
+              sx={{
+                "&:hover": {
+                  backgroundColor: "rgba(244, 67, 54, 0.8)",
+                  borderColor: "#ef5350",
+                },
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </ActionBtn>
+          </Tooltip>
+        )}
       </ActionButtons>
 
       {/* Main Content */}

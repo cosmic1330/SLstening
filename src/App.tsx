@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import useStocksStore from "./store/Stock.store";
+import Category from "./pages/Home/Category";
 
 // 懶加載組件
 const List = lazy(() => import("./pages/Home/List"));
@@ -52,6 +53,14 @@ function App() {``
               element={
                 <Suspense fallback={<div>載入中...</div>}>
                   <RedBall />
+                </Suspense>
+              }
+            />
+            <Route
+              path="category"
+              element={
+                <Suspense fallback={<div>載入中...</div>}>
+                  <Category />
                 </Suspense>
               }
             />

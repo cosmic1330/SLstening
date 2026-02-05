@@ -20,7 +20,7 @@ const Box = styled(MuiBox)`
 export default function CnnBox() {
   const handleClick = () => {
     window.open(
-      "https://www.macromicro.me/series/22748/cnn-fear-and-greed?utm_source=chatgpt.com",
+      "https://www.macromicro.me/charts/50108/cnn-fear-and-greed",
       "_blank"
     );
   };

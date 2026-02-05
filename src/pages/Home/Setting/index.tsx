@@ -1,6 +1,7 @@
 import {
   ArrowBackIosNew as ArrowBackIcon,
   BugReport as BugReportIcon,
+  DeleteOutline as DeleteOutlineIcon,
   CloudDownload as DownloadIcon,
   DeleteForever as ResetIcon,
   Settings as SettingsIcon,
@@ -53,15 +54,16 @@ const PageContainer = styled(Box)`
   overflow: auto;
   position: relative;
   background-color: #0f1214;
-  background-image: radial-gradient(
-      at 0% 0%,
-      hsla(253, 16%, 7%, 1) 0,
-      transparent 50%
-    ),
+  background-image:
+    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
     radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
     radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 100% 100%, 100% 100%, 100% 100%, 200px 200px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    200px 200px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
   color: white;
   padding-bottom: 80px; /* Space for BottomBar if any */
@@ -79,8 +81,12 @@ const GlassCard = styled(Paper)(({ theme }) => ({
 }));
 
 function Setting() {
-  const { factory_reset, fetchSupabaseWatchStock, addStocks } =
-    useStocksStore();
+  const {
+    factory_reset,
+    fetchSupabaseWatchStock,
+    addStocks,
+    removeSupabaseWatchStock,
+  } = useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   const navigate = useNavigate();
 
@@ -90,10 +96,10 @@ function Setting() {
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
-    localStorage.getItem("slitenting-alwaysOnTop") === "true"
+    localStorage.getItem("slitenting-alwaysOnTop") === "true",
   );
   const [debugMode, setDebugMode] = useState(
-    localStorage.getItem("slitenting-debugMode") === "true"
+    localStorage.getItem("slitenting-debugMode") === "true",
   );
   const [marketVisibility, setMarketVisibility] = useState(() => {
     const saved = localStorage.getItem("slitenting-market-info-visibility");
@@ -121,7 +127,7 @@ function Setting() {
       localStorage.setItem("slitenting-alwaysOnTop", checked.toString());
       getCurrentWindow().setAlwaysOnTop(checked);
     },
-    []
+    [],
   );
 
   const handleDebugModeChange = useCallback(
@@ -130,7 +136,7 @@ function Setting() {
       setDebugMode(checked);
       localStorage.setItem("slitenting-debugMode", checked.toString());
     },
-    []
+    [],
   );
 
   const handleMarketVisibilityChange = useCallback(
@@ -139,12 +145,12 @@ function Setting() {
         const next = { ...prev, [key]: checked };
         localStorage.setItem(
           "slitenting-market-info-visibility",
-          JSON.stringify(next)
+          JSON.stringify(next),
         );
         return next;
       });
     },
-    []
+    [],
   );
 
   const handleFactoryReset = useCallback(async () => {
@@ -178,7 +184,7 @@ function Setting() {
 
   const handleConfirmSync = useCallback(async () => {
     const stocksToAdd = pendingStocks.filter((s) =>
-      selectedStocks.includes(s.id)
+      selectedStocks.includes(s.id),
     );
     if (stocksToAdd.length > 0) {
       await addStocks(stocksToAdd);
@@ -200,9 +206,26 @@ function Setting() {
 
   const handleToggleStock = (id: string) => {
     setSelectedStocks((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
+
+  const handleDeleteCloudStock = useCallback(
+    async (id: string, name: string) => {
+      if (window.confirm(`確定要從雲端同步清單中刪除 ${id} ${name} 嗎？`)) {
+        try {
+          await removeSupabaseWatchStock(id);
+          setPendingStocks((prev) => prev.filter((s) => s.id !== id));
+          setSelectedStocks((prev) => prev.filter((i) => i !== id));
+          sendNotification({ title: "刪除成功", body: `已從雲端移除 ${name}` });
+        } catch (e) {
+          console.error(e);
+          sendNotification({ title: "錯誤", body: "刪除失敗" });
+        }
+      }
+    },
+    [removeSupabaseWatchStock],
+  );
 
   return (
     <PageContainer>
@@ -446,7 +469,7 @@ function Setting() {
                         onChange={(e) =>
                           handleMarketVisibilityChange(
                             item.key,
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                         sx={{
@@ -539,7 +562,24 @@ function Setting() {
           </Box>
           <List dense sx={{ maxHeight: "300px", overflow: "auto" }}>
             {pendingStocks.map((stock) => (
-              <ListItem key={stock.id} disablePadding>
+              <ListItem
+                key={stock.id}
+                disablePadding
+                secondaryAction={
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    size="small"
+                    onClick={() => handleDeleteCloudStock(stock.id, stock.name)}
+                    sx={{
+                      color: "rgba(248, 113, 113, 0.7)",
+                      "&:hover": { color: "#f87171" },
+                    }}
+                  >
+                    <DeleteOutlineIcon fontSize="small" />
+                  </IconButton>
+                }
+              >
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -554,7 +594,7 @@ function Setting() {
                       {stock.id} - {stock.name}
                     </Typography>
                   }
-                  sx={{ width: "100%", ml: 0 }}
+                  sx={{ width: "100%", ml: 0, mr: 0 }}
                 />
               </ListItem>
             ))}

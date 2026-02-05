@@ -18,6 +18,7 @@ interface StocksState {
   factory_reset: () => Promise<void>;
   fetchSupabaseWatchStock: () => Promise<StockStoreType[]>;
   addStocks: (stocks: StockStoreType[]) => Promise<void>;
+  removeSupabaseWatchStock: (id: string) => Promise<void>;
 }
 
 const useStocksStore = create<StocksState>((set, get) => ({
@@ -27,7 +28,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
     const currentStocks = get().stocks;
     // 檢查是否已存在相同 ID 的股票
     const exists = currentStocks.some(
-      (existingStock) => existingStock.id === stock.id
+      (existingStock) => existingStock.id === stock.id,
     );
 
     if (!exists) {
@@ -119,6 +120,24 @@ const useStocksStore = create<StocksState>((set, get) => ({
     set(() => ({
       stocks: updatedStocks,
     }));
+  },
+  removeSupabaseWatchStock: async (id: string) => {
+    const { supabase } = await import("../supabase");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("watch_stock")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("stock_id", id);
+
+    if (error) {
+      console.error("Error deleting from watch_stock:", error);
+      throw error;
+    }
   },
 }));
 

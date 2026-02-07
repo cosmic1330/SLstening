@@ -332,7 +332,7 @@ export default function Bollean({
     const highs = calculationSlice.map((d) => d.h as number | null);
     const lows = calculationSlice.map((d) => d.l as number | null);
 
-    return calculateChannel(highs, lows, 3);
+    return calculateChannel(highs, lows);
   }, [chartData, isLocked, lockedInfo, channelPeriod]);
 
   const handleToggleLock = (checked: boolean) => {

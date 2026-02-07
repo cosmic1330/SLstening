@@ -87,7 +87,6 @@ function linearRegression(
 export function calculateChannel(
   highs: (number | null)[],
   lows: (number | null)[],
-  window: number = 3, // Kept for compatibility
 ): ChannelResult | null {
   // 1. Preparation: Filter valid points (excluding the very last incomplete bar)
   const validData: { i: number; h: number; l: number; m: number }[] = [];

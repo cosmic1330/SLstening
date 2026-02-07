@@ -80,17 +80,18 @@ function linearRegression(
 }
 
 /**
- * Calculates a classic Linear Regression Channel (LRC).
- * 100% Reliability: Guaranteed to detect a channel if there is price data.
- * High Precision: Boundaries precisely enclose the absolute highs and lows.
+ * Calculates a robust Linear Regression Channel (LRC).
+ * Uses Standard Deviation to define boundaries, which is more stable
+ * and better for identifying future support and resistance.
  */
 export function calculateChannel(
   highs: (number | null)[],
   lows: (number | null)[],
+  multiplier: number = 2.0, // Default to 2.0 SD (Pearson Channel)
 ): ChannelResult | null {
-  // 1. Preparation: Filter valid points (excluding the very last incomplete bar)
+  // 1. Preparation: Filter valid points
   const validData: { i: number; h: number; l: number; m: number }[] = [];
-  for (let i = 0; i < highs.length - 1; i++) {
+  for (let i = 0; i < highs.length; i++) {
     const h = highs[i];
     const l = lows[i];
     if (h != null && l != null) {
@@ -108,22 +109,26 @@ export function calculateChannel(
 
   const { slope, intercept } = reg;
 
-  // 3. Determine Boundaries (Geometric Fit)
-  // Shift the center line up to touch the highest high, and down to touch the lowest low.
-  let maxHighResidual = -Infinity;
-  let minLowResidual = Infinity;
-
-  validData.forEach((d) => {
-    const baseValue = slope * d.i + intercept;
-    const highRes = d.h - baseValue;
-    const lowRes = d.l - baseValue;
-
-    if (highRes > maxHighResidual) maxHighResidual = highRes;
-    if (lowRes < minLowResidual) minLowResidual = lowRes;
+  // 3. Determine Boundaries using Standard Deviation of Residuals
+  // Residual = Distance between price mid-point and the trendline
+  const residuals = validData.map((d) => {
+    const trendValue = slope * d.i + intercept;
+    return d.m - trendValue;
   });
 
-  const upperIntercept = intercept + maxHighResidual;
-  const lowerIntercept = intercept + minLowResidual;
+  // Calculate Mean (should be near 0 for OLS)
+  const meanResidual =
+    residuals.reduce((acc, val) => acc + val, 0) / residuals.length;
+
+  // Calculate Standard Deviation of Residuals
+  const variance =
+    residuals.reduce((acc, val) => acc + Math.pow(val - meanResidual, 2), 0) /
+    residuals.length;
+  const stdDev = Math.sqrt(variance);
+
+  // Apply multiplier for boundaries
+  const upperIntercept = intercept + stdDev * multiplier;
+  const lowerIntercept = intercept - stdDev * multiplier;
 
   // 4. Classification
   let type: "ascending" | "descending" | "horizontal" = "horizontal";

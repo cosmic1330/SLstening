@@ -155,6 +155,7 @@ export default function Bollean({
 
   // LRC Dynamic Parameters
   const [channelPeriod, setChannelPeriod] = useState(60);
+  const [channelMultiplier, setChannelMultiplier] = useState(2.0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
@@ -356,8 +357,8 @@ export default function Bollean({
     const highs = calculationSlice.map((d) => d.h as number | null);
     const lows = calculationSlice.map((d) => d.l as number | null);
 
-    return calculateChannel(highs, lows);
-  }, [chartData, isLocked, lockedInfo, channelPeriod]);
+    return calculateChannel(highs, lows, channelMultiplier);
+  }, [chartData, isLocked, lockedInfo, channelPeriod, channelMultiplier]);
 
   const handleToggleLock = (checked: boolean) => {
     if (checked) {
@@ -785,6 +786,20 @@ export default function Bollean({
                     step={1}
                     onChange={(_, v) => setChannelPeriod(v as number)}
                     size="small"
+                  />
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    標準差倍數: {channelMultiplier.toFixed(1)}
+                  </Typography>
+                  <Slider
+                    value={channelMultiplier}
+                    min={0.5}
+                    max={5.0}
+                    step={0.1}
+                    onChange={(_, v) => setChannelMultiplier(v as number)}
+                    size="small"
+                    color="secondary"
                   />
                 </Box>
               </Menu>

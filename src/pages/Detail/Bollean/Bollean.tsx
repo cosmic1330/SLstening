@@ -2,6 +2,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsIcon from "@mui/icons-material/Settings";
+
 import {
   Box,
   Card,
@@ -142,7 +143,7 @@ export default function Bollean({
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
-  const [showChannel, setShowChannel] = useState(true);
+  const [showChannel, setShowChannel] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockedInfo, setLockedInfo] = useState<{
     slope: number;
@@ -320,6 +321,29 @@ export default function Bollean({
       rightOffset === 0 ? undefined : -rightOffset,
     );
   }, [allPointsWithIndicators, visibleCount, rightOffset]);
+
+  const yDomain = useMemo(() => {
+    if (chartData.length === 0) return ["auto", "auto"];
+
+    let min = Infinity;
+    let max = -Infinity;
+
+    chartData.forEach((d: any) => {
+      // Include Price
+      if (d.h != null && d.h > max) max = d.h;
+      if (d.l != null && d.l < min) min = d.l;
+
+      // Include Bollinger Bands
+      if (d.bollUb != null && d.bollUb > max) max = d.bollUb;
+      if (d.bollLb != null && d.bollLb < min) min = d.bollLb;
+    });
+
+    if (min === Infinity || max === -Infinity) return ["auto", "auto"];
+
+    const range = max - min;
+    const padding = range * 0.05; // 5% padding
+    return [min - padding, max + padding];
+  }, [chartData]);
 
   const channelInfo = useMemo(() => {
     if (isLocked && lockedInfo) return lockedInfo;
@@ -703,7 +727,7 @@ export default function Bollean({
                     variant="caption"
                     sx={{ fontSize: "0.65rem", color: "#888" }}
                   >
-                    通道
+                    顯示通道
                   </Typography>
                 }
                 sx={{ m: 0 }}
@@ -780,7 +804,7 @@ export default function Bollean({
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
-            <YAxis domain={["auto", "auto"]} />
+            <YAxis domain={yDomain} allowDataOverflow={true} />
             <YAxis
               yAxisId="right"
               orientation="right"

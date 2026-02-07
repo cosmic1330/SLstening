@@ -77,9 +77,27 @@ export default function Header({
         sx={{
           overflowX: "auto",
           pb: 1,
-          "::-webkit-scrollbar": { display: "none" },
-          msOverflowStyle: "none",
-          scrollbarWidth: "none",
+          px: 1, // Add side padding to prevent clipping at edges
+          maskImage:
+            "linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent)",
+          "::-webkit-scrollbar": {
+            display: "block",
+            height: "3px",
+          },
+          "::-webkit-scrollbar-track": {
+            backgroundColor: "transparent",
+          },
+          "::-webkit-scrollbar-thumb": {
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            borderRadius: "3px",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+            },
+          },
+          msOverflowStyle: "auto",
+          scrollbarWidth: "thin",
         }}
       >
         {categories.map((c) => (

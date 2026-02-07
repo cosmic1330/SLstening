@@ -9,11 +9,13 @@ import {
   CircularProgress,
   Container,
   Divider,
+  FormControlLabel,
   Tooltip as MuiTooltip,
   Stack,
   Step,
   StepButton,
   Stepper,
+  Switch,
   Typography,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -34,6 +36,7 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { calculateChannel } from "../../../utils/channelUtils";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 import Fundamental from "../Tooltip/Fundamental";
@@ -54,6 +57,8 @@ interface BolleanChartData extends Partial<{
   exitSignal?: number | null;
   buyReason?: string;
   exitReason?: string;
+  channelUb?: number | null;
+  channelLb?: number | null;
 }
 
 type CheckStatus = "pass" | "fail" | "manual";
@@ -133,6 +138,15 @@ export default function Bollean({
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [activeStep, setActiveStep] = useState(0);
+  const [showChannel, setShowChannel] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockedInfo, setLockedInfo] = useState<{
+    slope: number;
+    upperIntercept: number;
+    lowerIntercept: number;
+    anchorTime: number | string;
+    type: string;
+  } | null>(null);
 
   useEffect(() => {
     const handleSwitchStep = () => {
@@ -217,103 +231,152 @@ export default function Bollean({
     };
   }, [deals.length, visibleCount, rightOffset]);
 
-  const chartData = useMemo((): BolleanChartData[] => {
+  const allPointsWithIndicators = useMemo((): BolleanChartData[] => {
     if (!deals || deals.length === 0) return [];
-
-    // Initial pass: Calculate Bands using centralized utility
     const baseData = calculateIndicators(deals, settings);
-
-    // Second pass: Calculate Signals & Logic
     let lastSignalState: "buy" | "neutral" = "neutral";
-
-    // Helper to check valid number
     const isNum = (n: any): n is number => typeof n === "number";
 
-    return baseData
-      .map((d, i) => {
-        if (i < settings.boll) return d; // Skip initial stabilization
+    return baseData.map((d, i) => {
+      if (i < settings.boll) return d as BolleanChartData;
+      const prev = baseData[i - 1];
+      const price = d.c;
+      const ub = d.bollUb;
+      const lb = d.bollLb;
+      const ma = d.bollMa;
+      const width = d.bandWidth;
 
-        const prev = baseData[i - 1];
+      if (
+        !isNum(price) ||
+        ub === null ||
+        lb === null ||
+        ma === null ||
+        width === null
+      )
+        return d as BolleanChartData;
 
-        const price = d.c;
-        const ub = d.bollUb;
-        const lb = d.bollLb;
-        const ma = d.bollMa;
-        const width = d.bandWidth;
+      const maRising = ma > (prev.bollMa || 0);
+      const priceAboveMa = price > ma;
+      const isSqueeze = width < 0.15;
+      const breakoutUp =
+        isSqueeze && price > ub && (d.v || 0) > (prev.v || 0) * 1.3;
+      const touchedLb = (d.l || 0) <= lb;
+      const closeHigh = price > (d.o || 0);
+      const reversalLong = touchedLb && closeHigh && maRising;
 
-        if (
-          !isNum(price) ||
-          ub === null ||
-          lb === null ||
-          ma === null ||
-          width === null
-        )
-          return d;
+      let score = 0;
+      if (maRising) score += 20;
+      if (priceAboveMa) score += 20;
+      if (breakoutUp) score += 40;
+      if (reversalLong) score += 30;
 
-        // 1. Trend Filter
-        const maRising = ma > (prev.bollMa || 0);
-        const priceAboveMa = price > ma;
+      let buySignal: number | null = null;
+      let exitSignal: number | null = null;
+      let buyReason: string | undefined;
+      let exitReason: string | undefined;
 
-        // 2. Squeeze Breakout Condition
-        // BandWidth low (< 0.10 or relative low - using 0.15 as generic placeholder for "tight")
-        // Note: Absolute bandwidth depends on asset class. Percentage width is safer.
-        // README says < 30% percentile, which requires history.
-        // Simplified: width < 0.10 (10%) is often "squeeze" for stocks. Let's use 0.15 for now.
-        const isSqueeze = width < 0.15;
-        const breakoutUp =
-          isSqueeze && price > ub && (d.v || 0) > (prev.v || 0) * 1.3; // Volume spike
-
-        // 3. Reversal (Long)
-        // Price touched Lower Band then closed higher (Hammer/Pinbar logic simplified)
-        const touchedLb = (d.l || 0) <= lb;
-        const closeHigh = price > (d.o || 0);
-        const reversalLong = touchedLb && closeHigh && maRising; // Trend following dip buy
-
-        // Scoring for BUY
-        let score = 0;
-        if (maRising) score += 20;
-        if (priceAboveMa) score += 20;
-        if (breakoutUp) score += 40; // High weight for breakout
-        if (reversalLong) score += 30;
-
-        let buySignal: number | null = null;
-        let exitSignal: number | null = null;
-        let buyReason: string | undefined;
-        let exitReason: string | undefined;
-
-        if (lastSignalState === "buy") {
-          // Exit Logic
-          // 1. Price falls below MA (Trend break)
-          // 2. Price touches UB then fails to make new high (simplified: close < prev close after touching UB) - too noisy?
-          // Let's use simple MA break or strict Hard Stop below previous low.
-          if (price < ma) {
-            exitSignal = (d.h || 0) * 1.02;
-            exitReason = "跌破中軌";
-            lastSignalState = "neutral";
-          }
-        } else {
-          // Buy Logic
-          // Score threshold or specific setup
-          if ((breakoutUp || reversalLong) && score >= 50) {
-            buySignal = (d.l || 0) * 0.98;
-            buyReason = "突破/反轉";
-            lastSignalState = "buy";
-          }
+      if (lastSignalState === "buy") {
+        if (price < ma) {
+          exitSignal = (d.h || 0) * 1.02;
+          exitReason = "跌破中軌";
+          lastSignalState = "neutral";
         }
+      } else {
+        if ((breakoutUp || reversalLong) && score >= 50) {
+          buySignal = (d.l || 0) * 0.98;
+          buyReason = "突破/反轉";
+          lastSignalState = "buy";
+        }
+      }
 
-        return {
-          ...d,
-          buySignal,
-          exitSignal,
-          buyReason,
-          exitReason,
-        };
-      })
-      .slice(
-        -(visibleCount + rightOffset),
-        rightOffset === 0 ? undefined : -rightOffset,
+      return {
+        ...d,
+        buySignal,
+        exitSignal,
+        buyReason,
+        exitReason,
+      } as BolleanChartData;
+    });
+  }, [deals, settings]);
+
+  const chartData = useMemo(() => {
+    return allPointsWithIndicators.slice(
+      -(visibleCount + rightOffset),
+      rightOffset === 0 ? undefined : -rightOffset,
+    );
+  }, [allPointsWithIndicators, visibleCount, rightOffset]);
+
+  const channelInfo = useMemo(() => {
+    if (isLocked && lockedInfo) return lockedInfo;
+    if (chartData.length === 0) return null;
+
+    // Requirements: recent 30-60 points
+    const n = Math.min(60, chartData.length);
+    const calculationSlice = chartData.slice(-n);
+
+    const highs = calculationSlice.map((d) => d.h as number | null);
+    const lows = calculationSlice.map((d) => d.l as number | null);
+
+    return calculateChannel(highs, lows, 3);
+  }, [chartData, isLocked, lockedInfo]);
+
+  const handleToggleLock = (checked: boolean) => {
+    if (checked) {
+      if (!channelInfo || chartData.length === 0) return;
+      const n = Math.min(60, chartData.length);
+      const anchorPoint = chartData[chartData.length - n];
+      if (!anchorPoint || anchorPoint.t === undefined) return;
+      setLockedInfo({
+        ...channelInfo,
+        anchorTime: anchorPoint.t,
+      });
+      setIsLocked(true);
+    } else {
+      setIsLocked(false);
+      setLockedInfo(null);
+    }
+  };
+
+  const finalChartData = useMemo(() => {
+    if (!channelInfo) return chartData;
+
+    let anchorIdx = -1;
+    if (isLocked && lockedInfo) {
+      anchorIdx = allPointsWithIndicators.findIndex(
+        (p) => p.t === lockedInfo.anchorTime,
       );
-  }, [deals, visibleCount, rightOffset]);
+    } else {
+      const n = Math.min(60, chartData.length);
+      const startIndex = chartData.length - n;
+      // In chartData, index is i. In allPointsWithIndicators, it's something else.
+      // But we can just use the relative logic for non-locked.
+      return chartData.map((d, i) => {
+        const relativeIndex = i - startIndex;
+        const channelUb =
+          channelInfo.slope * relativeIndex + channelInfo.upperIntercept;
+        const channelLb =
+          channelInfo.slope * relativeIndex + channelInfo.lowerIntercept;
+        return { ...d, channelUb, channelLb };
+      });
+    }
+
+    if (anchorIdx === -1) return chartData;
+
+    return chartData.map((d) => {
+      const currentFullIdx = allPointsWithIndicators.findIndex(
+        (p) => p.t === d.t,
+      );
+      if (currentFullIdx === -1) return d;
+
+      const relativeIndex = currentFullIdx - anchorIdx;
+      const channelUb =
+        channelInfo.slope * relativeIndex + channelInfo.upperIntercept;
+      const channelLb =
+        channelInfo.slope * relativeIndex + channelInfo.lowerIntercept;
+
+      return { ...d, channelUb, channelLb };
+    });
+  }, [chartData, channelInfo, isLocked, lockedInfo, allPointsWithIndicators]);
 
   // MA Deduction Points for BOLL chart
   const maDeductionPoints = useMemo(() => {
@@ -538,7 +601,6 @@ export default function Bollean({
           variant="outlined"
           size="small"
         />
-
         <Divider orientation="vertical" flexItem />
         <Box sx={{ flexGrow: 1 }}>
           <Stepper nonLinear activeStep={activeStep}>
@@ -581,6 +643,71 @@ export default function Bollean({
                 />
               ))}
             </Stack>
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{ display: { xs: "none", md: "block" }, mx: 1 }}
+            />{" "}
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {channelInfo && (
+                <Chip
+                  label={
+                    channelInfo.type === "ascending"
+                      ? "上升通道"
+                      : channelInfo.type === "descending"
+                        ? "下降通道"
+                        : "橫盤通道"
+                  }
+                  color="secondary"
+                  variant="filled"
+                  size="small"
+                />
+              )}
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={showChannel}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setShowChannel(e.target.checked)
+                    }
+                    size="small"
+                    color="secondary"
+                  />
+                }
+                label={
+                  <Typography
+                    variant="caption"
+                    sx={{ fontSize: "0.65rem", color: "#888" }}
+                  >
+                    通道
+                  </Typography>
+                }
+                sx={{ m: 0 }}
+              />
+              {showChannel && (
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isLocked}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleToggleLock(e.target.checked)
+                      }
+                      size="small"
+                      color="warning"
+                    />
+                  }
+                  label={
+                    <Typography
+                      variant="caption"
+                      sx={{ fontSize: "0.65rem", color: "#888" }}
+                    >
+                      固定
+                    </Typography>
+                  }
+                  sx={{ m: 0, ml: 1 }}
+                />
+              )}
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
@@ -591,7 +718,7 @@ export default function Bollean({
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={chartData}
+            data={finalChartData}
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -684,6 +811,28 @@ export default function Bollean({
               activeDot={false}
               name="Lower Band"
             />
+
+            {/* Price Channel lines */}
+            {showChannel && (
+              <>
+                <Line
+                  dataKey="channelUb"
+                  stroke="#00bcd4"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  name="Channel Upper"
+                />
+                <Line
+                  dataKey="channelLb"
+                  stroke="#00bcd4"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  name="Channel Lower"
+                />
+              </>
+            )}
 
             {/* Signals */}
             {(activeStep === 0 || activeStep === 2) && (

@@ -1,3 +1,5 @@
+const SLOPE_THRESHOLD = 0.0001;
+
 export interface ChannelPoint {
   index: number;
   value: number;
@@ -8,35 +10,6 @@ export interface ChannelResult {
   upperIntercept: number;
   lowerIntercept: number;
   type: "ascending" | "descending" | "horizontal";
-}
-
-// Helper function for linear regression (slope and intercept)
-function linearRegression(
-  x: number[],
-  y: number[],
-): { slope: number; intercept: number } | null {
-  const n = x.length;
-  if (n < 2) return null;
-
-  let sumX = 0;
-  let sumY = 0;
-  let sumXY = 0;
-  let sumXX = 0;
-
-  for (let i = 0; i < n; i++) {
-    sumX += x[i];
-    sumY += y[i];
-    sumXY += x[i] * y[i];
-    sumXX += x[i] * x[i];
-  }
-
-  const denominator = n * sumXX - sumX * sumX;
-  if (denominator === 0) return null;
-
-  const slope = (n * sumXY - sumX * sumY) / denominator;
-  const intercept = (sumY - slope * sumX) / n;
-
-  return { slope, intercept };
 }
 
 /**
@@ -61,16 +34,9 @@ export function findLocalExtrema(
       const compare = data[j];
       if (compare === null || compare === undefined) continue;
 
-      if (type === "high") {
-        if (compare > current) {
-          isExtremum = false;
-          break;
-        }
-      } else {
-        if (compare < current) {
-          isExtremum = false;
-          break;
-        }
+      if (type === "high" ? compare > current : compare < current) {
+        isExtremum = false;
+        break;
       }
     }
 
@@ -83,52 +49,90 @@ export function findLocalExtrema(
 }
 
 /**
- * Calculates a parallel channel based on highs and lows.
- * @param highs Array of high prices
- * @param lows Array of low prices
- * @param window Rolling window for extrema detection
+ * Simple Linear Regression (Ordinary Least Squares).
+ * Uses all points in the provided range.
+ */
+function linearRegression(
+  x: number[],
+  y: number[],
+): { slope: number; intercept: number } | null {
+  const n = x.length;
+  if (n < 2) return null;
+
+  let sumX = 0,
+    sumY = 0,
+    sumXY = 0,
+    sumXX = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += x[i];
+    sumY += y[i];
+    sumXY += x[i] * y[i];
+    sumXX += x[i] * x[i];
+  }
+
+  const denominator = n * sumXX - sumX * sumX;
+  if (denominator === 0) return null;
+
+  const slope = (n * sumXY - sumX * sumY) / denominator;
+  const intercept = (sumY - slope * sumX) / n;
+
+  return { slope, intercept };
+}
+
+/**
+ * Calculates a classic Linear Regression Channel (LRC).
+ * 100% Reliability: Guaranteed to detect a channel if there is price data.
+ * High Precision: Boundaries precisely enclose the absolute highs and lows.
  */
 export function calculateChannel(
   highs: (number | null)[],
   lows: (number | null)[],
-  window: number = 3,
+  window: number = 3, // Kept for compatibility
 ): ChannelResult | null {
-  // Exclude the last point (today's price) as requested by the user
-  const calculationHighs = highs.slice(0, -1);
-  const calculationLows = lows.slice(0, -1);
+  // 1. Preparation: Filter valid points (excluding the very last incomplete bar)
+  const validData: { i: number; h: number; l: number; m: number }[] = [];
+  for (let i = 0; i < highs.length - 1; i++) {
+    const h = highs[i];
+    const l = lows[i];
+    if (h != null && l != null) {
+      validData.push({ i, h, l, m: (h + l) / 2 });
+    }
+  }
 
-  const peaks = findLocalExtrema(calculationHighs, window, "high");
-  const troughs = findLocalExtrema(calculationLows, window, "low");
+  if (validData.length < 2) return null;
 
-  // Require at least 2 peaks and 2 troughs for a valid channel
-  if (peaks.length < 2 || troughs.length < 2) return null;
-
-  // Use a unified slope from all extrema to guarantee parallelism
-  const allExtrema = [...peaks, ...troughs];
-  const xCoords = allExtrema.map((p) => p.index);
-  const yCoords = allExtrema.map((p) => p.value);
-  const reg = linearRegression(xCoords, yCoords);
+  // 2. Linear Regression on Mid-points
+  const x = validData.map((d) => d.i);
+  const y = validData.map((d) => d.m);
+  const reg = linearRegression(x, y);
   if (!reg) return null;
 
-  const slope = reg.slope;
+  const { slope, intercept } = reg;
 
-  // Adjust intercepts to bound the entire range of peaks and troughs
-  let upperIntercept = -Infinity;
-  for (const p of peaks) {
-    const b = p.value - slope * p.index;
-    if (b > upperIntercept) upperIntercept = b;
-  }
+  // 3. Determine Boundaries (Geometric Fit)
+  // Shift the center line up to touch the highest high, and down to touch the lowest low.
+  let maxHighResidual = -Infinity;
+  let minLowResidual = Infinity;
 
-  let lowerIntercept = Infinity;
-  for (const p of troughs) {
-    const b = p.value - slope * p.index;
-    if (b < lowerIntercept) lowerIntercept = b;
-  }
+  validData.forEach((d) => {
+    const baseValue = slope * d.i + intercept;
+    const highRes = d.h - baseValue;
+    const lowRes = d.l - baseValue;
 
-  // Basic classification
+    if (highRes > maxHighResidual) maxHighResidual = highRes;
+    if (lowRes < minLowResidual) minLowResidual = lowRes;
+  });
+
+  const upperIntercept = intercept + maxHighResidual;
+  const lowerIntercept = intercept + minLowResidual;
+
+  // 4. Classification
   let type: "ascending" | "descending" | "horizontal" = "horizontal";
-  if (slope > 0.0001) type = "ascending";
-  else if (slope < -0.0001) type = "descending";
+  const avgPrice = (upperIntercept + lowerIntercept) / 2;
+  const normalizedSlope = avgPrice !== 0 ? slope / avgPrice : 0;
+
+  if (normalizedSlope > SLOPE_THRESHOLD) type = "ascending";
+  else if (normalizedSlope < -SLOPE_THRESHOLD) type = "descending";
 
   return { slope, upperIntercept, lowerIntercept, type };
 }

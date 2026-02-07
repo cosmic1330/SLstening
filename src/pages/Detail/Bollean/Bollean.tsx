@@ -1,6 +1,7 @@
 import CancelIcon from "@mui/icons-material/Cancel";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
   Card,
@@ -10,7 +11,10 @@ import {
   Container,
   Divider,
   FormControlLabel,
+  IconButton,
+  Menu,
   Tooltip as MuiTooltip,
+  Slider,
   Stack,
   Step,
   StepButton,
@@ -147,6 +151,17 @@ export default function Bollean({
     anchorTime: number | string;
     type: string;
   } | null>(null);
+
+  // LRC Dynamic Parameters
+  const [channelPeriod, setChannelPeriod] = useState(60);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleCloseSettings = () => {
+    setAnchorEl(null);
+  };
 
   useEffect(() => {
     const handleSwitchStep = () => {
@@ -310,20 +325,20 @@ export default function Bollean({
     if (isLocked && lockedInfo) return lockedInfo;
     if (chartData.length === 0) return null;
 
-    // Requirements: recent 30-60 points
-    const n = Math.min(60, chartData.length);
+    // Requirements: dynamic points based on channelPeriod
+    const n = Math.min(channelPeriod, chartData.length);
     const calculationSlice = chartData.slice(-n);
 
     const highs = calculationSlice.map((d) => d.h as number | null);
     const lows = calculationSlice.map((d) => d.l as number | null);
 
     return calculateChannel(highs, lows, 3);
-  }, [chartData, isLocked, lockedInfo]);
+  }, [chartData, isLocked, lockedInfo, channelPeriod]);
 
   const handleToggleLock = (checked: boolean) => {
     if (checked) {
       if (!channelInfo || chartData.length === 0) return;
-      const n = Math.min(60, chartData.length);
+      const n = Math.min(channelPeriod, chartData.length);
       const anchorPoint = chartData[chartData.length - n];
       if (!anchorPoint || anchorPoint.t === undefined) return;
       setLockedInfo({
@@ -346,7 +361,7 @@ export default function Bollean({
         (p) => p.t === lockedInfo.anchorTime,
       );
     } else {
-      const n = Math.min(60, chartData.length);
+      const n = Math.min(channelPeriod, chartData.length);
       const startIndex = chartData.length - n;
       // In chartData, index is i. In allPointsWithIndicators, it's something else.
       // But we can just use the relative logic for non-locked.
@@ -649,7 +664,7 @@ export default function Bollean({
               sx={{ display: { xs: "none", md: "block" }, mx: 1 }}
             />{" "}
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {channelInfo && (
+              {channelInfo ? (
                 <Chip
                   label={
                     channelInfo.type === "ascending"
@@ -662,6 +677,15 @@ export default function Bollean({
                   variant="filled"
                   size="small"
                 />
+              ) : (
+                <MuiTooltip title="找不到足夠的趨勢特徵">
+                  <Chip
+                    label="無明顯通道"
+                    variant="outlined"
+                    size="small"
+                    sx={{ opacity: 0.6 }}
+                  />
+                </MuiTooltip>
               )}
               <FormControlLabel
                 control={
@@ -707,6 +731,39 @@ export default function Bollean({
                   sx={{ m: 0, ml: 1 }}
                 />
               )}
+              <IconButton
+                size="small"
+                onClick={handleOpenSettings}
+                sx={{ ml: 1 }}
+                color="primary"
+              >
+                <SettingsIcon fontSize="small" />
+              </IconButton>
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleCloseSettings}
+                PaperProps={{
+                  sx: { p: 2, width: 250, bgcolor: "background.paper" },
+                }}
+              >
+                <Typography variant="subtitle2" gutterBottom>
+                  通道參數調校
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    計算長度: {channelPeriod} 根
+                  </Typography>
+                  <Slider
+                    value={channelPeriod}
+                    min={10}
+                    max={200}
+                    step={1}
+                    onChange={(_, v) => setChannelPeriod(v as number)}
+                    size="small"
+                  />
+                </Box>
+              </Menu>
             </Stack>
           </Stack>
         </CardContent>

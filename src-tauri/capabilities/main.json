@@ -20,6 +20,7 @@
     "process:allow-restart",
     "sql:allow-load",
     "sql:allow-select",
-    "sql:allow-execute"
+    "sql:allow-execute",
+    "opener:allow-open-url"
   ]
 }

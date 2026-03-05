@@ -649,6 +649,18 @@ export default function MR({
               strokeDasharray="3 3"
               opacity={0.5}
             />
+            <ReferenceLine
+              y={70}
+              stroke="#f44336"
+              strokeDasharray="3 3"
+              label={{ value: "Overbought", fill: "#f44336", fontSize: 10 }}
+            />
+            <ReferenceLine
+              y={30}
+              stroke="#4caf50"
+              strokeDasharray="3 3"
+              label={{ value: "Oversold", fill: "#4caf50", fontSize: 10 }}
+            />
 
             {/* MACD Bars (Left Axis) */}
             <Bar

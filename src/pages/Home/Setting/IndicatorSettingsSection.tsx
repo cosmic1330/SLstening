@@ -71,6 +71,7 @@ export default function IndicatorSettingsSection() {
     { key: "emaLong", label: "EMA 長" },
     { key: "boll", label: "布林 (20)" },
     { key: "kd", label: "KD (9)" },
+    { key: "rsi", label: "RSI (5)" },
     { key: "mfi", label: "MFI (14)" },
     { key: "cmf", label: "CMF (21)" },
     { key: "cmfEma", label: "CMF EMA (5)" },

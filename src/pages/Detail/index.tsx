@@ -52,15 +52,16 @@ const PageContainer = styled(Box)`
   overflow: hidden;
   position: relative;
   background-color: #0f1214;
-  background-image: radial-gradient(
-      at 0% 0%,
-      hsla(253, 16%, 7%, 1) 0,
-      transparent 50%
-    ),
+  background-image:
+    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
     radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
     radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
     url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size: 100% 100%, 100% 100%, 100% 100%, 200px 200px;
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    200px 200px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
 `;
 
@@ -100,7 +101,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const [scrolling, setScrolling] = useState(false);
   const [perd, setPerd] = useState<UrlTaPerdOptions>(
     (localStorage.getItem("detail:perd:type") as UrlTaPerdOptions) ||
-      UrlTaPerdOptions.Hour
+      UrlTaPerdOptions.Hour,
   );
   const { id } = useParams();
   const [isCollapsed, setIsCollapsed] = useState(true);
@@ -125,7 +126,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       mfi: { title: "MFI資金流便覽", content: mfiDoc },
       ichimoku_cloud: { title: "一目均衡表說明", content: ichimokuDoc },
     }),
-    []
+    [],
   );
 
   const handleSetPerd = useCallback((newPerd: UrlTaPerdOptions) => {
@@ -182,9 +183,10 @@ const FullscreenVerticalCarousel: React.FC = () => {
         ),
       },
       {
-        id: "mj",
+        id: "mr",
         content: (
-          <MJ
+          <MR
+            perd={perd}
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
             rightOffset={rightOffset}
@@ -193,9 +195,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
         ),
       },
       {
-        id: "mr",
+        id: "mj",
         content: (
-          <MR
+          <MJ
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
             rightOffset={rightOffset}
@@ -230,7 +232,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
         content: <IchimokuCloud perd={perd} />,
       },
     ],
-    [perd, visibleCount, rightOffset]
+    [perd, visibleCount, rightOffset],
   );
 
   const goToSlide = useCallback((index: number) => {
@@ -256,7 +258,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
       setTimeout(() => setScrolling(false), 800);
     },
-    [current, scrolling, goToSlide, isDocOpen]
+    [current, scrolling, goToSlide, isDocOpen],
   );
 
   const handleKeyDown = useCallback(
@@ -288,7 +290,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
         window.dispatchEvent(new CustomEvent("detail-switch-step"));
       }
     },
-    [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen]
+    [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen],
   );
 
   useEffect(() => {
@@ -342,21 +344,21 @@ const FullscreenVerticalCarousel: React.FC = () => {
           perd === UrlTaPerdOptions.Hour
             ? "1h"
             : perd === UrlTaPerdOptions.Week
-            ? "1wk"
-            : "1d"
+              ? "1wk"
+              : "1d"
         }&range=${
           perd === UrlTaPerdOptions.Hour
             ? "730d"
             : perd === UrlTaPerdOptions.Week
-            ? "5y"
-            : "10y"
+              ? "5y"
+              : "10y"
         }`
       : generateDealDataDownloadUrl({
           type: UrlType.Indicators,
           id: encodeURIComponent(id as string),
           perd,
         }),
-    tauriFetcher
+    tauriFetcher,
   );
 
   const deals = useMemo(() => {
@@ -366,13 +368,13 @@ const FullscreenVerticalCarousel: React.FC = () => {
           data,
           perd === UrlTaPerdOptions.Hour
             ? IndicatorsDateTimeType.DateTime
-            : IndicatorsDateTimeType.Date
+            : IndicatorsDateTimeType.Date,
         )
       : analyzeIndicatorsData(
           data,
           perd === UrlTaPerdOptions.Hour
             ? IndicatorsDateTimeType.DateTime
-            : IndicatorsDateTimeType.Date
+            : IndicatorsDateTimeType.Date,
         );
   }, [data, id, perd]);
 

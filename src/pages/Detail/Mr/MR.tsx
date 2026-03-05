@@ -33,6 +33,7 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { UrlTaPerdOptions } from "../../../types";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 
@@ -69,11 +70,13 @@ interface MrStep {
 }
 
 export default function MR({
+  perd,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
+  perd?: UrlTaPerdOptions;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;
@@ -212,9 +215,18 @@ export default function MR({
       } else if (currShort && !prevShort) {
         result.push({ t: curr.t, type: "entry_short", price: curr.c });
       }
+
+      // Weekly Oversold Signal (RSI < 25)
+      if (
+        perd === UrlTaPerdOptions.Week &&
+        (curr.rsi || 100) < 25 &&
+        (prev.rsi || 0) >= 25
+      ) {
+        result.push({ t: curr.t, type: "oversold", price: curr.l });
+      }
     }
     return result;
-  }, [chartData]);
+  }, [chartData, perd]);
 
   const { steps, score, recommendation } = useMemo(() => {
     if (chartData.length === 0)
@@ -280,7 +292,7 @@ export default function MR({
         description: "MR 雙指標 (RSI & MACD)",
         checks: [
           {
-            label: `RSI(5) > 50: ${rsiVal.toFixed(1)}`,
+            label: `RSI(${settings.rsi}) > 50: ${rsiVal.toFixed(1)}`,
             status: rsiVal > 50 ? "pass" : "fail",
           },
           {
@@ -541,8 +553,18 @@ export default function MR({
             {/* Entry Signal Markers */}
             {signals.map((signal) => {
               const isLong = signal.type === "entry_long";
-              const yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
-              const color = isLong ? "#f44336" : "#4caf50";
+              const isShort = signal.type === "entry_short";
+              const isOversold = signal.type === "oversold";
+
+              let color = isLong ? "#f44336" : "#4caf50";
+              let label = isLong ? "買進" : "賣出";
+              let yPos = isLong ? signal.price! * 0.99 : signal.price! * 1.01;
+
+              if (isOversold) {
+                color = "#2196f3";
+                label = "超賣";
+                yPos = signal.price! * 0.97;
+              }
 
               return (
                 <ReferenceDot
@@ -557,8 +579,8 @@ export default function MR({
 
                     return (
                       <g>
-                        {isLong ? (
-                          // Long Entry
+                        {isLong || isOversold ? (
+                          // Long Entry or Oversold
                           <>
                             <path
                               d={`M${cx - 5},${cy + 10} L${cx + 5},${
@@ -574,7 +596,7 @@ export default function MR({
                               fontSize={11}
                               fontWeight="bold"
                             >
-                              買進
+                              {label}
                             </text>
                           </>
                         ) : (
@@ -594,7 +616,7 @@ export default function MR({
                               fontSize={11}
                               fontWeight="bold"
                             >
-                              賣出
+                              {label}
                             </text>
                           </>
                         )}
@@ -622,7 +644,7 @@ export default function MR({
               yAxisId="left"
               orientation="left"
               domain={[0, 100]}
-              ticks={[0, 30, 50, 70, 100]}
+              ticks={[0, 25, 50, 75, 100]}
               stroke="#888"
               fontSize={10}
             />
@@ -654,14 +676,14 @@ export default function MR({
               opacity={0.5}
             />
             <ReferenceLine
-              y={70}
+              y={75}
               yAxisId="left"
               stroke="#f44336"
               strokeDasharray="3 3"
               label={{ value: "Overbought", fill: "#f44336", fontSize: 10 }}
             />
             <ReferenceLine
-              y={30}
+              y={25}
               yAxisId="left"
               stroke="#4caf50"
               strokeDasharray="3 3"
@@ -709,7 +731,7 @@ export default function MR({
               stroke="#2196f3"
               dot={false}
               strokeWidth={2}
-              name="RSI (5)"
+              name={`RSI (${settings.rsi})`}
             />
           </ComposedChart>
         </ResponsiveContainer>

@@ -1,29 +1,11 @@
 import { error } from "@tauri-apps/plugin-log";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
 import { DealTableType, FutureIds, TickDealsType } from "../types";
 
 export default function useTwseDeals(isVisible: boolean = true) {
-  const { data: tickData, mutate: mutateTickDeals } = useSWR(
-    `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;autoRefresh=1743165248883;symbols=%5B%22%5ETWII%22%5D;type=tick?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=4ls9nghjud5o5&region=TW& site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
-    (url) => {
-      useDebugStore.getState().increment("twse");
-      return tauriFetcher(url);
-    },
-    { isPaused: () => document.visibilityState !== "visible" },
-  );
-  const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
-    `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds %2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
-    (url) => {
-      useDebugStore.getState().increment("twse");
-      return tauriFetcher(url);
-    },
-    { isPaused: () => document.visibilityState !== "visible" },
-  );
-
-  // 檢查當前時間是否在台灣時間 9:00 AM 到 1:30 PM 之間
   const checkTimeRange = () => {
     const taiwanTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Taipei",
@@ -35,20 +17,57 @@ export default function useTwseDeals(isVisible: boolean = true) {
     return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
-  useEffect(() => {
-    const isInTime = checkTimeRange();
-    if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
-    const interval = setInterval(() => {
-      const isInTime = checkTimeRange();
-      if (isInTime && document.visibilityState === "visible" && isVisible) {
-        // 自動重新請求
-        mutateHourlyDeals();
-        mutateTickDeals();
-      }
-    }, 10000); // 使用者已改為 10 秒
+  const {
+    data: tickData,
+    mutate: mutateTickDeals,
+    isValidating: isTickValidating,
+  } = useSWR(
+    `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;autoRefresh=1743165248883;symbols=%5B%22%5ETWII%22%5D;type=tick?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds%2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=4ls9nghjud5o5&region=TW& site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
+    (url) => {
+      useDebugStore.getState().increment("twse");
+      return tauriFetcher(url);
+    },
+    {
+      isPaused: () => !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => (checkTimeRange() ? 10000 : 0),
+    },
+  );
 
-    return () => clearInterval(interval); // 清除定時器
-  }, [mutateHourlyDeals, mutateTickDeals, isVisible]);
+  const {
+    data: hourlyData,
+    mutate: mutateHourlyDeals,
+    isValidating: isHourlyValidating,
+  } = useSWR(
+    `https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period=60m;symbols=%5B%22%5ETWII%22%5D?bkt=%5B%22TW-Stock-mWeb-NewTechCharts-Rampup%22%2C%22c00-stock-lumos-prod%22%5D&device=smartphone&ecma=modern&feature=enableGAMAds %2CenableGAMEdgeToEdge%2CenableEvPlayer%2CenableHighChart&intl=tw&lang=zh-Hant-TW&partner=none&prid=5l4ebc1jud6ac&region=TW&site=finance&tz=Asia%2FTaipei&ver=1.4.511`,
+    (url) => {
+      useDebugStore.getState().increment("twse");
+      return tauriFetcher(url);
+    },
+    {
+      isPaused: () => !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => (checkTimeRange() ? 10000 : 0),
+    },
+  );
+
+  const hasFetched = useRef(false);
+  useEffect(() => {
+    if (isVisible && !hasFetched.current) {
+      if (!isTickValidating) mutateTickDeals();
+      if (!isHourlyValidating) mutateHourlyDeals();
+    }
+
+    if (tickData || hourlyData) {
+      hasFetched.current = true;
+    }
+  }, [
+    isVisible,
+    mutateTickDeals,
+    mutateHourlyDeals,
+    tickData,
+    hourlyData,
+    isTickValidating,
+    isHourlyValidating,
+  ]);
 
   const tickDeals = useMemo(() => {
     try {

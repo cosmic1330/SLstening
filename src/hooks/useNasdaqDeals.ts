@@ -1,21 +1,11 @@
 import { error } from "@tauri-apps/plugin-log";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
 import { DealTableType, FutureIds } from "../types";
 
 export default function useNasdaqDeals(isVisible: boolean = true) {
-  const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${FutureIds.NASDAQ_FUTURE}?interval=1d&range=200d`,
-    (url) => {
-      useDebugStore.getState().increment("nasdaq");
-      return tauriFetcher(url);
-    },
-    { isPaused: () => document.visibilityState !== "visible" },
-  );
-
-  // 檢查當前時間是否在台灣時間 9:00 AM 到 1:30 PM 之間
   const checkTimeRange = () => {
     const taiwanTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Taipei",
@@ -27,19 +17,32 @@ export default function useNasdaqDeals(isVisible: boolean = true) {
     return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
-  useEffect(() => {
-    const isInTime = checkTimeRange();
-    if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
-    const interval = setInterval(() => {
-      const isInTime = checkTimeRange();
-      if (isInTime && document.visibilityState === "visible" && isVisible) {
-        // 自動重新請求
-        mutateHourlyDeals();
-      }
-    }, 10000); // 統一改為 10 秒
+  const {
+    data: hourlyData,
+    mutate: mutateHourlyDeals,
+    isValidating: isHourlyValidating,
+  } = useSWR(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${FutureIds.NASDAQ_FUTURE}?interval=1d&range=200d`,
+    (url) => {
+      useDebugStore.getState().increment("nasdaq");
+      return tauriFetcher(url);
+    },
+    {
+      isPaused: () => !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => (checkTimeRange() ? 10000 : 0),
+    },
+  );
 
-    return () => clearInterval(interval); // 清除定時器
-  }, [mutateHourlyDeals, isVisible]);
+  const hasFetched = useRef(false);
+  useEffect(() => {
+    if (isVisible && !hasFetched.current) {
+      if (!isHourlyValidating) mutateHourlyDeals();
+    }
+
+    if (hourlyData) {
+      hasFetched.current = true;
+    }
+  }, [isVisible, mutateHourlyDeals, hourlyData, isHourlyValidating]);
 
   const deals = useMemo(() => {
     try {

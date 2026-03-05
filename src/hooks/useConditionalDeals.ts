@@ -1,5 +1,5 @@
 import { info } from "@tauri-apps/plugin-log";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
@@ -16,7 +16,11 @@ export default function useConditionalDeals(
   enabled: boolean = true,
   isVisible: boolean = true,
 ) {
-  const { data: tickData, mutate: mutateTickDeals } = useSWR(
+  const {
+    data: tickData,
+    mutate: mutateTickDeals,
+    isValidating: isTickValidating,
+  } = useSWR(
     enabled
       ? generateDealDataDownloadUrl({
           type: UrlType.Tick,
@@ -28,10 +32,22 @@ export default function useConditionalDeals(
       return tauriFetcher(url);
     },
     {
-      isPaused: () => !enabled || document.visibilityState !== "visible",
+      isPaused: () =>
+        !enabled || !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => {
+        const taiwanTime = new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Taipei",
+        });
+        return checkTimeRange(taiwanTime) ? 10000 : 0;
+      },
     },
   );
-  const { data: dailyData, mutate: mutateDailyDeals } = useSWR(
+
+  const {
+    data: dailyData,
+    mutate: mutateDailyDeals,
+    isValidating: isDailyValidating,
+  } = useSWR(
     enabled
       ? generateDealDataDownloadUrl({
           type: UrlType.Indicators,
@@ -44,51 +60,46 @@ export default function useConditionalDeals(
       return tauriFetcher(url);
     },
     {
-      isPaused: () => !enabled || document.visibilityState !== "visible",
+      isPaused: () =>
+        !enabled || !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => {
+        const taiwanTime = new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Taipei",
+        });
+        return checkTimeRange(taiwanTime) ? 10000 : 0;
+      },
     },
   );
 
+  const hasFetched = useRef(false);
   useEffect(() => {
-    if (!enabled) return; // 如果未啟用，不啟動定時器
+    // 當元件變成可見、未處於請求中、且尚未成功獲取過資料時，主動觸發一次請求
+    if (enabled && isVisible && !hasFetched.current) {
+      if (!isTickValidating) mutateTickDeals();
+      if (!isDailyValidating) mutateDailyDeals();
+    }
 
-    const taiwanTime = new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Taipei",
-    });
-    const now = new Date(taiwanTime);
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const isInTime =
-      hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
-
-    if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
-
-    const interval = setInterval(() => {
-      const taiwanTime = new Date().toLocaleString("en-US", {
-        timeZone: "Asia/Taipei",
-      });
-      const isInTime = checkTimeRange(taiwanTime);
-      if (
-        isInTime &&
-        document.visibilityState === "visible" &&
-        enabled &&
-        isVisible
-      ) {
-        // 自動重新請求
-        mutateDailyDeals();
-        console.log("Mutate daily deals for stock:", id);
-        mutateTickDeals();
-      }
-    }, 10000); // 統一改為 10 秒
-
-    return () => clearInterval(interval); // 清除定時器
-  }, [mutateDailyDeals, mutateTickDeals, enabled, id]);
+    // 如果資料已經成功回傳過，標記為已獲取，以防無限 mutate
+    if (tickData || dailyData) {
+      hasFetched.current = true;
+    }
+  }, [
+    isVisible,
+    enabled,
+    mutateTickDeals,
+    mutateDailyDeals,
+    tickData,
+    dailyData,
+    isTickValidating,
+    isDailyValidating,
+  ]);
 
   useEffect(() => {
-    if (enabled) {
+    if (enabled && isVisible) {
       useDebugStore.getState().updateActiveInstances(1);
       return () => useDebugStore.getState().updateActiveInstances(-1);
     }
-  }, [enabled]);
+  }, [enabled, isVisible]);
 
   const tickDeals = useMemo(() => {
     try {

@@ -1,18 +1,43 @@
 import { RefObject, useEffect, useState } from "react";
 
+let observer: IntersectionObserver | null = null;
+const callbacks = new Map<Element, (isIntersecting: boolean) => void>();
+
+function getObserver() {
+  if (!observer) {
+    observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const callback = callbacks.get(entry.target);
+          if (callback) {
+            callback(entry.isIntersecting);
+          }
+        });
+      },
+      { root: null, rootMargin: "0px", threshold: 0 },
+    );
+  }
+  return observer;
+}
+
 export function useIsVisible(ref: RefObject<HTMLElement>) {
   const [isIntersecting, setIntersecting] = useState(false);
 
   useEffect(() => {
-    if (!ref.current) return;
+    const el = ref.current;
+    if (!el) return;
 
-    const observer = new IntersectionObserver(([entry]) =>
-      setIntersecting(entry.isIntersecting),
-    );
+    const obs = getObserver();
+    callbacks.set(el, setIntersecting);
+    obs.observe(el);
 
-    observer.observe(ref.current);
     return () => {
-      observer.disconnect();
+      callbacks.delete(el);
+      obs.unobserve(el);
+      if (callbacks.size === 0) {
+        obs.disconnect();
+        observer = null;
+      }
     };
   }, [ref]);
 

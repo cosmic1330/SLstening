@@ -1,5 +1,5 @@
 import { error } from "@tauri-apps/plugin-log";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
@@ -7,20 +7,6 @@ import { DealTableType, FutureIds, UrlTaPerdOptions, UrlType } from "../types";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
 export default function useWtxDeals(isVisible: boolean = true) {
-  const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
-    generateDealDataDownloadUrl({
-      type: UrlType.Indicators,
-      id: FutureIds.WTX,
-      perd: UrlTaPerdOptions.Day,
-    }),
-    (url) => {
-      useDebugStore.getState().increment("wtx");
-      return tauriFetcher(url);
-    },
-    { isPaused: () => document.visibilityState !== "visible" },
-  );
-
-  // 檢查當前時間是否在台灣時間 9:00 AM 到 1:30 PM 之間
   const checkTimeRange = () => {
     const taiwanTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Taipei",
@@ -32,19 +18,36 @@ export default function useWtxDeals(isVisible: boolean = true) {
     return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
-  useEffect(() => {
-    const isInTime = checkTimeRange();
-    if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
-    const interval = setInterval(() => {
-      const isInTime = checkTimeRange();
-      if (isInTime && document.visibilityState === "visible" && isVisible) {
-        // 自動重新請求
-        mutateHourlyDeals();
-      }
-    }, 10000); // 每 10 秒檢查一次
+  const {
+    data: hourlyData,
+    mutate: mutateHourlyDeals,
+    isValidating: isHourlyValidating,
+  } = useSWR(
+    generateDealDataDownloadUrl({
+      type: UrlType.Indicators,
+      id: FutureIds.WTX,
+      perd: UrlTaPerdOptions.Day,
+    }),
+    (url) => {
+      useDebugStore.getState().increment("wtx");
+      return tauriFetcher(url);
+    },
+    {
+      isPaused: () => !isVisible || document.visibilityState !== "visible",
+      refreshInterval: () => (checkTimeRange() ? 10000 : 0),
+    },
+  );
 
-    return () => clearInterval(interval); // 清除定時器
-  }, [mutateHourlyDeals, isVisible]);
+  const hasFetched = useRef(false);
+  useEffect(() => {
+    if (isVisible && !hasFetched.current) {
+      if (!isHourlyValidating) mutateHourlyDeals();
+    }
+
+    if (hourlyData) {
+      hasFetched.current = true;
+    }
+  }, [isVisible, mutateHourlyDeals, hourlyData, isHourlyValidating]);
 
   const deals = useMemo(() => {
     try {

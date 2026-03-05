@@ -616,55 +616,65 @@ export default function MJ({
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
 
-            {/* Left Axis for MACD Osc */}
+            {/* Left Axis for J-Line (0-100) */}
             <YAxis
               yAxisId="left"
               orientation="left"
+              domain={([dataMin, dataMax]) => {
+                const diff = Math.max(
+                  Math.abs(dataMin - 50),
+                  Math.abs(dataMax - 50),
+                );
+                return [50 - diff, 50 + diff];
+              }}
+              ticks={[0, 30, 50, 70, 100]}
               stroke="#888"
               fontSize={10}
             />
 
-            {/* Right Axis for J-Line (0-100) */}
+            {/* Right Axis for MACD Osc */}
             <YAxis
               yAxisId="right"
               orientation="right"
-              domain={[0, 100]}
-              ticks={[0, 25, 50, 75, 100]}
-              stroke="#2196f3"
+              domain={([dataMin, dataMax]) => {
+                const absMax = Math.max(Math.abs(dataMin), Math.abs(dataMax));
+                return [-absMax, absMax];
+              }}
+              stroke="#888"
               fontSize={10}
               width={0}
             />
 
             <Tooltip content={<ChartTooltip />} />
 
-            <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5} />
+            <ReferenceLine y={0} yAxisId="right" stroke="#666" opacity={0.5} />
             <ReferenceLine
               y={50}
-              yAxisId="right"
+              yAxisId="left"
               stroke="#666"
               strokeDasharray="3 3"
               opacity={0.5}
             />
 
-            {/* MACD Bars (Left Axis) */}
+            {/* MACD Bars (Right Axis) */}
             <Bar
-              yAxisId="left"
+              yAxisId="right"
               dataKey="positiveOsc"
               fill="#f44336"
               barSize={3}
               name="Osc +"
             />
             <Bar
-              yAxisId="left"
+              yAxisId="right"
               dataKey="negativeOsc"
               fill="#4caf50"
               barSize={3}
               name="Osc -"
             />
 
-            {/* J Line Zones (Right Axis) */}
+            {/* J Line Zones (Left Axis) */}
             <Area
-              yAxisId="right"
+              yAxisId="left"
               type="monotone"
               dataKey="longZone"
               fill="#ffcdd2"
@@ -673,7 +683,7 @@ export default function MJ({
               opacity={0.3}
             />
             <Area
-              yAxisId="right"
+              yAxisId="left"
               type="monotone"
               dataKey="shortZone"
               fill="#c8e6c9"
@@ -682,7 +692,7 @@ export default function MJ({
               opacity={0.3}
             />
             <Line
-              yAxisId="right"
+              yAxisId="left"
               dataKey="j"
               stroke="#2196f3"
               dot={false}

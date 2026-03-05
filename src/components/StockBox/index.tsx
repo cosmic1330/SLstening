@@ -15,9 +15,10 @@ import {
   styled,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
+import { useIsVisible } from "../../hooks/useIsVisible";
 import useMaDeduction from "../../hooks/useMaDeduction";
 import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
@@ -130,8 +131,15 @@ export default function StockBox({
   canDelete = true,
   onRemove,
 }: StockBoxProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isComponentVisible = useIsVisible(containerRef);
+
   // Using the Hook with enabled capabilities
-  const { deals, name, tickDeals } = useConditionalDeals(stock.id, enabled);
+  const { deals, name, tickDeals } = useConditionalDeals(
+    stock.id,
+    enabled,
+    isComponentVisible,
+  );
 
   // MA Calculations
   const {
@@ -222,7 +230,7 @@ export default function StockBox({
       : "radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)";
 
   return (
-    <StyledCard onClick={openDetailWindow}>
+    <StyledCard ref={containerRef} onClick={openDetailWindow}>
       <Box
         className="card-glow"
         sx={{

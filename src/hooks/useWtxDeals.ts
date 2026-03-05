@@ -2,27 +2,33 @@ import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
+import useDebugStore from "../store/debug.store";
 import { DealTableType, FutureIds, UrlTaPerdOptions, UrlType } from "../types";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
-export default function useWtxDeals() {
+export default function useWtxDeals(isVisible: boolean = true) {
   const { data: hourlyData, mutate: mutateHourlyDeals } = useSWR(
     generateDealDataDownloadUrl({
       type: UrlType.Indicators,
       id: FutureIds.WTX,
       perd: UrlTaPerdOptions.Day,
     }),
-    tauriFetcher
+    (url) => {
+      useDebugStore.getState().increment("wtx");
+      return tauriFetcher(url);
+    },
+    { isPaused: () => document.visibilityState !== "visible" },
   );
 
-  // 檢查當前時間是否在台灣時間 8:00 AM 到 1:30 PM 之間
+  // 檢查當前時間是否在台灣時間 9:00 AM 到 1:30 PM 之間
   const checkTimeRange = () => {
     const taiwanTime = new Date().toLocaleString("en-US", {
       timeZone: "Asia/Taipei",
     });
-    const hours = new Date(taiwanTime).getHours();
-    const minutes = new Date(taiwanTime).getMinutes();
-    // 9:00 AM 至 1:30 PM 時間範圍
+    const now = new Date(taiwanTime);
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
     return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
   };
 
@@ -31,18 +37,18 @@ export default function useWtxDeals() {
     if (!isInTime) return; // 如果不在時間範圍內，則不啟動定時器
     const interval = setInterval(() => {
       const isInTime = checkTimeRange();
-      if (isInTime) {
+      if (isInTime && document.visibilityState === "visible" && isVisible) {
         // 自動重新請求
         mutateHourlyDeals();
       }
     }, 10000); // 每 10 秒檢查一次
 
     return () => clearInterval(interval); // 清除定時器
-  }, [mutateHourlyDeals]);
+  }, [mutateHourlyDeals, isVisible]);
 
   const deals = useMemo(() => {
     try {
-      if (!hourlyData) throw new Error("hourlyData is null");
+      if (!hourlyData) return null;
       const data = JSON.parse(hourlyData);
       const opens = data[0].chart.indicators.quote[0].open;
       const closes = data[0].chart.indicators.quote[0].close;

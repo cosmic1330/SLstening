@@ -19,24 +19,31 @@ function List() {
   const marketVisibility = useShowMarketInfo();
 
   useEffect(() => {
-    // 监听股票添加事件
-    const unlistenadd = listen("stock-added", async (event: any) => {
-      const { stockNumber } = event.payload;
-      await reload();
-      info(`stock add ${stockNumber}`);
-    });
-    const unlistenremoved = listen("stock-removed", async (event: any) => {
-      const { stockNumber } = event.payload;
-      await reload();
-      info(`stock removed ${stockNumber}`);
-    });
+    let unlistenadd: (() => void) | null = null;
+    let unlistenremoved: (() => void) | null = null;
+
+    // 監聽股票添加事件
+    const setupListeners = async () => {
+      unlistenadd = await listen("stock-added", async (event: any) => {
+        const { stockNumber } = event.payload;
+        await reload();
+        info(`stock add ${stockNumber}`);
+      });
+      unlistenremoved = await listen("stock-removed", async (event: any) => {
+        const { stockNumber } = event.payload;
+        await reload();
+        info(`stock removed ${stockNumber}`);
+      });
+    };
+
+    setupListeners();
 
     return () => {
-      // 清理监听器
-      unlistenadd.then((fn) => fn());
-      unlistenremoved.then((fn) => fn());
+      // 清理監聽器
+      if (unlistenadd) unlistenadd();
+      if (unlistenremoved) unlistenremoved();
     };
-  }, []);
+  }, [reload]);
 
   return (
     <Container component="main">

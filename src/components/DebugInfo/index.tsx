@@ -1,10 +1,10 @@
 import { Box, Typography } from "@mui/material";
-import { useEffect, useState } from "react";
+import useDebugStore from "../../store/debug.store";
 
 interface DebugInfoProps {
-  visibleStartIndex: number;
-  visibleStopIndex: number;
-  totalItems: number;
+  visibleStartIndex?: number;
+  visibleStopIndex?: number;
+  totalItems?: number;
 }
 
 export default function DebugInfo({
@@ -12,13 +12,9 @@ export default function DebugInfo({
   visibleStopIndex,
   totalItems,
 }: DebugInfoProps) {
-  const [apiRequests, setApiRequests] = useState(0);
+  const { counts, isVisible, activeInstanceCounts } = useDebugStore();
 
-  useEffect(() => {
-    // 計算當前可見範圍內的項目數量
-    const visibleItemsCount = visibleStopIndex - visibleStartIndex + 1;
-    setApiRequests(visibleItemsCount);
-  }, [visibleStartIndex, visibleStopIndex]);
+  if (!isVisible) return null;
 
   return (
     <Box
@@ -31,19 +27,48 @@ export default function DebugInfo({
         padding: 2,
         borderRadius: 1,
         zIndex: 1000,
+        pointerEvents: "none", // 避免干擾點擊
+        minWidth: 240,
       }}
     >
-      <Typography variant="caption" display="block">
-        總項目數: {totalItems}
+      <Typography
+        variant="caption"
+        display="block"
+        color="tomato"
+        sx={{ fontWeight: "bold", mb: 0.5 }}
+      >
+        [DEBUG MODE - Ctrl+Shift+D]
       </Typography>
-      <Typography variant="caption" display="block">
-        可見範圍: {visibleStartIndex} - {visibleStopIndex}
-      </Typography>
-      <Typography variant="caption" display="block">
-        API 請求數: {apiRequests}
+      {totalItems !== undefined && (
+        <Typography variant="caption" display="block">
+          列表總項數: {totalItems}
+        </Typography>
+      )}
+      {visibleStartIndex !== undefined && visibleStopIndex !== undefined && (
+        <Typography variant="caption" display="block">
+          可見索引: {visibleStartIndex} - {visibleStopIndex}
+        </Typography>
+      )}
+      <Typography
+        variant="caption"
+        display="block"
+        sx={{ mt: 1, borderTop: "1px solid rgba(255,255,255,0.2)", pt: 0.5 }}
+      >
+        各請求已更新次數:
       </Typography>
       <Typography variant="caption" display="block" color="lime">
-        只有 {apiRequests} 個項目在請求數據！
+        WTX: {counts.wtx} | TWSE: {counts.twse} | NASDAQ: {counts.nasdaq}
+      </Typography>
+      <Typography variant="caption" display="block" color="cyan">
+        OTC: {counts.otc} | Cond: {counts.conditional}
+      </Typography>
+      <Typography
+        variant="caption"
+        display="block"
+        color="yellow"
+        sx={{ mt: 0.5 }}
+      >
+        活跃個股實例數 (Cond): {activeInstanceCounts}
       </Typography>
     </Box>
   );

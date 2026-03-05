@@ -1,9 +1,11 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import { useRef } from "react";
+import TickChart from "../../../components/CommonChart/TickChart";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
+import { useIsVisible } from "../../../hooks/useIsVisible";
 import useOtcDeals from "../../../hooks/useOtcDeals";
 import { FutureIds } from "../../../types";
-import TickChart from "../../../components/CommonChart/TickChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -13,14 +15,17 @@ const Box = styled(MuiBox)`
   color: #fff;
 `;
 export default function OtcBox() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isComponentVisible = useIsVisible(containerRef);
+
   const { openDetailWindow } = useDetailWebviewWindow({
     id: FutureIds.OTC,
     name: "櫃買指數",
     group: "大盤",
   });
-  const { deals, tickDeals } = useOtcDeals();
+  const { deals, tickDeals } = useOtcDeals(isComponentVisible);
   return (
-    <Box color="#fff" border="1px solid #fff">
+    <Box ref={containerRef} color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>
         <Grid size={12}>
           <Stack
@@ -46,8 +51,8 @@ export default function OtcBox() {
                 deals && deals.change > 0
                   ? "#ff0000"
                   : deals && deals.change < 0
-                  ? "#00ff00"
-                  : "#fff"
+                    ? "#00ff00"
+                    : "#fff"
               }
             >
               {deals && deals.change}

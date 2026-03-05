@@ -1,9 +1,11 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import { useRef } from "react";
+import MakChart from "../../../components/CommonChart/MakChart";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
+import { useIsVisible } from "../../../hooks/useIsVisible";
 import useWtxDeals from "../../../hooks/useWtxDeals";
 import { FutureIds } from "../../../types";
-import MakChart from "../../../components/CommonChart/MakChart";
 
 const Box = styled(MuiBox)`
   background-color: rgba(0, 0, 0, 0.5);
@@ -14,15 +16,18 @@ const Box = styled(MuiBox)`
 `;
 
 export default function WtxBox() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isComponentVisible = useIsVisible(containerRef);
+
   const { openDetailWindow } = useDetailWebviewWindow({
     id: FutureIds.WTX,
     name: "台指期近一",
     group: "期貨",
   });
-  const { deals } = useWtxDeals();
+  const { deals } = useWtxDeals(isComponentVisible);
 
   return (
-    <Box color="#fff" border="1px solid #fff">
+    <Box ref={containerRef} color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>
         <Grid size={12}>{deals && <MakChart deals={deals} />}</Grid>
         <Grid size={12}>
@@ -49,8 +54,8 @@ export default function WtxBox() {
                 deals && deals.change > 0
                   ? "#ff0000"
                   : deals && deals.change < 0
-                  ? "#00ff00"
-                  : "#fff"
+                    ? "#00ff00"
+                    : "#fff"
               }
             >
               {deals && deals.change}

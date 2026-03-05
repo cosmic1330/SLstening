@@ -1,7 +1,9 @@
 import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
 import { Grid, Box as MuiBox, Stack, styled, Typography } from "@mui/material";
+import { useRef } from "react";
 import MakChart from "../../../components/CommonChart/MakChart";
 import useDetailWebviewWindow from "../../../hooks/useDetailWebviewWindow";
+import { useIsVisible } from "../../../hooks/useIsVisible";
 import useNasdaqDeals from "../../../hooks/useNasdaqDeals";
 import { FutureIds } from "../../../types";
 
@@ -14,15 +16,18 @@ const Box = styled(MuiBox)`
 `;
 
 export default function NasdaqBox() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isComponentVisible = useIsVisible(containerRef);
+
   const { openDetailWindow } = useDetailWebviewWindow({
     id: FutureIds.NASDAQ_FUTURE,
     name: "納斯達克期貨",
     group: "期貨",
   });
-  const { deals } = useNasdaqDeals();
+  const { deals } = useNasdaqDeals(isComponentVisible);
 
   return (
-    <Box color="#fff" border="1px solid #fff">
+    <Box ref={containerRef} color="#fff" border="1px solid #fff">
       <Grid container alignItems="center" mb={1}>
         <Grid size={12}>{deals && <MakChart deals={deals} />}</Grid>
         <Grid size={12}>
@@ -49,8 +54,8 @@ export default function NasdaqBox() {
                 deals && deals.change > 0
                   ? "#ff0000"
                   : deals && deals.change < 0
-                  ? "#00ff00"
-                  : "#fff"
+                    ? "#00ff00"
+                    : "#fff"
               }
             >
               {deals && deals.change}

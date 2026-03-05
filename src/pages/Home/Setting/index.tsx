@@ -39,6 +39,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
 import useStocksStore from "../../../store/Stock.store";
+import useDebugStore from "../../../store/debug.store";
 import IndicatorSettingsSection from "./IndicatorSettingsSection";
 import StyledListSubheader from "./StyledListSubheader";
 // Important: Make sure this path is correct or hardcode the version
@@ -98,9 +99,7 @@ function Setting() {
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
   );
-  const [debugMode, setDebugMode] = useState(
-    localStorage.getItem("slitenting-debugMode") === "true",
-  );
+  const { isVisible: debugMode, toggleVisibility } = useDebugStore();
   const [marketVisibility, setMarketVisibility] = useState(() => {
     const saved = localStorage.getItem("slitenting-market-info-visibility");
     if (saved) {
@@ -130,14 +129,9 @@ function Setting() {
     [],
   );
 
-  const handleDebugModeChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = event.target.checked;
-      setDebugMode(checked);
-      localStorage.setItem("slitenting-debugMode", checked.toString());
-    },
-    [],
-  );
+  const handleDebugModeChange = useCallback(() => {
+    toggleVisibility();
+  }, [toggleVisibility]);
 
   const handleMarketVisibilityChange = useCallback(
     (key: string, checked: boolean) => {
@@ -410,7 +404,7 @@ function Setting() {
               </ListItemIcon>
               <ListItemText
                 primary="開發者模式"
-                secondary="顯示內部除錯資訊"
+                secondary="顯示內部除錯資訊 (可使用 Ctrl + Shift + D 切換)"
                 primaryTypographyProps={{ fontWeight: 600, color: "white" }}
                 secondaryTypographyProps={{
                   color: "rgba(255,255,255,0.5)",

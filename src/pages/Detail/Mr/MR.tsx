@@ -617,21 +617,25 @@ export default function MR({
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
 
-            {/* Left Axis for MACD Osc */}
+            {/* Left Axis for RSI (0-100) */}
             <YAxis
               yAxisId="left"
               orientation="left"
+              domain={[0, 100]}
+              ticks={[0, 30, 50, 70, 100]}
               stroke="#888"
               fontSize={10}
             />
 
-            {/* Right Axis for RSI (0-100) */}
+            {/* Right Axis for MACD Osc */}
             <YAxis
               yAxisId="right"
               orientation="right"
-              domain={[0, 100]}
-              ticks={[0, 25, 50, 75, 100]}
-              stroke="#2196f3"
+              domain={([dataMin, dataMax]) => {
+                const absMax = Math.max(Math.abs(dataMin), Math.abs(dataMax));
+                return [-absMax, absMax];
+              }}
+              stroke="#888"
               fontSize={10}
               width={0}
             />
@@ -641,46 +645,48 @@ export default function MR({
               offset={50}
             />
 
-            <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5} />
+            <ReferenceLine y={0} yAxisId="right" stroke="#666" opacity={0.5} />
             <ReferenceLine
               y={50}
-              yAxisId="right"
+              yAxisId="left"
               stroke="#666"
               strokeDasharray="3 3"
               opacity={0.5}
             />
             <ReferenceLine
               y={70}
+              yAxisId="left"
               stroke="#f44336"
               strokeDasharray="3 3"
               label={{ value: "Overbought", fill: "#f44336", fontSize: 10 }}
             />
             <ReferenceLine
               y={30}
+              yAxisId="left"
               stroke="#4caf50"
               strokeDasharray="3 3"
               label={{ value: "Oversold", fill: "#4caf50", fontSize: 10 }}
             />
 
-            {/* MACD Bars (Left Axis) */}
+            {/* MACD Bars (Right Axis) */}
             <Bar
-              yAxisId="left"
+              yAxisId="right"
               dataKey="positiveOsc"
               fill="#f44336"
               barSize={3}
               name="Osc +"
             />
             <Bar
-              yAxisId="left"
+              yAxisId="right"
               dataKey="negativeOsc"
               fill="#4caf50"
               barSize={3}
               name="Osc -"
             />
 
-            {/* RSI Zones (Right Axis) */}
+            {/* RSI Zones (Left Axis) */}
             <Area
-              yAxisId="right"
+              yAxisId="left"
               type="monotone"
               dataKey="longZone"
               fill="#ffcdd2"
@@ -689,7 +695,7 @@ export default function MR({
               opacity={0.3}
             />
             <Area
-              yAxisId="right"
+              yAxisId="left"
               type="monotone"
               dataKey="shortZone"
               fill="#c8e6c9"
@@ -698,7 +704,7 @@ export default function MR({
               opacity={0.3}
             />
             <Line
-              yAxisId="right"
+              yAxisId="left"
               dataKey="rsi"
               stroke="#2196f3"
               dot={false}

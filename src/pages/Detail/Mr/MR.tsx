@@ -204,8 +204,10 @@ export default function MR({
       const curr = chartData[i];
       const prev = chartData[i - 1];
 
-      const currLong = (curr.rsi || 0) > 50 && (curr.osc || 0) > 0;
-      const prevLong = (prev.rsi || 0) > 50 && (prev.osc || 0) > 0;
+      const currLong =
+        (curr.rsi || 0) > 50 && (curr.rsi || 0) < 75 && (curr.osc || 0) > 0;
+      const prevLong =
+        (prev.rsi || 0) > 50 && (prev.rsi || 0) < 75 && (prev.osc || 0) > 0;
 
       const currShort = (curr.rsi || 0) < 50 && (curr.osc || 0) < 0;
       const prevShort = (prev.rsi || 0) < 50 && (prev.osc || 0) < 0;
@@ -553,7 +555,6 @@ export default function MR({
             {/* Entry Signal Markers */}
             {signals.map((signal) => {
               const isLong = signal.type === "entry_long";
-              const isShort = signal.type === "entry_short";
               const isOversold = signal.type === "oversold";
 
               let color = isLong ? "#f44336" : "#4caf50";

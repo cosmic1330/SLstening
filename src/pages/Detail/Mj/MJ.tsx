@@ -45,6 +45,7 @@ interface MjChartData extends Partial<{
   v: number | null;
 }> {
   j: number | null;
+  rsi: number | null;
   osc: number | null;
   bollMa: number | null;
   bollUb: number | null;
@@ -181,6 +182,7 @@ export default function MJ({
         return {
           ...item,
           j,
+          rsi: item.rsi,
           osc,
           longZone: isLong ? j : null,
           shortZone: isShort ? j : null,
@@ -201,15 +203,24 @@ export default function MJ({
       const curr = chartData[i];
       const prev = chartData[i - 1];
 
-      const currLong = (curr.j || 0) > 50 && (curr.osc || 0) > 0;
-      const prevLong = (prev.j || 0) > 50 && (prev.osc || 0) > 0;
+      // MJ Logic: J crosses 50
+      const jCrossUp = (prev.j || 0) <= 50 && (curr.j || 0) > 50;
+      const jCrossDown = (prev.j || 0) >= 50 && (curr.j || 0) < 50;
 
-      const currShort = (curr.j || 0) < 50 && (curr.osc || 0) < 0;
-      const prevShort = (prev.j || 0) < 50 && (prev.osc || 0) < 0;
+      const isOscPositive = (curr.osc || 0) > 0;
+      const isOscNegative = (curr.osc || 0) < 0;
 
-      if (currLong && !prevLong) {
+      // 1. Long Entry: J crosses up 50 AND Osc is positive AND 50 < RSI < 75
+      if (
+        jCrossUp &&
+        isOscPositive &&
+        (curr.rsi || 0) < 75 &&
+        (curr.rsi || 0) > 50
+      ) {
         result.push({ t: curr.t, type: "entry_long", price: curr.c });
-      } else if (currShort && !prevShort) {
+      }
+      // 2. Short Entry: J crosses down 50 AND Osc is negative AND RSI > 25 (avoid bottom)
+      else if (jCrossDown && isOscNegative && (curr.rsi || 100) > 25) {
         result.push({ t: curr.t, type: "entry_short", price: curr.c });
       }
     }
@@ -227,10 +238,17 @@ export default function MJ({
 
     const price = current.c;
     const j = current.j;
+    const rsi = current.rsi;
     const osc = current.osc;
     const bollMa = current.bollMa;
 
-    if (!isNum(price) || !isNum(j) || !isNum(osc) || !isNum(bollMa)) {
+    if (
+      !isNum(price) ||
+      !isNum(j) ||
+      !isNum(osc) ||
+      !isNum(bollMa) ||
+      !isNum(rsi)
+    ) {
       return { steps: [], score: 0, recommendation: "Data Error" };
     }
 
@@ -254,6 +272,10 @@ export default function MJ({
     // 3. Momentum (40)
     if (jRising) totalScore += 20;
     if (oscRising) totalScore += 20;
+
+    // 4. RSI Confirmation (Extra Layer)
+    if (rsi < 25) totalScore += 10;
+    if (rsi > 75) totalScore -= 10;
 
     if (totalScore < 0) totalScore = 0;
     if (totalScore > 100) totalScore = 100;
@@ -316,6 +338,10 @@ export default function MJ({
           {
             label: `J線 上升中: ${jRising ? "Yes" : "No"}`,
             status: jRising ? "pass" : "fail",
+          },
+          {
+            label: `RSI: ${rsi.toFixed(1)} ${rsi < 25 ? "(低檔觸發)" : rsi > 75 ? "(高檔過濾)" : ""}`,
+            status: rsi < 25 || rsi > 75 ? "pass" : "manual",
           },
         ],
       },

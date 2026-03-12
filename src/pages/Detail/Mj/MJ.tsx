@@ -1,21 +1,11 @@
-import CancelIcon from "@mui/icons-material/Cancel";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   Box,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Container,
-  Divider,
   Stack,
-  Step,
-  StepButton,
-  Stepper,
   Typography,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import {
   Area,
   Bar,
@@ -56,18 +46,6 @@ interface MjChartData extends Partial<{
   negativeOsc: number | null;
 }
 
-type CheckStatus = "pass" | "fail" | "manual";
-
-interface StepCheck {
-  label: string;
-  status: CheckStatus;
-}
-
-interface MjStep {
-  label: string;
-  description: string;
-  checks: StepCheck[];
-}
 
 export default function MJ({
   visibleCount,
@@ -82,16 +60,6 @@ export default function MJ({
 }) {
   const deals = useContext(DealsContext);
   const { settings } = useIndicatorSettings();
-  const [activeStep, setActiveStep] = useState(0);
-
-  useEffect(() => {
-    const handleSwitchStep = () => {
-      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
-    };
-    window.addEventListener("detail-switch-step", handleSwitchStep);
-    return () =>
-      window.removeEventListener("detail-switch-step", handleSwitchStep);
-  }, []);
 
   // Zoom & Pan Control
   const chartContainerRef = useRef<HTMLDivElement>(null);
@@ -227,144 +195,6 @@ export default function MJ({
     return result;
   }, [chartData]);
 
-  const { steps, score, recommendation } = useMemo(() => {
-    if (chartData.length === 0)
-      return { steps: [], score: 0, recommendation: "" };
-
-    const current = chartData[chartData.length - 1];
-    const prev = chartData[chartData.length - 2] || current;
-
-    const isNum = (n: any): n is number => typeof n === "number";
-
-    const price = current.c;
-    const j = current.j;
-    const rsi = current.rsi;
-    const osc = current.osc;
-    const bollMa = current.bollMa;
-
-    if (
-      !isNum(price) ||
-      !isNum(j) ||
-      !isNum(osc) ||
-      !isNum(bollMa) ||
-      !isNum(rsi)
-    ) {
-      return { steps: [], score: 0, recommendation: "Data Error" };
-    }
-
-    const isLongZone = j > 50 && osc > 0;
-    const isShortZone = j < 50 && osc < 0;
-    const trendUp = price > bollMa;
-    const jRising = j > (prev.j || 0);
-    const oscRising = osc > (prev.osc || 0);
-
-    // Scoring
-    let totalScore = 0;
-
-    // 1. Zone Status (40)
-    if (isLongZone) totalScore += 40;
-    else if (j > 50 || osc > 0) totalScore += 20; // Partial bull
-    if (isShortZone) totalScore -= 40;
-
-    // 2. Trend (20)
-    if (trendUp) totalScore += 20;
-
-    // 3. Momentum (40)
-    if (jRising) totalScore += 20;
-    if (oscRising) totalScore += 20;
-
-    // 4. RSI Confirmation (Extra Layer)
-    if (rsi < 25) totalScore += 10;
-    if (rsi > 75) totalScore -= 10;
-
-    if (totalScore < 0) totalScore = 0;
-    if (totalScore > 100) totalScore = 100;
-
-    let rec = "Neutral";
-    if (totalScore >= 80) rec = "Strong Buy";
-    else if (totalScore >= 60) rec = "Buy";
-    else if (totalScore <= 20) rec = "Sell";
-    else rec = "Hold";
-
-    // const stopLoss = (price * 0.95).toFixed(2);
-
-    const mjSteps: MjStep[] = [
-      {
-        label: "I. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: `目前建議: ${rec}`,
-            status: totalScore >= 60 ? "pass" : "manual",
-          },
-        ],
-      },
-      {
-        label: "II. 指標狀態",
-        description: "MJ 雙指標共振",
-        checks: [
-          {
-            label: `KD-J 線 > 50: ${j.toFixed(1)}`,
-            status: j > 50 ? "pass" : "fail",
-          },
-          {
-            label: `MACD Osc > 0: ${osc.toFixed(2)}`,
-            status: osc > 0 ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "III. 訊號判定",
-        description: "多空區域確認",
-        checks: [
-          {
-            label: `多方共振 (J>50 & Osc>0): ${isLongZone ? "Yes" : "No"}`,
-            status: isLongZone ? "pass" : "fail",
-          },
-          {
-            label: `空方共振 (J<50 & Osc<0): ${isShortZone ? "Yes" : "No"}`,
-            status: isShortZone ? "fail" : "pass",
-          },
-        ],
-      },
-      {
-        label: "IV. 趨勢與動能",
-        description: "MA20 與 動能方向",
-        checks: [
-          {
-            label: `價格 > 中軌: ${trendUp ? "Yes" : "No"}`,
-            status: trendUp ? "pass" : "fail",
-          },
-          {
-            label: `J線 上升中: ${jRising ? "Yes" : "No"}`,
-            status: jRising ? "pass" : "fail",
-          },
-          {
-            label: `RSI: ${rsi.toFixed(1)} ${rsi < 25 ? "(低檔觸發)" : rsi > 75 ? "(高檔過濾)" : ""}`,
-            status: rsi < 25 || rsi > 75 ? "pass" : "manual",
-          },
-        ],
-      },
-    ];
-
-    return { steps: mjSteps, score: totalScore, recommendation: rec };
-  }, [chartData]);
-
-  const handleStep = (step: number) => () => {
-    setActiveStep(step);
-  };
-
-  const getStatusIcon = (status: CheckStatus) => {
-    switch (status) {
-      case "pass":
-        return <CheckCircleIcon fontSize="small" color="success" />;
-      case "fail":
-        return <CancelIcon fontSize="small" color="error" />;
-      case "manual":
-      default:
-        return <HelpOutlineIcon fontSize="small" color="disabled" />;
-    }
-  };
 
   if (chartData.length === 0) {
     return (
@@ -393,62 +223,11 @@ export default function MJ({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="h6" component="div" color="white">
+        <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
           MJ
         </Typography>
-
-        <Chip
-          label={`${score}分 - ${recommendation}`}
-          color={score >= 80 ? "success" : score >= 60 ? "warning" : "error"}
-          variant="outlined"
-          size="small"
-        />
-
-        <Divider orientation="vertical" flexItem />
-        <Box sx={{ flexGrow: 1 }}>
-          <Stepper nonLinear activeStep={activeStep}>
-            {steps.map((step, index) => (
-              <Step key={step.label}>
-                <StepButton color="inherit" onClick={handleStep(index)}>
-                  {step.label}
-                </StepButton>
-              </Step>
-            ))}
-          </Stepper>
-        </Box>
       </Stack>
 
-      <Card variant="outlined" sx={{ mb: 1, bgcolor: "background.default" }}>
-        <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            alignItems="center"
-          >
-            <Typography variant="subtitle2" color="primary" fontWeight="bold">
-              {steps[activeStep]?.description}
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {steps[activeStep]?.checks.map((check, idx) => (
-                <Chip
-                  key={idx}
-                  icon={getStatusIcon(check.status)}
-                  label={check.label}
-                  variant="outlined"
-                  color={
-                    check.status === "pass"
-                      ? "success"
-                      : check.status === "fail"
-                        ? "error"
-                        : "default"
-                  }
-                  size="small"
-                />
-              ))}
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
 
       <Box
         ref={chartContainerRef}

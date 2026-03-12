@@ -1,22 +1,12 @@
-import CancelIcon from "@mui/icons-material/Cancel";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import {
   Box,
-  Card,
-  CardContent,
-  Chip,
   CircularProgress,
   Container,
-  Divider,
-  Tooltip as MuiTooltip,
   Stack,
-  Step,
-  StepButton,
-  Stepper,
   Typography,
+  Tooltip as MuiTooltip,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -70,19 +60,6 @@ interface ObvChartData extends Partial<{
   obvHist?: number | null;
 }
 
-type CheckStatus = "pass" | "fail" | "manual";
-
-interface StepCheck {
-  label: string;
-  status: CheckStatus;
-}
-
-interface AnalysisStep {
-  label: string;
-  description: string;
-  checks: StepCheck[];
-}
-
 export default function Obv({
   visibleCount,
   setVisibleCount,
@@ -95,16 +72,6 @@ export default function Obv({
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
   const fullDeals = useContext(DealsContext);
-  const [activeStep, setActiveStep] = useState(0);
-
-  useEffect(() => {
-    const handleSwitchStep = () => {
-      setActiveStep((prev) => (prev + 1) % 3); // 3 steps total
-    };
-    window.addEventListener("detail-switch-step", handleSwitchStep);
-    return () =>
-      window.removeEventListener("detail-switch-step", handleSwitchStep);
-  }, []);
 
   // Zoom & Pan Control
   // const [visibleCount, setVisibleCount] = useState(150);
@@ -265,117 +232,6 @@ export default function Obv({
   }, [fullDeals, signals, visibleCount, rightOffset]);
 
   // --- Analysis Steps Logic ---
-  const { steps, score, recommendation } = useMemo(() => {
-    if (chartData.length === 0)
-      return { steps: [], score: 0, recommendation: "" };
-
-    const current = chartData[chartData.length - 1];
-    // Helper Checks
-    // Scoring Logic
-    let totalScore = 0;
-    const currentPrice = current.c || 0;
-    const currentMa60 = current.ma60 || null;
-    const currentObv = current.obv || null;
-    const currentObvMa = current.obvMa20 || null;
-    const currentRsi = current.rsi || null;
-    const currentOsc = current.macdOsc || null;
-    const currentVol = current.v || 0;
-    const currentVolMa = current.volMa20 || null;
-
-    // 1. Trend (Price vs MA60) - 25pts
-    if (currentMa60 !== null && currentPrice > currentMa60) totalScore += 25;
-
-    // 2. Volume & Momentum (OBV & Attack Vol) - 25pts
-    let volScore = 0;
-    if (
-      currentObvMa !== null &&
-      currentObv !== null &&
-      currentObv > currentObvMa
-    )
-      volScore += 15;
-    if (currentVolMa !== null && currentVol > currentVolMa * 1.5)
-      volScore += 10;
-    totalScore += volScore;
-
-    // 3. Momentum (RSI) - 25pts
-    if (currentRsi !== null) {
-      if (currentRsi > 40 && currentRsi < 70) totalScore += 25;
-      else if (currentRsi >= 70) totalScore += 10;
-    }
-
-    // 4. Turning Point (MACD) - 25pts
-    if (currentOsc !== null && currentOsc > 0) totalScore += 25;
-
-    let rec = "Neutral";
-    if (totalScore >= 75) rec = "Strong Buy";
-    else if (totalScore >= 50) rec = "Buy";
-    else if (totalScore <= 25) rec = "Sell";
-
-    const analysisSteps: AnalysisStep[] = [
-      {
-        label: "I. 綜合訊號",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          {
-            label: `目前建議: ${rec}`,
-            status: totalScore >= 50 ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "II. 量能與趨勢",
-        description: "OBV 與 攻擊量確認",
-        checks: [
-          {
-            label: "價格 > MA60",
-            status:
-              currentMa60 !== null && currentPrice > currentMa60
-                ? "pass"
-                : "fail",
-          },
-          {
-            label: "OBV 轉強 / 攻擊量",
-            status: volScore >= 15 ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "III. 動能指標",
-        description: "RSI 與 MACD",
-        checks: [
-          {
-            label: `RSI(14): ${
-              currentRsi !== null ? currentRsi.toFixed(1) : "N/A"
-            }`,
-            status:
-              currentRsi !== null && currentRsi > 40 && currentRsi < 70
-                ? "pass"
-                : "manual",
-          },
-          {
-            label: `MACD Osc: ${
-              currentOsc !== null ? currentOsc.toFixed(2) : "N/A"
-            }`,
-            status: currentOsc !== null && currentOsc > 0 ? "pass" : "fail",
-          },
-        ],
-      },
-    ];
-
-    return { steps: analysisSteps, score: totalScore, recommendation: rec };
-  }, [chartData]);
-
-  const getStatusIcon = (status: CheckStatus) => {
-    switch (status) {
-      case "pass":
-        return <CheckCircleIcon fontSize="small" color="success" />;
-      case "fail":
-        return <CancelIcon fontSize="small" color="error" />;
-      case "manual":
-      default:
-        return <HelpOutlineIcon fontSize="small" color="disabled" />;
-    }
-  };
 
   if (chartData.length === 0) {
     return (
@@ -417,60 +273,11 @@ export default function Obv({
                 variant="subtitle2"
                 sx={{ mb: 1, fontWeight: "bold" }}
               >
-                DMI 指標說明
+                OBV 指標說明
               </Typography>
-              <table style={{ borderCollapse: "collapse", width: "100%" }}>
-                <thead>
-                  <tr
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.2)" }}
-                  >
-                    <th style={{ textAlign: "left", padding: "4px" }}>
-                      線條名稱
-                    </th>
-                    <th style={{ textAlign: "left", padding: "4px" }}>
-                      代表意義
-                    </th>
-                    <th style={{ textAlign: "left", padding: "4px" }}>
-                      簡單口訣
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      +DI (正趨向線)
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      代表多頭（買方）的力量。
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      越高代表多頭越強。
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      -DI (負趨向線)
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      代表空頭（賣方）的力量。
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      越高代表空頭越強。
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      ADX (平均趨向指數)
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      {`ADX > 25: 代表市場進入強勢趨勢期`}
-                    </td>
-                    <td style={{ padding: "4px", verticalAlign: "top" }}>
-                      {`ADX < 20： 代表市場進入悶盤/盤整期`}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <Typography variant="caption" display="block">
+                量行價先，OBV上升代表資金進場。
+              </Typography>
             </Box>
           }
           arrow
@@ -484,64 +291,8 @@ export default function Obv({
             OBV
           </Typography>
         </MuiTooltip>
-
-        <Chip
-          label={`${score}分 - ${recommendation}`}
-          color={score >= 60 ? "success" : "error"}
-          variant="outlined"
-          size="small"
-        />
-
-        <Divider orientation="vertical" flexItem />
-
-        <Box sx={{ flexGrow: 1 }}>
-          <Stepper nonLinear activeStep={activeStep}>
-            {steps.map((step, index) => (
-              <Step key={step.label}>
-                <StepButton
-                  color="inherit"
-                  onClick={() => setActiveStep(index)}
-                >
-                  {step.label}
-                </StepButton>
-              </Step>
-            ))}
-          </Stepper>
-        </Box>
       </Stack>
 
-      {/* Analysis Details Card */}
-      <Card variant="outlined" sx={{ mb: 1, bgcolor: "background.default" }}>
-        <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            alignItems="center"
-          >
-            <Typography variant="subtitle2" color="primary" fontWeight="bold">
-              {steps[activeStep]?.description}
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {steps[activeStep]?.checks.map((check, idx) => (
-                <Chip
-                  key={idx}
-                  icon={getStatusIcon(check.status)}
-                  label={check.label}
-                  variant="outlined"
-                  color={
-                    check.status === "pass"
-                      ? "success"
-                      : check.status === "fail"
-                        ? "error"
-                        : "default"
-                  }
-                  size="small"
-                />
-              ))}
-            </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
 
       {/* Charts Area */}
       <Box

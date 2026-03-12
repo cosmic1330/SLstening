@@ -84,7 +84,7 @@ export const useIchimokuData = (
       return {
         combinedData: [],
         signals: [],
-        analysis: { steps: [], score: 0, recommendation: "Loading..." },
+        analysis: { steps: [] },
       };
     }
 
@@ -247,8 +247,6 @@ export const useIchimokuData = (
   return {
     chartData: slicedData,
     signals,
-    score: analysis.score,
-    recommendation: analysis.recommendation,
     steps: analysis.steps,
   };
 };

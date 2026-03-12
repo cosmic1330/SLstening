@@ -1,26 +1,19 @@
-import CancelIcon from "@mui/icons-material/Cancel";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import LockIcon from "@mui/icons-material/Lock";
+import LockOpenIcon from "@mui/icons-material/LockOpen";
 import SettingsIcon from "@mui/icons-material/Settings";
-
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   Box,
-  Card,
-  CardContent,
   Chip,
   CircularProgress,
   Container,
   Divider,
-  FormControlLabel,
   IconButton,
   Menu,
   Tooltip as MuiTooltip,
   Slider,
   Stack,
-  Step,
-  StepButton,
-  Stepper,
-  Switch,
   Typography,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -66,18 +59,6 @@ interface BolleanChartData extends Partial<{
   channelLb?: number | null;
 }
 
-type CheckStatus = "pass" | "fail" | "manual";
-
-interface StepCheck {
-  label: string;
-  status: CheckStatus;
-}
-
-interface BolleanStep {
-  label: string;
-  description: string;
-  checks: StepCheck[];
-}
 
 const BuyArrow = (props: any) => {
   const { cx, cy, payload } = props;
@@ -142,7 +123,6 @@ export default function Bollean({
 }) {
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
-  const [activeStep, setActiveStep] = useState(0);
   const [showChannel, setShowChannel] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [lockedInfo, setLockedInfo] = useState<{
@@ -165,14 +145,6 @@ export default function Bollean({
     setAnchorEl(null);
   };
 
-  useEffect(() => {
-    const handleSwitchStep = () => {
-      setActiveStep((prev) => (prev + 1) % 4); // 4 steps total
-    };
-    window.addEventListener("detail-switch-step", handleSwitchStep);
-    return () =>
-      window.removeEventListener("detail-switch-step", handleSwitchStep);
-  }, []);
   const { id } = useParams();
 
   // Zoom & Pan Control
@@ -388,8 +360,6 @@ export default function Bollean({
     } else {
       const n = Math.min(channelPeriod, chartData.length);
       const startIndex = chartData.length - n;
-      // In chartData, index is i. In allPointsWithIndicators, it's something else.
-      // But we can just use the relative logic for non-locked.
       return chartData.map((d, i) => {
         const relativeIndex = i - startIndex;
         const channelUb =
@@ -418,7 +388,6 @@ export default function Bollean({
     });
   }, [chartData, channelInfo, isLocked, lockedInfo, allPointsWithIndicators]);
 
-  // MA Deduction Points for BOLL chart
   const maDeductionPoints = useMemo(() => {
     if (chartData.length === 0) return [];
     const latest = chartData[chartData.length - 1];
@@ -441,8 +410,6 @@ export default function Bollean({
     maConfigs.forEach((config) => {
       const t = (latest as any)[config.key];
       if (t) {
-        // Find price in full deals by current timestamp
-        // indicatorUtils already calculated these. We need price at time t.
         const fullData = calculateIndicators(deals, settings);
         const target = fullData.find((d) => d.t === t);
         if (target) {
@@ -459,148 +426,6 @@ export default function Bollean({
 
     return points;
   }, [chartData, deals, settings]);
-
-  const { steps, score, recommendation } = useMemo(() => {
-    if (chartData.length === 0)
-      return { steps: [], score: 0, recommendation: "" };
-
-    const current = chartData[chartData.length - 1];
-    const prev = chartData[chartData.length - 2] || current;
-
-    const isNum = (n: any): n is number => typeof n === "number";
-
-    const price = current.c;
-    const ub = current.bollUb;
-    const lb = current.bollLb;
-    const ma = current.bollMa;
-    const width = current.bandWidth;
-
-    // Safety
-    if (
-      !isNum(price) ||
-      !isNum(ub) ||
-      !isNum(lb) ||
-      !isNum(ma) ||
-      !isNum(width)
-    ) {
-      return { steps: [], score: 0, recommendation: "Data Error" };
-    }
-
-    // I. Market Environment
-    // 1. Band Width
-    const isSqueeze = width < 0.15; // < 15% width as proxy for "Low"
-    const isWide = width > 0.3; // > 30% as "High/Volatile"
-
-    // 2. Trend
-    const maSlope = ma - (prev.bollMa || ma);
-    const maRising = maSlope > 0;
-    const pricePosition =
-      price > ma ? "Bullish (Above MA)" : "Bearish (Below MA)";
-
-    // II. Entry Conditions
-    const volSpike = (current.v || 0) > (prev.v || 0) * 1.3;
-    const touchedLb = (current.l || 0) <= lb;
-    const reversalCandle = touchedLb && price > (current.o || 0); // Simple check
-
-    // III. Risk
-    const stopLoss = price > ma ? ma.toFixed(2) : (price * 0.98).toFixed(2); // Simple rule
-
-    // IV. Score
-    let totalScore = 0;
-    // Trend (40%)
-    if (maRising) totalScore += 20;
-    if (price > ma) totalScore += 20;
-    // Volatility (20%)
-    if (!isWide) totalScore += 20; // Prefer not too volatile unless breaking out
-    // Signal (40%)
-    if (volSpike) totalScore += 20;
-    if (reversalCandle || (price > ub && isSqueeze)) totalScore += 20;
-
-    let rec = "Reject";
-    if (totalScore >= 80) rec = "Strong Buy";
-    else if (totalScore >= 60) rec = "Watch";
-    else rec = "Neutral";
-
-    const bolleanSteps: BolleanStep[] = [
-      {
-        label: "I. 綜合評估",
-        description: `得分: ${totalScore} - ${rec}`,
-        checks: [
-          { label: "趨勢明確 (MA斜率)", status: maRising ? "pass" : "fail" },
-          { label: "成交量配合", status: volSpike ? "pass" : "manual" },
-          { label: "無假突破跡象", status: "manual" },
-        ],
-      },
-      {
-        label: "II. 市場環境",
-        description: "波動度與趨勢 (Macro & Regime)",
-        checks: [
-          {
-            label: `帶寬狀態: ${
-              isSqueeze ? "壓縮 (<15%)" : isWide ? "擴張 (>30%)" : "正常"
-            }`,
-            status: "manual",
-          },
-          {
-            label: `趨勢方向: ${maRising ? "上彎 (偏多)" : "下彎 (偏空)"}`,
-            status: maRising ? "pass" : "fail",
-          },
-          {
-            label: `價格位置: ${pricePosition}`,
-            status: price > ma ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "III. 入場條件",
-        description: "多/空策略與突破 (Entry)",
-        checks: [
-          {
-            label: "突破上軌且放量 (Squeeze Breakout)",
-            status: price > ub && volSpike ? "pass" : "fail",
-          },
-          {
-            label: "觸及下軌並反轉 (Reversal)",
-            status: reversalCandle ? "pass" : "fail",
-          },
-          {
-            label: "中軌向上支撐",
-            status: maRising && price > ma ? "pass" : "fail",
-          },
-        ],
-      },
-      {
-        label: "IV. 風險控管",
-        description: "停損與部位 (Risk Control)",
-        checks: [
-          { label: `建議停損位: ${stopLoss} (中軌)`, status: "manual" },
-          {
-            label: `帶寬: ${(width * 100).toFixed(1)}% (過寬減倉)`,
-            status: isWide ? "fail" : "pass",
-          },
-          { label: "單筆風險 < 1.5%", status: "manual" },
-        ],
-      },
-    ];
-
-    return { steps: bolleanSteps, score: totalScore, recommendation: rec };
-  }, [chartData]);
-
-  const handleStep = (step: number) => () => {
-    setActiveStep(step);
-  };
-
-  const getStatusIcon = (status: CheckStatus) => {
-    switch (status) {
-      case "pass":
-        return <CheckCircleIcon fontSize="small" color="success" />;
-      case "fail":
-        return <CancelIcon fontSize="small" color="error" />;
-      case "manual":
-      default:
-        return <HelpOutlineIcon fontSize="small" color="disabled" />;
-    }
-  };
 
   if (chartData.length === 0) {
     return (
@@ -630,183 +455,125 @@ export default function Bollean({
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
-          <Typography variant="h6" component="div" color="white">
+          <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
             Bolling
           </Typography>
         </MuiTooltip>
 
-        <Chip
-          label={`${score}分 - ${recommendation}`}
-          color={score >= 80 ? "success" : score >= 60 ? "warning" : "error"}
-          variant="outlined"
-          size="small"
-        />
-        <Divider orientation="vertical" flexItem />
-        <Box sx={{ flexGrow: 1 }}>
-          <Stepper nonLinear activeStep={activeStep}>
-            {steps.map((step, index) => (
-              <Step key={step.label}>
-                <StepButton color="inherit" onClick={handleStep(index)}>
-                  {step.label}
-                </StepButton>
-              </Step>
-            ))}
-          </Stepper>
-        </Box>
-      </Stack>
+        <Box sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}>
+          {channelInfo && (
+            <Chip
+              label={
+                channelInfo.type === "ascending"
+                  ? "上升通道"
+                  : channelInfo.type === "descending"
+                    ? "下降通道"
+                    : "橫盤通道"
+              }
+              color="secondary"
+              variant="filled"
+              size="small"
+              sx={{ height: 24, fontSize: "0.75rem" }}
+            />
+          )}
 
-      <Card variant="outlined" sx={{ mb: 1, bgcolor: "background.default" }}>
-        <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1}
-            alignItems="center"
-          >
-            <Typography variant="subtitle2" color="primary" fontWeight="bold">
-              {steps[activeStep]?.description}
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {steps[activeStep]?.checks.map((check, idx) => (
-                <Chip
-                  key={idx}
-                  icon={getStatusIcon(check.status)}
-                  label={check.label}
-                  variant="outlined"
-                  color={
-                    check.status === "pass"
-                      ? "success"
-                      : check.status === "fail"
-                        ? "error"
-                        : "default"
-                  }
-                  size="small"
-                />
-              ))}
-            </Stack>
-            <Divider
-              orientation="vertical"
-              flexItem
-              sx={{ display: { xs: "none", md: "block" }, mx: 1 }}
-            />{" "}
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {channelInfo ? (
-                <Chip
-                  label={
-                    channelInfo.type === "ascending"
-                      ? "上升通道"
-                      : channelInfo.type === "descending"
-                        ? "下降通道"
-                        : "橫盤通道"
-                  }
-                  color="secondary"
-                  variant="filled"
-                  size="small"
-                />
-              ) : (
-                <MuiTooltip title="找不到足夠的趨勢特徵">
-                  <Chip
-                    label="無明顯通道"
-                    variant="outlined"
-                    size="small"
-                    sx={{ opacity: 0.6 }}
-                  />
-                </MuiTooltip>
-              )}
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={showChannel}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setShowChannel(e.target.checked)
-                    }
-                    size="small"
-                    color="secondary"
-                  />
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              icon={showChannel ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+              label="通道"
+              size="small"
+              onClick={() => setShowChannel(!showChannel)}
+              variant={showChannel ? "filled" : "outlined"}
+              color={showChannel ? "secondary" : "default"}
+              sx={{
+                height: 24,
+                fontSize: "0.75rem",
+                fontWeight: showChannel ? "bold" : "normal",
+                transition: "all 0.2s",
+                borderColor: showChannel ? "secondary.main" : "#444",
+                "&:hover": {
+                  transform: "translateY(-1px)",
+                  boxShadow: showChannel ? "0 2px 8px rgba(156, 39, 176, 0.3)" : "none",
                 }
-                label={
-                  <Typography
-                    variant="caption"
-                    sx={{ fontSize: "0.65rem", color: "#888" }}
-                  >
-                    顯示通道
-                  </Typography>
-                }
-                sx={{ m: 0 }}
-              />
-              {showChannel && (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={isLocked}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleToggleLock(e.target.checked)
-                      }
-                      size="small"
-                      color="warning"
-                    />
-                  }
-                  label={
-                    <Typography
-                      variant="caption"
-                      sx={{ fontSize: "0.65rem", color: "#888" }}
-                    >
-                      固定
-                    </Typography>
-                  }
-                  sx={{ m: 0, ml: 1 }}
-                />
-              )}
-              <IconButton
+              }}
+            />
+            {showChannel && (
+              <Chip
+                icon={isLocked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+                label="固定"
                 size="small"
-                onClick={handleOpenSettings}
-                sx={{ ml: 1 }}
-                color="primary"
-              >
-                <SettingsIcon fontSize="small" />
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={Boolean(anchorEl)}
-                onClose={handleCloseSettings}
-                PaperProps={{
-                  sx: { p: 2, width: 250, bgcolor: "background.paper" },
+                onClick={() => handleToggleLock(!isLocked)}
+                variant={isLocked ? "filled" : "outlined"}
+                color={isLocked ? "warning" : "default"}
+                sx={{
+                  height: 24,
+                  fontSize: "0.75rem",
+                  fontWeight: isLocked ? "bold" : "normal",
+                  transition: "all 0.2s",
+                  borderColor: isLocked ? "warning.main" : "#444",
+                  "&:hover": {
+                    transform: "translateY(-1px)",
+                    boxShadow: isLocked ? "0 2px 8px rgba(237, 108, 2, 0.3)" : "none",
+                  }
                 }}
-              >
-                <Typography variant="subtitle2" gutterBottom>
-                  通道參數調校
-                </Typography>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    計算長度: {channelPeriod} 根
-                  </Typography>
-                  <Slider
-                    value={channelPeriod}
-                    min={10}
-                    max={200}
-                    step={1}
-                    onChange={(_, v) => setChannelPeriod(v as number)}
-                    size="small"
-                  />
-                </Box>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    標準差倍數: {channelMultiplier.toFixed(1)}
-                  </Typography>
-                  <Slider
-                    value={channelMultiplier}
-                    min={0.5}
-                    max={5.0}
-                    step={0.1}
-                    onChange={(_, v) => setChannelMultiplier(v as number)}
-                    size="small"
-                    color="secondary"
-                  />
-                </Box>
-              </Menu>
-            </Stack>
+              />
+            )}
+            <IconButton
+              size="small"
+              onClick={handleOpenSettings}
+              color="primary"
+              sx={{ 
+                p: 0.5,
+                transition: "transform 0.2s",
+                "&:hover": { transform: "rotate(45deg)" }
+              }}
+            >
+              <SettingsIcon fontSize="small" />
+            </IconButton>
           </Stack>
-        </CardContent>
-      </Card>
+        </Box>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleCloseSettings}
+          PaperProps={{
+            sx: { p: 2, width: 250, bgcolor: "background.paper" },
+          }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            通道參數調校
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              計算長度: {channelPeriod} 根
+            </Typography>
+            <Slider
+              value={channelPeriod}
+              min={10}
+              max={200}
+              step={1}
+              onChange={(_, v) => setChannelPeriod(v as number)}
+              size="small"
+            />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              標準差倍數: {channelMultiplier.toFixed(1)}
+            </Typography>
+            <Slider
+              value={channelMultiplier}
+              min={0.5}
+              max={5.0}
+              step={0.1}
+              onChange={(_, v) => setChannelMultiplier(v as number)}
+              size="small"
+              color="secondary"
+            />
+          </Box>
+        </Menu>
+      </Stack>
 
       <Box
         ref={chartContainerRef}
@@ -872,7 +639,6 @@ export default function Bollean({
             />
             <Customized component={BaseCandlestickRectangle} />
 
-            {(activeStep === 0 || activeStep === 2) && (
               <Bar
                 dataKey="v"
                 yAxisId="right"
@@ -881,7 +647,6 @@ export default function Bollean({
                 name="Volume"
                 barSize={10}
               />
-            )}
 
             <Line
               dataKey="bollMa"
@@ -931,8 +696,6 @@ export default function Bollean({
             )}
 
             {/* Signals */}
-            {(activeStep === 0 || activeStep === 2) && (
-              <>
                 <Scatter
                   dataKey="buySignal"
                   shape={<BuyArrow />}
@@ -943,8 +706,6 @@ export default function Bollean({
                   shape={<ExitArrow />}
                   legendType="none"
                 />
-              </>
-            )}
 
             {/* Deduction Markers */}
             {maDeductionPoints.map((p) => (

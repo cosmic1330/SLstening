@@ -285,9 +285,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
             handleSetPerd(options[idx + 1]);
           }
         }
-      } else if (e.key === " ") {
-        e.preventDefault(); // Prevent page scroll
-        window.dispatchEvent(new CustomEvent("detail-switch-step"));
       }
     },
     [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen],

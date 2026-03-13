@@ -20,12 +20,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import ma from "../../../cls_tools/ma";
-import macd from "../../../cls_tools/macd";
-import obvTool from "../../../cls_tools/obv";
-import rsi from "../../../cls_tools/rsi";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 import { calculateObvSignals } from "./obvStrategy";
 
@@ -47,8 +45,8 @@ interface ObvChartData extends Partial<{
   obvMa20: number | null;
   // RSI & MACD
   rsi: number | null;
-  macdOsc: number | null;
-  macdDif: number | null;
+  osc: number | null;
+  dif: number | null;
   // Signals
   obvDivergenceEntry?: number | null;
   fakeBreakout?: number | null;
@@ -71,6 +69,7 @@ export default function Obv({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
+  const { settings } = useIndicatorSettings();
   const fullDeals = useContext(DealsContext);
 
   // Zoom & Pan Control
@@ -166,55 +165,16 @@ export default function Obv({
   const chartData = useMemo((): ObvChartData[] => {
     if (!fullDeals || fullDeals.length === 0) return [];
 
-    // Initial states for cls_tools
-    let obvState = obvTool.init(fullDeals[0]);
-    let ma20State = ma.init(fullDeals[0], 20);
-    let ma60State = ma.init(fullDeals[0], 60);
-    let rsiState = rsi.init(fullDeals[0], 14);
-    let macdState = macd.init(fullDeals[0]);
-    let volMa20State = ma.init({ c: fullDeals[0].v } as any, 20);
-
-    // Pre-calculate OBV for its MA
-    const obvValues: number[] = [];
-    for (let i = 0; i < fullDeals.length; i++) {
-      if (i > 0) obvState = obvTool.next(fullDeals[i], obvState);
-      obvValues.push(obvState.obv);
-    }
-
-    let obvMaState20 = ma.init({ c: obvValues[0] } as any, 20);
-    const obvMaValues20 = [obvMaState20.ma];
-    for (let i = 1; i < obvValues.length; i++) {
-      obvMaState20 = ma.next({ c: obvValues[i] } as any, obvMaState20, 20);
-      obvMaValues20.push(obvMaState20.ma);
-    }
+    const enhancedData = calculateIndicators(fullDeals, settings);
 
     // Map Signals
     const signalMap = new Map(signals.map((s) => [s.t, s]));
 
-    const allData = fullDeals.map((d, i) => {
-      if (i > 0) {
-        ma20State = ma.next(d, ma20State, 20);
-        ma60State = ma.next(d, ma60State, 60);
-        rsiState = rsi.next(d, rsiState, 14);
-        macdState = macd.next(d, macdState);
-        volMa20State = ma.next({ c: d.v } as any, volMa20State, 20);
-      }
-
+    const allData = enhancedData.map((d) => {
       const signal = signalMap.get(d.t);
-      const obvVal = obvValues[i];
-      const obvMa20 = obvMaValues20[i];
 
       return {
         ...d,
-        ma20: i >= 19 ? ma20State.ma : null,
-        ma60: i >= 59 ? ma60State.ma : null,
-        volMa20: i >= 19 ? volMa20State.ma : null,
-        obv: obvVal,
-        obvMa20: i >= 19 ? obvMa20 : null,
-        obvHist: obvVal !== null && obvMa20 !== null ? obvVal - obvMa20 : null,
-        rsi: i >= 13 ? rsiState.rsi : null,
-        macdOsc: macdState.osc,
-        macdDif: (macdState as any).dif || null,
         obvDivergenceEntry:
           signal?.type === "OBV_DIVERGENCE_ENTRY" ? d.l * 0.99 : null,
         fakeBreakout: signal?.type === "FAKE_BREAKOUT" ? d.h * 1.02 : null,
@@ -222,14 +182,15 @@ export default function Obv({
         exitWeakness: signal?.type === "EXIT_WEAKNESS" ? d.l * 0.98 : null,
         stopLoss: (signal as any)?.type === "STOP_LOSS" ? d.h * 1.02 : null,
         signalReason: signal?.reason || null,
-      };
+        obvHist: d.obv !== null && d.obvMa20 !== null ? d.obv - d.obvMa20 : null,
+      } as ObvChartData;
     });
 
     return allData.slice(
       -(visibleCount + rightOffset),
       rightOffset === 0 ? undefined : -rightOffset,
     );
-  }, [fullDeals, signals, visibleCount, rightOffset]);
+  }, [fullDeals, signals, visibleCount, rightOffset, settings]);
 
   // --- Analysis Steps Logic ---
 

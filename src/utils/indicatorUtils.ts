@@ -1,8 +1,11 @@
 import boll from "../cls_tools/boll";
+import cmf from "../cls_tools/cmf";
 import kd from "../cls_tools/kd";
 import ma from "../cls_tools/ma";
 import macd from "../cls_tools/macd";
 import mfi from "../cls_tools/mfi";
+import obv from "../cls_tools/obv";
+import obvEma from "../cls_tools/obvEma";
 import rsi from "../cls_tools/rsi";
 import { IndicatorSettings } from "../hooks/useIndicatorSettings";
 import { TaType } from "../types";
@@ -25,6 +28,7 @@ export interface EnhancedDealData {
   deduction20: number | null;
   deduction60: number | null;
   deduction120: number | null;
+  deduction240: number | null;
   volMa10: number | null;
   volMa20: number | null;
   bollMa: number | null;
@@ -36,7 +40,12 @@ export interface EnhancedDealData {
   j: number | null;
   rsi: number | null;
   mfi: number | null;
+  obv: number | null;
+  obvEma: number | null;
+  obvMa20: number | null;
+  cmf: number | null;
   osc: number | null;
+  dif: number | null;
   trend: string;
 }
 
@@ -56,11 +65,17 @@ export function calculateIndicators(
   let ma60Data = ma.init(deals[0], settings.ma60);
   let ma120Data = ma.init(deals[0], settings.ma120);
   let ma240Data = ma.init(deals[0], settings.ma240);
+  let volMa10Data = ma.init({ ...deals[0], c: deals[0].v }, settings.ma10);
+  let volMa20Data = ma.init({ ...deals[0], c: deals[0].v }, settings.ma20);
   let bollData = boll.init(deals[0]);
   let kdData = kd.init(deals[0], settings.kd);
   let rsiData = rsi.init(deals[0], settings.rsi);
   let mfiData = mfi.init(deals[0], settings.mfi);
   let macdData = macd.init(deals[0]);
+  let obvData = obv.init(deals[0]);
+  let obvEmaData = obvEma.init(obvData.obv, 10);
+  let obvMa20Data = ma.init({ ...deals[0], c: obvData.obv }, 20);
+  let cmfData = cmf.init(deals[0]);
 
   return deals.map((deal, i) => {
     if (i > 0) {
@@ -70,11 +85,17 @@ export function calculateIndicators(
       ma60Data = ma.next(deal, ma60Data, settings.ma60);
       ma120Data = ma.next(deal, ma120Data, settings.ma120);
       ma240Data = ma.next(deal, ma240Data, settings.ma240);
+      volMa10Data = ma.next({ ...deal, c: deal.v }, volMa10Data, settings.ma10);
+      volMa20Data = ma.next({ ...deal, c: deal.v }, volMa20Data, settings.ma20);
       bollData = boll.next(deal, bollData, settings.boll);
       kdData = kd.next(deal, kdData, settings.kd);
       rsiData = rsi.next(deal, rsiData, settings.rsi);
       mfiData = mfi.next(deal, mfiData, settings.mfi);
       macdData = macd.next(deal, macdData);
+      obvData = obv.next(deal, obvData);
+      obvEmaData = obvEma.next(obvData.obv, obvEmaData, 10);
+      obvMa20Data = ma.next({ ...deal, c: obvData.obv }, obvMa20Data, 20);
+      cmfData = cmf.next(deal, cmfData, settings.cmf, settings.cmfEma);
     }
 
     const ma5 = ma5Data.ma ? ma5Data.ma : null;
@@ -108,10 +129,6 @@ export function calculateIndicators(
       ma240Data.dataset && ma240Data.dataset.length >= settings.ma240
         ? ma240Data.dataset[0].t
         : null;
-    const deductionBoll =
-      bollData.dataset && bollData.dataset.length >= settings.boll
-        ? bollData.dataset[0].t
-        : null;
 
     const bollMa = bollData.bollMa ? bollData.bollMa : null;
     const bollUb = bollData.bollUb ? bollData.bollUb : null;
@@ -122,20 +139,8 @@ export function calculateIndicators(
       bandWidth = (bollUb - bollLb) / bollMa;
     }
 
-    // Volume MAs
-    let volMa10: number | null = null;
-    let volMa20: number | null = null;
-
-    if (i >= settings.ma10 - 1) {
-      let sumV = 0;
-      for (let j = 0; j < settings.ma10; j++) sumV += deals[i - j].v || 0;
-      volMa10 = sumV / settings.ma10;
-    }
-    if (i >= settings.ma20 - 1) {
-      let sumV = 0;
-      for (let j = 0; j < settings.ma20; j++) sumV += deals[i - j].v || 0;
-      volMa20 = sumV / settings.ma20;
-    }
+    const volMa10 = volMa10Data.ma ? volMa10Data.ma : null;
+    const volMa20 = volMa20Data.ma ? volMa20Data.ma : null;
 
     let trend = "震盪";
     if (ma5 && ma10 && ma20 && ma60 && ma240) {
@@ -159,7 +164,6 @@ export function calculateIndicators(
       deduction60,
       deduction120,
       deduction240,
-      deductionBoll,
       volMa10,
       volMa20,
       bollMa,
@@ -171,7 +175,12 @@ export function calculateIndicators(
       j: kdData.j ? kdData.j : null,
       rsi: rsiData.rsi ? rsiData.rsi : null,
       mfi: mfiData.mfi ? mfiData.mfi : null,
+      obv: obvData.obv,
+      obvEma: obvEmaData.ema,
+      obvMa20: obvMa20Data.ma,
+      cmf: cmfData.cmf,
       osc: macdData.osc ? macdData.osc : null,
+      dif: macdData.dif ? macdData.dif[macdData.dif.length - 1] : null,
       trend,
     };
   });

@@ -21,7 +21,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import macd from "../../../cls_tools/macd";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
@@ -60,7 +59,6 @@ interface MfiChartData extends Partial<EnhancedDealData> {
   // MACD
   macdOsc?: number | null;
   macdDif?: number | null;
-  macdDem?: number | null;
 }
 
 
@@ -154,22 +152,16 @@ export default function Mfi({
   const chartData = useMemo((): MfiChartData[] => {
     if (!deals || deals.length === 0) return [];
 
-    // 1. Initial enhancement (MAs, Boll, RSI, MFI)
     const enhancedData = calculateIndicators(deals, settings);
 
-    // 2. Full dataset signal calculation
-    let macdState = macd.init(deals[0]);
-    const fullDataWithMacd = enhancedData.map((d, i) => {
-      if (i > 0) macdState = macd.next(d as any, macdState);
-      return {
-        ...d,
-        macdOsc: macdState.osc,
-        macdDif: (macdState as any).dif,
-        macdDem: (macdState as any).dem,
-      };
-    });
+    // Map MACD fields for compatibility
+    const dataWithMacd = enhancedData.map((d) => ({
+      ...d,
+      macdOsc: d.osc,
+      macdDif: d.dif,
+    }));
 
-    const fullDataWithSignals = fullDataWithMacd.map((d, i, arr) => {
+    const fullDataWithSignals = dataWithMacd.map((d, i, arr) => {
       let buySignal: number | null = null;
       let exitSignal: number | null = null;
       let accumulationSignal: number | null = null;
@@ -194,11 +186,7 @@ export default function Mfi({
         }
 
         // v2.0 Accumulation Signal (吸籌確認)
-        // Conditions: MFI < 30 + Hook Up + Low Vol + (Box<3% or Support) + MACD Improving
         if (currMfi < 30 && currMfi > prevMfi) {
-          // Data Prep
-          // Note: using simple loop for extrema might be slow if array is huge, but fine for typical chart
-          // We need access to highs/lows. arr has them.
           const highs = arr.map((x) => x.h || 0);
           const lows = arr.map((x) => x.l || 0);
           const resistance = getExtrema(highs, i, 20, "MAX");
@@ -230,13 +218,10 @@ export default function Mfi({
       };
     });
 
-    // 3. Slice for visible area
-    const slicedData = fullDataWithSignals.slice(
+    return fullDataWithSignals.slice(
       -(visibleCount + rightOffset),
       rightOffset === 0 ? undefined : -rightOffset,
     );
-
-    return slicedData;
   }, [deals, settings, visibleCount, rightOffset]);
 
 

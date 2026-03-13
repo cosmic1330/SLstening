@@ -12,11 +12,15 @@ const formatDateTime = (timestamp: number) => {
     timeZone: "Asia/Taipei",
     day: "2-digit",
   });
-  const hh = d.toLocaleString("en-US", {
+  let hh = d.toLocaleString("en-US", {
     timeZone: "Asia/Taipei",
     hour: "2-digit",
     hour12: false,
   });
+  // 如果小時是 24 點，強制設為 "00"
+  if (hh === "24") {
+    hh = "00";
+  }
   let mi = d.toLocaleString("en-US", {
     timeZone: "Asia/Taipei",
     minute: "2-digit",

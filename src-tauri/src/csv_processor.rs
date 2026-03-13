@@ -76,6 +76,89 @@ fn write_deal_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> 
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Deal, Skills};
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_write_deal_entities_to_csv() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        let deals = vec![
+            DataEntity::Deal(Deal {
+                stock_id: "2330".to_string(),
+                t: "20240101".to_string(),
+                c: 100.0,
+                o: 99.0,
+                h: 101.0,
+                l: 98.0,
+                v: 1000,
+            }),
+        ];
+
+        let result = write_entities_to_csv(&deals, path);
+        assert!(result.is_ok());
+
+        let content = std::fs::read_to_string(path).unwrap();
+        assert!(content.contains("stock_id,t,c,o,h,l,v"));
+        assert!(content.contains("2330,20240101,100,99,101,98,1000"));
+    }
+
+    #[test]
+    fn test_write_skills_entities_to_csv() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        let skills = vec![
+            DataEntity::Skills(Skills {
+                stock_id: "2330".to_string(),
+                t: "20240101".to_string(),
+                ma5: 100.0,
+                ma5_ded: 99.0,
+                ma10: 101.0,
+                ma10_ded: 98.0,
+                ma20: 102.0,
+                ma20_ded: 97.0,
+                ma60: 103.0,
+                ma60_ded: 96.0,
+                ma120: 104.0,
+                ma120_ded: 95.0,
+                macd: 1.0,
+                dif: 0.5,
+                osc: 0.5,
+                k: 50.0,
+                d: 50.0,
+                j: Some(50.0),
+                rsi5: 60.0,
+                rsi10: 55.0,
+                boll_ub: 110.0,
+                boll_ma: 100.0,
+                boll_lb: 90.0,
+                obv: 10000.0,
+                obv5: 9000.0,
+            }),
+        ];
+
+        let result = write_entities_to_csv(&skills, path);
+        assert!(result.is_ok());
+
+        let content = std::fs::read_to_string(path).unwrap();
+        assert!(content.contains("stock_id,t,ma5,ma5_ded,ma10,ma10_ded,ma20,ma20_ded,ma60,ma60_ded,ma120,ma120_ded,macd,dif,osc,k,d,rsi5,rsi10,bollUb,bollMa,bollLb,obv,obv5"));
+    }
+
+    #[test]
+    fn test_write_empty_entities_returns_error() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+        let empty: Vec<DataEntity> = vec![];
+        let result = write_entities_to_csv(&empty, path);
+        assert!(result.is_err());
+    }
+}
+
 fn write_skills_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> {
     let mut writer = Writer::from_path(path)?;
     

@@ -39,3 +39,6 @@ ts-rs = "10.0.0"
 tauri-plugin-updater = "2"
 tauri-plugin-window-state = "2"
 
+[dev-dependencies]
+tempfile = "3.8"
+

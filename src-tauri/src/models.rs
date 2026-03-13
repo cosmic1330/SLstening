@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
+use ts_rs::TS;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
 #[serde(tag = "type")]
+#[ts(export)]
 pub enum DataEntity {
     Deal(Deal),
     Skills(Skills),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Deal {
     pub stock_id: String, // 股票代號
     pub t: String,        // 日期
@@ -18,7 +21,8 @@ pub struct Deal {
     pub v: i64,           // 成交量
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, TS)]
+#[ts(export)]
 pub struct Skills {
     pub stock_id: String, // 股票代號
     pub t: String,        // 日期
@@ -44,4 +48,5 @@ pub struct Skills {
     pub boll_lb: f64,      // Bollinger Lower Band
     pub obv: f64,         // OBV
     pub obv5: f64,        // OBV5
+    pub j: Option<f64>,   // J 指標 (Migration v4 加入)
 }

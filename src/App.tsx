@@ -19,7 +19,6 @@ const RedBall = lazy(() => import("./pages/Home/RedBall"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
 
 function App() {
-  ``;
   const { reload } = useStocksStore();
 
   useEffect(() => {
@@ -37,64 +36,64 @@ function App() {
   }, []);
 
   return (
-    <UserProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route index element={<Login />} />
-          <Route path="register" element={<Register />} />
-          <Route path="add" element={<Add />} />
-          <Route path="detail/:id" element={<Detail />} />
-          <Route path="dashboard" element={<Home />}>
-            <Route
-              index
-              element={
-                <Suspense fallback={<div>載入中...</div>}>
-                  <List />
-                </Suspense>
-              }
-            />
-            <Route
-              path="setting"
-              element={
-                <Suspense fallback={<div>載入中...</div>}>
-                  <Setting />
-                </Suspense>
-              }
-            />
-            <Route
-              path="redball"
-              element={
-                <Suspense fallback={<div>載入中...</div>}>
-                  <RedBall />
-                </Suspense>
-              }
-            />
-            <Route
-              path="category"
-              element={
-                <Suspense fallback={<div>載入中...</div>}>
-                  <Category />
-                </Suspense>
-              }
-            />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Route>
-        </Routes>
-        <DebugInfo />
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={false}
-          closeOnClick={false}
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="dark"
-        />
-      </BrowserRouter>
-    </UserProvider>
+      <UserProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route index element={<Login />} />
+            <Route path="register" element={<Register />} />
+            <Route path="add" element={<Add />} />
+            <Route path="detail/:id" element={<Detail />} />
+            <Route path="dashboard" element={<Home />}>
+              <Route
+                index
+                element={
+                  <Suspense fallback={<div>載入中...</div>}>
+                    <List />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="setting"
+                element={
+                  <Suspense fallback={<div>載入中...</div>}>
+                    <Setting />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="redball"
+                element={
+                  <Suspense fallback={<div>載入中...</div>}>
+                    <RedBall />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="category"
+                element={
+                  <Suspense fallback={<div>載入中...</div>}>
+                    <Category />
+                  </Suspense>
+                }
+              />
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Route>
+          </Routes>
+          <DebugInfo />
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick={false}
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="dark"
+          />
+        </BrowserRouter>
+      </UserProvider>
   );
 }
 

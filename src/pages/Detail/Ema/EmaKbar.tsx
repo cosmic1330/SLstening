@@ -1,12 +1,5 @@
-import {
-  Avatar,
-  Box,
-  Chip,
-  CircularProgress,
-  Container,
-  Stack,
-  Typography,
-} from "@mui/material";
+
+import { Box, Chip, Typography, CircularProgress, Container, Stack } from '@mui/material';
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,

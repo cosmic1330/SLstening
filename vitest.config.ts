@@ -10,8 +10,18 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    dangerouslyIgnoreUnhandledErrors: true,
     setupFiles: './src/setupTests.ts',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    coverage: {
+      provider: 'istanbul',
+      include: ['src/utils/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/__tests__/**'
+      ],
+      reporter: ['text', 'html']
+    }
   },
   resolve: {
     alias: {

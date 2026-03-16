@@ -17,4 +17,4 @@
 | REQ-007 | 圖表效能限制：單次渲染數據點建議控制在 300 - 500 點內 | Active | 2026-03-12 | v1: 原始規範 | 防止 Webview 渲染阻塞 |
 | REQ-008 | MUI 全局禁用 TouchRipple | Active | 2026-03-13 | v1: 原始規範; v2: 檢視發現未實作 | 需建立 ThemeProvider |
 | REQ-010 | Rust Command 統一返回 AppError 結構化錯誤 | Active | 2026-03-13 | v1: 檢視報告新增 | 禁止直接返回 String 錯誤 |
-
+| REQ-011 | 打包前(tauri build) 強制執行自動測試與覆蓋率收集 | Active | 2026-03-16 | v1: 依照使用者要求新增 | 阻擋未過測試及不符標準的專案發布 |

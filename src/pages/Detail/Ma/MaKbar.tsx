@@ -1,7 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import {
-  Avatar,
   Box,
   Chip,
   CircularProgress,

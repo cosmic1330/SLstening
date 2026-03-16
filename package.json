@@ -9,8 +9,11 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "app": "tauri dev",
-    "package": "tauri build",
-    "test": "vitest"
+    "package": "npm run test:all && tauri build",
+    "test": "vitest",
+    "test:frontend": "vitest run",
+    "test:backend": "cd src-tauri && cargo test",
+    "test:all": "npm run test:frontend && npm run test:backend"
   },
   "dependencies": {
     "@ch20026103/anysis": "0.0.20-alpha.0",
@@ -53,11 +56,16 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-istanbul": "^4.1.0",
+    "@vitest/coverage-v8": "^4.1.0",
+    "jsdom": "^29.0.0",
     "typescript": "~5.6.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^4.1.0"
   }
 }

@@ -157,6 +157,19 @@ mod tests {
         let result = write_entities_to_csv(&empty, path);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_csv_error_formatting() {
+        let invalid_err = CsvError::InvalidDataType;
+        assert_eq!(format!("{}", invalid_err), "無效的數據類型");
+
+        let io_err = CsvError::IoError(std::io::Error::new(std::io::ErrorKind::NotFound, "not found"));
+        assert_eq!(format!("{}", io_err), "IO 錯誤: not found");
+        
+        use std::error::Error;
+        assert!(invalid_err.source().is_none());
+        assert!(io_err.source().is_some());
+    }
 }
 
 fn write_skills_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> {

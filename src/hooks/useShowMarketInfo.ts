@@ -7,6 +7,7 @@ export type MarketInfoSettings = {
   twse: boolean;
   otc: boolean;
   wtx: boolean;
+  margin: boolean;
 };
 
 const STORAGE_KEY = "slitenting-market-info-visibility";
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS: MarketInfoSettings = {
   twse: true,
   otc: true,
   wtx: true,
+  margin: true,
 };
 
 export function useShowMarketInfo() {
@@ -41,6 +43,7 @@ export function useShowMarketInfo() {
         twse: isVisible,
         otc: isVisible,
         wtx: isVisible,
+        margin: isVisible,
       };
     }
     return DEFAULT_SETTINGS;

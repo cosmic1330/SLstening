@@ -11,6 +11,7 @@ import NasdaqBox from "./nasdaq";
 import OtcBox from "./otc";
 import TwseBox from "./twse";
 import WtxBox from "./wtx";
+import MarginBox from "./margin";
 
 import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
 
@@ -57,6 +58,11 @@ function List() {
           {marketVisibility.mm && (
             <Grid size={12}>
               <MmBox />
+            </Grid>
+          )}
+          {marketVisibility.margin && (
+            <Grid size={12}>
+              <MarginBox />
             </Grid>
           )}
           {marketVisibility.nasdaq && (

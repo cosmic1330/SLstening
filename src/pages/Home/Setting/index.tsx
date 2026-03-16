@@ -116,6 +116,7 @@ function Setting() {
       twse: true,
       otc: true,
       wtx: true,
+      margin: true,
     };
   });
 
@@ -439,6 +440,7 @@ function Setting() {
                   { key: "twse", label: "台股加權指數" },
                   { key: "otc", label: "櫃買指數" },
                   { key: "wtx", label: "台指期貨" },
+                  { key: "margin", label: "台股融資維持率" },
                 ].map((item) => (
                   <Grid size={6} key={item.key}>
                     <Box

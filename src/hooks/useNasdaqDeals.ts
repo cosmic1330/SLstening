@@ -54,24 +54,34 @@ export default function useNasdaqDeals(isVisible: boolean = true) {
       const lows = data.chart.result[0].indicators.quote[0].low;
       const volumes = data.chart.result[0].indicators.quote[0].volume;
       const ts = data.chart.result[0].timestamp;
-      const change = Math.round((closes.at(-1) - closes.at(-2)) * 100) / 100;
-      const price = Math.round(
-        data.chart.result[0].indicators.quote[0].close.at(-1) || 0,
-      );
-
       const res: (Omit<DealTableType, "stock_id" | "t"> & { t: number })[] = [];
       for (let i = 0; i < opens.length; i++) {
-        if (opens[i] !== null) {
+        // 確保 OHLC 都不為 null 且 ts[i] 存在
+        if (
+          opens[i] !== null &&
+          closes[i] !== null &&
+          highs[i] !== null &&
+          lows[i] !== null &&
+          ts[i] !== undefined
+        ) {
           res.push({
             t: ts[i],
             o: opens[i],
             c: closes[i],
             h: highs[i],
             l: lows[i],
-            v: volumes[i],
+            v: volumes[i] || 0,
           });
         }
       }
+
+      if (res.length === 0) return null;
+
+      const lastDeal = res[res.length - 1];
+      const prevDeal = res[res.length - 2] || lastDeal;
+
+      const price = Math.round(lastDeal.c);
+      const change = Math.round((lastDeal.c - prevDeal.c) * 100) / 100;
 
       return { data: res, price, change };
     } catch (e) {

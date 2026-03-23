@@ -28,7 +28,12 @@ export function analyzeIndicatorsData(
 
   const response = [];
   for (let i = 0; i < opens.length; i++) {
-    if (opens[i] !== null) {
+    if (
+      opens[i] !== null &&
+      closes[i] !== null &&
+      highs[i] !== null &&
+      lows[i] !== null
+    ) {
       response.push({
         t: ts[i],
         o: opens[i],
@@ -64,7 +69,12 @@ export function analyzeNasdaqIndicatorsData(
 
   const response = [];
   for (let i = 0; i < opens.length; i++) {
-    if (opens[i] !== null) {
+    if (
+      opens[i] !== null &&
+      closes[i] !== null &&
+      highs[i] !== null &&
+      lows[i] !== null
+    ) {
       response.push({
         t: ts[i],
         o: opens[i],

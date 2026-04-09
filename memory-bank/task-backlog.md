@@ -9,6 +9,7 @@
 | REQ-004 | Schoice 效能調優：確保複雜篩選邏輯在 Rust 層更穩定執行 | Pending | 2026-03-12 | - | v1: 原始需求 | 優化巨量資料處理速度 |
 | REQ-009 | 引入 ts-rs 實現 Rust 與 TS 類型自動同步 | Pending | 2026-03-13 | - | v1: 檢視報告新增 | 確保前後端資料結構一致 |
 | REQ-012 | 修復 Nasdaq K-線數值異常：優化 Yahoo API 資料過濾與計算邏輯 | Completed | 2026-03-23 | - | v1: 原始需求 | 解決 Nasdaq 頁面顯示異常的問題 |
+| REQ-013 | 登入頁面 UI 與配色全面重新設計 | In-Progress | 2026-03-27 | - | v1: 原始需求 | 提升首頁的 Premium 視覺質感 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

@@ -20,9 +20,9 @@ export interface IndicatorSettings {
 const DEFAULT_SETTINGS: IndicatorSettings = {
   ma5: 5,
   ma10: 10,
-  ma20: 20,
+  ma20: 30,
   ma60: 60,
-  boll: 20,
+  boll: 30,
   kd: 9,
   mfi: 14,
   rsi: 5,
@@ -39,11 +39,19 @@ export default function useIndicatorSettings() {
     const saved = localStorage.getItem("slitenting-indicator-settings");
     if (saved) {
       try {
-        return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        if (!localStorage.getItem("slitenting-indicator-settings-ma30-migrated")) {
+          if (parsed.ma20 === 20) parsed.ma20 = 30;
+          if (parsed.boll === 20) parsed.boll = 30;
+          localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
+          localStorage.setItem("slitenting-indicator-settings", JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
+        }
+        return { ...DEFAULT_SETTINGS, ...parsed };
       } catch (e) {
         return DEFAULT_SETTINGS;
       }
     }
+    localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
     return DEFAULT_SETTINGS;
   });
 

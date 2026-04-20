@@ -1,5 +1,4 @@
-import { Stack, Typography } from "@mui/material";
-import { useMemo } from "react";
+import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
 
 export default function AvgPrice({
@@ -9,37 +8,33 @@ export default function AvgPrice({
   lastPrice: number;
   tickDeals: TickDealsType | null;
 }) {
-  const { avgPrice, color } = useMemo(() => {
-    if (tickDeals && tickDeals.avgPrices && tickDeals.avgPrices.length > 0) {
-      const avgPriceValue = tickDeals.avgPrices[tickDeals.avgPrices.length - 1];
-      const avgPrice = Math.round(avgPriceValue * 100) / 100;
-      const color = lastPrice > avgPrice ? "#fff" : "#4caf50";
-      return {
-        avgPrice,
-        color,
-      };
-    }
-    return {
-      avgPrice: null,
-      color: "#fff",
-    };
-  }, [tickDeals, lastPrice]);
-
-  if (avgPrice === null) return null;
+  const avgPrice = tickDeals?.avgPrices[tickDeals.avgPrices.length - 1] || 0;
+  const isAbove = lastPrice >= avgPrice;
 
   return (
-    <Stack
-      direction="row"
-      justifyContent="space-between"
-      alignItems="center"
-      width="100%"
-    >
-      <Typography variant="caption" fontWeight={600} color="#fff">
-        日均
-      </Typography>
-      <Typography variant="body2" color={color} fontWeight="bold">
-        {avgPrice}
-      </Typography>
-    </Stack>
+    <Tooltip title={`當前均價: ${avgPrice}`} arrow enterTouchDelay={0}>
+      <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
+        <Typography
+          sx={{
+            fontSize: "9px",
+            fontWeight: 900,
+            color: "rgba(255,255,255,0.7)",
+            textTransform: "uppercase",
+          }}
+        >
+          MA Price
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: "12px",
+            fontWeight: 900,
+            color: isAbove ? "#FF5252" : "#69F0AE",
+            lineHeight: 1.2,
+          }}
+        >
+          {avgPrice > 0 ? avgPrice.toFixed(2) : "--"}
+        </Typography>
+      </Stack>
+    </Tooltip>
   );
 }

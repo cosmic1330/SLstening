@@ -13,9 +13,11 @@ import {
   Tooltip,
   Typography,
   styled,
+  alpha,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import { useIsVisible } from "../../hooks/useIsVisible";
@@ -33,67 +35,66 @@ import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
 
-export const STOCK_BOX_HEIGHT = 420;
+// Constants
+export const STOCK_BOX_HEIGHT = 280;
 
-// Premium Card Styling
-const StyledCard = styled(Box)(() => ({
+// Premium Colors (Traditional Japanese & Financial tones - High Contrast)
+const COLORS = {
+  up: "#FF5252", 
+  down: "#69F0AE", 
+  neutral: "#94A3B8",
+  cardBg: "rgba(10, 10, 15, 0.85)", // Darker, less transparent
+  cardBorder: "rgba(255, 255, 255, 0.12)",
+  textSecondary: "rgba(255, 255, 255, 0.8)", // Brighter for readability
+};
+
+// Styled Components
+const StyledCard = styled(motion.div)(() => ({
   position: "relative",
-  background: "rgba(30, 30, 35, 0.6)",
-  backdropFilter: "blur(24px) saturate(180%)",
-  borderRadius: "24px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow:
-    "0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255,255,255,0.05)",
+  background: COLORS.cardBg,
+  backdropFilter: "blur(20px)", // Reduced blur for clarity
+  borderRadius: "16px", // Reduced radius
+  border: `1px solid ${COLORS.cardBorder}`,
+  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.4)",
   overflow: "hidden",
   cursor: "pointer",
-  transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
   height: "100%",
   display: "flex",
   flexDirection: "column",
   boxSizing: "border-box",
-  "&:hover": {
-    transform: "translateY(-6px) scale(1.02)",
-    background: "rgba(40, 40, 45, 0.75)",
-    boxShadow:
-      "0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255,255,255,0.1)",
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    "& .action-buttons": {
-      opacity: 1,
-      transform: "translateY(0)",
-      pointerEvents: "auto",
-    },
-  },
+  fontFamily: "'Outfit', 'Inter', sans-serif",
 }));
 
-const ActionButtons = styled(Stack)(() => ({
+const ActionButtons = styled(motion.div)(() => ({
   position: "absolute",
   top: 12,
   right: 12,
-  opacity: 0,
-  pointerEvents: "none",
-  transform: "translateY(-10px)",
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   zIndex: 20,
 }));
 
 const ActionBtn = styled(IconButton)(({ theme }) => ({
-  backgroundColor: "rgba(0,0,0,0.5)",
-  backdropFilter: "blur(4px)",
-  color: theme.palette.common.white,
-  border: "1px solid rgba(255,255,255,0.1)",
+  backgroundColor: "rgba(255, 255, 255, 0.1)",
+  backdropFilter: "blur(12px)",
+  color: "rgba(255, 255, 255, 0.9)",
+  border: "1px solid rgba(255, 255, 255, 0.2)",
   padding: 6,
+  transition: "all 0.2s ease",
   "&:hover": {
     backgroundColor: theme.palette.primary.main,
+    color: "#fff",
     transform: "scale(1.1)",
   },
 }));
 
-const MetricBox = styled(Box)(() => ({
+const MetricTag = styled(Box)(() => ({
   padding: "4px 8px",
-  borderRadius: "12px",
-  transition: "background 0.2s",
+  borderRadius: "8px",
+  background: "rgba(255, 255, 255, 0.05)",
+  border: "1px solid rgba(255, 255, 255, 0.08)",
+  transition: "all 0.2s ease",
   "&:hover": {
-    background: "rgba(255,255,255,0.03)",
+    background: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
   },
 }));
 
@@ -113,39 +114,15 @@ export default function StockBox({
 }: StockBoxProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isComponentVisible = useIsVisible(containerRef);
+  const [isHovered, setIsHovered] = useState(false);
 
-  // 1. 市場訂閱機制 (Rust-side subscription)
+  // Data Hooks
   useMarketSubscriber(stock.id, enabled, isComponentVisible);
-
-  // 2. 從全域 Store 獲取推播的即時數據
   const tickDeals = useMarketDataStore((state) => state.getTick(stock.id)) || null;
+  const { deals, name } = useConditionalDeals(stock.id, enabled, isComponentVisible);
 
-  // 3. 獲取日 K 與技術指標資料 (目前仍使用 SWR 輪詢)
-  const { deals, name } = useConditionalDeals(
-    stock.id,
-    enabled,
-    isComponentVisible,
-  );
-
-  // MA Calculations
-  const {
-    ma5,
-    ma5_deduction_time,
-    ma5_deduction_value,
-    ma5_tomorrow_deduction_value,
-    ma5_tomorrow_deduction_time,
-    ma10,
-    ma10_deduction_time,
-    ma10_deduction_value,
-    ma10_tomorrow_deduction_value,
-    ma10_tomorrow_deduction_time,
-    ma20,
-    ma20_deduction_time,
-    ma20_deduction_value,
-    ma20_tomorrow_deduction_value,
-    ma20_tomorrow_deduction_time,
-  } = useMaDeduction(deals);
-
+  // Indicators
+  const maData = useMaDeduction(deals);
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
     name: name || stock.name,
@@ -154,256 +131,221 @@ export default function StockBox({
 
   const removeStock = useStocksStore((state) => state.remove);
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    removeStock(stock.id);
-  };
-
-  const url =
-    stock.type === "上市"
-      ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
-      : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
-
-  const lastPrice = useMemo(() => {
-    if (tickDeals?.price) return tickDeals.price;
-    return deals.length > 0 ? deals[deals.length - 1].c : 0;
+  const priceInfo = useMemo(() => {
+    const lastPrice = tickDeals?.price || (deals.length > 0 ? deals[deals.length - 1].c : 0);
+    const percent = tickDeals?.changePercent || (deals.length >= 2 ? Math.round(((lastPrice - deals[deals.length - 2].c) / deals[deals.length - 2].c) * 10000) / 100 : 0);
+    const isUp = percent > 0;
+    const isDown = percent < 0;
+    const mainColor = isUp ? COLORS.up : isDown ? COLORS.down : COLORS.neutral;
+    
+    return { lastPrice, percent, isUp, isDown, mainColor };
   }, [deals, tickDeals]);
 
-  const percent = useMemo(() => {
-    if (tickDeals?.changePercent) return tickDeals.changePercent;
-    if (deals.length < 2) return 0;
-    const prePrice = deals[deals.length - 2].c;
-    return Math.round(((lastPrice - prePrice) / prePrice) * 10000) / 100;
-  }, [deals, tickDeals, lastPrice]);
-
-  const avgDaysVolume = useMemo(() => {
-    if (deals.length < 11) return 0;
+  const volumeInfo = useMemo(() => {
+    if (deals.length < 11) return { avgDaysVolume: 0, estimatedVolume: 0 };
     const pastDeals = deals.slice(-11, -1);
     const totalVolume = pastDeals.reduce((acc, deal) => acc + deal.v, 0);
-    return Math.round((totalVolume / pastDeals.length) * 100) / 100;
+    const avgDaysVolume = Math.round((totalVolume / pastDeals.length) * 100) / 100;
+    const { estimatedVolume } = estimateVolume({
+      currentVolume: deals[deals.length - 1].v,
+      currentTime: new Date(),
+      previousDayVolume: deals[deals.length - 2]?.v,
+      avg5DaysVolume: avgDaysVolume,
+    });
+    return { avgDaysVolume, estimatedVolume };
   }, [deals]);
 
-  const { estimatedVolume } = useMemo(() => {
-    if (deals.length > 0) {
-      return estimateVolume({
-        currentVolume: deals[deals.length - 1].v,
-        currentTime: new Date(),
-        previousDayVolume: deals[deals.length - 2]?.v,
-        avg5DaysVolume: avgDaysVolume,
-      });
-    }
-    return { estimatedVolume: 0 };
-  }, [deals, avgDaysVolume]);
-
-  const isPositive = percent > 0;
-  const isNegative = percent < 0;
-  const mainColor = isPositive ? "#FF5252" : isNegative ? "#69F0AE" : "#B0B0B0";
-
-  const glowColor = isPositive
-    ? "radial-gradient(circle at 80% 20%, rgba(255, 82, 82, 0.15) 0%, transparent 50%)"
-    : isNegative
-      ? "radial-gradient(circle at 80% 20%, rgba(105, 240, 174, 0.15) 0%, transparent 50%)"
-      : "radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%)";
+  const cardGlow = useMemo(() => {
+    return `radial-gradient(circle at 100% 0%, ${alpha(priceInfo.mainColor, 0.1)} 0%, transparent 50%)`;
+  }, [priceInfo.mainColor]);
 
   return (
-    <StyledCard ref={containerRef} onClick={openDetailWindow}>
+    <StyledCard
+      ref={containerRef}
+      onClick={openDetailWindow}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      whileHover={{ y: -4 }}
+    >
       <Box
-        className="card-glow"
         sx={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
-          bottom: 0,
-          background: glowColor,
-          opacity: 0.5,
-          transition: "opacity 0.4s",
-          zIndex: 0,
+          height: "100%",
+          background: cardGlow,
           pointerEvents: "none",
+          zIndex: 0,
         }}
       />
 
-      <ActionButtons direction="row" spacing={1} className="action-buttons">
-        <Tooltip title="TradingView" arrow>
-          <ActionBtn
-            size="small"
-            onClick={async (e) => {
-              e.stopPropagation();
-              await open(url);
-            }}
+      <AnimatePresence>
+        {isHovered && (
+          <ActionButtons
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
           >
-            <OpenInNewIcon fontSize="small" />
-          </ActionBtn>
-        </Tooltip>
-        <Tooltip title="Analytics" arrow>
-          <ActionBtn
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              openDetailWindow();
-            }}
-          >
-            <AnalyticsIcon fontSize="small" />
-          </ActionBtn>
-        </Tooltip>
-        {onRemove && (
-          <Tooltip title="從此分類移除" arrow>
-            <ActionBtn
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-            >
-              <CloseIcon fontSize="small" />
-            </ActionBtn>
-          </Tooltip>
-        )}
-        {canDelete && (
-          <Tooltip title="Delete Stock" arrow>
-            <ActionBtn size="small" color="error" onClick={handleDelete}>
-              <DeleteIcon fontSize="small" />
-            </ActionBtn>
-          </Tooltip>
-        )}
-      </ActionButtons>
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title="TradingView" arrow>
+                <ActionBtn
+                  size="small"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const url = stock.type === "上市"
+                      ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
+                      : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
+                    await open(url);
+                  }}
+                >
+                  <OpenInNewIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+                </ActionBtn>
+              </Tooltip>
+              
+              {onRemove && (
+                <Tooltip title="移除" arrow>
+                  <ActionBtn
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove();
+                    }}
+                  >
+                    <CloseIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+                  </ActionBtn>
+                </Tooltip>
+              )}
 
-      <Box sx={{ position: "relative", zIndex: 1, p: 2.5 }}>
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="flex-start"
-          mb={2.5}
-        >
-          <Box>
+              {canDelete && (
+                <Tooltip title="刪除" arrow>
+                  <ActionBtn 
+                    size="small" 
+                    sx={{ "&:hover": { bgcolor: "#FF5252" } }}
+                    onClick={(e) => { e.stopPropagation(); removeStock(stock.id); }}
+                  >
+                    <DeleteIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+                  </ActionBtn>
+                </Tooltip>
+              )}
+            </Stack>
+          </ActionButtons>
+        )}
+      </AnimatePresence>
+
+      <Box sx={{ position: "relative", zIndex: 1, p: 2, flex: 1 }}>
+        {/* Header: Name & ID */}
+        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+          <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
             <Typography
-              variant="caption"
+              noWrap
               sx={{
-                color: "rgba(255,255,255,0.5)",
-                fontWeight: 600,
-                letterSpacing: 0.5,
+                color: COLORS.textSecondary,
+                fontSize: "11px",
+                fontWeight: 900,
+                letterSpacing: "0.02em",
+                lineHeight: 1,
+                mb: 0.5,
               }}
             >
-              {stock.id}
+              {stock.id} · {stock.type}
             </Typography>
             <Typography
-              variant="h5"
-              sx={{ fontWeight: 800, color: "#fff", lineHeight: 1.1 }}
+              noWrap
+              sx={{
+                fontWeight: 900,
+                fontSize: "18px",
+                color: "#fff",
+                lineHeight: 1,
+              }}
             >
               {name || stock.name}
             </Typography>
           </Box>
-          <Box sx={{ textAlign: "right" }}>
+          <Box sx={{ textAlign: "right", flexShrink: 0 }}>
             <Typography
-              variant="h3"
-              sx={{ fontWeight: 800, color: mainColor, letterSpacing: -1 }}
+              sx={{
+                fontWeight: 900,
+                fontSize: "24px",
+                color: priceInfo.mainColor,
+                lineHeight: 1,
+              }}
             >
-              {lastPrice}
+              {priceInfo.lastPrice}
             </Typography>
-            <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
-              {isPositive ? (
-                <TrendingUpIcon sx={{ fontSize: 16, color: mainColor }} />
-              ) : isNegative ? (
-                <TrendingDownIcon sx={{ fontSize: 16, color: mainColor }} />
-              ) : null}
+            <Stack direction="row" spacing={0.2} justifyContent="flex-end" alignItems="center">
               <Typography
-                variant="subtitle2"
-                sx={{ fontWeight: 700, color: mainColor }}
+                sx={{
+                  fontWeight: 900,
+                  fontSize: "13px",
+                  color: priceInfo.mainColor,
+                }}
               >
-                {percent > 0 ? "+" : ""}
-                {percent}%
+                {priceInfo.percent > 0 ? "+" : ""}{priceInfo.percent}%
               </Typography>
             </Stack>
           </Box>
         </Stack>
 
-        <Divider sx={{ borderColor: "rgba(255,255,255,0.08)", mb: 2 }} />
-
-        <Grid container spacing={2}>
-          <Grid size={6}>
-            <Box>
-              <MetricBox>
-                <Ma5
-                  {...{
-                    ma5,
-                    lastPrice,
-                    ma5_deduction_time,
-                    ma5_deduction_value,
-                    ma5_tomorrow_deduction_time,
-                    ma5_tomorrow_deduction_value,
-                  }}
-                />
-              </MetricBox>
-              <MetricBox>
-                <Ma20
-                  {...{
-                    ma20,
-                    lastPrice,
-                    ma20_deduction_time,
-                    ma20_deduction_value,
-                    ma20_tomorrow_deduction_time,
-                    ma20_tomorrow_deduction_value,
-                  }}
-                />
-              </MetricBox>
-            </Box>
+        {/* Indicators Grid - More Compact */}
+        <Box sx={{ mt: 1.5 }}>
+          <Grid container spacing={1}>
+            <Grid size={{ xs: 4 }}>
+              <MetricTag>
+                <Ma5 lastPrice={priceInfo.lastPrice} {...maData} />
+              </MetricTag>
+            </Grid>
+            <Grid size={{ xs: 4 }}>
+              <MetricTag>
+                <Ma10 lastPrice={priceInfo.lastPrice} {...maData} />
+              </MetricTag>
+            </Grid>
+            <Grid size={{ xs: 4 }}>
+              <MetricTag>
+                <Ma20 lastPrice={priceInfo.lastPrice} {...maData} />
+              </MetricTag>
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <MetricTag>
+                <VolumeRatio {...volumeInfo} />
+              </MetricTag>
+            </Grid>
+            <Grid size={{ xs: 6 }}>
+              <MetricTag>
+                <AvgPrice lastPrice={priceInfo.lastPrice} tickDeals={tickDeals} />
+              </MetricTag>
+            </Grid>
           </Grid>
-
-          <Grid size={6}>
-            <MetricBox>
-              <Ma10
-                {...{
-                  ma10,
-                  lastPrice,
-                  ma10_deduction_time,
-                  ma10_deduction_value,
-                  ma10_tomorrow_deduction_time,
-                  ma10_tomorrow_deduction_value,
-                }}
-              />
-            </MetricBox>
-            <MetricBox>
-              <AvgPrice {...{ lastPrice, tickDeals }} />
-            </MetricBox>
-          </Grid>
-
-          <Grid size={6}>
-            <MetricBox>
-              <VolumeEstimated {...{ deals, estimatedVolume }} />
-            </MetricBox>
-          </Grid>
-          <Grid size={6}>
-            <MetricBox>
-              <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
-            </MetricBox>
-          </Grid>
-        </Grid>
+        </Box>
       </Box>
 
+      {/* Footer Chart - Thinner */}
       <Box
         sx={{
-          height: 64,
+          height: 40,
           mt: "auto",
-          background:
-            "linear-gradient(to top, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 100%)",
+          background: "rgba(255,255,255,0.02)",
           position: "relative",
-          borderBottomLeftRadius: "24px",
-          borderBottomRightRadius: "24px",
-          overflow: "hidden",
+          display: "flex",
+          alignItems: "flex-end",
         }}
       >
         {tickDeals ? (
           <StockTickChart tickDeals={tickDeals} />
         ) : (
           <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            height="100%"
+            sx={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: 0.2,
+            }}
           >
-            <Typography variant="caption" color="text.disabled">
-              等待數據推播...
-            </Typography>
+            <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>LOADING</Typography>
           </Box>
         )}
       </Box>

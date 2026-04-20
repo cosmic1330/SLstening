@@ -1,8 +1,8 @@
 import { Box } from "@mui/material";
 import { useMemo } from "react";
 import {
-  Line,
-  LineChart,
+  Area,
+  AreaChart,
   ReferenceLine,
   ResponsiveContainer,
   YAxis,
@@ -10,7 +10,11 @@ import {
 import { TickDealsType } from "../../types";
 import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
-export default function StockTickChart({ tickDeals }: { tickDeals: TickDealsType }) {
+export default function StockTickChart({
+  tickDeals,
+}: {
+  tickDeals: TickDealsType;
+}) {
   const data = useMemo(() => {
     const res = [];
     try {
@@ -24,7 +28,7 @@ export default function StockTickChart({ tickDeals }: { tickDeals: TickDealsType
       }
 
       let totalCount = Math.ceil(
-        tickDeals.closes.length / (currentProgress / 100)
+        tickDeals.closes.length / (currentProgress / 100),
       );
 
       // Limit totalCount to prevent crashes if currentProgress is very small
@@ -47,34 +51,52 @@ export default function StockTickChart({ tickDeals }: { tickDeals: TickDealsType
     return res;
   }, [tickDeals]);
 
+  const isUp = useMemo(() => {
+    if (tickDeals.closes.length < 1) return true;
+    return tickDeals.price >= tickDeals.previousClose;
+  }, [tickDeals]);
+
+  const mainColor = isUp ? "#ff5252" : "#69f0ae";
+
   return (
-    <Box height={50}>
+    <Box height={40} sx={{ width: "100%", opacity: 0.8 }}>
       <ResponsiveContainer>
-        <LineChart data={data}>
+        <AreaChart data={data}>
+          <defs>
+            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={mainColor} stopOpacity={0.15} />
+              <stop offset="95%" stopColor={mainColor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <YAxis domain={["dataMin", "dataMax"]} hide />
           {Number.isFinite(tickDeals.previousClose) && (
             <ReferenceLine
               y={tickDeals.previousClose}
-              stroke="#63c762"
-              strokeWidth={1.5}
-              ifOverflow="extendDomain"
+              stroke="rgba(255,255,255,0.15)"
+              strokeDasharray="3 3"
+              strokeWidth={1}
             />
           )}
-          <Line
+          <Area
             type="monotone"
-            dataKey={"avgPrice"}
-            stroke={"#ff7300"}
-            strokeWidth={1.5}
+            dataKey="close"
+            stroke={mainColor}
+            strokeWidth={2}
+            fillOpacity={1}
+            fill="url(#areaGradient)"
             dot={false}
+            isAnimationActive={false}
           />
-          <Line
+          <Area
             type="monotone"
-            dataKey={"close"}
-            stroke={"#fff"}
-            strokeWidth={1.5}
+            dataKey="avgPrice"
+            stroke="#ffffff"
+            strokeWidth={1}
+            fill="transparent"
             dot={false}
+            isAnimationActive={false}
           />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </Box>
   );

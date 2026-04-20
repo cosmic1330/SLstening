@@ -143,9 +143,7 @@ const MarketIndexItemLayout = ({
  * 處理 NASDAQ 市場指標
  */
 function MarketIndexNasdaqItem({
-  id,
   name,
-  group,
   isVisible,
   openDetailWindow,
   containerRef,
@@ -184,9 +182,7 @@ function MarketIndexNasdaqItem({
  * 處理 WTX 市場指標
  */
 function MarketIndexWtxItem({
-  id,
   name,
-  group,
   isVisible,
   openDetailWindow,
   containerRef,
@@ -227,7 +223,6 @@ function MarketIndexWtxItem({
 function MarketIndexTickItem({
   id,
   name,
-  group,
   isVisible,
   openDetailWindow,
   containerRef,

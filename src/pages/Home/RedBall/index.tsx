@@ -13,7 +13,6 @@ import {
 import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
-import { useDebugMode } from "../../../hooks/useDebugMode";
 import RedBallCard, { RED_BALL_CARD_HEIGHT } from "./components/RedBallCard";
 
 type CsvStockType = {
@@ -31,35 +30,25 @@ const PageContainer = styled(Box)`
   height: 100vh;
   overflow: hidden;
   position: relative;
-  background-color: #0f1214;
-  background-image:
-    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-    radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    200px 200px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
-  color: white;
+  background: #fdf8f2;
+  backgroundimage:
+    radial-gradient(at 0% 0%, rgba(61, 90, 69, 0.05) 0, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(210, 105, 30, 0.05) 0, transparent 50%);
+  color: #5d4037;
   display: flex;
   flex-direction: column;
 `;
 
-const GlassHeader = styled(Paper)(({ theme }) => ({
-  background: "rgba(30, 30, 40, 0.4)",
-  backdropFilter: "blur(20px)",
-  WebkitBackdropFilter: "blur(20px)",
-  borderRadius: "0 0 24px 24px",
-  borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-  borderLeft: "1px solid rgba(255, 255, 255, 0.08)",
-  borderRight: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
-  padding: theme.spacing(2, 3, 0, 3),
+const GhibliHeader = styled(Paper)(({ theme }) => ({
+  background: "#FAF3E0",
+  borderRadius: "0 0 20px 20px",
+  borderBottom: "2px solid #D2B48C",
+  borderLeft: "2px solid #D2B48C",
+  borderRight: "2px solid #D2B48C",
+  boxShadow: "0 8px 24px rgba(0,0,0,0.1)",
+  padding: theme.spacing(3, 4, 0, 4),
   zIndex: 10,
-  margin: theme.spacing(2),
+  margin: theme.spacing(0, 2, 2, 2),
 }));
 
 const StyledTab = styled(Tab)(({ theme }) => ({
@@ -68,14 +57,13 @@ const StyledTab = styled(Tab)(({ theme }) => ({
   [theme.breakpoints.up("sm")]: {
     minWidth: 0,
   },
-  fontWeight: 600,
+  fontWeight: 800,
   marginRight: theme.spacing(1),
-  color: "rgba(255, 255, 255, 0.4)",
+  color: "#8B7355",
+  opacity: 0.6,
   "&.Mui-selected": {
-    color: "#60a5fa",
-  },
-  "&.Mui-focusVisible": {
-    backgroundColor: "rgba(100, 95, 228, 0.32)",
+    color: "#3D5A45",
+    opacity: 1,
   },
 }));
 
@@ -131,8 +119,6 @@ export default function RedBall() {
   const [filteredStocks, setFilteredStocks] = useState<CsvStockType[]>([]);
   const [availableLists, setAvailableLists] = useState<string[]>([]);
 
-  const isDebugMode = useDebugMode();
-
   useEffect(() => {
     const sheetId = "1v42zeXlZIUaqmDTyu3FjQrq7a4Pcudbf9S53AH8wyBA";
     const gid = "411196894";
@@ -172,7 +158,7 @@ export default function RedBall() {
 
   return (
     <PageContainer>
-      <GlassHeader>
+      <GhibliHeader>
         <Container maxWidth="lg">
           <Stack
             direction="row"
@@ -183,19 +169,18 @@ export default function RedBall() {
             <Box
               sx={{
                 p: 1,
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-                boxShadow: "0 4px 12px rgba(220, 38, 38, 0.4)",
+                borderRadius: "10px",
+                background: "#3D5A45",
+                boxShadow: "0 4px 0 #2D4A35",
                 display: "flex",
               }}
             >
-              <TrendingIcon sx={{ color: "white" }} />
+              <TrendingIcon sx={{ color: "#F1E5AC" }} />
             </Box>
             <Typography
               variant="h5"
-              fontWeight="800"
-              sx={{ letterSpacing: "-0.5px" }}
-              color="#fff"
+              fontWeight="900"
+              sx={{ letterSpacing: "-0.5px", color: "#5D4037" }}
             >
               系統推薦股
             </Typography>
@@ -210,10 +195,10 @@ export default function RedBall() {
               sx={{
                 minHeight: 48,
                 "& .MuiTabs-indicator": {
-                  backgroundColor: "#60a5fa",
-                  height: 3,
-                  borderRadius: "3px 3px 0 0",
-                  boxShadow: "0 -2px 10px rgba(96, 165, 250, 0.5)",
+                  backgroundColor: "#3D5A45",
+                  height: 4,
+                  borderRadius: "4px 4px 0 0",
+                  boxShadow: "0 -2px 0 rgba(61, 90, 69, 0.2)",
                 },
               }}
             >
@@ -223,7 +208,7 @@ export default function RedBall() {
             </Tabs>
           )}
         </Container>
-      </GlassHeader>
+      </GhibliHeader>
 
       <Box sx={{ flex: 1, overflow: "hidden", position: "relative" }}>
         {loading ? (
@@ -236,10 +221,10 @@ export default function RedBall() {
             }}
           >
             <Stack alignItems="center" spacing={2}>
-              <CircularProgress size={40} sx={{ color: "#ef4444" }} />
+              <CircularProgress size={40} sx={{ color: "#3D5A45" }} />
               <Typography
                 variant="body2"
-                sx={{ color: "rgba(255,255,255,0.5)" }}
+                sx={{ color: "#8B7355", fontWeight: 700 }}
               >
                 正在獲取數據...
               </Typography>
@@ -252,10 +237,7 @@ export default function RedBall() {
                 stocks={filteredStocks as any}
                 height={window.innerHeight - 170}
                 itemHeight={RED_BALL_CARD_HEIGHT}
-                showDebug={isDebugMode}
-                renderItem={(stock) => (
-                  <RedBallCard stock={stock} />
-                )}
+                renderItem={(stock) => <RedBallCard stock={stock} />}
               />
             )}
           </Container>

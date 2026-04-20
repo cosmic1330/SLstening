@@ -1,4 +1,4 @@
-import { Box, Stack, Typography, styled, Tooltip } from "@mui/material";
+import { Box, styled, Tooltip, Typography } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 const StyledLinkChip = styled(Box)(({ theme }) => ({
@@ -24,7 +24,11 @@ interface MarketLinkBoxProps {
   icon: React.ReactNode;
 }
 
-export default function MarketLinkBox({ title, url, icon }: MarketLinkBoxProps) {
+export default function MarketLinkBox({
+  title,
+  url,
+  icon,
+}: MarketLinkBoxProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     openUrl(url);
@@ -33,7 +37,14 @@ export default function MarketLinkBox({ title, url, icon }: MarketLinkBoxProps) 
   return (
     <Tooltip title={`前往 ${title}`} arrow>
       <StyledLinkChip onClick={handleClick}>
-        <Box sx={{ color: "rgba(255,255,255,0.6)", mr: 1, display: "flex", fontSize: "16px" }}>
+        <Box
+          sx={{
+            color: "rgba(255,255,255,0.6)",
+            mr: 1,
+            display: "flex",
+            fontSize: "16px",
+          }}
+        >
           {icon}
         </Box>
         <Typography

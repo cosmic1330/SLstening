@@ -54,29 +54,17 @@ const PageContainer = styled(Box)`
   height: 100vh;
   overflow: auto;
   position: relative;
-  background-color: #0f1214;
-  background-image:
-    radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-    radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
-    radial-gradient(at 100% 0%, hsla(339, 49%, 25%, 1) 0, transparent 50%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
-  background-size:
-    100% 100%,
-    100% 100%,
-    100% 100%,
-    200px 200px;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
-  color: white;
-  padding-bottom: 80px; /* Space for BottomBar if any */
+  background: #FDF8F2;
+  backgroundImage: radial-gradient(at 0% 0%, rgba(61, 90, 69, 0.05) 0, transparent 50%), radial-gradient(at 100% 100%, rgba(210, 105, 30, 0.05) 0, transparent 50%);
+  color: #5D4037;
+  padding-bottom: 80px; 
 `;
 
-const GlassCard = styled(Paper)(({ theme }) => ({
-  background: "rgba(30, 30, 40, 0.6)",
-  backdropFilter: "blur(20px)",
-  WebkitBackdropFilter: "blur(20px)",
-  borderRadius: "24px",
-  border: "1px solid rgba(255, 255, 255, 0.1)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+const GhibliNotebookPaper = styled(Paper)(({ theme }) => ({
+  background: "#FAF3E0",
+  borderRadius: "20px",
+  border: "2px solid #5D4037",
+  boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
   overflow: "hidden",
   marginTop: theme.spacing(2),
 }));
@@ -222,6 +210,13 @@ function Setting() {
     [removeSupabaseWatchStock],
   );
 
+  const switchStyles = {
+    "& .MuiSwitch-switchBase.Mui-checked": { color: "#3D5A45" },
+    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+      backgroundColor: "#3D5A45",
+    },
+  };
+
   return (
     <PageContainer>
       <Container maxWidth="sm" sx={{ pt: 4 }}>
@@ -229,33 +224,35 @@ function Setting() {
           <IconButton
             onClick={() => navigate("/dashboard")}
             sx={{
-              color: "rgba(255,255,255,0.7)",
-              background: "rgba(255,255,255,0.05)",
-              borderRadius: "12px",
+              color: "#5D4037",
+              background: "rgba(93, 64, 55, 0.05)",
+              borderRadius: "10px",
+              border: "1.5px solid #D2B48C",
             }}
           >
             <ArrowBackIcon fontSize="small" />
           </IconButton>
-          <Typography variant="h5" fontWeight="800">
+          <Typography variant="h5" fontWeight="900" sx={{ color: "#5D4037" }}>
             偏好設定
           </Typography>
         </Stack>
 
-        <GlassCard elevation={0}>
+        <GhibliNotebookPaper elevation={0}>
           <List disablePadding>
             <StyledListSubheader>資料管理</StyledListSubheader>
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <DownloadIcon sx={{ color: "#60a5fa" }} />
+                <DownloadIcon sx={{ color: "#8B7355" }} />
               </ListItemIcon>
               <ListItemText
                 primary="更新股票列表"
                 secondary="手動觸發台股資料庫更新"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
               <ListItemSecondaryAction>
@@ -266,11 +263,14 @@ function Setting() {
                   disabled={disable}
                   sx={{
                     borderRadius: "10px",
-                    borderColor: "rgba(96, 165, 250, 0.4)",
-                    color: "#60a5fa",
+                    borderColor: "#3D5A45",
+                    color: "#3D5A45",
+                    fontWeight: 800,
+                    borderWidth: "2px",
                     "&:hover": {
-                      borderColor: "#60a5fa",
-                      background: "rgba(96, 165, 250, 0.1)",
+                      borderWidth: "2px",
+                      borderColor: "#3D5A45",
+                      background: "rgba(61, 90, 69, 0.05)",
                     },
                   }}
                 >
@@ -283,19 +283,20 @@ function Setting() {
               </ListItemSecondaryAction>
             </ListItem>
 
-            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <SyncIcon sx={{ color: "#34d399" }} />
+                <SyncIcon sx={{ color: "#3D5A45" }} />
               </ListItemIcon>
               <ListItemText
                 primary="同步Schoice自選股票"
                 secondary="加入雲端自選股票列表"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
               <ListItemSecondaryAction>
@@ -306,11 +307,14 @@ function Setting() {
                   disabled={syncLoading}
                   sx={{
                     borderRadius: "10px",
-                    borderColor: "rgba(52, 211, 153, 0.4)",
-                    color: "#34d399",
+                    borderColor: "#3D5A45",
+                    color: "#3D5A45",
+                    fontWeight: 800,
+                    borderWidth: "2px",
                     "&:hover": {
-                      borderColor: "#34d399",
-                      background: "rgba(52, 211, 153, 0.1)",
+                      borderWidth: "2px",
+                      borderColor: "#3D5A45",
+                      background: "rgba(61, 90, 69, 0.05)",
                     },
                   }}
                 >
@@ -323,19 +327,20 @@ function Setting() {
               </ListItemSecondaryAction>
             </ListItem>
 
-            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <ResetIcon sx={{ color: "#f87171" }} />
+                <ResetIcon sx={{ color: "#D2691E" }} />
               </ListItemIcon>
               <ListItemText
                 primary="回到原廠設定"
                 secondary="清除快取並重設資料庫"
-                primaryTypographyProps={{ fontWeight: 600, color: "#f87171" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#D2691E" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
               <ListItemSecondaryAction>
@@ -344,7 +349,7 @@ function Setting() {
                   size="small"
                   color="error"
                   onClick={handleFactoryReset}
-                  sx={{ borderRadius: "10px" }}
+                  sx={{ borderRadius: "10px", fontWeight: 800 }}
                 >
                   執行
                 </Button>
@@ -355,61 +360,59 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <TopIcon sx={{ color: "#c084fc" }} />
+                <TopIcon sx={{ color: "#8B7355" }} />
               </ListItemIcon>
               <ListItemText
                 primary="視窗置頂"
                 secondary="保持視窗顯示在最前方"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
               <ListItemSecondaryAction>
                 <Switch
                   checked={alwaysOnTop}
                   onChange={handleAlwaysOnTopChange}
-                  sx={{
-                    "& .MuiSwitch-switchBase.Mui-checked": { color: "#c084fc" },
-                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                      backgroundColor: "#c084fc",
-                    },
-                  }}
+                  sx={switchStyles}
                 />
               </ListItemSecondaryAction>
             </ListItem>
 
-            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <SettingsIcon sx={{ color: "#10b981" }} />
+                <SettingsIcon sx={{ color: "#3D5A45" }} />
               </ListItemIcon>
               <ListItemText
                 primary="顯示大盤資訊"
                 secondary="首頁顯示指數與市場概況"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
             </ListItem>
 
-            <Divider sx={{ mx: 2, borderColor: "rgba(255,255,255,0.05)" }} />
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <BugReportIcon sx={{ color: "#fbbf24" }} />
+                <BugReportIcon sx={{ color: "#D2B48C" }} />
               </ListItemIcon>
               <ListItemText
                 primary="開發者模式"
                 secondary="顯示內部除錯資訊 (可使用 Ctrl + Shift + D 切換)"
-                primaryTypographyProps={{ fontWeight: 600, color: "white" }}
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
-                  color: "rgba(255,255,255,0.5)",
+                  color: "#8B7355",
                   fontSize: "0.75rem",
+                  fontWeight: 600,
                 }}
               />
               <ListItemSecondaryAction>
@@ -417,9 +420,9 @@ function Setting() {
                   checked={debugMode}
                   onChange={handleDebugModeChange}
                   sx={{
-                    "& .MuiSwitch-switchBase.Mui-checked": { color: "#fbbf24" },
+                    "& .MuiSwitch-switchBase.Mui-checked": { color: "#D2B48C" },
                     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                      backgroundColor: "#fbbf24",
+                      backgroundColor: "#D2B48C",
                     },
                   }}
                 />
@@ -427,7 +430,7 @@ function Setting() {
             </ListItem>
 
             <Divider
-              sx={{ mx: 2, mb: 2, borderColor: "rgba(255,255,255,0.05)" }}
+              sx={{ mx: 2, mb: 2, borderColor: "rgba(93, 64, 55, 0.1)" }}
             />
 
             {/* Granular market settings */}
@@ -448,14 +451,14 @@ function Setting() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        background: "rgba(255,255,255,0.03)",
+                        background: "rgba(93, 64, 55, 0.05)",
                         p: "4px 8px",
                         borderRadius: "8px",
                       }}
                     >
                       <Typography
                         variant="caption"
-                        sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 500 }}
+                        sx={{ color: "#8B7355", fontWeight: 800 }}
                       >
                         {item.label}
                       </Typography>
@@ -468,15 +471,7 @@ function Setting() {
                             e.target.checked,
                           )
                         }
-                        sx={{
-                          "& .MuiSwitch-switchBase.Mui-checked": {
-                            color: "#10b981",
-                          },
-                          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
-                            {
-                              backgroundColor: "#10b981",
-                            },
-                        }}
+                        sx={switchStyles}
                       />
                     </Box>
                   </Grid>
@@ -486,17 +481,17 @@ function Setting() {
 
             <IndicatorSettingsSection />
           </List>
-        </GlassCard>
+        </GhibliNotebookPaper>
 
         <Stack
           alignItems="center"
           spacing={1}
           sx={{ mt: 6, mb: 4, opacity: 0.6 }}
         >
-          <SettingsIcon sx={{ fontSize: 32, color: "rgba(255,255,255,0.4)" }} />
+          <SettingsIcon sx={{ fontSize: 32, color: "#8B7355" }} />
           <Typography
             variant="body2"
-            sx={{ letterSpacing: "1px", color: "rgba(255,255,255,0.4)" }}
+            sx={{ letterSpacing: "1px", color: "#8B7355", fontWeight: 900 }}
           >
             SLSTEN PROJECT
           </Typography>
@@ -505,11 +500,11 @@ function Setting() {
               px: 1.5,
               py: 0.5,
               borderRadius: "8px",
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(93, 64, 55, 0.05)",
+              border: "1px solid #D2B48C",
             }}
           >
-            <Typography variant="caption" sx={{ fontWeight: 700 }}>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: "#5D4037" }}>
               v{VERSION}
             </Typography>
           </Box>
@@ -521,16 +516,16 @@ function Setting() {
         onClose={() => setSyncDialogOpen(false)}
         PaperProps={{
           sx: {
-            background: "rgba(30, 30, 40, 0.95)",
-            backdropFilter: "blur(20px)",
+            background: "#FAF3E0",
             borderRadius: "24px",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
-            color: "white",
+            border: "2px solid #5D4037",
+            color: "#5D4037",
             minWidth: "320px",
+            backgroundImage: "none",
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 800 }}>同步缺少的股票</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900, color: "#5D4037" }}>同步缺少的股票</DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <FormControlLabel
@@ -543,13 +538,13 @@ function Setting() {
                     selectedStocks.length < pendingStocks.length
                   }
                   onChange={handleToggleSelectAll}
-                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                  sx={{ color: "#8B7355", "&.Mui-checked": { color: "#3D5A45" } }}
                 />
               }
               label={
                 <Typography
                   variant="body2"
-                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                  sx={{ color: "#5D4037", fontWeight: 700 }}
                 >
                   全選
                 </Typography>
@@ -567,10 +562,7 @@ function Setting() {
                     aria-label="delete"
                     size="small"
                     onClick={() => handleDeleteCloudStock(stock.id, stock.name)}
-                    sx={{
-                      color: "rgba(248, 113, 113, 0.7)",
-                      "&:hover": { color: "#f87171" },
-                    }}
+                    sx={{ color: "#D2691E" }}
                   >
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
@@ -582,11 +574,11 @@ function Setting() {
                       size="small"
                       checked={selectedStocks.includes(stock.id)}
                       onChange={() => handleToggleStock(stock.id)}
-                      sx={{ color: "rgba(255,255,255,0.7)" }}
+                      sx={{ color: "#8B7355", "&.Mui-checked": { color: "#3D5A45" } }}
                     />
                   }
                   label={
-                    <Typography variant="body2">
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: "#5D4037" }}>
                       {stock.id} - {stock.name}
                     </Typography>
                   }
@@ -596,10 +588,14 @@ function Setting() {
             ))}
           </List>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ p: 4 }}>
           <Button
             onClick={() => setSyncDialogOpen(false)}
-            sx={{ color: "rgba(255,255,255,0.5)" }}
+            sx={{ 
+                color: "#8B7355", 
+                fontWeight: 800,
+                textDecoration: "underline" 
+            }}
           >
             取消
           </Button>
@@ -609,8 +605,16 @@ function Setting() {
             disabled={selectedStocks.length === 0}
             sx={{
               borderRadius: "12px",
-              background: "#34d399",
-              "&:hover": { background: "#10b981" },
+              background: "#3D5A45",
+              color: "#F1E5AC",
+              fontWeight: 900,
+              border: "2px solid #2D4A35",
+              boxShadow: "0 4px 0 #2D4A35",
+              "&:hover": { 
+                background: "#3D5A45",
+                transform: "translateY(2px)",
+                boxShadow: "0 2px 0 #2D4A35",
+              },
             }}
           >
             確認新增 ({selectedStocks.length})

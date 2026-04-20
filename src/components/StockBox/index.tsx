@@ -1,37 +1,32 @@
-import AnalyticsIcon from "@mui/icons-material/Analytics";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import {
   Box,
-  Divider,
   Grid,
   IconButton,
   Stack,
   Tooltip,
   Typography,
-  styled,
   alpha,
+  styled,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import { useIsVisible } from "../../hooks/useIsVisible";
 import useMaDeduction from "../../hooks/useMaDeduction";
-import useStocksStore from "../../store/Stock.store";
-import useMarketDataStore from "../../store/MarketData.store";
 import useMarketSubscriber from "../../hooks/useMarketSubscriber";
+import useMarketDataStore from "../../store/MarketData.store";
+import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
 import Ma10 from "./Items/Ma10";
 import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
-import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
 
@@ -40,8 +35,8 @@ export const STOCK_BOX_HEIGHT = 280;
 
 // Premium Colors (Traditional Japanese & Financial tones - High Contrast)
 const COLORS = {
-  up: "#FF5252", 
-  down: "#69F0AE", 
+  up: "#FF5252",
+  down: "#69F0AE",
   neutral: "#94A3B8",
   cardBg: "rgba(10, 10, 15, 0.85)", // Darker, less transparent
   cardBorder: "rgba(255, 255, 255, 0.12)",
@@ -118,8 +113,13 @@ export default function StockBox({
 
   // Data Hooks
   useMarketSubscriber(stock.id, enabled, isComponentVisible);
-  const tickDeals = useMarketDataStore((state) => state.getTick(stock.id)) || null;
-  const { deals, name } = useConditionalDeals(stock.id, enabled, isComponentVisible);
+  const tickDeals =
+    useMarketDataStore((state) => state.getTick(stock.id)) || null;
+  const { deals, name } = useConditionalDeals(
+    stock.id,
+    enabled,
+    isComponentVisible,
+  );
 
   // Indicators
   const maData = useMaDeduction(deals);
@@ -132,12 +132,21 @@ export default function StockBox({
   const removeStock = useStocksStore((state) => state.remove);
 
   const priceInfo = useMemo(() => {
-    const lastPrice = tickDeals?.price || (deals.length > 0 ? deals[deals.length - 1].c : 0);
-    const percent = tickDeals?.changePercent || (deals.length >= 2 ? Math.round(((lastPrice - deals[deals.length - 2].c) / deals[deals.length - 2].c) * 10000) / 100 : 0);
+    const lastPrice =
+      tickDeals?.price || (deals.length > 0 ? deals[deals.length - 1].c : 0);
+    const percent =
+      tickDeals?.changePercent ||
+      (deals.length >= 2
+        ? Math.round(
+            ((lastPrice - deals[deals.length - 2].c) /
+              deals[deals.length - 2].c) *
+              10000,
+          ) / 100
+        : 0);
     const isUp = percent > 0;
     const isDown = percent < 0;
     const mainColor = isUp ? COLORS.up : isDown ? COLORS.down : COLORS.neutral;
-    
+
     return { lastPrice, percent, isUp, isDown, mainColor };
   }, [deals, tickDeals]);
 
@@ -145,7 +154,8 @@ export default function StockBox({
     if (deals.length < 11) return { avgDaysVolume: 0, estimatedVolume: 0 };
     const pastDeals = deals.slice(-11, -1);
     const totalVolume = pastDeals.reduce((acc, deal) => acc + deal.v, 0);
-    const avgDaysVolume = Math.round((totalVolume / pastDeals.length) * 100) / 100;
+    const avgDaysVolume =
+      Math.round((totalVolume / pastDeals.length) * 100) / 100;
     const { estimatedVolume } = estimateVolume({
       currentVolume: deals[deals.length - 1].v,
       currentTime: new Date(),
@@ -195,16 +205,17 @@ export default function StockBox({
                   size="small"
                   onClick={async (e) => {
                     e.stopPropagation();
-                    const url = stock.type === "上市"
-                      ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
-                      : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
+                    const url =
+                      stock.type === "上市"
+                        ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
+                        : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
                     await open(url);
                   }}
                 >
                   <OpenInNewIcon fontSize="inherit" sx={{ fontSize: 14 }} />
                 </ActionBtn>
               </Tooltip>
-              
+
               {onRemove && (
                 <Tooltip title="移除" arrow>
                   <ActionBtn
@@ -221,10 +232,13 @@ export default function StockBox({
 
               {canDelete && (
                 <Tooltip title="刪除" arrow>
-                  <ActionBtn 
-                    size="small" 
+                  <ActionBtn
+                    size="small"
                     sx={{ "&:hover": { bgcolor: "#FF5252" } }}
-                    onClick={(e) => { e.stopPropagation(); removeStock(stock.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeStock(stock.id);
+                    }}
                   >
                     <DeleteIcon fontSize="inherit" sx={{ fontSize: 14 }} />
                   </ActionBtn>
@@ -237,7 +251,12 @@ export default function StockBox({
 
       <Box sx={{ position: "relative", zIndex: 1, p: 2, flex: 1 }}>
         {/* Header: Name & ID */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={1}
+        >
           <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
             <Typography
               noWrap
@@ -275,7 +294,12 @@ export default function StockBox({
             >
               {priceInfo.lastPrice}
             </Typography>
-            <Stack direction="row" spacing={0.2} justifyContent="flex-end" alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.2}
+              justifyContent="flex-end"
+              alignItems="center"
+            >
               <Typography
                 sx={{
                   fontWeight: 900,
@@ -283,7 +307,8 @@ export default function StockBox({
                   color: priceInfo.mainColor,
                 }}
               >
-                {priceInfo.percent > 0 ? "+" : ""}{priceInfo.percent}%
+                {priceInfo.percent > 0 ? "+" : ""}
+                {priceInfo.percent}%
               </Typography>
             </Stack>
           </Box>
@@ -314,7 +339,10 @@ export default function StockBox({
             </Grid>
             <Grid size={{ xs: 6 }}>
               <MetricTag>
-                <AvgPrice lastPrice={priceInfo.lastPrice} tickDeals={tickDeals} />
+                <AvgPrice
+                  lastPrice={priceInfo.lastPrice}
+                  tickDeals={tickDeals}
+                />
               </MetricTag>
             </Grid>
           </Grid>
@@ -345,7 +373,9 @@ export default function StockBox({
               opacity: 0.2,
             }}
           >
-            <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>LOADING</Typography>
+            <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>
+              LOADING
+            </Typography>
           </Box>
         )}
       </Box>

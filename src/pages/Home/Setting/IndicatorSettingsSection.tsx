@@ -6,29 +6,28 @@ const SettingGridItem = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: theme.spacing(0.5),
-  background: "rgba(255, 255, 255, 0.03)",
+  background: "rgba(93, 64, 55, 0.05)",
   padding: theme.spacing(1.5),
-  borderRadius: "16px",
-  border: "1px solid rgba(255, 255, 255, 0.05)",
+  borderRadius: "12px",
+  border: "1.5px solid rgba(93, 64, 55, 0.1)",
   transition: "all 0.2s ease-in-out",
   "&:hover": {
-    background: "rgba(255, 255, 255, 0.06)",
-    border: "1px solid rgba(255, 255, 255, 0.1)",
-    transform: "translateY(-2px)",
+    background: "rgba(93, 64, 55, 0.08)",
+    border: "1.5px solid rgba(93, 64, 55, 0.2)",
+    transform: "translateY(-1px)",
   },
   "&:focus-within": {
-    background: "rgba(255, 255, 255, 0.08)",
-    border: "1px solid rgba(144, 202, 249, 0.3)",
-    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
+    background: "rgba(93, 64, 55, 0.1)",
+    border: "2px solid #3D5A45",
   },
 }));
 
 const StyledInput = styled("input")({
   background: "transparent",
   border: "none",
-  color: "white",
+  color: "#5D4037",
   fontSize: "1.1rem",
-  fontWeight: "800",
+  fontWeight: "900",
   width: "100%",
   outline: "none",
   fontFamily: "inherit",
@@ -39,19 +38,19 @@ const StyledInput = styled("input")({
 });
 
 const ResetButton = styled("button")({
-  background: "rgba(255, 255, 255, 0.05)",
-  border: "1px solid rgba(255, 255, 255, 0.1)",
-  color: "rgba(255, 255, 255, 0.6)",
+  background: "#3D5A45",
+  border: "2px solid #2D4A35",
+  color: "#F1E5AC",
   borderRadius: "8px",
-  padding: "4px 10px",
+  padding: "4px 12px",
   fontSize: "0.75rem",
-  fontWeight: 600,
+  fontWeight: 800,
   cursor: "pointer",
+  boxShadow: "0 2px 0 #2D4A35",
   transition: "all 0.2s",
   "&:hover": {
-    background: "rgba(255, 255, 255, 0.15)",
-    color: "white",
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    transform: "translateY(1px)",
+    boxShadow: "0 1px 0 #2D4A35",
   },
   "&:active": {
     transform: "scale(0.95)",
@@ -99,8 +98,8 @@ export default function IndicatorSettingsSection() {
                 <Typography
                   variant="caption"
                   sx={{
-                    color: "rgba(255, 255, 255, 0.4)",
-                    fontWeight: 700,
+                    color: "#8B7355",
+                    fontWeight: 800,
                     fontSize: "0.65rem",
                     letterSpacing: "0.05rem",
                     textTransform: "uppercase",

@@ -15,19 +15,21 @@ import {
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import MakChart from "../../../../components/CommonChart/MakChart";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
 import useMaDeduction from "../../../../hooks/useMaDeduction";
+import useMarketSubscriber from "../../../../hooks/useMarketSubscriber";
+import useMarketDataStore from "../../../../store/MarketData.store";
 import useStocksStore from "../../../../store/Stock.store";
+import { useIsVisible } from "../../../../hooks/useIsVisible";
 import { StockStoreType, TaType } from "../../../../types";
 import estimateVolume from "../../../../utils/estimateVolume";
 
-export const RED_BALL_CARD_HEIGHT = 360; // 統一管理推薦股卡片高度
+export const RED_BALL_CARD_HEIGHT = 360;
 
 // --- Styled Components ---
-
 const ActionBtn = styled(IconButton)(() => ({
   padding: 4,
   background: "rgba(0,0,0,0.3)",
@@ -81,7 +83,6 @@ const CompactMetric = styled(Box)(() => ({
   borderBottom: "1px solid rgba(255,255,255,0.03)",
 }));
 
-// --- Volume Logic ---
 const getVolumeStatus = (ratio: number) => {
   if (ratio >= 5) return { title: "出大量", color: "#ef4444" };
   if (ratio >= 2.5) return { title: "放量", color: "#f87171" };
@@ -91,7 +92,6 @@ const getVolumeStatus = (ratio: number) => {
   return { title: "量縮", color: "#10b981" };
 };
 
-// --- Helper for Date Conversion ---
 const convertTaToMak = (deals: TaType) => {
   return deals.map((d) => {
     const s = d.t.toString();
@@ -106,18 +106,24 @@ const convertTaToMak = (deals: TaType) => {
   });
 };
 
-// --- Main Component ---
-
 interface RedBallCardProps {
   stock: StockStoreType;
-  isVisible: boolean;
 }
 
-export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
+export default function RedBallCard({ stock }: RedBallCardProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isVisible = useIsVisible(containerRef);
+
   if (!stock || !stock.id) return null;
 
+  // 市場訂閱機制
+  useMarketSubscriber(stock.id, true, isVisible);
+
+  // 從全域 Store 獲取推播的即時數據
+  const tickDeals = useMarketDataStore((state) => state.getTick(stock.id));
+
   const recommendationReason = stock.type || "策略選股";
-  const { deals, name, tickDeals } = useConditionalDeals(stock.id, isVisible);
+  const { deals, name } = useConditionalDeals(stock.id, true, isVisible);
   const { ma5, ma20 } = useMaDeduction(deals);
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
@@ -126,19 +132,12 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
   });
 
   const lastPrice = useMemo(() => {
-    let price: any = 0;
-    if (tickDeals?.price !== undefined && tickDeals?.price !== null) {
-      price = tickDeals.price;
-    } else if (deals && deals.length > 0) {
-      price = deals[deals.length - 1].c;
-    }
-    return Number(price) || 0;
+    if (tickDeals?.price) return tickDeals.price;
+    return deals.length > 0 ? deals[deals.length - 1].c : 0;
   }, [deals, tickDeals]);
 
   const percent = useMemo(() => {
-    if (tickDeals && typeof tickDeals.changePercent === "number") {
-      return tickDeals.changePercent;
-    }
+    if (tickDeals?.changePercent) return tickDeals.changePercent;
     if (!deals || deals.length < 2) return 0;
     const current = Number(lastPrice) || 0;
     const prePrice = Number(deals[deals.length - 2].c) || 0;
@@ -188,7 +187,6 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
   const isNegative = percent < 0;
   const mainColor = isPositive ? "#ef4444" : isNegative ? "#10b981" : "#94a3b8";
 
-  // Wrap deals for MakChart
   const makDeals = useMemo(() => {
     if (!deals || deals.length === 0) return null;
     return {
@@ -200,7 +198,7 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
 
   if (!isVisible) {
     return (
-      <CardContainer sx={{ p: 1.5 }}>
+      <CardContainer ref={containerRef} sx={{ p: 1.5 }}>
         <Skeleton width="60%" />
         <Skeleton variant="rectangular" height={40} sx={{ my: 1 }} />
         <Skeleton width="100%" height={20} sx={{ my: 0.5 }} />
@@ -210,8 +208,7 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
   }
 
   return (
-    <CardContainer onClick={openDetailWindow}>
-      {/* Mini Actions */}
+    <CardContainer ref={containerRef} onClick={openDetailWindow}>
       <ActionButtons direction="row" spacing={0.5} className="action-buttons">
         {!isTracking && (
           <Tooltip title="加入追蹤" arrow>
@@ -253,7 +250,6 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
       </ActionButtons>
 
       <Box sx={{ p: 1.5, flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Header Row: Name & Price */}
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -301,7 +297,6 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
 
         <Divider sx={{ borderColor: "rgba(255,255,255,0.06)", mb: 1 }} />
 
-        {/* Reason chips */}
         <Stack
           direction="row"
           spacing={0.5}
@@ -329,13 +324,9 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
           ))}
         </Stack>
 
-        {/* Dense Metrics */}
         <Stack spacing={0.2} sx={{ mb: 1 }}>
           <CompactMetric>
-            <Typography
-              variant="caption"
-              sx={{ color: "rgba(255,255,255,0.4)" }}
-            >
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
               量能狀態
             </Typography>
             <Typography
@@ -350,32 +341,22 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
             </Typography>
           </CompactMetric>
           <CompactMetric>
-            <Typography
-              variant="caption"
-              sx={{ color: "rgba(255,255,255,0.4)" }}
-            >
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
               預估量
             </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: "white", fontWeight: 700 }}
-            >
+            <Typography variant="caption" sx={{ color: "white", fontWeight: 700 }}>
               {Math.round(estimatedVolume).toLocaleString()}
             </Typography>
           </CompactMetric>
           <CompactMetric>
-            <Typography
-              variant="caption"
-              sx={{ color: "rgba(255,255,255,0.4)" }}
-            >
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
               MA5 / MA20
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Typography
                 variant="caption"
                 sx={{
-                  color:
-                    Number(lastPrice) >= Number(ma5) ? "#ef4444" : "#10b981",
+                  color: Number(lastPrice) >= Number(ma5) ? "#ef4444" : "#10b981",
                   fontWeight: 700,
                 }}
               >
@@ -384,8 +365,7 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
               <Typography
                 variant="caption"
                 sx={{
-                  color:
-                    Number(lastPrice) >= Number(ma20) ? "#ef4444" : "#10b981",
+                  color: Number(lastPrice) >= Number(ma20) ? "#ef4444" : "#10b981",
                   fontWeight: 700,
                 }}
               >
@@ -396,7 +376,6 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
         </Stack>
       </Box>
 
-      {/* MakChart implementation */}
       <Box
         sx={{
           height: 100,
@@ -420,7 +399,7 @@ export default function RedBallCard({ stock, isVisible }: RedBallCardProps) {
               color="rgba(255,255,255,0.2)"
               sx={{ fontStyle: "italic" }}
             >
-              載入日線走勢...
+              載入數據中...
             </Typography>
           </Box>
         )}

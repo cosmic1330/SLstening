@@ -253,8 +253,8 @@ export default function RedBall() {
                 height={window.innerHeight - 170}
                 itemHeight={RED_BALL_CARD_HEIGHT}
                 showDebug={isDebugMode}
-                renderItem={(stock, isVisible) => (
-                  <RedBallCard stock={stock} isVisible={isVisible} />
+                renderItem={(stock) => (
+                  <RedBallCard stock={stock} />
                 )}
               />
             )}

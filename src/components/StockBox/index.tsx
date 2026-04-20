@@ -21,32 +21,32 @@ import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import { useIsVisible } from "../../hooks/useIsVisible";
 import useMaDeduction from "../../hooks/useMaDeduction";
 import useStocksStore from "../../store/Stock.store";
+import useMarketDataStore from "../../store/MarketData.store";
+import useMarketSubscriber from "../../hooks/useMarketSubscriber";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
 import AvgPrice from "./Items/AvgPrice";
 import Ma10 from "./Items/Ma10";
 import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
-import PreVolume from "./Items/PreVolume";
-import Volume from "./Items/Volume";
 import VolumeEstimated from "./Items/VolumeEstimated";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
 
-export const STOCK_BOX_HEIGHT = 420; // 統一管理卡片高度
+export const STOCK_BOX_HEIGHT = 420;
 
 // Premium Card Styling
 const StyledCard = styled(Box)(() => ({
   position: "relative",
-  background: "rgba(30, 30, 35, 0.6)", // Darker, more transparent base
-  backdropFilter: "blur(24px) saturate(180%)", // Heavy blur & saturation for premium glass
+  background: "rgba(30, 30, 35, 0.6)",
+  backdropFilter: "blur(24px) saturate(180%)",
   borderRadius: "24px",
   border: "1px solid rgba(255, 255, 255, 0.08)",
   boxShadow:
     "0 8px 32px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255,255,255,0.05)",
   overflow: "hidden",
   cursor: "pointer",
-  transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)", // Bouncy spring effect
+  transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
   height: "100%",
   display: "flex",
   flexDirection: "column",
@@ -62,13 +62,9 @@ const StyledCard = styled(Box)(() => ({
       transform: "translateY(0)",
       pointerEvents: "auto",
     },
-    "& .card-glow": {
-      opacity: 0.8,
-    },
   },
 }));
 
-// Action buttons container
 const ActionButtons = styled(Stack)(() => ({
   position: "absolute",
   top: 12,
@@ -80,7 +76,6 @@ const ActionButtons = styled(Stack)(() => ({
   zIndex: 20,
 }));
 
-// Action Button Style
 const ActionBtn = styled(IconButton)(({ theme }) => ({
   backgroundColor: "rgba(0,0,0,0.5)",
   backdropFilter: "blur(4px)",
@@ -93,7 +88,6 @@ const ActionBtn = styled(IconButton)(({ theme }) => ({
   },
 }));
 
-// Metric Container with subtle separation
 const MetricBox = styled(Box)(() => ({
   padding: "4px 8px",
   borderRadius: "12px",
@@ -103,24 +97,10 @@ const MetricBox = styled(Box)(() => ({
   },
 }));
 
-const GlowEffect = styled(Box)(() => ({
-  position: "absolute",
-  top: "-50%",
-  left: "-50%",
-  width: "200%",
-  height: "200%",
-  background:
-    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 0%, transparent 50%)",
-  opacity: 0,
-  pointerEvents: "none",
-  transition: "opacity 0.5s ease",
-  zIndex: 0,
-}));
-
 export interface StockBoxProps {
   stock: StockStoreType;
-  canDelete?: boolean; // Kept for interface compatibility, logic handled internally if needed
-  canAdd?: boolean; // Kept for interface compatibility
+  canDelete?: boolean;
+  canAdd?: boolean;
   enabled?: boolean;
   onRemove?: () => void;
 }
@@ -134,8 +114,14 @@ export default function StockBox({
   const containerRef = useRef<HTMLDivElement>(null);
   const isComponentVisible = useIsVisible(containerRef);
 
-  // Using the Hook with enabled capabilities
-  const { deals, name, tickDeals } = useConditionalDeals(
+  // 1. 市場訂閱機制 (Rust-side subscription)
+  useMarketSubscriber(stock.id, enabled, isComponentVisible);
+
+  // 2. 從全域 Store 獲取推播的即時數據
+  const tickDeals = useMarketDataStore((state) => state.getTick(stock.id)) || null;
+
+  // 3. 獲取日 K 與技術指標資料 (目前仍使用 SWR 輪詢)
+  const { deals, name } = useConditionalDeals(
     stock.id,
     enabled,
     isComponentVisible,
@@ -160,7 +146,6 @@ export default function StockBox({
     ma20_tomorrow_deduction_time,
   } = useMaDeduction(deals);
 
-  // Detail Window Opener
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
     name: name || stock.name,
@@ -174,13 +159,11 @@ export default function StockBox({
     removeStock(stock.id);
   };
 
-  // TradingView Link
   const url =
     stock.type === "上市"
       ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
       : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
 
-  // Basic Price Calcs
   const lastPrice = useMemo(() => {
     if (tickDeals?.price) return tickDeals.price;
     return deals.length > 0 ? deals[deals.length - 1].c : 0;
@@ -193,7 +176,6 @@ export default function StockBox({
     return Math.round(((lastPrice - prePrice) / prePrice) * 10000) / 100;
   }, [deals, tickDeals, lastPrice]);
 
-  // Volume Analysis
   const avgDaysVolume = useMemo(() => {
     if (deals.length < 11) return 0;
     const pastDeals = deals.slice(-11, -1);
@@ -215,14 +197,8 @@ export default function StockBox({
 
   const isPositive = percent > 0;
   const isNegative = percent < 0;
-  // Taiwan market colors: Red = Up, Green = Down
-  const mainColor = isPositive
-    ? "#FF5252" // Red accent
-    : isNegative
-      ? "#69F0AE" // Green accent
-      : "#B0B0B0"; // Grey
+  const mainColor = isPositive ? "#FF5252" : isNegative ? "#69F0AE" : "#B0B0B0";
 
-  // Dynamic Glow Color based on trend
   const glowColor = isPositive
     ? "radial-gradient(circle at 80% 20%, rgba(255, 82, 82, 0.15) 0%, transparent 50%)"
     : isNegative
@@ -246,11 +222,9 @@ export default function StockBox({
           pointerEvents: "none",
         }}
       />
-      <GlowEffect className="highlight-glow" />
 
-      {/* Action Buttons */}
       <ActionButtons direction="row" spacing={1} className="action-buttons">
-        <Tooltip title="View Chart on TradingView" arrow>
+        <Tooltip title="TradingView" arrow>
           <ActionBtn
             size="small"
             onClick={async (e) => {
@@ -261,7 +235,7 @@ export default function StockBox({
             <OpenInNewIcon fontSize="small" />
           </ActionBtn>
         </Tooltip>
-        <Tooltip title="Detailed Analytics" arrow>
+        <Tooltip title="Analytics" arrow>
           <ActionBtn
             size="small"
             onClick={(e) => {
@@ -280,12 +254,6 @@ export default function StockBox({
                 e.stopPropagation();
                 onRemove();
               }}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "rgba(244, 67, 54, 0.8)",
-                  borderColor: "#ef5350",
-                },
-              }}
             >
               <CloseIcon fontSize="small" />
             </ActionBtn>
@@ -293,26 +261,14 @@ export default function StockBox({
         )}
         {canDelete && (
           <Tooltip title="Delete Stock" arrow>
-            <ActionBtn
-              size="small"
-              color="error"
-              onClick={handleDelete}
-              sx={{
-                "&:hover": {
-                  backgroundColor: "rgba(244, 67, 54, 0.8)",
-                  borderColor: "#ef5350",
-                },
-              }}
-            >
+            <ActionBtn size="small" color="error" onClick={handleDelete}>
               <DeleteIcon fontSize="small" />
             </ActionBtn>
           </Tooltip>
         )}
       </ActionButtons>
 
-      {/* Main Content */}
       <Box sx={{ position: "relative", zIndex: 1, p: 2.5 }}>
-        {/* Header: Name & Price */}
         <Stack
           direction="row"
           justifyContent="space-between"
@@ -340,22 +296,11 @@ export default function StockBox({
           <Box sx={{ textAlign: "right" }}>
             <Typography
               variant="h3"
-              sx={{
-                fontWeight: 800,
-                color: mainColor,
-                letterSpacing: -1,
-                lineHeight: 1,
-              }}
+              sx={{ fontWeight: 800, color: mainColor, letterSpacing: -1 }}
             >
               {lastPrice}
             </Typography>
-            <Stack
-              direction="row"
-              justifyContent="flex-end"
-              alignItems="center"
-              spacing={0.5}
-              mt={0.5}
-            >
+            <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
               {isPositive ? (
                 <TrendingUpIcon sx={{ fontSize: 16, color: mainColor }} />
               ) : isNegative ? (
@@ -374,10 +319,7 @@ export default function StockBox({
 
         <Divider sx={{ borderColor: "rgba(255,255,255,0.08)", mb: 2 }} />
 
-        {/* Info Grid - Grouped logically */}
-        {/* Info Grid - Grouped logically */}
         <Grid container spacing={2}>
-          {/* Moving Averages Group */}
           <Grid size={6}>
             <Box>
               <MetricBox>
@@ -407,7 +349,7 @@ export default function StockBox({
             </Box>
           </Grid>
 
-          <Grid size={{ xs: 6 }}>
+          <Grid size={6}>
             <MetricBox>
               <Ma10
                 {...{
@@ -425,43 +367,29 @@ export default function StockBox({
             </MetricBox>
           </Grid>
 
-          {/* Volume & Stats Group */}
-          <Grid size={{ xs: 6 }}>
-            <Stack direction="row" flexWrap="nowrap" spacing={1}>
-              <MetricBox>
-                <VolumeEstimated {...{ deals, estimatedVolume }} />
-              </MetricBox>
-              <MetricBox>
-                <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
-              </MetricBox>
-            </Stack>
+          <Grid size={6}>
+            <MetricBox>
+              <VolumeEstimated {...{ deals, estimatedVolume }} />
+            </MetricBox>
           </Grid>
-
-          {/* Volume bars (Standard & Pre) */}
-          <Grid size={{ xs: 6 }}>
-            <Stack direction="row" flexWrap="nowrap" spacing={1}>
-              <MetricBox>
-                <Volume {...{ deals }} />
-              </MetricBox>
-              <MetricBox>
-                <PreVolume {...{ deals }} />
-              </MetricBox>
-            </Stack>
+          <Grid size={6}>
+            <MetricBox>
+              <VolumeRatio {...{ estimatedVolume, avgDaysVolume }} />
+            </MetricBox>
           </Grid>
         </Grid>
       </Box>
 
-      {/* Chart Footer - Integrated seamlessly */}
       <Box
         sx={{
           height: 64,
-          mt: 1,
+          mt: "auto",
           background:
             "linear-gradient(to top, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 100%)",
           position: "relative",
           borderBottomLeftRadius: "24px",
           borderBottomRightRadius: "24px",
-          overflow: "hidden", // Ensure chart doesn't spill
+          overflow: "hidden",
         }}
       >
         {tickDeals ? (
@@ -473,12 +401,8 @@ export default function StockBox({
             justifyContent="center"
             height="100%"
           >
-            <Typography
-              variant="caption"
-              color="text.disabled"
-              sx={{ fontStyle: "italic" }}
-            >
-              Waiting for tick data...
+            <Typography variant="caption" color="text.disabled">
+              等待數據推播...
             </Typography>
           </Box>
         )}

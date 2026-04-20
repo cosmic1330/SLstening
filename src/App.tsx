@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import useStocksStore from "./store/Stock.store";
 import useDebugStore from "./store/debug.store";
+import useMarketWatcher from "./hooks/useMarketWatcher";
 
 // 懶加載組件
 const List = lazy(() => import("./pages/Home/List"));
@@ -20,6 +21,9 @@ const Setting = lazy(() => import("./pages/Home/Setting"));
 
 function App() {
   const { reload } = useStocksStore();
+  
+  // 啟動全域市場資料監聽
+  useMarketWatcher();
 
   useEffect(() => {
     reload();

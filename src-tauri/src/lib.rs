@@ -4,6 +4,8 @@ mod models;
 mod sqlite;
 mod updater;
 mod commands;
+mod market_watcher;
+use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -30,17 +32,26 @@ pub fn run() {
         )
         .setup(|app| {
             let handle = app.handle().clone();
+            
+            // 監聽更新
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = updater::update(handle).await {
                     log::error!("Update check failed: {:?}", e);
                 }
             });
+
+            // 初始化市場觀察者 (Market Watcher)
+            let market_manager = market_watcher::init(app.handle().clone());
+            app.manage(market_manager);
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::common::greet,
             commands::export::create_csv_from_json,
-            commands::storage::get_db_size
+            commands::storage::get_db_size,
+            commands::market::subscribe_stock,
+            commands::market::unsubscribe_stock
         ])
         .run(tauri::generate_context!()) {
         log::error!("error while running tauri application: {}", e);

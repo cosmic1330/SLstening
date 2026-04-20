@@ -27,10 +27,9 @@ export default function StockWorkspace({
             stocks={stocks}
             height={window.innerHeight} // Scrolling container handled by PageContainer
             itemHeight={STOCK_BOX_HEIGHT}
-            renderItem={(stock, isVisible) => (
+            renderItem={(stock) => (
               <LazyStockBox
                 stock={stock}
-                isVisible={isVisible}
                 canDelete={false}
                 onRemove={() => onRemoveStock(stock.id)}
               />

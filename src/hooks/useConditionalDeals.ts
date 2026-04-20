@@ -1,5 +1,5 @@
-import { info } from "@tauri-apps/plugin-log";
-import { useEffect, useMemo, useRef } from "react";
+import { info, warn } from "@tauri-apps/plugin-log";
+import { useEffect, useMemo } from "react";
 import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
@@ -11,89 +11,91 @@ import {
 import checkTimeRange from "../utils/checkTimeRange";
 import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
 
+/**
+ * useConditionalDeals Hook
+ * 負責根據可見性與啟用狀態獲取股票資料。
+ * 考慮到 Yahoo API 的 IP 封鎖風險，實施了嚴格的頻率限制與快取策略。
+ */
 export default function useConditionalDeals(
   id: string,
   enabled: boolean = true,
   isVisible: boolean = true,
 ) {
+  const taiwanTimeStr = new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Taipei",
+  });
+  const isMarketOpen = checkTimeRange(taiwanTimeStr);
+
+  // 決定是否應該啟動獲取邏輯：必須啟用、可見、且視窗處於焦點
+  const shouldFetch = 
+    enabled && 
+    isVisible && 
+    typeof window !== "undefined" && 
+    document.visibilityState === "visible";
+
+  // --- Tick 資料 (即時價格與成交明細) ---
   const {
     data: tickData,
-    mutate: mutateTickDeals,
-    isValidating: isTickValidating,
   } = useSWR(
-    enabled
+    shouldFetch
       ? generateDealDataDownloadUrl({
           type: UrlType.Tick,
           id,
         })
       : null,
-    (url: string) => {
-      useDebugStore.getState().increment("conditional");
-      return tauriFetcher(url);
+    async (url: string) => {
+      try {
+        useDebugStore.getState().increment("conditional");
+        return await tauriFetcher(url);
+      } catch (error: any) {
+        if (error.message?.includes("429")) {
+          warn(`Yahoo API Rate Limited (429) for ${id}. Slowing down...`);
+        }
+        throw error;
+      }
     },
     {
-      isPaused: () =>
-        !enabled || !isVisible || document.visibilityState !== "visible",
+      revalidateOnFocus: false, // 避免頻繁切換視窗導致請求
+      revalidateOnMount: true,
+      dedupingInterval: 10000, // 10秒內不重複請求相同 ID
       refreshInterval: () => {
-        const taiwanTime = new Date().toLocaleString("en-US", {
-          timeZone: "Asia/Taipei",
-        });
-        return checkTimeRange(taiwanTime) ? 10000 : 0;
+        // 只有在開盤時間才進行輪詢，且頻率放寬至 20 秒以防封鎖
+        return shouldFetch && isMarketOpen ? 20000 : 0;
       },
     },
   );
 
+  // --- Daily 資料 (日 K 線與技術指標) ---
   const {
     data: dailyData,
-    mutate: mutateDailyDeals,
-    isValidating: isDailyValidating,
   } = useSWR(
-    enabled
+    shouldFetch
       ? generateDealDataDownloadUrl({
           type: UrlType.Indicators,
           id,
           perd: UrlTaPerdOptions.Day,
         })
       : null,
-    (url: string) => {
-      useDebugStore.getState().increment("conditional");
-      return tauriFetcher(url);
+    async (url: string) => {
+      try {
+        useDebugStore.getState().increment("conditional");
+        return await tauriFetcher(url);
+      } catch (error: any) {
+        throw error;
+      }
     },
     {
-      isPaused: () =>
-        !enabled || !isVisible || document.visibilityState !== "visible",
+      revalidateOnFocus: false,
+      revalidateOnMount: true,
+      dedupingInterval: 60000, // 日K資料 1 分鐘內不重複請求
       refreshInterval: () => {
-        const taiwanTime = new Date().toLocaleString("en-US", {
-          timeZone: "Asia/Taipei",
-        });
-        return checkTimeRange(taiwanTime) ? 10000 : 0;
+        // 日 K 線資料變化較慢，開盤時每 5 分鐘更新一次即可
+        return shouldFetch && isMarketOpen ? 300000 : 0;
       },
     },
   );
 
-  const hasFetched = useRef(false);
-  useEffect(() => {
-    // 當元件變成可見、未處於請求中、且尚未成功獲取過資料時，主動觸發一次請求
-    if (enabled && isVisible && !hasFetched.current) {
-      if (!isTickValidating) mutateTickDeals();
-      if (!isDailyValidating) mutateDailyDeals();
-    }
-
-    // 如果資料已經成功回傳過，標記為已獲取，以防無限 mutate
-    if (tickData || dailyData) {
-      hasFetched.current = true;
-    }
-  }, [
-    isVisible,
-    enabled,
-    mutateTickDeals,
-    mutateDailyDeals,
-    tickData,
-    dailyData,
-    isTickValidating,
-    isDailyValidating,
-  ]);
-
+  // 追蹤活躍執行個體 (Debug 用)
   useEffect(() => {
     if (enabled && isVisible) {
       useDebugStore.getState().updateActiveInstances(1);
@@ -101,28 +103,37 @@ export default function useConditionalDeals(
     }
   }, [enabled, isVisible]);
 
+  // 資料解析邏輯 (保持原有邏輯並增強穩定性)
   const tickDeals = useMemo(() => {
     try {
       if (!tickData) return null;
       const data = JSON.parse(tickData);
-      const closes = data[0].chart.indicators.quote[0].close.filter(
-        (item: number | null) => item !== null,
-      );
-      const highs = data[0].chart.indicators.quote[0].high.filter(
-        (item: number | null) => item !== null,
-      );
-      const quote = data[0]?.chart?.quote || {};
-      const changePercent = quote.changePercent;
-      const price = quote.price;
-      const previousClose = quote.previousClose;
+      
+      const chartData = data?.[0]?.chart;
+      if (!chartData) return null;
+
+      const indicators = chartData.indicators?.quote?.[0];
+      const resultMeta = chartData.result?.[0]?.meta;
+      const quote = resultMeta || chartData.quote || {};
+
+      if (!indicators && !quote.price) return null;
+
+      const closes = (indicators?.close || []).filter((item: number | null) => item !== null);
+      const highs = (indicators?.high || []).filter((item: number | null) => item !== null);
+      
+      const price = quote.price || (closes.length > 0 ? closes[closes.length - 1] : 0);
+      const changePercent = quote.changePercent || 0;
+      const previousClose = quote.previousClose || 0;
+      
       let pre = 0;
       const avgPrices = (highs || []).map((item: number, index: number) => {
         pre += item;
         return pre / (index + 1);
       });
 
-      let ts = data[0].chart.quote.refreshedTs;
-      const res: TickDealsType = {
+      const ts = quote.refreshedTs || chartData.meta?.regularMarketTime || Date.now();
+      
+      return {
         id,
         ts,
         price,
@@ -130,10 +141,9 @@ export default function useConditionalDeals(
         changePercent,
         closes,
         previousClose,
-      };
-      return res;
+      } as TickDealsType;
     } catch (e) {
-      info(`Error parsing tickData: ${e}`);
+      info(`Error parsing tickData for ${id}: ${e}`);
       return null;
     }
   }, [tickData, id]);
@@ -144,14 +154,14 @@ export default function useConditionalDeals(
   }, [dailyData]);
 
   const name = useMemo(() => {
-    let name = "null";
-    if (!dailyData) return name;
+    let stockName = "null";
+    if (!dailyData) return stockName;
 
     const match = dailyData.match(/name":"([^"]*)"/);
     if (match) {
-      name = match[1];
+      stockName = match[1];
     }
-    return name;
+    return stockName;
   }, [dailyData]);
 
   return { deals, name, tickDeals };

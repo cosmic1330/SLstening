@@ -61,7 +61,6 @@ const InnerElement = forwardRef<HTMLDivElement, any>(({ children, style, ...rest
       style={{
         ...style,
         position: "relative",
-        height: baseHeight + headerHeight,
       }}
       {...rest}
     >

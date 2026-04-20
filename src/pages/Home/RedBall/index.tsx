@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
+import useWindowSize from "../../../hooks/useWindowSize";
 import RedBallCard, { RED_BALL_CARD_HEIGHT } from "./components/RedBallCard";
 
 type CsvStockType = {
@@ -113,6 +114,7 @@ function csvToStockStore(csv: string): CsvStockType[] {
 }
 
 export default function RedBall() {
+  const { height: windowHeight } = useWindowSize();
   const [loading, setLoading] = useState(true);
   const [stocks, setStocks] = useState<CsvStockType[]>([]);
   const [selectedList, setSelectedList] = useState<string>("");
@@ -235,7 +237,7 @@ export default function RedBall() {
             {filteredStocks.length > 0 && (
               <VirtualizedStockList
                 stocks={filteredStocks as any}
-                height={window.innerHeight - 170}
+                height={windowHeight - 170}
                 itemHeight={RED_BALL_CARD_HEIGHT}
                 renderItem={(stock) => <RedBallCard stock={stock} />}
               />

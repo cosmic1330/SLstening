@@ -59,7 +59,7 @@ export default function StockTickChart({
   const mainColor = isUp ? "#ff5252" : "#69f0ae";
 
   return (
-    <Box height={40} sx={{ width: "100%", opacity: 0.8 }}>
+    <Box height={64} sx={{ width: "100%", opacity: 0.8 }}>
       <ResponsiveContainer>
         <AreaChart data={data}>
           <defs>
@@ -68,11 +68,21 @@ export default function StockTickChart({
               <stop offset="95%" stopColor={mainColor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <YAxis domain={["dataMin", "dataMax"]} hide />
+          <YAxis
+            domain={([dataMin, dataMax]) => {
+              if (!Number.isFinite(tickDeals.previousClose))
+                return [dataMin, dataMax];
+              return [
+                Math.min(dataMin, tickDeals.previousClose),
+                Math.max(dataMax, tickDeals.previousClose),
+              ];
+            }}
+            hide
+          />
           {Number.isFinite(tickDeals.previousClose) && (
             <ReferenceLine
               y={tickDeals.previousClose}
-              stroke="rgba(255,255,255,0.15)"
+              stroke="rgba(255,255,255,0.5)"
               strokeDasharray="3 3"
               strokeWidth={1}
             />

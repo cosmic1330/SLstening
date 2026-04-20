@@ -45,6 +45,8 @@ function MakChartTooltip({ active, payload }: TooltipProps<number, string>) {
 export default function MakChart({
   deals,
   height = 120,
+  count = 60,
+  hideTooltip = false,
 }: {
   deals: {
     data: (Omit<DealTableType, "stock_id" | "t"> & { t: number })[];
@@ -52,11 +54,13 @@ export default function MakChart({
     price: any;
   };
   height?: number;
+  count?: number;
+  hideTooltip?: boolean;
 }) {
   const { settings } = useIndicatorSettings();
   const data = useMemo(() => {
-    return calculateIndicators(deals.data, settings).splice(-80);
-  }, [deals.data, settings]);
+    return calculateIndicators(deals.data, settings).splice(-count);
+  }, [deals.data, settings, count]);
 
   return (
     <Box height={height}>
@@ -65,7 +69,9 @@ export default function MakChart({
           <XAxis hide />
           <YAxis domain={["dataMin", "dataMax"]} dataKey="c" hide />
           <ZAxis type="number" range={[10]} />
-          <Tooltip offset={50} content={<MakChartTooltip />} />
+          {!hideTooltip && (
+            <Tooltip offset={50} content={<MakChartTooltip />} />
+          )}
           <Line
             dataKey="h"
             stroke="#000"

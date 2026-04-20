@@ -83,21 +83,10 @@ export default function Header({
           WebkitMaskImage:
             "linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent)",
           "::-webkit-scrollbar": {
-            display: "block",
-            height: "3px",
+            display: "none",
           },
-          "::-webkit-scrollbar-track": {
-            backgroundColor: "transparent",
-          },
-          "::-webkit-scrollbar-thumb": {
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            borderRadius: "3px",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-            },
-          },
-          msOverflowStyle: "auto",
-          scrollbarWidth: "thin",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
         }}
       >
         {categories.map((c) => (

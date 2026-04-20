@@ -1,19 +1,20 @@
-import { Box, Button, Stack, Typography, styled } from "@mui/material";
-import LanguageIcon from "@mui/icons-material/Language";
+import { Box, Stack, Typography, styled, Tooltip } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
-const StyledLinkCard = styled(Box)(() => ({
-  position: "relative",
-  background: "rgba(30, 30, 35, 0.4)",
-  backdropFilter: "blur(16px)",
-  borderRadius: "16px",
+const StyledLinkChip = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: "4px 12px",
+  background: "rgba(255, 255, 255, 0.05)",
+  backdropFilter: "blur(12px)",
+  borderRadius: "20px",
   border: "1px solid rgba(255, 255, 255, 0.08)",
-  padding: "12px 16px",
-  transition: "all 0.3s ease",
-  cursor: "default",
+  cursor: "pointer",
+  transition: "all 0.2s ease",
   "&:hover": {
-    background: "rgba(40, 40, 45, 0.6)",
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    background: "rgba(255, 255, 255, 0.12)",
+    borderColor: theme.palette.primary.main,
+    transform: "translateY(-1px)",
   },
 }));
 
@@ -24,39 +25,28 @@ interface MarketLinkBoxProps {
 }
 
 export default function MarketLinkBox({ title, url, icon }: MarketLinkBoxProps) {
-  const handleClick = async () => {
-    await openUrl(url);
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    openUrl(url);
   };
 
   return (
-    <StyledLinkCard>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" alignItems="center" spacing={1.5}>
-          <Box sx={{ color: "primary.main", display: "flex" }}>
-            {icon}
-          </Box>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-            {title}
-          </Typography>
-        </Stack>
-        <Button
-          size="small"
-          startIcon={<LanguageIcon sx={{ fontSize: 14 }} />}
-          onClick={handleClick}
+    <Tooltip title={`前往 ${title}`} arrow>
+      <StyledLinkChip onClick={handleClick}>
+        <Box sx={{ color: "rgba(255,255,255,0.6)", mr: 1, display: "flex", fontSize: "16px" }}>
+          {icon}
+        </Box>
+        <Typography
           sx={{
-            borderRadius: "8px",
-            color: "primary.main",
-            background: "rgba(144, 202, 249, 0.05)",
-            fontSize: "0.75rem",
-            fontWeight: 700,
-            "&:hover": {
-              background: "rgba(144, 202, 249, 0.15)",
-            },
+            fontSize: "12px",
+            fontWeight: 800,
+            color: "rgba(255,255,255,0.85)",
+            whiteSpace: "nowrap",
           }}
         >
-          詳情
-        </Button>
-      </Stack>
-    </StyledLinkCard>
+          {title}
+        </Typography>
+      </StyledLinkChip>
+    </Tooltip>
   );
 }

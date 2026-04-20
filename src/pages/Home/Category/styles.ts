@@ -2,9 +2,8 @@ import { Box, Chip, TextField, styled } from "@mui/material";
 
 export const PageContainer = styled(Box)(() => ({
   width: "100%",
-  minHeight: "100vh",
-  overflowY: "auto",
-  overflowX: "hidden",
+  height: "100vh", // Fixed height for virtualized scrolling
+  overflow: "hidden", // Scrollbar will be inside VirtualizedStockList
   position: "relative",
   backgroundColor: "#020617",
   backgroundImage:

@@ -40,8 +40,8 @@ export default function Category() {
       .filter((s): s is StockStoreType => s !== undefined);
   }, [currentCategory, menu]);
 
-  return (
-    <PageContainer>
+  const pageHeader = useMemo(() => (
+    <>
       <Header
         categories={categories}
         activeId={activeId}
@@ -60,10 +60,22 @@ export default function Category() {
           }
         />
       )}
+    </>
+  ), [
+    categories,
+    activeId,
+    currentStocks.length,
+    currentCategory,
+    menu,
+    addStockToCategory,
+  ]);
 
+  return (
+    <PageContainer>
       <StockWorkspace
         stocks={currentStocks}
         hasCategory={!!currentCategory}
+        header={pageHeader}
         onRemoveStock={(stockId) =>
           currentCategory &&
           removeStockFromCategory(currentCategory.id, stockId)

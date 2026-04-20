@@ -1,98 +1,143 @@
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
+  Collapse,
+  Divider,
   Stack,
+  styled,
   TextField,
   Typography,
-  styled,
-  alpha,
-  Divider,
-  Alert,
-  Collapse
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { error } from "@tauri-apps/plugin-log";
+import { motion, Variants } from "framer-motion";
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { supabase } from "../../supabase";
-import translateError from "../../utils/translateError";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 import GoogleOauthButton from "../../components/GoogleOauthButton";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
+import { supabase } from "../../supabase";
+import translateError from "../../utils/translateError";
 
-// Glassmorphism Card Component
-const GlassCard = styled(Box)(({ theme }) => ({
-  background: "rgba(30, 30, 40, 0.6)", // Semi-transparent dark background
-  backdropFilter: "blur(16px)", // Strong blur effect
-  WebkitBackdropFilter: "blur(16px)",
+// Animation Variants
+const containerVariants: Variants = {
+  hidden: { opacity: 0, y: 20, rotate: -1 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    rotate: 0,
+    transition: {
+      duration: 0.8,
+      ease: [0.22, 1, 0.36, 1],
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+};
+
+// Ghibli Parchment Paper Card
+const GhibliPaperCard = styled(motion.div)(({ theme }) => ({
+  background: "#FAF3E0", // 古紙色
+  backgroundImage:
+    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 100%)",
   borderRadius: "24px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+  border: "2px solid #5D4037", // 深木棕
+  boxShadow: `
+    0 10px 30px rgba(0, 0, 0, 0.2),
+    inset 0 0 60px rgba(139, 115, 85, 0.1)
+  `,
   padding: theme.spacing(6),
   width: "100%",
   maxWidth: "420px",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: theme.spacing(3),
-  transition: "transform 0.2s ease-in-out",
+  position: "relative",
+  zIndex: 2,
 
-  // RWD adjustments
-  [theme.breakpoints.down("sm")]: {
-    padding: theme.spacing(3),
-    borderRadius: "16px",
-    maxWidth: "90%",
-    gap: theme.spacing(2),
+  // 封蠟裝飾 (Wax Seal Shorthand)
+  "&::before": {
+    content: '""',
+    position: "absolute",
+    top: "-25px",
+    left: "50%",
+    transform: "translateX(-50%)",
+    width: "50px",
+    height: "50px",
+    background: "#B22222", // 火漆紅
+    borderRadius: "50%",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(0,0,0,0.2)",
+    border: "4px solid #A52A2A",
+    zIndex: 3,
   },
 
-  "&:hover": {
-    boxShadow: "0 12px 40px 0 rgba(0, 0, 30, 0.4)",
+  [theme.breakpoints.down("sm")]: {
+    padding: theme.spacing(4),
+    maxWidth: "90%",
   },
 }));
 
-// Custom Styled TextField
-const CustomTextField = styled(TextField)(({ theme }) => ({
+// Hand-drawn TextField
+const HanddrawnTextField = styled(TextField)(() => ({
   "& .MuiOutlinedInput-root": {
-    borderRadius: "12px",
-    backgroundColor: alpha(theme.palette.common.white, 0.03),
-    transition: "all 0.2s ease",
+    borderRadius: "8px",
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    transition: "all 0.3s ease",
     "& fieldset": {
-      borderColor: "rgba(255, 255, 255, 0.1)",
+      borderColor: "#8B7355", // 暖土棕
+      borderWidth: "1.5px",
     },
     "&:hover fieldset": {
-      borderColor: "rgba(255, 255, 255, 0.2)",
+      borderColor: "#5D4037",
     },
     "&.Mui-focused fieldset": {
-      borderColor: theme.palette.primary.main,
-      borderWidth: "1px",
+      borderColor: "#3D5A45", // 林綠
+      borderWidth: "2px",
     },
     "&.Mui-focused": {
-      backgroundColor: alpha(theme.palette.common.white, 0.05),
-      transform: "translateY(-1px)",
-    },
-    // Smaller input on small screens
-    [theme.breakpoints.down("sm")]: {
-      "& input": {
-        padding: "10px 14px",
-      },
+      backgroundColor: "white",
     },
   },
   "& .MuiInputLabel-root": {
-    color: alpha(theme.palette.common.white, 0.6),
-    [theme.breakpoints.down("sm")]: {
-      fontSize: "0.875rem",
-      transform: "translate(14px, 12px) scale(1)",
-      "&.MuiInputLabel-shrink": {
-        transform: "translate(14px, -9px) scale(0.75)",
-      },
-    },
+    color: "#8B7355",
+    fontWeight: 600,
   },
   "& .MuiInputLabel-root.Mui-focused": {
-    color: theme.palette.primary.main,
+    color: "#3D5A45",
   },
   "& input": {
-    color: theme.palette.common.white,
+    padding: "14px 16px",
+    color: "#5D4037",
+    fontWeight: 600,
+  },
+}));
+
+const ForestButton = styled(motion.button)(() => ({
+  width: "100%",
+  padding: "14px",
+  borderRadius: "12px",
+  border: "2px solid #2D4A35",
+  background: "#3D5A45",
+  color: "#F1E5AC", // 暖奶油黃字
+  fontWeight: 800,
+  fontSize: "1rem",
+  cursor: "pointer",
+  boxShadow: "0 4px 0 #2D4A35",
+  transition: "all 0.1s ease",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  "&:disabled": {
+    background: "#A8B5AA",
+    border: "2px solid #8A968C",
+    boxShadow: "none",
+    color: "#E0E0E0",
   },
 }));
 
@@ -101,10 +146,10 @@ const Content = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(
-    localStorage.getItem("slitenting-email") || ""
+    localStorage.getItem("slitenting-email") || "",
   );
   const [password, setPassword] = useState(
-    localStorage.getItem("slitenting-password") || ""
+    localStorage.getItem("slitenting-password") || "",
   );
   const [remember, setRemember] = useState(true);
   let navigate = useNavigate();
@@ -144,28 +189,55 @@ const Content = () => {
   };
 
   return (
-    <GlassCard>
-      <Box sx={{ position: "absolute", top: 24, right: 24, color: "white" }}>
+    <GhibliPaperCard
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <Box sx={{ position: "absolute", top: 20, right: 20 }}>
         <LanguageSwitcher />
       </Box>
-      <Box mb={1} textAlign="center">
-        {/* Logo placeholder - using text if image not ideal, but keeping image for now */}
-        <img
-          src="icon.png"
-          alt="logo"
-          style={{
-            width: "80px",
-            marginBottom: "8px",
-            filter: "drop-shadow(0 0 10px rgba(255,255,255,0.2))",
-          }}
-        />
-        <Typography variant="h5" fontWeight="700" color="white" gutterBottom>
-          {t("Pages.Login.welcomeBack")}
-        </Typography>
-        <Typography variant="body2" color="rgba(255,255,255,0.5)">
-          {t("Pages.Login.enterCredentials")}
-        </Typography>
-      </Box>
+
+      <motion.div variants={itemVariants}>
+        <Box mb={4} textAlign="center">
+          <Box
+            sx={{
+              width: "64px",
+              height: "64px",
+              margin: "0 auto 12px",
+              borderRadius: "50%",
+              background: "#F1E5AC",
+              border: "2px solid #5D4037",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+            }}
+          >
+            <img
+              src="icon.png"
+              alt="logo"
+              style={{
+                width: "42px",
+                height: "42px",
+              }}
+            />
+          </Box>
+          <Typography
+            variant="h5"
+            fontWeight="900"
+            sx={{ color: "#5D4037", letterSpacing: "-0.5px", mb: 0.5 }}
+          >
+            {t("Pages.Login.welcomeBack")}
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: "#8B7355", fontWeight: 700, fontStyle: "italic" }}
+          >
+            {t("Pages.Login.enterCredentials")}
+          </Typography>
+        </Box>
+      </motion.div>
 
       <Box
         width="100%"
@@ -181,12 +253,11 @@ const Content = () => {
             sx={{
               mb: 2,
               borderRadius: "12px",
-              backgroundColor: "rgba(211, 47, 47, 0.15)", // Transparent red
-              color: "#ffcdd2",
-              border: "1px solid rgba(239, 83, 80, 0.3)",
-              "& .MuiAlert-icon": {
-                color: "#ef5350", // Light red icon
-              },
+              backgroundColor: "#FFF1EB",
+              color: "#A52A2A",
+              border: "1px solid #A52A2A",
+              fontWeight: 700,
+              "& .MuiAlert-icon": { color: "#A52A2A" },
             }}
             onClose={() => setErrorMsg("")}
           >
@@ -195,107 +266,119 @@ const Content = () => {
         </Collapse>
 
         <Stack spacing={2.5}>
-          <CustomTextField
-            fullWidth
-            label={t("Pages.Login.email")}
-            name="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            variant="outlined"
-          />
-          <CustomTextField
-            fullWidth
-            label={t("Pages.Login.password")}
-            name="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            variant="outlined"
-          />
+          <motion.div variants={itemVariants}>
+            <HanddrawnTextField
+              fullWidth
+              label={t("Pages.Login.email")}
+              name="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              variant="outlined"
+            />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <HanddrawnTextField
+              fullWidth
+              label={t("Pages.Login.password")}
+              name="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              variant="outlined"
+            />
+          </motion.div>
         </Stack>
 
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          mt={1.5}
-          mb={3}
-        >
-          <Stack direction="row" alignItems="center">
-            <Checkbox
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              size="small"
+        <motion.div variants={itemVariants}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            mt={2}
+            mb={3}
+          >
+            <Stack
+              direction="row"
+              alignItems="center"
+              sx={{ cursor: "pointer" }}
+              onClick={() => setRemember(!remember)}
+            >
+              <Checkbox
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                size="small"
+                sx={{
+                  padding: 0,
+                  marginRight: 1,
+                  color: "#8B7355",
+                  "&.Mui-checked": {
+                    color: "#3D5A45",
+                  },
+                }}
+              />
+              <Typography
+                variant="body2"
+                sx={{ color: "#8B7355", fontWeight: 700, userSelect: "none" }}
+              >
+                {t("Pages.Login.rememberMe")}
+              </Typography>
+            </Stack>
+          </Stack>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <ForestButton
+            type="submit"
+            onClick={signIn}
+            disabled={loading || !email || !password}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98, translateY: 2 }}
+          >
+            {loading ? t("Pages.Login.signingIn") : t("Pages.Login.signIn")}
+          </ForestButton>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Box my={3.5} display="flex" alignItems="center">
+            <Divider sx={{ flex: 1, borderColor: "#D2B48C" }} />
+            <Typography
+              variant="caption"
+              sx={{ color: "#8B7355", mx: 2, fontWeight: 900 }}
+            >
+              {t("Pages.Login.or").toUpperCase()}
+            </Typography>
+            <Divider sx={{ flex: 1, borderColor: "#D2B48C" }} />
+          </Box>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Stack spacing={2}>
+            <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
+
+            <Button
+              onClick={register}
+              disabled={loading}
+              fullWidth
               sx={{
-                color: "rgba(255,255,255,0.4)",
-                "&.Mui-checked": {
-                  color: "primary.main",
+                py: 1,
+                color: "#5D4037",
+                borderRadius: "12px",
+                fontWeight: 800,
+                textDecoration: "underline",
+                "&:hover": {
+                  background: "rgba(93, 64, 55, 0.05)",
                 },
               }}
-            />
-            <Typography variant="caption" color="rgba(255,255,255,0.6)">
-              {t("Pages.Login.rememberMe")}
-            </Typography>
+            >
+              {t("Pages.Login.register")}
+            </Button>
           </Stack>
-          {/* Optional: Forgot Password Link could go here */}
-        </Stack>
-
-        <Button
-          type="submit"
-          onClick={signIn}
-          disabled={loading || !email || !password}
-          fullWidth
-          size="large"
-          variant="contained"
-          sx={{
-            borderRadius: "12px",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            textTransform: "none",
-            fontWeight: 600,
-            fontSize: "1rem",
-            boxShadow: "0 4px 15px rgba(100, 100, 255, 0.3)",
-            "&:hover": {
-              background: "linear-gradient(135deg, #764ba2 0%, #667eea 100%)",
-              boxShadow: "0 6px 20px rgba(100, 100, 255, 0.4)",
-            },
-          }}
-        >
-          {loading ? t("Pages.Login.signingIn") : t("Pages.Login.signIn")}
-        </Button>
-
-        <Box my={2} display="flex" alignItems="center">
-          <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
-          <Typography variant="caption" color="rgba(255,255,255,0.4)" mx={2}>
-            {t("Pages.Login.or")}
-          </Typography>
-          <Divider sx={{ flex: 1, borderColor: "rgba(255,255,255,0.1)" }} />
-        </Box>
-
-        <Stack spacing={1}>
-          <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
-
-          <Button
-            onClick={register}
-            disabled={loading}
-            fullWidth
-            size="medium"
-            sx={{
-              color: "rgba(255,255,255,0.7)",
-              textTransform: "none",
-              "&:hover": {
-                color: "white",
-                background: "rgba(255,255,255,0.05)",
-              },
-            }}
-          >
-            {t("Pages.Login.register")}
-          </Button>
-        </Stack>
+        </motion.div>
       </Box>
-    </GlassCard>
+    </GhibliPaperCard>
   );
 };
 

@@ -58,22 +58,23 @@ export default function ManageDialogs({
     }
   };
 
+  const paperStyles = {
+    background: "#FAF3E0", // 古紙色
+    color: "#5D4037", // 深木棕
+    borderRadius: "24px",
+    border: "2px solid #5D4037",
+    boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+    backgroundImage: "none",
+  };
+
   return (
     <>
       <Dialog
         open={isAddOpen}
         onClose={onAddClose}
-        PaperProps={{
-          sx: {
-            background: "#0f172a",
-            color: "white",
-            borderRadius: "24px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            backgroundImage: "none",
-          },
-        }}
+        PaperProps={{ sx: paperStyles }}
       >
-        <DialogTitle sx={{ fontWeight: 800, pt: 3 }}>
+        <DialogTitle sx={{ fontWeight: 900, pt: 4, color: "#5D4037" }}>
           建立全新自選分類
         </DialogTitle>
         <DialogContent>
@@ -88,17 +89,33 @@ export default function ManageDialogs({
           />
         </DialogContent>
         <DialogActions sx={{ p: 4, pt: 1 }}>
-          <Button onClick={onAddClose} sx={{ color: "rgba(255,255,255,0.5)" }}>
+          <Button 
+            onClick={onAddClose} 
+            sx={{ 
+              color: "#8B7355", 
+              fontWeight: 800,
+              textDecoration: "underline",
+              "&:hover": { background: "transparent", color: "#5D4037" }
+            }}
+          >
             取消
           </Button>
           <Button
             onClick={handleCreate}
             variant="contained"
             sx={{
-              background: "#10b981",
+              background: "#3D5A45", // 森林綠
+              color: "#F1E5AC",
               borderRadius: "12px",
               px: 4,
-              "&:hover": { background: "#059669" },
+              fontWeight: 900,
+              border: "2px solid #2D4A35",
+              boxShadow: "0 4px 0 #2D4A35",
+              "&:hover": { 
+                background: "#3D5A45",
+                transform: "translateY(2px)",
+                boxShadow: "0 2px 0 #2D4A35",
+              },
             }}
           >
             建立
@@ -111,17 +128,11 @@ export default function ManageDialogs({
         onClose={onManageClose}
         maxWidth="xs"
         fullWidth
-        PaperProps={{
-          sx: {
-            background: "#0f172a",
-            color: "white",
-            borderRadius: "24px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            backgroundImage: "none",
-          },
-        }}
+        PaperProps={{ sx: paperStyles }}
       >
-        <DialogTitle sx={{ fontWeight: 800, pt: 3 }}>自選分類管理</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900, pt: 4, color: "#5D4037" }}>
+          自選分類管理
+        </DialogTitle>
         <DialogContent>
           <List sx={{ mt: 1 }}>
             {categories.map((c) => (
@@ -129,16 +140,16 @@ export default function ManageDialogs({
                 key={c.id}
                 sx={{
                   mb: 1.5,
-                  background: "rgba(255,255,255,0.03)",
-                  borderRadius: "16px",
-                  border: "1px solid rgba(255,255,255,0.05)",
+                  background: "rgba(93, 64, 55, 0.05)",
+                  borderRadius: "12px",
+                  border: "1.5px solid rgba(93, 64, 55, 0.1)",
                   pr: 7,
                 }}
                 secondaryAction={
                   <IconButton
                     edge="end"
                     onClick={() => onRemoveCategory(c.id)}
-                    sx={{ color: "#f43f5e" }}
+                    sx={{ color: "#D2691E" }}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
@@ -158,7 +169,7 @@ export default function ManageDialogs({
                     onKeyPress={(e) => e.key === "Enter" && handleRename()}
                     InputProps={{
                       disableUnderline: true,
-                      sx: { color: "white", fontWeight: 600, py: 0.5 },
+                      sx: { color: "#5D4037", fontWeight: 800, py: 0.5 },
                     }}
                   />
                 ) : (
@@ -170,8 +181,9 @@ export default function ManageDialogs({
                   >
                     <Typography
                       sx={{
-                        fontWeight: 600,
+                        fontWeight: 800,
                         flex: 1,
+                        color: "#5D4037",
                         textOverflow: "ellipsis",
                         overflow: "hidden",
                         whiteSpace: "nowrap",
@@ -182,7 +194,7 @@ export default function ManageDialogs({
                     <IconButton
                       size="small"
                       onClick={() => setEditingCat({ id: c.id, name: c.name })}
-                      sx={{ color: "rgba(255,255,255,0.3)" }}
+                      sx={{ color: "#8B7355" }}
                     >
                       <EditIcon sx={{ fontSize: 18 }} />
                     </IconButton>
@@ -193,17 +205,24 @@ export default function ManageDialogs({
             {categories.length === 0 && (
               <Typography
                 variant="body2"
-                sx={{ opacity: 0.5, textAlign: "center", py: 3 }}
+                sx={{ color: "#8B7355", textAlign: "center", py: 3, fontWeight: 700, fontStyle: "italic" }}
               >
                 目前沒有任何分類
               </Typography>
             )}
           </List>
         </DialogContent>
-        <DialogActions sx={{ p: 3 }}>
+        <DialogActions sx={{ p: 4, pt: 1 }}>
           <Button
             onClick={onManageClose}
-            sx={{ color: "rgba(255,255,255,0.5)" }}
+            sx={{ 
+              color: "#5D4037", 
+              fontWeight: 900,
+              border: "2px solid #5D4037",
+              borderRadius: "10px",
+              px: 3,
+              "&:hover": { background: "rgba(93, 64, 55, 0.05)" }
+            }}
           >
             關閉
           </Button>

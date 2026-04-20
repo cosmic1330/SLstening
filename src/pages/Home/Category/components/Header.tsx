@@ -32,9 +32,9 @@ export default function Header({
       >
         <Box>
           <Typography
-            variant="h3"
+            variant="h5"
             fontWeight="900"
-            sx={{ letterSpacing: "-1px", color: "#fff" }}
+            sx={{ letterSpacing: "-1px" }}
           >
             自選分類
           </Typography>
@@ -56,7 +56,7 @@ export default function Header({
               "&:hover": { background: "rgba(255,255,255,0.08)" },
             }}
           >
-            <AddIcon sx={{ color: "white", fontSize: "1.4rem" }} />
+            <AddIcon sx={{ fontSize: "1.4rem" }} />
           </IconButton>
           <IconButton
             onClick={onManageClick}
@@ -66,7 +66,7 @@ export default function Header({
               "&:hover": { background: "rgba(255,255,255,0.08)" },
             }}
           >
-            <SettingsIcon sx={{ color: "white", fontSize: "1.4rem" }} />
+            <SettingsIcon sx={{  fontSize: "1.4rem" }} />
           </IconButton>
         </Stack>
       </Stack>

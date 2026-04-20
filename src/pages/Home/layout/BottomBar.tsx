@@ -8,74 +8,72 @@ import { Box, IconButton,  styled, Tooltip } from "@mui/material"; // Import Too
 import { useLocation, useNavigate } from "react-router";
 import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 
-const GlassDock = styled(Box)(() => ({
+import useUIStore from "../../../store/UI.store";
+
+const WoodenDock = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "visible",
+})<{ visible?: boolean }>(({ visible }) => ({
   position: "fixed",
-  bottom: 20,
+  bottom: 12,
   left: "50%",
-  transform: "translateX(-50%)",
-  width: "90%",
-  maxWidth: "500px",
-  height: 70,
-  background: "rgba(20, 20, 30, 0.6)",
-  backdropFilter: "blur(20px)",
-  WebkitBackdropFilter: "blur(20px)",
-  borderRadius: "24px",
-  border: "1px solid rgba(255, 255, 255, 0.1)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+  transform: visible 
+    ? "translateX(-50%)" 
+    : "translateX(-50%) translateY(120px)", // Slide out of view
+  width: "92%",
+  maxWidth: "460px",
+  height: 60,
+  background: "#3D5A45",
+  borderRadius: "16px",
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  padding: "0 20px",
+  padding: "0 16px",
   zIndex: 1000,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  
-  "&:hover": {
-     boxShadow: "0 12px 40px 0 rgba(0, 0, 0, 0.4)",
-     border: "1px solid rgba(255, 255, 255, 0.15)",
-  }
+  opacity: visible ? 1 : 0,
+  pointerEvents: visible ? "auto" : "none", // Prevent accidental clicks when hidden
+  transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)", // Bouncy return
 }));
 
 const NavButton = styled(IconButton, {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ active }) => ({
-  color: active ? "#60a5fa" : "rgba(255, 255, 255, 0.5)",
+  color: active ? "#F1E5AC" : "rgba(241, 229, 172, 0.4)",
   transition: "all 0.2s ease",
-  padding: "10px",
+  padding: "8px",
   
   "&:hover": {
     background: "rgba(255, 255, 255, 0.05)",
-    transform: "translateY(-2px)",
-    color: active ? "#60a5fa" : "rgba(255, 255, 255, 0.8)",
+    color: active ? "#F1E5AC" : "#F1E5AC",
   },
   
   "& .MuiSvgIcon-root": {
-    fontSize: "1.6rem", // Slightly larger icons
-    filter: active ? "drop-shadow(0 0 4px rgba(96, 165, 250, 0.6))" : "none",
+    fontSize: "1.4rem",
+    filter: active ? "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" : "none",
   }
 }));
 
 const CenterFab = styled(IconButton)(() => ({
   position: "absolute",
-  top: -25,
+  top: -20,
   left: "50%",
   transform: "translateX(-50%)",
-  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-  color: "#fff",
+  background: "#D2691E",
+  color: "#F1E5AC",
   padding: 0, 
-  width: 56,
-  height: 56,
-  boxShadow: "0 4px 14px rgba(37, 99, 235, 0.4)",
-  border: "4px solid #1a1a24", // Match background to create "cutout" effect illusion
-  transition: "all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)", // Bouncy effect
+  width: 48,
+  height: 48,
+  boxShadow: "0 4px 0 #8B4513",
+  border: "2px solid #2D4A35",
+  transition: "all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)",
   
   "&:hover": {
-    background: "linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)",
-    transform: "translateX(-50%) translateY(-4px) scale(1.05)",
-    boxShadow: "0 8px 20px rgba(37, 99, 235, 0.6)",
+    background: "#E67E22",
+    transform: "translateX(-50%) translateY(-2px)",
+    boxShadow: "0 6px 0 #8B4513",
   },
 
   "& .MuiSvgIcon-root": {
-      fontSize: "3rem",
+      fontSize: "2.4rem",
   }
 }));
 
@@ -83,6 +81,7 @@ export default function BottomBar() {
   const { openAddWindow } = useAddWebviewWindow();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isBottomBarVisible } = useUIStore();
 
   const isActive = (path: string) => {
     if (path === "/dashboard" && location.pathname === "/dashboard") return true;
@@ -91,7 +90,7 @@ export default function BottomBar() {
   };
 
   return (
-    <GlassDock>
+    <WoodenDock visible={isBottomBarVisible}>
       <Tooltip title="首頁" arrow>
         <NavButton 
             active={isActive("/dashboard")}
@@ -134,6 +133,6 @@ export default function BottomBar() {
             <CategoryIcon />
         </NavButton>
       </Tooltip>
-    </GlassDock>
+    </WoodenDock>
   );
 }

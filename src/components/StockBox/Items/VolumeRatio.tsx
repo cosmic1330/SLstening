@@ -1,4 +1,4 @@
-import { Box, Tooltip, Typography, Stack } from "@mui/material";
+import { Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 
 const sections = [
@@ -19,7 +19,7 @@ export default function VolumeRatio({
 }) {
   const ratio = useMemo(
     () => Math.round((estimatedVolume / avgDaysVolume) * 10) / 10,
-    [estimatedVolume, avgDaysVolume]
+    [estimatedVolume, avgDaysVolume],
   );
 
   const section = useMemo(() => {
@@ -28,7 +28,12 @@ export default function VolumeRatio({
 
   return (
     <Tooltip title={`預估量 / 十日均量: ${ratio}倍`} arrow enterTouchDelay={0}>
-      <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
+      <Stack
+        direction="column"
+        spacing={0}
+        alignItems="center"
+        sx={{ width: "100%" }}
+      >
         <Typography
           sx={{
             fontSize: "9px",

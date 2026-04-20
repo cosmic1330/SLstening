@@ -42,7 +42,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
     );
 
     if (!exists) {
-      const updatedStocks = [...currentStocks, stock];
+      const updatedStocks = [stock, ...currentStocks];
       const store = await Store.load("settings.json");
       await store.set("stocks", updatedStocks);
       await store.save();
@@ -125,7 +125,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
   },
   addStocks: async (newStocks: StockStoreType[]) => {
     const currentStocks = get().stocks;
-    const updatedStocks = [...currentStocks, ...newStocks];
+    const updatedStocks = [...newStocks, ...currentStocks];
     const store = await Store.load("settings.json");
     await store.set("stocks", updatedStocks);
     await store.save();
@@ -158,7 +158,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       name,
       stockIds: [],
     };
-    const updatedCategories = [...categories, newCategory];
+    const updatedCategories = [newCategory, ...categories];
     const store = await Store.load("settings.json");
     await store.set("categories", updatedCategories);
     await store.save();
@@ -184,7 +184,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
     const updatedCategories = get().categories.map((c) => {
       if (c.id === categoryId) {
         if (!c.stockIds.includes(stockId)) {
-          return { ...c, stockIds: [...c.stockIds, stockId] };
+          return { ...c, stockIds: [stockId, ...c.stockIds] };
         }
       }
       return c;

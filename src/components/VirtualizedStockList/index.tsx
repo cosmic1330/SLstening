@@ -1,5 +1,5 @@
 import { Box, Grid, useMediaQuery, useTheme } from "@mui/material";
-import React, { memo, useMemo, forwardRef, useRef, useState } from "react";
+import React, { forwardRef, memo, useMemo, useRef, useState } from "react";
 import { FixedSizeList as List } from "react-window";
 import { StockStoreType } from "../../types";
 import LazyStockBox from "../StockBox/LazyStockBox";
@@ -27,48 +27,51 @@ const VirtualScrollContext = React.createContext<{
  * 自定義捲動容器 (Outer)
  * Header 使用標準文件流 (flow)，會自然地將下方的列表內容推開
  */
-const OuterElement = forwardRef<HTMLDivElement, any>(({ children, style, ...rest }, ref) => {
-  const { header, headerRef } = React.useContext(VirtualScrollContext);
-  return (
-    <div
-      ref={ref}
-      style={{
-        ...style,
-        scrollbarWidth: "none",
-        msOverflowStyle: "none",
-        overflowY: "auto",
-        overflowX: "hidden",
-      }}
-      {...rest}
-    >
-      <div ref={headerRef} style={{ width: "100%" }}>{header}</div>
-      {children}
-    </div>
-  );
-});
+const OuterElement = forwardRef<HTMLDivElement, any>(
+  ({ children, style, ...rest }, ref) => {
+    const { header, headerRef } = React.useContext(VirtualScrollContext);
+    return (
+      <div
+        ref={ref}
+        style={{
+          ...style,
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
+        {...rest}
+      >
+        <div ref={headerRef} style={{ width: "100%" }}>
+          {header}
+        </div>
+        {children}
+      </div>
+    );
+  },
+);
 
 /**
  * 自定義內容容器 (Inner)
  * 只需要增加總高度即可，不需要額外的位移，因為它在層級上跟在 Header 之後
  */
-const InnerElement = forwardRef<HTMLDivElement, any>(({ children, style, ...rest }, ref) => {
-  const { headerHeight } = React.useContext(VirtualScrollContext);
-  const baseHeight = style?.height ? (typeof style.height === 'number' ? style.height : parseFloat(style.height)) : 0;
-  
-  return (
-    <div
-      ref={ref}
-      style={{
-        ...style,
-        position: "relative",
-      }}
-      {...rest}
-    >
-      {/* 修正：移除這裡的 absolute 偏移，因為父容器中的 Header 已經佔位 */}
-      {children}
-    </div>
-  );
-});
+const InnerElement = forwardRef<HTMLDivElement, any>(
+  ({ children, style, ...rest }, ref) => {
+    return (
+      <div
+        ref={ref}
+        style={{
+          ...style,
+          position: "relative",
+        }}
+        {...rest}
+      >
+        {/* 修正：移除這裡的 absolute 偏移，因為父容器中的 Header 已經佔位 */}
+        {children}
+      </div>
+    );
+  },
+);
 
 const StockRow = memo(
   ({
@@ -99,7 +102,11 @@ const StockRow = memo(
 
     return (
       <Box style={style}>
-        <Grid container spacing={1} sx={{ px: 1, py: 1, height: "100%", boxSizing: "border-box" }}>
+        <Grid
+          container
+          spacing={1}
+          sx={{ px: 1, py: 1, height: "100%", boxSizing: "border-box" }}
+        >
           {rowStocks.map((stock) => (
             <Grid
               size={12 / columns}
@@ -152,17 +159,23 @@ export default function VirtualizedStockList({
 
   const rowCount = Math.ceil((stocks?.length || 0) / columns);
 
-  const itemData = useMemo(() => ({
-    stocks,
-    columns,
-    renderItem,
-  }), [stocks, columns, renderItem]);
+  const itemData = useMemo(
+    () => ({
+      stocks,
+      columns,
+      renderItem,
+    }),
+    [stocks, columns, renderItem],
+  );
 
-  const contextValue = useMemo(() => ({
-    header,
-    headerHeight,
-    headerRef,
-  }), [header, headerHeight, headerRef]);
+  const contextValue = useMemo(
+    () => ({
+      header,
+      headerHeight,
+      headerRef,
+    }),
+    [header, headerHeight, headerRef],
+  );
 
   const safeHeight = Math.max(height || 0, 100);
 

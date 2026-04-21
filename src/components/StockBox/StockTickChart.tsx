@@ -8,7 +8,6 @@ import {
   YAxis,
 } from "recharts";
 import { TickDealsType } from "../../types";
-import getTimeProgressPercent from "../../utils/getTimeProgressPercent";
 
 export default function StockTickChart({
   tickDeals,

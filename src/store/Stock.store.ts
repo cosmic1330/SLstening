@@ -28,6 +28,7 @@ interface StocksState {
     categoryId: string,
     stockId: string,
   ) => Promise<void>;
+  updateCategories: (categories: CategoryType[]) => Promise<void>;
 }
 
 const useStocksStore = create<StocksState>((set, get) => ({
@@ -205,6 +206,12 @@ const useStocksStore = create<StocksState>((set, get) => ({
     await store.set("categories", updatedCategories);
     await store.save();
     set({ categories: updatedCategories });
+  },
+  updateCategories: async (categories: CategoryType[]) => {
+    const store = await Store.load("settings.json");
+    await store.set("categories", categories);
+    await store.save();
+    set({ categories });
   },
 }));
 

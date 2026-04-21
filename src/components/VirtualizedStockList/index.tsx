@@ -1,6 +1,6 @@
 import { Box, Grid, useMediaQuery, useTheme } from "@mui/material";
 import React, { forwardRef, memo, useMemo, useRef, useState } from "react";
-import { FixedSizeList as List } from "react-window";
+import { VariableSizeList as List } from "react-window";
 import { StockStoreType } from "../../types";
 import LazyStockBox from "../StockBox/LazyStockBox";
 
@@ -29,7 +29,6 @@ const VirtualScrollContext = React.createContext<{
  */
 const OuterElement = forwardRef<HTMLDivElement, any>(
   ({ children, style, ...rest }, ref) => {
-    const { header, headerRef } = React.useContext(VirtualScrollContext);
     return (
       <div
         ref={ref}
@@ -42,9 +41,6 @@ const OuterElement = forwardRef<HTMLDivElement, any>(
         }}
         {...rest}
       >
-        <div ref={headerRef} style={{ width: "100%" }}>
-          {header}
-        </div>
         {children}
       </div>
     );
@@ -84,11 +80,27 @@ const StockRow = memo(
     data: {
       stocks: StockStoreType[];
       columns: number;
+      header: React.ReactNode;
+      headerRef: (node: HTMLDivElement | null) => void;
       renderItem?: (stock: StockStoreType) => React.ReactNode;
     };
   }) => {
-    const { stocks, columns, renderItem } = data;
-    const startIndex = index * columns;
+    const { stocks, columns, renderItem, header, headerRef } = data;
+
+    // Index 0 是 Header
+    if (index === 0 && header) {
+      return (
+        <Box style={style}>
+          <div ref={headerRef} style={{ width: "100%" }}>
+            {header}
+          </div>
+        </Box>
+      );
+    }
+
+    // 計算股票索引，需扣除 Header 佔用的 index 0
+    const realRowIndex = header ? index - 1 : index;
+    const startIndex = realRowIndex * columns;
     const rowStocks = [];
 
     for (let i = 0; i < columns; i++) {
@@ -135,18 +147,23 @@ export default function VirtualizedStockList({
   const theme = useTheme();
   const [headerHeight, setHeaderHeight] = useState(0);
   const observerRef = useRef<ResizeObserver | null>(null);
+  const listRef = useRef<List>(null);
 
   const headerRef = React.useCallback((node: HTMLDivElement | null) => {
     if (observerRef.current) observerRef.current.disconnect();
     if (node) {
       const observer = new ResizeObserver((entries) => {
         const h = entries[0]?.contentRect.height || 0;
-        setHeaderHeight(h);
+        if (h !== headerHeight) {
+          setHeaderHeight(h);
+          // 當 Header 高度改變時，重置 VariableSizeList 的快取
+          listRef.current?.resetAfterIndex(0);
+        }
       });
       observer.observe(node);
       observerRef.current = observer;
     }
-  }, []);
+  }, [headerHeight]);
 
   const isSm = useMediaQuery(theme.breakpoints.up("sm"));
   const isMd = useMediaQuery(theme.breakpoints.up("md"));
@@ -158,14 +175,27 @@ export default function VirtualizedStockList({
   }, [isMd, isSm]);
 
   const rowCount = Math.ceil((stocks?.length || 0) / columns);
+  const itemCount = header ? rowCount + 1 : rowCount;
+
+  const getItemSize = React.useCallback(
+    (index: number) => {
+      if (index === 0 && header) {
+        return headerHeight || 50; // 給個預設值避免計算錯誤
+      }
+      return itemHeight;
+    },
+    [header, headerHeight, itemHeight],
+  );
 
   const itemData = useMemo(
     () => ({
       stocks,
       columns,
       renderItem,
+      header,
+      headerRef,
     }),
-    [stocks, columns, renderItem],
+    [stocks, columns, renderItem, header, headerRef],
   );
 
   const contextValue = useMemo(
@@ -182,10 +212,11 @@ export default function VirtualizedStockList({
   return (
     <VirtualScrollContext.Provider value={contextValue}>
       <List
+        ref={listRef}
         height={safeHeight}
         width={width}
-        itemCount={rowCount}
-        itemSize={itemHeight}
+        itemCount={itemCount}
+        itemSize={getItemSize}
         itemData={itemData}
         outerElementType={OuterElement}
         innerElementType={InnerElement}

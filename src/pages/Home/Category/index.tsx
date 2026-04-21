@@ -16,6 +16,7 @@ export default function Category() {
     renameCategory,
     addStockToCategory,
     removeStockFromCategory,
+    updateCategories,
   } = useStocksStore();
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -50,6 +51,7 @@ export default function Category() {
         onSelect={setActiveId}
         onAddClick={() => setIsAddCatOpen(true)}
         onManageClick={() => setIsManageOpen(true)}
+        onReorder={updateCategories}
       />
 
       {currentCategory && (

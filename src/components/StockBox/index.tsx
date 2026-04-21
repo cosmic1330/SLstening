@@ -349,15 +349,16 @@ export default function StockBox({
         </Box>
       </Box>
 
-      {/* Footer Chart - Thinner */}
+      {/* Footer Chart - Enhanced Visibility */}
       <Box
         sx={{
-          height: 40,
+          height: 64,
           mt: "auto",
-          background: "rgba(255,255,255,0.02)",
+          background: "rgba(255,255,255,0.03)",
           position: "relative",
           display: "flex",
           alignItems: "flex-end",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
         }}
       >
         {tickDeals ? (

@@ -17,39 +17,20 @@ export default function StockTickChart({
 }) {
   const data = useMemo(() => {
     const res = [];
-    try {
-      const currentProgress = getTimeProgressPercent(tickDeals.ts);
+    const baseCount = 270; // Fixed 270 minutes for Taiwan stock market (09:00-13:30)
+    const totalCount = Math.max(baseCount, tickDeals.closes.length);
 
-      if (currentProgress <= 0 || tickDeals.closes.length === 0) {
-        return tickDeals.closes.map((close, i) => ({
-          close,
-          avgPrice: tickDeals.avgPrices[i],
-        }));
+    for (let i = 0; i < totalCount; i++) {
+      if (i < tickDeals.closes.length) {
+        const close = tickDeals.closes[i];
+        const avgPrice = tickDeals.avgPrices[i];
+        res.push({ close, avgPrice });
+      } else {
+        res.push({ close: null, avgPrice: null });
       }
-
-      let totalCount = Math.ceil(
-        tickDeals.closes.length / (currentProgress / 100),
-      );
-
-      // Limit totalCount to prevent crashes if currentProgress is very small
-      if (!Number.isFinite(totalCount) || totalCount > 1000) {
-        totalCount = Math.max(tickDeals.closes.length, 270);
-      }
-
-      for (let i = 0; i < totalCount; i++) {
-        if (tickDeals.closes[i]) {
-          const close = tickDeals.closes[i];
-          const avgPrice = tickDeals.avgPrices[i];
-          res.push({ close, avgPrice });
-        } else {
-          res.push({ close: null, avgPrice: null });
-        }
-      }
-    } catch (error) {
-      console.error("Error in data calculation:", error);
     }
     return res;
-  }, [tickDeals]);
+  }, [tickDeals.closes, tickDeals.avgPrices]);
 
   const isUp = useMemo(() => {
     if (tickDeals.closes.length < 1) return true;

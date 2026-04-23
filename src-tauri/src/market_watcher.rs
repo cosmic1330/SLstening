@@ -36,7 +36,7 @@ pub enum MarketEvent {
 pub struct MarketManager {
     // 使用 DashSet 提供線程安全的訂閱管理
     pub active_symbols: Arc<DashSet<String>>,
-    // 記錄最後一次被封鎖的時間 (Atomic 或 Mutex)
+    // 記錄最後一次被封鎖的時間
     pub last_blocked_at: std::sync::Mutex<Option<std::time::Instant>>,
 }
 
@@ -45,23 +45,6 @@ impl MarketManager {
         Self {
             active_symbols: Arc::new(DashSet::new()),
             last_blocked_at: std::sync::Mutex::new(None),
-        }
-    }
-
-    /// 檢查是否處於封鎖冷卻期 (5 分鐘)
-    pub fn is_in_cooldown(&self) -> bool {
-        if let Ok(last) = self.last_blocked_at.lock() {
-            if let Some(instant) = *last {
-                return instant.elapsed() < Duration::from_secs(300); // 5 分鐘
-            }
-        }
-        false
-    }
-
-    /// 標記進入冷卻期
-    pub fn enter_cooldown(&self) {
-        if let Ok(mut last) = self.last_blocked_at.lock() {
-            *last = Some(std::time::Instant::now());
         }
     }
 
@@ -76,6 +59,23 @@ impl MarketManager {
     pub fn get_active_symbols(&self) -> Vec<String> {
         self.active_symbols.iter().map(|s| s.clone()).collect()
     }
+
+    /// 檢查是否處於封鎖冷卻期 (5 分鐘)
+    pub fn is_in_cooldown(&self) -> bool {
+        if let Ok(last) = self.last_blocked_at.lock() {
+            if let Some(instant) = *last {
+                return instant.elapsed() < Duration::from_secs(300);
+            }
+        }
+        false
+    }
+
+    /// 標記進入冷卻期
+    pub fn enter_cooldown(&self) {
+        if let Ok(mut last) = self.last_blocked_at.lock() {
+            *last = Some(std::time::Instant::now());
+        }
+    }
 }
 
 pub fn init(app: AppHandle) -> Arc<MarketManager> {
@@ -83,7 +83,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
     let manager_clone = Arc::clone(&manager);
     let app_clone = app.clone();
 
-    // 啟動即時報價輪詢 (Tick) - 每 20 秒
+    // 啟動即時報價輪詢 (Tick) - 每 30 秒
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
@@ -100,19 +100,22 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 continue;
             }
 
-            // 分類：台灣股票與全球指數
-            let mut tw_stocks = Vec::new();
+            // 分類：需要單獨處理的全球指數 vs 可以批量處理的台灣股票/指數
+            let mut tw_batch = Vec::new();
             let mut other_indices = Vec::new();
 
             for s in symbols {
-                if s.contains("^") || s.contains("=") {
+                // 加權與櫃買指數在台灣 API 更準，歸類到 tw_batch
+                if s == "^TWII" || s == "^TWOII" {
+                    tw_batch.push(s);
+                } else if s.contains("^") || s.contains("=") {
                     other_indices.push(s);
                 } else {
-                    tw_stocks.push(s);
+                    tw_batch.push(s);
                 }
             }
 
-            // 1. 處理全球指數 (單獨請求，因為 API 不同)
+            // 1. 處理全球指數 (單獨請求)
             for symbol in other_indices {
                 log::info!("Updating market index: {}", symbol);
                 let app_handle = app_clone.clone();
@@ -133,8 +136,8 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
 
-            // 2. 處理台灣股票 (批量請求，每 5 檔一組)
-            for chunk in tw_stocks.chunks(5) {
+            // 2. 處理台灣股票/指數 (批量請求，每 5 檔一組)
+            for chunk in tw_batch.chunks(5) {
                 log::info!("Fetching batch of {} symbols: {:?}", chunk.len(), chunk);
                 let app_handle = app_clone.clone();
                 match fetch_ticks_batched(chunk).await {
@@ -151,7 +154,6 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                         log::error!("Failed to fetch batch {:?}: {:?}", chunk, e);
                     },
                 }
-                // 批次間隔，避免突發流量
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
         }
@@ -165,13 +167,15 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         return Ok(Vec::new());
     }
 
-    // 如果只有一個且是全球指數，走全球 API
-    let is_global = symbols.len() == 1 && (symbols[0].contains("^") || symbols[0].contains("="));
+    // 判斷是否為「非台灣」的全球指數
+    let is_global_index = symbols.len() == 1 && 
+        (symbols[0].contains("^") || symbols[0].contains("=")) && 
+        symbols[0] != "^TWII" && symbols[0] != "^TWOII";
     
-    let url = if is_global {
+    let url = if is_global_index {
         format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d", symbols[0])
     } else {
-        // 台灣股票批量 API
+        // 台灣股票/指數批量 API
         let symbols_str = symbols.iter()
             .map(|s| format!("\"{}\"", s))
             .collect::<Vec<_>>()
@@ -190,12 +194,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         .await
         .map_err(|e| AppError::Unknown(e.to_string()))?;
 
-    // 檢查是否被封鎖 (429 Too Many Requests 或 403 Forbidden)
     if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS || res.status() == reqwest::StatusCode::FORBIDDEN {
-        log::warn!("Yahoo API blocked our request (Status: {})", res.status());
-        // 通知前端顯示提示，這裡我們需要 AppHandle
-        // 注意：這裡 fetch_ticks_batched 沒有 AppHandle，我們可以在調用處處理，
-        // 或者直接讓它返回特定的錯誤。
         return Err(AppError::Unknown("API_BLOCKED".to_string()));
     }
 
@@ -204,13 +203,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         .map_err(|e| AppError::Serialization(e.to_string()))?;
     
     let mut results = Vec::new();
-
-    // 處理回傳數據 (可能是 Array 或單一 Object)
-    let items = if v.is_array() {
-        v.as_array().unwrap().clone()
-    } else {
-        vec![v]
-    };
+    let items = if v.is_array() { v.as_array().unwrap().clone() } else { vec![v] };
 
     for item in items {
         let chart = &item["chart"];
@@ -226,20 +219,13 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let indicators = &result_node["indicators"]["quote"][0];
         let yahoo_symbol = meta["symbol"].as_str().unwrap_or("unknown").to_string();
 
-        // ID 匹配邏輯：尋找這筆數據是對應到哪一個請求的代碼
-        // 例如：請求 "6274"，Yahoo 回傳 "6274.TWO"，我們應發送 "6274" 給前端
+        // ID 匹配邏輯
         let matched_id = symbols.iter()
             .find(|&s| yahoo_symbol.starts_with(s) || s.starts_with(&yahoo_symbol))
             .cloned()
             .unwrap_or(yahoo_symbol);
 
-        let quote = if !chart["quote"].is_null() {
-            &chart["quote"]
-        } else if !result_node["quote"].is_null() {
-            &result_node["quote"]
-        } else {
-            meta
-        };
+        let quote = if !chart["quote"].is_null() { &chart["quote"] } else if !result_node["quote"].is_null() { &result_node["quote"] } else { meta };
 
         let price = meta["regularMarketPrice"].as_f64()
             .or_else(|| meta["price"].as_f64())
@@ -253,31 +239,19 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let change_percent = if previous_close != 0.0 {
             ((price - previous_close) / previous_close) * 100.0
         } else {
-            meta["regularMarketChangePercent"].as_f64()
-                .or_else(|| meta["changePercent"].as_f64())
-                .or_else(|| quote["changePercent"].as_f64())
-                .unwrap_or(0.0)
+            meta["regularMarketChangePercent"].as_f64().unwrap_or(0.0)
         };
         let change_percent = (change_percent * 100.0).round() / 100.0;
 
         let refreshed_ts = meta["regularMarketTime"].as_i64()
             .or_else(|| quote["refreshedTs"].as_i64())
-            .or_else(|| meta["refreshedTs"].as_i64())
             .unwrap_or(0);
         
-        let closes: Vec<f64> = indicators["close"].as_array()
-            .map(|a| a.iter().filter_map(|v| v.as_f64()).collect())
-            .unwrap_or_default();
-        
-        let highs: Vec<f64> = indicators["high"].as_array()
-            .map(|a| a.iter().filter_map(|v| v.as_f64()).collect())
-            .unwrap_or_default();
+        let closes: Vec<f64> = indicators["close"].as_array().map(|a| a.iter().filter_map(|v| v.as_f64()).collect()).unwrap_or_default();
+        let highs: Vec<f64> = indicators["high"].as_array().map(|a| a.iter().filter_map(|v| v.as_f64()).collect()).unwrap_or_default();
             
         let mut pre = 0.0;
-        let avg_prices: Vec<f64> = highs.iter().enumerate().map(|(i, &h)| {
-            pre += h;
-            pre / (i + 1) as f64
-        }).collect();
+        let avg_prices: Vec<f64> = highs.iter().enumerate().map(|(i, &h)| { pre += h; pre / (i + 1) as f64 }).collect();
 
         results.push(MarketTick {
             id: matched_id,

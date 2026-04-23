@@ -16,11 +16,16 @@ export default function useMarketSubscriber(
     const shouldSubscribe = enabled && isVisible;
 
     if (shouldSubscribe) {
-      invoke("subscribe_stock", { symbol: id }).catch((err) => {
-        console.error(`Failed to subscribe to ${id}:`, err);
-      });
+      // 加入 500ms 防抖，避免快速滑過時產生大量請求
+      const timer = setTimeout(() => {
+        console.log(`[Subscriber] Subscribing to: ${id}`);
+        invoke("subscribe_stock", { symbol: id }).catch((err) => {
+          console.error(`Failed to subscribe to ${id}:`, err);
+        });
+      }, 1500);
 
       return () => {
+        clearTimeout(timer);
         invoke("unsubscribe_stock", { symbol: id }).catch((err) => {
           console.error(`Failed to unsubscribe from ${id}:`, err);
         });

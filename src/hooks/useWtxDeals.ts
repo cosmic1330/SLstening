@@ -34,7 +34,7 @@ export default function useWtxDeals(isVisible: boolean = true) {
     },
     {
       isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (checkTimeRange() ? 10000 : 0),
+      refreshInterval: () => (checkTimeRange() ? 30000 : 0),
     },
   );
 

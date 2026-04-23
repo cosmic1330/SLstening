@@ -5,10 +5,12 @@ import {
   Grid,
   Stack,
   Typography,
+  Alert,
+  Snackbar,
 } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { info } from "@tauri-apps/plugin-log";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { STOCK_BOX_HEIGHT } from "../../../components/StockBox";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import useWindowSize from "../../../hooks/useWindowSize";
@@ -180,6 +182,22 @@ function List() {
   const { stocks = [], reload } = useStocksStore();
   const visibility = useShowMarketInfo();
   const { height: windowHeight } = useWindowSize();
+  const [isBlocked, setIsBlocked] = useState(false);
+
+  useEffect(() => {
+    const setupApiBlockedListener = async () => {
+      const unlisten = await listen("api-blocked", () => {
+        setIsBlocked(true);
+      });
+      return unlisten;
+    };
+
+    let unlistenPromise = setupApiBlockedListener();
+
+    return () => {
+      unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
 
   useEffect(() => {
     let unlistenadd: (() => void) | null = null;
@@ -252,6 +270,22 @@ function List() {
           header={dashboardHeader}
         />
       </Box>
+
+      <Snackbar
+        open={isBlocked}
+        autoHideDuration={6000}
+        onClose={() => setIsBlocked(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setIsBlocked(false)}
+          severity="error"
+          variant="filled"
+          sx={{ width: "100%", fontWeight: 700 }}
+        >
+          Yahoo API 暫時限制連線 (冷卻中)，請稍候再試
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }

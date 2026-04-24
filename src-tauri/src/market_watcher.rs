@@ -12,10 +12,12 @@ pub struct MarketTick {
     pub id: String,
     pub price: f64,
     pub change_percent: f64,
+    #[ts(type = "number")]
     pub refreshed_ts: i64,
     pub closes: Vec<f64>,
     pub avg_prices: Vec<f64>,
     pub previous_close: f64,
+    #[ts(type = "number[]")]
     pub timestamps: Vec<i64>,
 }
 

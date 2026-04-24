@@ -405,6 +405,7 @@ export default function Bollean({
       { key: "deduction20", color: "#ff9800", period: settings.ma20 },
       { key: "deduction60", color: "#f44336", period: settings.ma60 },
       { key: "deduction120", color: "#4caf50", period: settings.ma120 },
+      { key: "deduction240", color: "#cc00ff", period: settings.ma240 },
     ];
 
     maConfigs.forEach((config) => {
@@ -651,23 +652,23 @@ export default function Bollean({
             <Line
               dataKey="bollMa"
               stroke="#2196f3"
-              strokeWidth={1.5}
+              strokeWidth={1}
               dot={false}
               activeDot={false}
               name={`${settings.boll} MA (Mid)`}
             />
             <Line
               dataKey="bollUb"
-              stroke="#ff9800"
-              strokeDasharray="3 3"
+              stroke="#00bcd4"
+              strokeWidth={1.7}
               dot={false}
               activeDot={false}
               name="Upper Band"
             />
             <Line
               dataKey="bollLb"
-              stroke="#ff9800"
-              strokeDasharray="3 3"
+              stroke="#00bcd4"
+              strokeWidth={1.7}
               dot={false}
               activeDot={false}
               name="Lower Band"
@@ -678,7 +679,7 @@ export default function Bollean({
               <>
                 <Line
                   dataKey="channelUb"
-                  stroke="#00bcd4"
+                  stroke="#ff9800"
                   strokeWidth={2}
                   dot={false}
                   activeDot={false}
@@ -686,7 +687,7 @@ export default function Bollean({
                 />
                 <Line
                   dataKey="channelLb"
-                  stroke="#00bcd4"
+                  stroke="#ff9800"
                   strokeWidth={2}
                   dot={false}
                   activeDot={false}

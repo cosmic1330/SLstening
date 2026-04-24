@@ -33,7 +33,8 @@ export default function useMarketWatcher() {
             ts: payload.refreshed_ts,
             closes: payload.closes,
             avgPrices: payload.avg_prices,
-            previousClose: payload.previous_close, // Updated to use the value from Rust
+            previousClose: payload.previous_close,
+            timestamps: payload.timestamps,
           };
           updateTick(tick);
         } else if (type === "Indicators") {

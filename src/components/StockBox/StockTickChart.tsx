@@ -1,5 +1,5 @@
 import { Box } from "@mui/material";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -9,41 +9,65 @@ import {
 } from "recharts";
 import { TickDealsType } from "../../types";
 
-export default function StockTickChart({
+const StockTickChart = React.memo(function StockTickChart({
   tickDeals,
 }: {
   tickDeals: TickDealsType;
 }) {
   const data = useMemo(() => {
-    const res = [];
-    const baseCount = 270; // Fixed 270 minutes for Taiwan stock market (09:00-13:30)
-    const totalCount = Math.max(baseCount, tickDeals.closes.length);
+    const baseCount = 271; // 09:00 to 13:30 inclusive = 271 minutes
+    const res: { close: number | null; avgPrice: number | null }[] = new Array(
+      baseCount,
+    );
 
-    for (let i = 0; i < totalCount; i++) {
-      if (i < tickDeals.closes.length) {
-        const close = tickDeals.closes[i];
-        const avgPrice = tickDeals.avgPrices[i];
-        res.push({ close, avgPrice });
-      } else {
-        res.push({ close: null, avgPrice: null });
+    // 預先填充以提高效能
+    for (let i = 0; i < baseCount; i++) {
+      res[i] = { close: null, avgPrice: null };
+    }
+
+    if (!tickDeals.timestamps || tickDeals.timestamps.length === 0) return res;
+
+    const lastTs = tickDeals.timestamps[tickDeals.timestamps.length - 1];
+    const lastDate = new Date(lastTs * 1000);
+    const startOfDayTs =
+      Date.UTC(
+        lastDate.getUTCFullYear(),
+        lastDate.getUTCMonth(),
+        lastDate.getUTCDate(),
+        1, // 01:00 UTC = 09:00 Taipei
+        0,
+        0,
+      ) / 1000;
+
+    const { closes, avgPrices, timestamps } = tickDeals;
+
+    for (let i = 0; i < closes.length; i++) {
+      const ts = timestamps[i];
+      if (!ts) continue;
+
+      const minuteIndex = Math.floor((ts - startOfDayTs) / 60);
+      if (minuteIndex >= 0 && minuteIndex < baseCount) {
+        res[minuteIndex].close = closes[i];
+        res[minuteIndex].avgPrice = avgPrices[i] || null;
       }
     }
+
     return res;
-  }, [tickDeals.closes, tickDeals.avgPrices]);
+  }, [tickDeals.closes, tickDeals.avgPrices, tickDeals.timestamps]);
 
   const isUp = useMemo(() => {
-    if (tickDeals.closes.length < 1) return true;
     return tickDeals.price >= tickDeals.previousClose;
-  }, [tickDeals]);
+  }, [tickDeals.price, tickDeals.previousClose]);
 
   const mainColor = isUp ? "#ff5252" : "#69f0ae";
+  const gradientId = `gradient-${tickDeals.id}`;
 
   return (
     <Box height={64} sx={{ width: "100%", opacity: 0.8 }}>
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <defs>
-            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={mainColor} stopOpacity={0.15} />
               <stop offset="95%" stopColor={mainColor} stopOpacity={0} />
             </linearGradient>
@@ -52,17 +76,17 @@ export default function StockTickChart({
             domain={([dataMin, dataMax]) => {
               if (!Number.isFinite(tickDeals.previousClose))
                 return [dataMin, dataMax];
-              return [
-                Math.min(dataMin, tickDeals.previousClose),
-                Math.max(dataMax, tickDeals.previousClose),
-              ];
+              const min = Math.min(dataMin, tickDeals.previousClose);
+              const max = Math.max(dataMax, tickDeals.previousClose);
+              const padding = (max - min) * 0.1 || 0.1;
+              return [min - padding, max + padding];
             }}
             hide
           />
           {Number.isFinite(tickDeals.previousClose) && (
             <ReferenceLine
               y={tickDeals.previousClose}
-              stroke="rgba(255,255,255,0.5)"
+              stroke="rgba(255,255,255,0.3)"
               strokeDasharray="3 3"
               strokeWidth={1}
             />
@@ -73,21 +97,25 @@ export default function StockTickChart({
             stroke={mainColor}
             strokeWidth={2}
             fillOpacity={1}
-            fill="url(#areaGradient)"
+            fill={`url(#${gradientId})`}
             dot={false}
             isAnimationActive={false}
+            connectNulls={true}
           />
           <Area
             type="monotone"
             dataKey="avgPrice"
-            stroke="#ffffff"
+            stroke="rgba(255,255,255,0.6)"
             strokeWidth={1}
             fill="transparent"
             dot={false}
             isAnimationActive={false}
+            connectNulls={true}
           />
         </AreaChart>
       </ResponsiveContainer>
     </Box>
   );
-}
+});
+
+export default StockTickChart;

@@ -16,6 +16,7 @@ pub struct MarketTick {
     pub closes: Vec<f64>,
     pub avg_prices: Vec<f64>,
     pub previous_close: f64,
+    pub timestamps: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -246,9 +247,24 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let refreshed_ts = meta["regularMarketTime"].as_i64()
             .or_else(|| quote["refreshedTs"].as_i64())
             .unwrap_or(0);
-        
-        let closes: Vec<f64> = indicators["close"].as_array().map(|a| a.iter().filter_map(|v| v.as_f64()).collect()).unwrap_or_default();
-        let highs: Vec<f64> = indicators["high"].as_array().map(|a| a.iter().filter_map(|v| v.as_f64()).collect()).unwrap_or_default();
+
+        let timestamps_raw = result_node["timestamp"].as_array();
+        let closes_raw = indicators["close"].as_array();
+        let highs_raw = indicators["high"].as_array();
+
+        let mut timestamps = Vec::new();
+        let mut closes = Vec::new();
+        let mut highs = Vec::new();
+
+        if let (Some(ts_arr), Some(cl_arr), Some(hi_arr)) = (timestamps_raw, closes_raw, highs_raw) {
+            for ((ts_val, cl_val), hi_val) in ts_arr.iter().zip(cl_arr.iter()).zip(hi_arr.iter()) {
+                if let (Some(ts), Some(cl), Some(hi)) = (ts_val.as_i64(), cl_val.as_f64(), hi_val.as_f64()) {
+                    timestamps.push(ts);
+                    closes.push(cl);
+                    highs.push(hi);
+                }
+            }
+        }
             
         let mut pre = 0.0;
         let avg_prices: Vec<f64> = highs.iter().enumerate().map(|(i, &h)| { pre += h; pre / (i + 1) as f64 }).collect();
@@ -261,6 +277,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
             closes,
             avg_prices,
             previous_close,
+            timestamps,
         });
     }
 

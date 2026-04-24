@@ -11,6 +11,7 @@
 | REQ-012 | 修復 Nasdaq K-線數值異常：優化 Yahoo API 資料過濾與計算邏輯 | Completed | 2026-03-23 | - | v1: 原始需求 | 解決 Nasdaq 頁面顯示異常的問題 |
 | REQ-013 | 登入頁面 UI 與配色全面重新設計 | In-Progress | 2026-03-27 | - | v1: 原始需求 | 提升首頁的 Premium 視覺質感 |
 | REQ-014 | 實現分類列表拖拉排序 (Drag-and-Drop) | Completed | 2026-04-21 | - | v1: 原始需求 | 增加使用者管理自選清單的靈活性 |
+| REQ-015 | 優化 StockTickChart：實現基於時間 (09:00-13:30) 的固定長度切分 | Completed | 2026-04-24 | - | v1: 原始需求 | 確保即時圖表能準確反映交易時段進度 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

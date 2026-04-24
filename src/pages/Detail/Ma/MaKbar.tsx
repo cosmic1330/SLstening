@@ -254,6 +254,12 @@ export default function MaKbar({
         color: "#4caf50",
         label: `MA${settings.ma120}扣抵`,
       },
+      {
+        key: "ma240",
+        deductionKey: "deduction240",
+        color: "#cc00ff",
+        label: `MA${settings.ma240}扣抵`,
+      },
     ];
 
     maConfigs.forEach((config) => {

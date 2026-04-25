@@ -21,6 +21,8 @@ export interface IndicatorSettings {
   atrVolSwitch: number;
   fastLookback: number;
   trendFilter: number;
+  kcLength: number;
+  kcMult: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -44,6 +46,8 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   atrVolSwitch: 1,
   fastLookback: 10,
   trendFilter: 50,
+  kcLength: 20,
+  kcMult: 2.0,
 };
 
 export default function useIndicatorSettings() {

@@ -55,6 +55,10 @@ export interface EnhancedDealData {
   direction: number | null;
   buySignal: number | null;
   exitSignal: number | null;
+  kcMiddle: number | null;
+  kcLower: number | null;
+  kcDynamicStop: number | null;
+  kcExitSignal: number | null;
   trend: string;
 }
 
@@ -99,12 +103,16 @@ export function calculateIndicators(
   // Volume filter state
   const volSeries: number[] = [];
 
-  // V7 Strategy state
   let ema50Data = emaTool.init(deals[0], settings.trendFilter || 50);
   let isLong = false;
   let trailStop = 0;
   const highSeries: number[] = [];
   const closeSeriesForHma: number[] = []; // Renamed to avoid confusion
+
+  // Keltner Channel (KC) state
+  let kcEmaData = emaTool.init(deals[0], settings.kcLength || 20);
+  let prevKcAtr = 0;
+  let kcDynamicStop: number | null = null;
 
   return deals.map((deal, i) => {
     if (i > 0) {
@@ -287,10 +295,41 @@ export function calculateIndicators(
     volSeries.push(deal.v);
     if (volSeries.length > 5) volSeries.shift();
     const volAvg = volSeries.reduce((a, b) => a + b, 0) / volSeries.length;
-    const volFilter = deal.v > volAvg;
+    const volFilter = deal.v > volAvg * 1.5;
 
     let buySignal = null;
     let exitSignal = null;
+
+    // --- Keltner Channel (KC) Ratchet Logic ---
+    if (i > 0) {
+      kcEmaData = emaTool.next(deal, kcEmaData, settings.kcLength || 20);
+    }
+    const kcMiddle = kcEmaData.ema;
+    
+    // Calculate KC ATR (using 10 as per Pinescript, or settings.atrLen)
+    // Note: Pinescript ta.atr uses RMA (Running Moving Average)
+    const kcAtrLen = 10; // As per the provided Pinescript
+    let kcAtr = tr;
+    if (i === 0) {
+      kcAtr = tr;
+    } else if (i < kcAtrLen) {
+      kcAtr = (prevKcAtr * i + tr) / (i + 1);
+    } else {
+      kcAtr = (prevKcAtr * (kcAtrLen - 1) + tr) / kcAtrLen;
+    }
+    prevKcAtr = kcAtr;
+
+    const kcLower = kcMiddle - (kcAtr * (settings.kcMult || 2.0));
+    
+    // Ratchet logic: Only move up
+    const currentKcLower = kcLower;
+    const prevKcDynamicStop = kcDynamicStop;
+    kcDynamicStop = Math.max(currentKcLower, kcDynamicStop || currentKcLower);
+
+    let kcExitSignal = null;
+    if (i > 0 && deals[i-1].c >= (prevKcDynamicStop || 0) && deal.c < (kcDynamicStop || 0)) {
+      kcExitSignal = deal.h * 1.01;
+    }
 
     // --- V7 Entry/Exit Logic ---
     let currentBarTrailStop = isLong ? trailStop : null;
@@ -365,6 +404,10 @@ export function calculateIndicators(
       direction,
       buySignal,
       exitSignal,
+      kcMiddle,
+      kcLower,
+      kcDynamicStop,
+      kcExitSignal,
       trend,
     };
   });

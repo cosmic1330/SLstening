@@ -57,6 +57,9 @@ interface BolleanChartData extends Partial<{
   exitReason?: string;
   channelUb?: number | null;
   channelLb?: number | null;
+  kcDynamicStop?: number | null;
+  kcExitSignal?: number | null;
+  kcMiddle?: number | null;
 }
 
 
@@ -110,6 +113,18 @@ const ExitArrow = (props: any) => {
   );
 };
 
+const KcXMarker = (props: any) => {
+  const { cx, cy } = props;
+  if (!cx || !cy) return null;
+  return (
+    <g>
+      <line x1={cx - 5} y1={cy - 5} x2={cx + 5} y2={cy + 5} stroke="#ff1744" strokeWidth={3} />
+      <line x1={cx + 5} y1={cy - 5} x2={cx - 5} y2={cy + 5} stroke="#ff1744" strokeWidth={3} />
+      <text x={cx} y={cy - 12} textAnchor="middle" fill="#ff1744" fontSize="10px" fontWeight="bold">跌破</text>
+    </g>
+  );
+};
+
 export default function Bollean({
   visibleCount,
   setVisibleCount,
@@ -124,6 +139,7 @@ export default function Bollean({
   const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
+  const [showKc, setShowKc] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const [lockedInfo, setLockedInfo] = useState<{
     slope: number;
@@ -309,6 +325,8 @@ export default function Bollean({
       // Include Bollinger Bands
       if (d.bollUb != null && d.bollUb > max) max = d.bollUb;
       if (d.bollLb != null && d.bollLb < min) min = d.bollLb;
+      if (d.kcDynamicStop != null && d.kcDynamicStop < min) min = d.kcDynamicStop;
+      if (d.kcDynamicStop != null && d.kcDynamicStop > max) max = d.kcDynamicStop;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -500,6 +518,25 @@ export default function Bollean({
                 }
               }}
             />
+            <Chip
+              icon={showKc ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
+              label="動態防線"
+              size="small"
+              onClick={() => setShowKc(!showKc)}
+              variant={showKc ? "filled" : "outlined"}
+              color={showKc ? "warning" : "default"}
+              sx={{
+                height: 24,
+                fontSize: "0.75rem",
+                fontWeight: showKc ? "bold" : "normal",
+                transition: "all 0.2s",
+                borderColor: showKc ? "warning.main" : "#444",
+                "&:hover": {
+                  transform: "translateY(-1px)",
+                  boxShadow: showKc ? "0 2px 8px rgba(255, 152, 0, 0.3)" : "none",
+                }
+              }}
+            />
             {showChannel && (
               <Chip
                 icon={isLocked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
@@ -598,7 +635,7 @@ export default function Bollean({
             />
 
             <Tooltip
-              content={<ChartTooltip hideKeys={["buySignal", "exitSignal"]} />}
+              content={<ChartTooltip hideKeys={["buySignal", "exitSignal", "kcExitSignal"]} />}
               offset={50}
             />
 
@@ -692,6 +729,25 @@ export default function Bollean({
                   dot={false}
                   activeDot={false}
                   name="Channel Lower"
+                />
+              </>
+            )}
+
+            {/* KC Dynamic Defense Line */}
+            {showKc && (
+              <>
+                <Line
+                  dataKey="kcDynamicStop"
+                  stroke="#ff9800"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  name="動態防線"
+                />
+                <Scatter
+                  dataKey="kcExitSignal"
+                  shape={<KcXMarker />}
+                  legendType="none"
                 />
               </>
             )}

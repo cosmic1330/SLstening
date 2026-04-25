@@ -260,11 +260,6 @@ export function calculateIndicators(
     const ema50 = ema50Data.ema;
 
     // Highest High of previous N days
-    const fastLookback = settings.fastLookback || 10;
-    let recentHigh = null;
-    if (highSeries.length >= fastLookback) {
-      recentHigh = Math.max(...highSeries.slice(-fastLookback));
-    }
     highSeries.push(deal.h);
 
     // ... existing ATR calculation is actually RMA, which is standard for Pinescript ta.atr
@@ -317,7 +312,6 @@ export function calculateIndicators(
     let currentBarTrailStop = ema30;
 
     if (i > 0) {
-
       // --- Supertrend 交叉信號邏輯 ---
       if (i > 0) {
         // 進場：價格站上 Supertrend (由空轉多)

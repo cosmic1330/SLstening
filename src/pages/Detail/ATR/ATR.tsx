@@ -1,19 +1,12 @@
-import SettingsIcon from "@mui/icons-material/Settings";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   Box,
-  Chip,
   CircularProgress,
   Container,
-  IconButton,
-  Menu,
   Tooltip as MuiTooltip,
-  Slider,
   Stack,
   Typography,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef } from "react";
 import { useParams } from "react-router";
 import {
   Bar,
@@ -294,7 +287,6 @@ export default function ATR({
               name="成交量"
               barSize={8}
             />
-
 
             <Line
               dataKey="supertrend"

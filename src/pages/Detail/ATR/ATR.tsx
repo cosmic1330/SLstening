@@ -91,10 +91,8 @@ export default function ATR({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings, updateSetting } = useIndicatorSettings();
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
-  const [showSuperTrend, setShowSuperTrend] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const { id } = useParams();
 
@@ -183,8 +181,6 @@ export default function ATR({
       if (d.l != null && d.l < min) min = d.l;
       if (d.supertrend != null && d.supertrend > max) max = d.supertrend;
       if (d.supertrend != null && d.supertrend < min) min = d.supertrend;
-      if (d.hma != null && d.hma > max) max = d.hma;
-      if (d.hma != null && d.hma < min) min = d.hma;
       if (d.ema50 != null && d.ema50 > max) max = d.ema50;
       if (d.ema50 != null && d.ema50 < min) min = d.ema50;
       if (d.trailStop != null && d.trailStop > max) max = d.trailStop;
@@ -224,126 +220,9 @@ export default function ATR({
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
-            ATR Trend
+            ATR
           </Typography>
         </MuiTooltip>
-
-        <Box
-          sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}
-        >
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              icon={
-                showSuperTrend ? (
-                  <VisibilityIcon fontSize="small" />
-                ) : (
-                  <VisibilityOffIcon fontSize="small" />
-                )
-              }
-              label="SuperTrend"
-              size="small"
-              onClick={() => setShowSuperTrend(!showSuperTrend)}
-              variant={showSuperTrend ? "filled" : "outlined"}
-              color={showSuperTrend ? "primary" : "default"}
-              sx={{ height: 24, fontSize: "0.75rem" }}
-            />
-            <IconButton
-              size="small"
-              onClick={(e) => setAnchorEl(e.currentTarget)}
-              color="primary"
-              sx={{ p: 0.5 }}
-            >
-              <SettingsIcon fontSize="small" />
-            </IconButton>
-          </Stack>
-        </Box>
-
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={() => setAnchorEl(null)}
-          PaperProps={{
-            sx: {
-              p: 2,
-              width: 250,
-              bgcolor: "rgba(30, 30, 40, 0.9)",
-              backdropFilter: "blur(10px)",
-            },
-          }}
-        >
-          <Typography variant="subtitle2" gutterBottom color="white">
-            策略參數設定
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.7)">
-              HMA 週期: {settings.hmaLength}
-            </Typography>
-            <Slider
-              value={settings.hmaLength}
-              min={5}
-              max={100}
-              step={1}
-              onChange={(_, v) => updateSetting("hmaLength", v as number)}
-              size="small"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.7)">
-              突破週期 (N天): {settings.fastLookback}
-            </Typography>
-            <Slider
-              value={settings.fastLookback}
-              min={3}
-              max={20}
-              step={1}
-              onChange={(_, v) => updateSetting("fastLookback", v as number)}
-              size="small"
-              color="primary"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.7)">
-              ATR 週期: {settings.atrLen}
-            </Typography>
-            <Slider
-              value={settings.atrLen}
-              min={5}
-              max={50}
-              step={1}
-              onChange={(_, v) => updateSetting("atrLen", v as number)}
-              size="small"
-              color="secondary"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.7)">
-              ATR 乘數: {settings.atrMult.toFixed(1)}
-            </Typography>
-            <Slider
-              value={settings.atrMult}
-              min={1.0}
-              max={5.0}
-              step={0.1}
-              onChange={(_, v) => updateSetting("atrMult", v as number)}
-              size="small"
-              color="primary"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.7)">
-              出場成交量過濾: {settings.atrVolSwitch === 1 ? "開啟" : "關閉"}
-            </Typography>
-            <Slider
-              value={settings.atrVolSwitch}
-              min={0}
-              max={1}
-              step={1}
-              onChange={(_, v) => updateSetting("atrVolSwitch", v as number)}
-              size="small"
-              color={settings.atrVolSwitch === 1 ? "success" : "warning"}
-            />
-          </Box>
-        </Menu>
       </Stack>
 
       <Box
@@ -416,35 +295,25 @@ export default function ATR({
               barSize={8}
             />
 
+
             <Line
-              dataKey="hma"
-              stroke="#089299"
-              strokeWidth={1.5}
+              dataKey="supertrend"
+              stroke="rgba(33, 150, 243, 0.8)"
+              strokeWidth={2}
               dot={false}
               activeDot={false}
-              name="HMA"
-              opacity={0.5}
+              name="SuperTrend"
             />
 
-            {showSuperTrend ? (
-              <Line
-                dataKey="supertrend"
-                stroke="rgba(33, 150, 243, 0.8)"
-                strokeWidth={2}
-                dot={false}
-                activeDot={false}
-                name="SuperTrend"
-              />
-            ) : (
-              <Line
-                dataKey="trailStop"
-                stroke="#eda049"
-                strokeWidth={2}
-                dot={false}
-                activeDot={false}
-                name="動態防線"
-              />
-            )}
+            <Line
+              dataKey="trailStop"
+              stroke="#eda049"
+              strokeWidth={1}
+              dot={false}
+              activeDot={false}
+              name="EMA 30"
+              opacity={0.3}
+            />
 
             <Scatter
               dataKey="buySignal"

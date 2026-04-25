@@ -101,10 +101,8 @@ export function calculateIndicators(
   const volSeries: number[] = [];
 
   let ema50Data = emaTool.init(deals[0], settings.trendFilter || 50);
-  let isLong = false;
-  let trailStop = 0;
+  let ema30Data = emaTool.init(deals[0], 30);
   const highSeries: number[] = [];
-  const closeSeriesForHma: number[] = []; // Renamed to avoid confusion
 
   // Keltner Channel (KC) state
   let kcEmaData = emaTool.init(deals[0], settings.kcLength || 20);
@@ -249,27 +247,11 @@ export function calculateIndicators(
     prevFinalUpperBand = finalUpperBand;
     prevFinalLowerBand = finalLowerBand;
     prevSuperTrend = supertrend;
+    const oldDirection = prevDirection;
     prevDirection = direction;
 
-    // --- HMA Calculation (Keep for reference if needed) ---
-    const hmaLength = settings.hmaLength || 20;
-    const halfLength = Math.floor(hmaLength / 2);
-    const sqrtLength = Math.floor(Math.sqrt(hmaLength));
-    closeSeriesForHma.push(deal.c);
-    const wmaHalf = calculateWMA(closeSeriesForHma, halfLength);
-    const wmaFull = calculateWMA(closeSeriesForHma, hmaLength);
-    let hmaVal = null;
-    if (wmaHalf !== null && wmaFull !== null) {
-      // Need a way to store diffs between bars. For simplicity, we just use a local array
-      // Note: This is a bit expensive to recalculate every time if not careful
-      const diffs = [];
-      for (let j = 0; j < closeSeriesForHma.length; j++) {
-        const wh = calculateWMA(closeSeriesForHma.slice(0, j + 1), halfLength);
-        const wf = calculateWMA(closeSeriesForHma.slice(0, j + 1), hmaLength);
-        if (wh !== null && wf !== null) diffs.push(2 * wh - wf);
-      }
-      hmaVal = calculateWMA(diffs, sqrtLength);
-    }
+    // --- HMA Calculation (Removed for performance and as per user request) ---
+    const hmaVal = null;
 
     // --- V7 Strategy Calculations ---
     if (i > 0) {
@@ -329,37 +311,27 @@ export function calculateIndicators(
       kcExitSignal = deal.h * 1.01;
     }
 
-    // --- V7 Entry/Exit Logic ---
-    let currentBarTrailStop = isLong ? trailStop : null;
+    // --- 均線與信號邏輯 ---
+    ema30Data = i === 0 ? ema30Data : emaTool.next(deal, ema30Data, 30);
+    const ema30 = ema30Data.ema;
+    let currentBarTrailStop = ema30;
 
     if (i > 0) {
-      const prevDeal = deals[i - 1];
 
-      // 進場：價格向上突破前高 且 高於 EMA 50
-      const breakout =
-        recentHigh !== null && deal.c > recentHigh && prevDeal.c <= recentHigh;
-      const buyCondition = breakout && deal.c > (ema50 || 0);
-
-      if (buyCondition && !isLong) {
-        buySignal = deal.l * 0.99;
-        isLong = true;
-        trailStop = deal.c - atr * atrMult;
-        currentBarTrailStop = trailStop;
-      }
-
-      // 追蹤止損邏輯
-      if (isLong) {
-        const currentStop = deal.c - atr * atrMult;
-        trailStop = Math.max(currentStop, trailStop);
-        currentBarTrailStop = trailStop;
-
-        // 出場：跌破止損線
-        if (deal.c < trailStop) {
-          exitSignal = deal.h * 1.01;
-          isLong = false;
-          // We keep currentBarTrailStop as trailStop for this candle to show the line where it was hit
+      // --- Supertrend 交叉信號邏輯 ---
+      if (i > 0) {
+        // 進場：價格站上 Supertrend (由空轉多)
+        if (oldDirection === 1 && direction === -1) {
+          buySignal = deal.l * 0.98; // 稍微向下偏移避免重疊
+        }
+        // 出場：價格跌破 Supertrend (由多轉空)
+        if (oldDirection === -1 && direction === 1) {
+          exitSignal = deal.h * 1.02; // 稍微向上偏移避免重疊
         }
       }
+
+      // 將 EMA 30 賦值給 trailStop 以供圖表橘線顯示
+      currentBarTrailStop = ema30;
     }
 
     return {
@@ -408,16 +380,4 @@ export function calculateIndicators(
       trend,
     };
   });
-}
-
-function calculateWMA(series: number[], period: number): number | null {
-  if (series.length < period) return null;
-  let sum = 0;
-  let weightSum = 0;
-  for (let i = 0; i < period; i++) {
-    const weight = period - i;
-    sum += series[series.length - 1 - i] * weight;
-    weightSum += weight;
-  }
-  return sum / weightSum;
 }

@@ -30,10 +30,7 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
-import {
-  calculateIndicators,
-  EnhancedDealData,
-} from "../../../utils/indicatorUtils";
+import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 import Fundamental from "../Tooltip/Fundamental";
 

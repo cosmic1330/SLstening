@@ -18,6 +18,12 @@ const mockSettings: IndicatorSettings = {
   emaLong: 10,
   cmf: 21,
   cmfEma: 5,
+  hmaLength: 20,
+  atrLen: 14,
+  atrMult: 2.5,
+  atrVolSwitch: 1,
+  fastLookback: 10,
+  trendFilter: 50,
 };
 
 const generateMockDeals = (count: number): TaType => {
@@ -113,6 +119,31 @@ describe('indicatorUtils', () => {
         const last = result[result.length - 1];
         
         expect(last.cmf).not.toBeNull();
+    });
+
+    it('should not produce redundant ATR buy/exit signals (V7 Logic)', () => {
+        // Create a scenario where conditions are met for multiple days
+        const deals: TaType = [];
+        // Need EMA 50 to be lower than price, so we start with some history
+        for (let i = 0; i < 100; i++) {
+          deals.push({
+            t: 20240101 + i,
+            o: 100 + i,
+            h: 105 + i,
+            l: 95 + i,
+            c: 100 + i,
+            v: 1000,
+          });
+        }
+        
+        const result = calculateIndicators(deals, { ...mockSettings, fastLookback: 5, trendFilter: 20 });
+        
+        const buySignals = result.filter(d => d.buySignal !== null);
+        const exitSignals = result.filter(d => d.exitSignal !== null);
+        
+        // In a steady uptrend, breakout happens only once or twice depending on slope
+        // But with state machine, we expect only ONE buy signal until exit.
+        expect(buySignals.length).toBeLessThanOrEqual(1);
     });
   });
 });

@@ -15,6 +15,12 @@ export interface IndicatorSettings {
   emaLong: number;
   cmf: number;
   cmfEma: number;
+  hmaLength: number;
+  atrLen: number;
+  atrMult: number;
+  atrVolSwitch: number;
+  fastLookback: number;
+  trendFilter: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -32,6 +38,12 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   emaLong: 10,
   cmf: 21,
   cmfEma: 5,
+  hmaLength: 20,
+  atrLen: 14,
+  atrMult: 2.5,
+  atrVolSwitch: 1,
+  fastLookback: 10,
+  trendFilter: 50,
 };
 
 export default function useIndicatorSettings() {

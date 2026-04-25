@@ -36,6 +36,7 @@ import mfiDoc from "./Mfi/Mfi.md?raw";
 import mjDoc from "./Mj/Mj.md?raw";
 import mrDoc from "./Mr/MR.md?raw";
 import obvDoc from "./Obv/Obv.md?raw";
+import atrDoc from "./ATR/ATR.md?raw";
 
 // lazy load components
 const MaKbar = lazy(() => import("./Ma/MaKbar"));
@@ -45,6 +46,7 @@ const MJ = lazy(() => import("./Mj/MJ"));
 const MR = lazy(() => import("./Mr/MR"));
 const Kd = lazy(() => import("./Kd/Kd"));
 const Mfi = lazy(() => import("./Mfi/Mfi"));
+const ATR = lazy(() => import("./ATR/ATR"));
 
 const PageContainer = styled(Box)`
   width: 100vw;
@@ -125,6 +127,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       kd: { title: "KD隨機指標策略", content: kdDoc },
       mfi: { title: "MFI資金流便覽", content: mfiDoc },
       ichimoku_cloud: { title: "一目均衡表說明", content: ichimokuDoc },
+      atr: { title: "ATR Trend 策略說明", content: atrDoc },
     }),
     [],
   );
@@ -230,6 +233,17 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "ichimoku_cloud",
         content: <IchimokuCloud perd={perd} />,
+      },
+      {
+        id: "atr",
+        content: (
+          <ATR
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
       },
     ],
     [perd, visibleCount, rightOffset],

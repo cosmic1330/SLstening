@@ -92,13 +92,10 @@ export function calculateIndicators(
 
   // ATR & SuperTrend state
   let prevAtr = 0;
-  let prevUpperBand = 0;
-  let prevLowerBand = 0;
   let prevFinalUpperBand = 0;
   let prevFinalLowerBand = 0;
   let prevSuperTrend = 0;
   let prevDirection = 1;
-  let prevHmaVal: number | null = null;
 
   // Volume filter state
   const volSeries: number[] = [];
@@ -294,9 +291,6 @@ export function calculateIndicators(
     // --- Volume Filter & Signals ---
     volSeries.push(deal.v);
     if (volSeries.length > 5) volSeries.shift();
-    const volAvg = volSeries.reduce((a, b) => a + b, 0) / volSeries.length;
-    const volFilter = deal.v > volAvg * 1.5;
-
     let buySignal = null;
     let exitSignal = null;
 
@@ -305,7 +299,7 @@ export function calculateIndicators(
       kcEmaData = emaTool.next(deal, kcEmaData, settings.kcLength || 20);
     }
     const kcMiddle = kcEmaData.ema;
-    
+
     // Calculate KC ATR (using 10 as per Pinescript, or settings.atrLen)
     // Note: Pinescript ta.atr uses RMA (Running Moving Average)
     const kcAtrLen = 10; // As per the provided Pinescript
@@ -319,15 +313,19 @@ export function calculateIndicators(
     }
     prevKcAtr = kcAtr;
 
-    const kcLower = kcMiddle - (kcAtr * (settings.kcMult || 2.0));
-    
+    const kcLower = kcMiddle - kcAtr * (settings.kcMult || 2.0);
+
     // Ratchet logic: Only move up
     const currentKcLower = kcLower;
     const prevKcDynamicStop = kcDynamicStop;
     kcDynamicStop = Math.max(currentKcLower, kcDynamicStop || currentKcLower);
 
     let kcExitSignal = null;
-    if (i > 0 && deals[i-1].c >= (prevKcDynamicStop || 0) && deal.c < (kcDynamicStop || 0)) {
+    if (
+      i > 0 &&
+      deals[i - 1].c >= (prevKcDynamicStop || 0) &&
+      deal.c < (kcDynamicStop || 0)
+    ) {
       kcExitSignal = deal.h * 1.01;
     }
 
@@ -336,9 +334,10 @@ export function calculateIndicators(
 
     if (i > 0) {
       const prevDeal = deals[i - 1];
-      
+
       // 進場：價格向上突破前高 且 高於 EMA 50
-      const breakout = recentHigh !== null && deal.c > recentHigh && prevDeal.c <= recentHigh;
+      const breakout =
+        recentHigh !== null && deal.c > recentHigh && prevDeal.c <= recentHigh;
       const buyCondition = breakout && deal.c > (ema50 || 0);
 
       if (buyCondition && !isLong) {
@@ -353,7 +352,7 @@ export function calculateIndicators(
         const currentStop = deal.c - atr * atrMult;
         trailStop = Math.max(currentStop, trailStop);
         currentBarTrailStop = trailStop;
-        
+
         // 出場：跌破止損線
         if (deal.c < trailStop) {
           exitSignal = deal.h * 1.01;
@@ -362,8 +361,6 @@ export function calculateIndicators(
         }
       }
     }
-
-    prevHmaVal = hmaVal;
 
     return {
       ...deal,

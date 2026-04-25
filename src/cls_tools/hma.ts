@@ -17,8 +17,6 @@ export class Hma {
   }
 
   public calculate(data: number[], period: number): (number | null)[] {
-    const wmaFull = [];
-    const wmaHalf = [];
     const hma = [];
 
     const halfPeriod = Math.floor(period / 2);

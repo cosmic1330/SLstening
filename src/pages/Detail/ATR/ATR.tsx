@@ -37,10 +37,6 @@ import {
 import ChartTooltip from "../Tooltip/ChartTooltip";
 import Fundamental from "../Tooltip/Fundamental";
 
-interface AtrChartData extends EnhancedDealData {
-  // Additional properties if needed
-}
-
 const BuyArrow = (props: any) => {
   const { cx, cy } = props;
   if (!cx || !cy) return null;
@@ -425,12 +421,11 @@ export default function ATR({
 
             <Line
               dataKey="hma"
-              stroke="#ffeb3b"
-              strokeWidth={1}
+              stroke="#089299"
+              strokeWidth={1.5}
               dot={false}
               activeDot={false}
               name="HMA"
-              strokeDasharray="3 3"
               opacity={0.5}
             />
 
@@ -446,7 +441,7 @@ export default function ATR({
             ) : (
               <Line
                 dataKey="trailStop"
-                stroke="#089981"
+                stroke="#eda049"
                 strokeWidth={2}
                 dot={false}
                 activeDot={false}

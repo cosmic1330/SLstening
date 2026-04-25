@@ -1,12 +1,17 @@
+import SettingsIcon from "@mui/icons-material/Settings";
 import {
   Box,
+  Button,
   CircularProgress,
   Container,
+  IconButton,
+  Menu,
   Tooltip as MuiTooltip,
+  Slider,
   Stack,
   Typography,
 } from "@mui/material";
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import {
   Bar,
@@ -84,8 +89,16 @@ export default function ATR({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings } = useIndicatorSettings();
+  const { settings, updateSetting, resetSettings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+  const handleCloseSettings = () => {
+    setAnchorEl(null);
+  };
 
   const { id } = useParams();
 
@@ -216,6 +229,66 @@ export default function ATR({
             ATR
           </Typography>
         </MuiTooltip>
+        <IconButton
+          size="small"
+          onClick={handleOpenSettings}
+          color="primary"
+          sx={{
+            p: 0.5,
+            transition: "transform 0.2s",
+            "&:hover": { transform: "rotate(45deg)" },
+          }}
+        >
+          <SettingsIcon fontSize="small" />
+        </IconButton>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleCloseSettings}
+          PaperProps={{
+            sx: { p: 2, width: 250, bgcolor: "background.paper" },
+          }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            Supertrend 參數
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              ATR 長度: {settings.atrLen} 根
+            </Typography>
+            <Slider
+              value={settings.atrLen}
+              min={5}
+              max={100}
+              step={1}
+              onChange={(_, v) => updateSetting("atrLen", v as number)}
+              size="small"
+            />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              ATR 倍數: {settings.atrMult.toFixed(1)}
+            </Typography>
+            <Slider
+              value={settings.atrMult}
+              min={0.5}
+              max={10.0}
+              step={0.1}
+              onChange={(_, v) => updateSetting("atrMult", v as number)}
+              size="small"
+              color="primary"
+            />
+          </Box>
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              size="small"
+              onClick={resetSettings}
+              sx={{ color: "primary.main", fontWeight: "bold" }}
+            >
+              全部回復預設
+            </Button>
+          </Box>
+        </Menu>
       </Stack>
 
       <Box

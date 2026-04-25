@@ -5,6 +5,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   Container,
@@ -62,7 +63,6 @@ interface BolleanChartData extends Partial<{
   kcMiddle?: number | null;
 }
 
-
 const BuyArrow = (props: any) => {
   const { cx, cy, payload } = props;
   if (!cx || !cy) return null;
@@ -118,9 +118,32 @@ const KcXMarker = (props: any) => {
   if (!cx || !cy) return null;
   return (
     <g>
-      <line x1={cx - 5} y1={cy - 5} x2={cx + 5} y2={cy + 5} stroke="#ff1744" strokeWidth={3} />
-      <line x1={cx + 5} y1={cy - 5} x2={cx - 5} y2={cy + 5} stroke="#ff1744" strokeWidth={3} />
-      <text x={cx} y={cy - 12} textAnchor="middle" fill="#ff1744" fontSize="10px" fontWeight="bold">跌破</text>
+      <line
+        x1={cx - 5}
+        y1={cy - 5}
+        x2={cx + 5}
+        y2={cy + 5}
+        stroke="#ff1744"
+        strokeWidth={3}
+      />
+      <line
+        x1={cx + 5}
+        y1={cy - 5}
+        x2={cx - 5}
+        y2={cy + 5}
+        stroke="#ff1744"
+        strokeWidth={3}
+      />
+      <text
+        x={cx}
+        y={cy - 12}
+        textAnchor="middle"
+        fill="#ff1744"
+        fontSize="10px"
+        fontWeight="bold"
+      >
+        跌破
+      </text>
     </g>
   );
 };
@@ -136,7 +159,7 @@ export default function Bollean({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings } = useIndicatorSettings();
+  const { settings, updateSetting, resetSettings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
   const [showKc, setShowKc] = useState(true);
@@ -152,13 +175,28 @@ export default function Bollean({
   // LRC Dynamic Parameters
   const [channelPeriod, setChannelPeriod] = useState(60);
   const [channelMultiplier, setChannelMultiplier] = useState(2.0);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [channelAnchorEl, setChannelAnchorEl] = useState<null | HTMLElement>(
+    null,
+  );
+  const [kcAnchorEl, setKcAnchorEl] = useState<null | HTMLElement>(null);
 
-  const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
+  const handleOpenChannelSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setChannelAnchorEl(event.currentTarget);
   };
-  const handleCloseSettings = () => {
-    setAnchorEl(null);
+  const handleCloseChannelSettings = () => {
+    setChannelAnchorEl(null);
+  };
+
+  const handleOpenKcSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setKcAnchorEl(event.currentTarget);
+  };
+  const handleCloseKcSettings = () => {
+    setKcAnchorEl(null);
+  };
+
+  const handleResetChannel = () => {
+    setChannelPeriod(60);
+    setChannelMultiplier(2.0);
   };
 
   const { id } = useParams();
@@ -325,8 +363,10 @@ export default function Bollean({
       // Include Bollinger Bands
       if (d.bollUb != null && d.bollUb > max) max = d.bollUb;
       if (d.bollLb != null && d.bollLb < min) min = d.bollLb;
-      if (d.kcDynamicStop != null && d.kcDynamicStop < min) min = d.kcDynamicStop;
-      if (d.kcDynamicStop != null && d.kcDynamicStop > max) max = d.kcDynamicStop;
+      if (d.kcDynamicStop != null && d.kcDynamicStop < min)
+        min = d.kcDynamicStop;
+      if (d.kcDynamicStop != null && d.kcDynamicStop > max)
+        max = d.kcDynamicStop;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -479,7 +519,9 @@ export default function Bollean({
           </Typography>
         </MuiTooltip>
 
-        <Box sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}>
+        <Box
+          sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}
+        >
           {channelInfo && (
             <Chip
               label={
@@ -499,47 +541,99 @@ export default function Bollean({
           <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
 
           <Stack direction="row" spacing={1} alignItems="center">
-            <Chip
-              icon={showChannel ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
-              label="通道"
-              size="small"
-              onClick={() => setShowChannel(!showChannel)}
-              variant={showChannel ? "filled" : "outlined"}
-              color={showChannel ? "secondary" : "default"}
-              sx={{
-                height: 24,
-                fontSize: "0.75rem",
-                fontWeight: showChannel ? "bold" : "normal",
-                transition: "all 0.2s",
-                borderColor: showChannel ? "secondary.main" : "#444",
-                "&:hover": {
-                  transform: "translateY(-1px)",
-                  boxShadow: showChannel ? "0 2px 8px rgba(156, 39, 176, 0.3)" : "none",
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Chip
+                icon={
+                  showChannel ? (
+                    <VisibilityIcon fontSize="small" />
+                  ) : (
+                    <VisibilityOffIcon fontSize="small" />
+                  )
                 }
-              }}
-            />
-            <Chip
-              icon={showKc ? <VisibilityIcon fontSize="small" /> : <VisibilityOffIcon fontSize="small" />}
-              label="動態防線"
-              size="small"
-              onClick={() => setShowKc(!showKc)}
-              variant={showKc ? "filled" : "outlined"}
-              color={showKc ? "warning" : "default"}
-              sx={{
-                height: 24,
-                fontSize: "0.75rem",
-                fontWeight: showKc ? "bold" : "normal",
-                transition: "all 0.2s",
-                borderColor: showKc ? "warning.main" : "#444",
-                "&:hover": {
-                  transform: "translateY(-1px)",
-                  boxShadow: showKc ? "0 2px 8px rgba(255, 152, 0, 0.3)" : "none",
+                label="通道"
+                size="small"
+                onClick={() => setShowChannel(!showChannel)}
+                variant={showChannel ? "filled" : "outlined"}
+                color={showChannel ? "secondary" : "default"}
+                sx={{
+                  height: 24,
+                  fontSize: "0.75rem",
+                  fontWeight: showChannel ? "bold" : "normal",
+                  transition: "all 0.2s",
+                  borderColor: showChannel ? "secondary.main" : "#444",
+                  "&:hover": {
+                    transform: "translateY(-1px)",
+                    boxShadow: showChannel
+                      ? "0 2px 8px rgba(156, 39, 176, 0.3)"
+                      : "none",
+                  },
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={handleOpenChannelSettings}
+                color="secondary"
+                sx={{
+                  p: 0.4,
+                  transition: "transform 0.2s",
+                  "&:hover": { transform: "rotate(45deg)" },
+                }}
+              >
+                <SettingsIcon sx={{ fontSize: "1rem" }} />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <Chip
+                icon={
+                  showKc ? (
+                    <VisibilityIcon fontSize="small" />
+                  ) : (
+                    <VisibilityOffIcon fontSize="small" />
+                  )
                 }
-              }}
-            />
+                label="動態防線"
+                size="small"
+                onClick={() => setShowKc(!showKc)}
+                variant={showKc ? "filled" : "outlined"}
+                color={showKc ? "warning" : "default"}
+                sx={{
+                  height: 24,
+                  fontSize: "0.75rem",
+                  fontWeight: showKc ? "bold" : "normal",
+                  transition: "all 0.2s",
+                  borderColor: showKc ? "warning.main" : "#444",
+                  "&:hover": {
+                    transform: "translateY(-1px)",
+                    boxShadow: showKc
+                      ? "0 2px 8px rgba(255, 152, 0, 0.3)"
+                      : "none",
+                  },
+                }}
+              />
+              <IconButton
+                size="small"
+                onClick={handleOpenKcSettings}
+                color="warning"
+                sx={{
+                  p: 0.4,
+                  transition: "transform 0.2s",
+                  "&:hover": { transform: "rotate(45deg)" },
+                }}
+              >
+                <SettingsIcon sx={{ fontSize: "1rem" }} />
+              </IconButton>
+            </Box>
+
             {showChannel && (
               <Chip
-                icon={isLocked ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+                icon={
+                  isLocked ? (
+                    <LockIcon fontSize="small" />
+                  ) : (
+                    <LockOpenIcon fontSize="small" />
+                  )
+                }
                 label="固定"
                 size="small"
                 onClick={() => handleToggleLock(!isLocked)}
@@ -553,29 +647,19 @@ export default function Bollean({
                   borderColor: isLocked ? "warning.main" : "#444",
                   "&:hover": {
                     transform: "translateY(-1px)",
-                    boxShadow: isLocked ? "0 2px 8px rgba(237, 108, 2, 0.3)" : "none",
-                  }
+                    boxShadow: isLocked
+                      ? "0 2px 8px rgba(237, 108, 2, 0.3)"
+                      : "none",
+                  },
                 }}
               />
             )}
-            <IconButton
-              size="small"
-              onClick={handleOpenSettings}
-              color="primary"
-              sx={{ 
-                p: 0.5,
-                transition: "transform 0.2s",
-                "&:hover": { transform: "rotate(45deg)" }
-              }}
-            >
-              <SettingsIcon fontSize="small" />
-            </IconButton>
           </Stack>
         </Box>
         <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleCloseSettings}
+          anchorEl={channelAnchorEl}
+          open={Boolean(channelAnchorEl)}
+          onClose={handleCloseChannelSettings}
           PaperProps={{
             sx: { p: 2, width: 250, bgcolor: "background.paper" },
           }}
@@ -610,6 +694,65 @@ export default function Bollean({
               color="secondary"
             />
           </Box>
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              size="small"
+              onClick={handleResetChannel}
+              sx={{ color: "secondary.main", fontWeight: "bold" }}
+            >
+              回復預設
+            </Button>
+          </Box>
+        </Menu>
+
+        <Menu
+          anchorEl={kcAnchorEl}
+          open={Boolean(kcAnchorEl)}
+          onClose={handleCloseKcSettings}
+          PaperProps={{
+            sx: { p: 2, width: 250, bgcolor: "background.paper" },
+          }}
+        >
+          <Typography variant="subtitle2" gutterBottom>
+            動態防線 (KC)
+          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              計算長度: {settings.kcLength} 根
+            </Typography>
+            <Slider
+              value={settings.kcLength}
+              min={5}
+              max={100}
+              step={1}
+              onChange={(_, v) => updateSetting("kcLength", v as number)}
+              size="small"
+              color="warning"
+            />
+          </Box>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">
+              標準差倍數: {settings.kcMult.toFixed(1)}
+            </Typography>
+            <Slider
+              value={settings.kcMult}
+              min={0.5}
+              max={5.0}
+              step={0.1}
+              onChange={(_, v) => updateSetting("kcMult", v as number)}
+              size="small"
+              color="warning"
+            />
+          </Box>
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              size="small"
+              onClick={resetSettings}
+              sx={{ color: "warning.main", fontWeight: "bold" }}
+            >
+              全部回復預設
+            </Button>
+          </Box>
         </Menu>
       </Stack>
 
@@ -635,7 +778,11 @@ export default function Bollean({
             />
 
             <Tooltip
-              content={<ChartTooltip hideKeys={["buySignal", "exitSignal", "kcExitSignal"]} />}
+              content={
+                <ChartTooltip
+                  hideKeys={["buySignal", "exitSignal", "kcExitSignal"]}
+                />
+              }
               offset={50}
             />
 
@@ -677,14 +824,14 @@ export default function Bollean({
             />
             <Customized component={BaseCandlestickRectangle} />
 
-              <Bar
-                dataKey="v"
-                yAxisId="right"
-                fill="#90caf9"
-                opacity={0.3}
-                name="Volume"
-                barSize={10}
-              />
+            <Bar
+              dataKey="v"
+              yAxisId="right"
+              fill="#90caf9"
+              opacity={0.3}
+              name="Volume"
+              barSize={10}
+            />
 
             <Line
               dataKey="bollMa"
@@ -716,7 +863,7 @@ export default function Bollean({
               <>
                 <Line
                   dataKey="channelUb"
-                  stroke="#ff9800"
+                  stroke="#d286ee"
                   strokeWidth={2}
                   dot={false}
                   activeDot={false}
@@ -724,7 +871,7 @@ export default function Bollean({
                 />
                 <Line
                   dataKey="channelLb"
-                  stroke="#ff9800"
+                  stroke="#d286ee"
                   strokeWidth={2}
                   dot={false}
                   activeDot={false}
@@ -753,16 +900,16 @@ export default function Bollean({
             )}
 
             {/* Signals */}
-                <Scatter
-                  dataKey="buySignal"
-                  shape={<BuyArrow />}
-                  legendType="none"
-                />
-                <Scatter
-                  dataKey="exitSignal"
-                  shape={<ExitArrow />}
-                  legendType="none"
-                />
+            <Scatter
+              dataKey="buySignal"
+              shape={<BuyArrow />}
+              legendType="none"
+            />
+            <Scatter
+              dataKey="exitSignal"
+              shape={<ExitArrow />}
+              legendType="none"
+            />
 
             {/* Deduction Markers */}
             {maDeductionPoints.map((p) => (

@@ -13,6 +13,8 @@
 | REQ-014 | 實現分類列表拖拉排序 (Drag-and-Drop) | Completed | 2026-04-21 | - | v1: 原始需求 | 增加使用者管理自選清單的靈活性 |
 | REQ-015 | 優化 StockTickChart：實現基於時間 (09:00-13:30) 的固定長度切分 | Completed | 2026-04-24 | - | v1: 原始需求 | 確保即時圖表能準確反映交易時段進度 |
 | REQ-016 | ATR 頁面優化：Supertrend 趨勢轉折策略定案，並改為雙線（EMA 30）併列顯示 | Completed | 2026-04-25 | REQ-016 | v1-v2: 優化動能防線; v3: 改為 Supertrend 信號; v4: 取消按鈕切換，雙線併列顯示 | 提升視覺直覺性與策略執行效率 |
+| REQ-017 | 設定頁面新增動態防線與 Supertrend 參數設定，並在詳情頁面提供即時調整 | Completed | 2026-04-25 | - | v1: 原始需求 | 增加技術指標的靈活性與可控性 |
+
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

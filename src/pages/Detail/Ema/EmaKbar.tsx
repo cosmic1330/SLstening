@@ -15,10 +15,12 @@ import {
   YAxis,
   ZAxis,
 } from "recharts";
+import boll from "../../../cls_tools/boll";
 import dmi from "../../../cls_tools/dmi";
 import ema from "../../../cls_tools/ema";
 import ma from "../../../cls_tools/ma";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
+import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import ChartTooltip from "../Tooltip/ChartTooltip";
@@ -39,6 +41,10 @@ interface AvgMaChartData extends Partial<{
   diPlus: number | null;
   diMinus: number | null;
   adx: number | null;
+  mss: number;
+  marketType: string;
+  diagnostic: string;
+  bw: number;
 }
 
 interface SignalPoint extends AvgMaChartData {
@@ -74,6 +80,8 @@ export default function AvgMaKbar({
     ema60: true,
     sma200: true,
   });
+
+  const [isAvgCandle, setIsAvgCandle] = useState(true);
 
   useEffect(() => {
     const container = chartContainerRef.current;
@@ -150,8 +158,13 @@ export default function AvgMaKbar({
     let ema60_data = ema.init(deals[0], 60);
     let sma200_data = ma.init(deals[0], 200);
     let dmi_data = dmi.init(deals[0], 14);
+    let boll_data = boll.init(deals[0]);
 
     const response: AvgMaChartData[] = [];
+    const ema60Series: number[] = [];
+
+    // Keltner Channel state for Squeeze Pro
+    let prevAtr = 0;
 
     for (let i = 0; i < deals.length; i++) {
       const deal = deals[i];
@@ -163,6 +176,7 @@ export default function AvgMaKbar({
         ema60_data = ema.next(deal, ema60_data, 60);
         sma200_data = ma.next(deal, sma200_data, 200);
         dmi_data = dmi.next(deal, dmi_data, 14);
+        boll_data = boll.next(deal, boll_data, 20);
       }
 
       // Vol MA20
@@ -175,6 +189,56 @@ export default function AvgMaKbar({
         volMa20 = sumV / 20;
       }
 
+      // --- Squeeze Pro Logic (BB vs KC) ---
+      // 1. Calculate ATR for Keltner Channel
+      let tr = deal.h - deal.l;
+      if (i > 0) {
+        tr = Math.max(tr, Math.abs(deal.h - deals[i-1].c), Math.abs(deal.l - deals[i-1].c));
+      }
+      let atr = i === 0 ? tr : (prevAtr * 19 + tr) / 20; // 20-period ATR
+      prevAtr = atr;
+
+      const kcWidth = (atr * 1.5) * 2; // Keltner Channel Width (Multiplier 1.5)
+      const bbWidth = (boll_data.bollUb && boll_data.bollLb) ? (boll_data.bollUb - boll_data.bollLb) : 0;
+      
+      const isSqueeze = bbWidth < kcWidth; // Squeeze Pro core logic
+      
+      ema60Series.push(ema60_data.ema || 0);
+      const slope = i >= 5 ? (ema60Series[i] - ema60Series[i - 5]) / 5 : 0;
+
+      // --- Real-world Market Regime Classification ---
+      let mss = 0;
+      let marketType = "震盪";
+      const diagnostics: string[] = [];
+
+      if (isSqueeze) {
+        marketType = "擠壓"; // Typical for low-vol range
+        mss = 1;
+        diagnostics.push("能量擠壓");
+      } else {
+        // BB > KC, expansion occurring
+        const e5 = ema5_data.ema || 0;
+        const e10 = ema10_data.ema || 0;
+        const e60 = ema60_data.ema || 0;
+        const isAligned = (e5 > e10 && e10 > e60) || (e5 < e10 && e10 < e60);
+        
+        if (isAligned && Math.abs(slope) > (e60 * 0.0005)) {
+          marketType = "趨勢";
+          mss = 4;
+          diagnostics.push("發散趨勢");
+        } else {
+          marketType = "寬震";
+          mss = 2.5;
+          diagnostics.push("擴張洗盤");
+        }
+      }
+
+      // Add momentum boost
+      if (dmi_data.adx > 25 && dmi_data.adx > (response[i-1]?.adx || 0)) {
+        mss += 1;
+        diagnostics.push("動能強勁");
+      }
+
       response.push({
         ...deal,
         ema5: ema5_data.ema || null,
@@ -185,6 +249,10 @@ export default function AvgMaKbar({
         diPlus: dmi_data.pDi ?? null,
         diMinus: dmi_data.mDi ?? null,
         adx: dmi_data.adx ?? null,
+        bw: bbWidth,
+        mss,
+        marketType,
+        diagnostic: diagnostics.join("|")
       });
     }
 
@@ -276,6 +344,61 @@ export default function AvgMaKbar({
           EMA
         </Typography>
         <Box sx={{ flexGrow: 1, display: "flex", gap: 1.5, alignItems: "center" }}>
+          {/* Market Status Badge */}
+          {chartData.length > 0 && (
+            <Chip
+              label={`${chartData[chartData.length - 1].marketType}市 (${chartData[chartData.length - 1].mss.toFixed(1)})`}
+              size="small"
+              sx={{
+                height: 28,
+                bgcolor: chartData[chartData.length - 1].marketType === "趨勢" 
+                  ? "rgba(33, 150, 243, 0.2)" 
+                  : chartData[chartData.length - 1].marketType === "寬震"
+                    ? "rgba(156, 39, 176, 0.2)"
+                    : "rgba(255, 255, 255, 0.05)",
+                color: chartData[chartData.length - 1].marketType === "趨勢" 
+                  ? "#2196f3" 
+                  : chartData[chartData.length - 1].marketType === "寬震"
+                    ? "#ce93d8"
+                    : "#aaa",
+                border: `1px solid ${
+                  chartData[chartData.length - 1].marketType === "趨勢" 
+                    ? "#2196f3" 
+                    : chartData[chartData.length - 1].marketType === "寬震"
+                      ? "#9c27b0"
+                      : "rgba(255, 255, 255, 0.1)"
+                }`,
+                fontWeight: "bold",
+                borderRadius: "4px",
+                mr: 2,
+                "& .MuiChip-label": { px: 1 },
+              }}
+            />
+          )}
+
+          {/* Candlestick Type Toggle */}
+          <Chip
+            label={isAvgCandle ? "平均 K 線" : "標準 K 線"}
+            size="small"
+            onClick={() => setIsAvgCandle(!isAvgCandle)}
+            variant="outlined"
+            sx={{
+              height: 28,
+              bgcolor: isAvgCandle ? "rgba(76, 175, 80, 0.1)" : "rgba(33, 150, 243, 0.1)",
+              color: isAvgCandle ? "#4caf50" : "#2196f3",
+              borderColor: isAvgCandle ? "rgba(76, 175, 80, 0.4)" : "rgba(33, 150, 243, 0.4)",
+              fontWeight: "bold",
+              borderRadius: "4px",
+              mr: 2,
+              transition: "all 0.2s",
+              "&:hover": {
+                bgcolor: isAvgCandle ? "rgba(76, 175, 80, 0.2)" : "rgba(33, 150, 243, 0.2)",
+                transform: "translateY(-1px)",
+              },
+              "& .MuiChip-label": { px: 1.5 },
+            }}
+          />
+
           {/* Glowing HUD EMA Toggles */}
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {[
@@ -348,7 +471,10 @@ export default function AvgMaKbar({
               width={0}
             />
             <ZAxis type="number" range={[10]} />
-            <Tooltip content={<ChartTooltip />} offset={50} />
+            <Tooltip 
+              content={<ChartTooltip hideKeys={["mss", "marketType", "diagnostic", "bw"]} />} 
+              offset={50} 
+            />
 
             <Line
               dataKey="h"
@@ -387,7 +513,7 @@ export default function AvgMaKbar({
               name="開"
             />
 
-            <Customized component={AvgCandlestickRectangle} />
+            <Customized component={isAvgCandle ? AvgCandlestickRectangle : BaseCandlestickRectangle} />
 
             {/* Volume Bars (Overlay) */}
             <Bar
@@ -538,6 +664,7 @@ export default function AvgMaKbar({
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
             <XAxis dataKey="t" hide />
             <YAxis
+              yAxisId="dmiAxis"
               domain={[0, 60]}
               tick={{ fill: "rgba(255,255,255,0.7)", fontSize: 10 }}
               stroke="rgba(255,255,255,0.3)"
@@ -549,9 +676,40 @@ export default function AvgMaKbar({
                 fontSize: 10,
               }}
             />
-            <Tooltip content={<ChartTooltip />} />
-            <ReferenceLine y={20} stroke="#666" strokeDasharray="3 3" />
+            <YAxis yAxisId="statusAxis" domain={[0, 1]} hide />
+            <Tooltip content={<ChartTooltip hideKeys={["mss", "marketType", "diagnostic", "bw"]} showMESS={false} showIchimoku={false} showSignals={false} />} />
+            
+            {/* Market Status Ribbon (Background) */}
+            <Bar
+              dataKey="mss"
+              yAxisId="statusAxis"
+              isAnimationActive={false}
+              shape={(props: any) => {
+                const { x, y, width, height, payload } = props;
+                const { marketType, mss } = payload;
+                let fill = "rgba(255,255,255,0.02)"; // Ranging (Grey)
+                if (marketType === "趨勢") {
+                  fill = payload.diPlus > payload.diMinus ? "rgba(33, 150, 243, 0.2)" : "rgba(244, 67, 54, 0.2)";
+                } else if (marketType === "寬震") {
+                  fill = "rgba(156, 39, 176, 0.12)";
+                } else if (marketType === "擠壓") {
+                  fill = "rgba(0, 0, 0, 0.35)"; // Deep grey for squeeze
+                }
+                return (
+                  <rect
+                    x={x}
+                    y={0} // Fill from top of the DMI area
+                    width={width}
+                    height={300} // Sufficient height to cover area
+                    fill={fill}
+                  />
+                );
+              }}
+            />
+
+            <ReferenceLine yAxisId="dmiAxis" y={20} stroke="#666" strokeDasharray="3 3" />
             <Line
+              yAxisId="dmiAxis"
               dataKey="adx"
               stroke="#ffeb3b"
               strokeWidth={2}
@@ -559,6 +717,7 @@ export default function AvgMaKbar({
               name="ADX"
             />
             <Line
+              yAxisId="dmiAxis"
               dataKey="diPlus"
               stroke="#ff4d4f"
               strokeWidth={1}
@@ -566,6 +725,7 @@ export default function AvgMaKbar({
               name="DI+"
             />
             <Line
+              yAxisId="dmiAxis"
               dataKey="diMinus"
               stroke="#52c41a"
               strokeWidth={1}

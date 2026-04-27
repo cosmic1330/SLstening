@@ -6,6 +6,7 @@ use ts_rs::TS;
 use std::time::Duration;
 use crate::error::AppError;
 use dashmap::DashMap;
+use urlencoding::{decode, encode};
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -249,12 +250,34 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
 }
 
 pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<MarketHistory, AppError> {
-    let url = if symbol.starts_with("^") || symbol.contains("=") {
-        // 全球指數或期貨
-        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range=5d", symbol, period)
+    // Decode then encode to handle both raw symbols and already-encoded symbols
+    let decoded_symbol = decode(symbol).unwrap_or(std::borrow::Cow::Borrowed(symbol));
+    let encoded_symbol = encode(&decoded_symbol);
+    
+    // Determine if it's a Global symbol (Indices/Futures) or a Taiwan symbol
+    // Taiwan stocks (e.g. "2330") and Taiwan indices ("^TWII", "^TWOII") use Yahoo Taiwan API.
+    // Global symbols (e.g. "^IXIC", "NQ=F") use Yahoo Finance's international API.
+    let is_global = (decoded_symbol.starts_with("^") || decoded_symbol.contains("=")) && 
+                    decoded_symbol != "^TWII" && 
+                    decoded_symbol != "^TWOII";
+
+    let url = if !is_global {
+        // Taiwan stocks and indices use Yahoo Taiwan's API
+        format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period={};symbols=[\"{}\"]", period, encoded_symbol)
     } else {
-        // 台灣股票
-        format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period={};symbols=[\"{}\"]", period, symbol)
+        // Global indices and futures use Yahoo Finance's international chart API
+        let (interval, range) = match period {
+            "1m" => ("1m", "1d"),
+            "5m" => ("5m", "5d"),
+            "15m" => ("15m", "5d"),
+            "30m" => ("30m", "5d"),
+            "60m" | "1h" => ("1h", "730d"),
+            "d" => ("1d", "10y"),
+            "w" => ("1wk", "10y"),
+            "m" => ("1mo", "10y"),
+            _ => ("1d", "10y"),
+        };
+        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range={}", encoded_symbol, interval, range)
     };
 
     let client = reqwest::Client::builder()
@@ -341,11 +364,16 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         symbols[0] != "^TWII" && symbols[0] != "^TWOII";
     
     let url = if is_global_index {
-        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d", symbols[0])
+        let decoded = decode(&symbols[0]).unwrap_or(std::borrow::Cow::Borrowed(&symbols[0]));
+        let encoded = encode(&decoded);
+        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d", encoded)
     } else {
         // 台灣股票/指數批量 API
         let symbols_str = symbols.iter()
-            .map(|s| format!("\"{}\"", s))
+            .map(|s| {
+                let decoded = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
+                format!("\"{}\"", encode(&decoded))
+            })
             .collect::<Vec<_>>()
             .join(",");
         format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;symbols=[{}];type=tick", symbols_str)
@@ -387,9 +415,13 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let indicators = &result_node["indicators"]["quote"][0];
         let yahoo_symbol = meta["symbol"].as_str().unwrap_or("unknown").to_string();
 
-        // ID 匹配邏輯
+        // ID 匹配邏輯 (解碼後比較以確保 WTX&.TW 等符號匹配成功)
+        let decoded_yahoo = decode(&yahoo_symbol).unwrap_or(std::borrow::Cow::Borrowed(&yahoo_symbol));
         let matched_id = symbols.iter()
-            .find(|&s| yahoo_symbol.starts_with(s) || s.starts_with(&yahoo_symbol))
+            .find(|&s| {
+                let decoded_s = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
+                decoded_yahoo.starts_with(decoded_s.as_ref()) || decoded_s.starts_with(decoded_yahoo.as_ref())
+            })
             .cloned()
             .unwrap_or(yahoo_symbol);
 

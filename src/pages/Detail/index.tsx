@@ -1,3 +1,5 @@
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { Box, createTheme, styled, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
@@ -12,16 +14,12 @@ import React, {
 } from "react";
 import { useNavigate, useParams } from "react-router";
 import useSWR from "swr";
-import { tauriFetcher } from "../../api/http_cache";
+import { marketApi } from "../../api/marketApi";
 import DocModal from "../../components/DocModal";
 import { DealsContext } from "../../context/DealsContext";
-import { FutureIds, UrlTaPerdOptions, UrlType } from "../../types";
-import {
-  analyzeIndicatorsData,
-  analyzeNasdaqIndicatorsData,
-  IndicatorsDateTimeType,
-} from "../../utils/analyzeIndicatorsData";
-import generateDealDataDownloadUrl from "../../utils/generateDealDataDownloadUrl";
+import { UrlTaPerdOptions } from "../../types";
+import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
+import formatDateTime from "../../utils/formatDateTime";
 import Bollean from "./Bollean/Bollean";
 import AvgMaKbar from "./Ema/EmaKbar";
 import GlassBar from "./GlassBar";
@@ -336,58 +334,55 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 监听股票添加事件
-    const unlisten = listen("detail", (event: any) => {
-      const { url } = event.payload;
-      navigate(url);
-    });
-
-    return () => {
-      unlisten.then((fn: any) => fn()); // 清理监听器
+    let unlisten: (() => void) | null = null;
+    const setup = async () => {
+      unlisten = await listen("detail", (event: any) => {
+        const { url } = event.payload;
+        navigate(url);
+      });
     };
-  }, []);
+    setup();
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, [navigate]);
 
-  const { data } = useSWR(
-    id === FutureIds.NASDAQ_FUTURE
-      ? `https://query1.finance.yahoo.com/v8/finance/chart/${
-          FutureIds.NASDAQ_FUTURE
-        }?interval=${
-          perd === UrlTaPerdOptions.Hour
-            ? "1h"
-            : perd === UrlTaPerdOptions.Week
-              ? "1wk"
-              : "1d"
-        }&range=${
-          perd === UrlTaPerdOptions.Hour
-            ? "730d"
-            : perd === UrlTaPerdOptions.Week
-              ? "5y"
-              : "10y"
-        }`
-      : generateDealDataDownloadUrl({
-          type: UrlType.Indicators,
-          id: encodeURIComponent(id as string),
-          perd,
-        }),
-    tauriFetcher,
+  const { data: historyData } = useSWR(
+    id && perd ? `market/history/${id}/${perd}` : null,
+    async () => {
+      return await marketApi.getHistoryData(id as string, perd);
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
+    }
   );
 
   const deals = useMemo(() => {
-    if (!data || !id || typeof data !== "string") return [];
-    return id === FutureIds.NASDAQ_FUTURE
-      ? analyzeNasdaqIndicatorsData(
-          data,
-          perd === UrlTaPerdOptions.Hour
-            ? IndicatorsDateTimeType.DateTime
-            : IndicatorsDateTimeType.Date,
-        )
-      : analyzeIndicatorsData(
-          data,
-          perd === UrlTaPerdOptions.Hour
-            ? IndicatorsDateTimeType.DateTime
-            : IndicatorsDateTimeType.Date,
-        );
-  }, [data, id, perd]);
+    if (!historyData || !historyData.data) return [];
+    
+    const timeType = perd === UrlTaPerdOptions.Hour
+      ? IndicatorsDateTimeType.DateTime
+      : IndicatorsDateTimeType.Date;
+
+    return historyData.data.map((item: any) => {
+      let t;
+      if (timeType === IndicatorsDateTimeType.Date) {
+        t = dateFormat(item.t * 1000, Mode.TimeStampToNumber);
+      } else {
+        t = formatDateTime(item.t * 1000);
+      }
+      
+      return {
+        t,
+        o: item.o,
+        c: item.c,
+        h: item.h,
+        l: item.l,
+        v: item.v,
+      };
+    });
+  }, [historyData, perd]);
 
   return (
     <ThemeProvider theme={darkTheme}>

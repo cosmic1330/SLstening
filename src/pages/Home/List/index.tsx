@@ -185,17 +185,18 @@ function List() {
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
-    const setupApiBlockedListener = async () => {
-      const unlisten = await listen("api-blocked", () => {
+    let unlisten: (() => void) | null = null;
+
+    const setup = async () => {
+      unlisten = await listen("api-blocked", () => {
         setIsBlocked(true);
       });
-      return unlisten;
     };
 
-    let unlistenPromise = setupApiBlockedListener();
+    setup();
 
     return () => {
-      unlistenPromise.then((unlisten) => unlisten());
+      if (unlisten) unlisten();
     };
   }, []);
 

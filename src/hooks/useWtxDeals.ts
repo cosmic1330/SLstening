@@ -1,40 +1,25 @@
-import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
-import { tauriFetcher } from "../api/http";
+import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
-import { DealTableType, FutureIds, UrlTaPerdOptions, UrlType } from "../types";
-import generateDealDataDownloadUrl from "../utils/generateDealDataDownloadUrl";
+import { FutureIds } from "../types";
+import { isTaiwanMarketOpen } from "../utils/marketUtils";
 
 export default function useWtxDeals(isVisible: boolean = true) {
-  const checkTimeRange = () => {
-    const taiwanTime = new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Taipei",
-    });
-    const now = new Date(taiwanTime);
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-
-    return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
-  };
-
   const {
-    data: hourlyData,
+    data: historyData,
     mutate: mutateHourlyDeals,
     isValidating: isHourlyValidating,
   } = useSWR(
-    generateDealDataDownloadUrl({
-      type: UrlType.Indicators,
-      id: FutureIds.WTX,
-      perd: UrlTaPerdOptions.Day,
-    }),
-    (url) => {
+    isVisible ? `market/history/${FutureIds.WTX}` : null,
+    async () => {
       useDebugStore.getState().increment("wtx");
-      return tauriFetcher(url);
+      return await marketApi.getHistoryData(FutureIds.WTX, "d");
     },
     {
       isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (checkTimeRange() ? 30000 : 0),
+      refreshInterval: () => (isTaiwanMarketOpen() ? 30000 : 0),
+      dedupingInterval: 10000,
     },
   );
 
@@ -44,44 +29,19 @@ export default function useWtxDeals(isVisible: boolean = true) {
       if (!isHourlyValidating) mutateHourlyDeals();
     }
 
-    if (hourlyData) {
+    if (historyData) {
       hasFetched.current = true;
     }
-  }, [isVisible, mutateHourlyDeals, hourlyData, isHourlyValidating]);
+  }, [isVisible, mutateHourlyDeals, historyData, isHourlyValidating]);
 
   const deals = useMemo(() => {
-    try {
-      if (!hourlyData) return null;
-      const data = JSON.parse(hourlyData);
-      const opens = data[0].chart.indicators.quote[0].open;
-      const closes = data[0].chart.indicators.quote[0].close;
-      const highs = data[0].chart.indicators.quote[0].high;
-      const lows = data[0].chart.indicators.quote[0].low;
-      const volumes = data[0].chart.indicators.quote[0].volume;
-      const ts = data[0].chart.timestamp;
-      const change = data[0].chart.quote.change;
-      const price = data[0].chart.quote.price;
-
-      const res: (Omit<DealTableType, "stock_id" | "t"> & { t: number })[] = [];
-      for (let i = 0; i < opens.length; i++) {
-        if (opens[i] !== null) {
-          res.push({
-            t: ts[i],
-            o: opens[i],
-            c: closes[i],
-            h: highs[i],
-            l: lows[i],
-            v: volumes[i],
-          });
-        }
-      }
-
-      return { data: res, change, price };
-    } catch (e) {
-      error(`Error parsing hourlyData: ${e}`);
-      return null;
-    }
-  }, [hourlyData]);
+    if (!historyData) return null;
+    return {
+      data: historyData.data,
+      change: historyData.change ?? 0,
+      price: historyData.price,
+    };
+  }, [historyData]);
 
   return { deals };
 }

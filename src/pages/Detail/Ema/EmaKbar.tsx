@@ -1,5 +1,11 @@
-
-import { Box, Chip, Typography, CircularProgress, Container, Stack } from '@mui/material';
+import {
+  Box,
+  Chip,
+  CircularProgress,
+  Container,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Bar,
@@ -193,16 +199,23 @@ export default function AvgMaKbar({
       // 1. Calculate ATR for Keltner Channel
       let tr = deal.h - deal.l;
       if (i > 0) {
-        tr = Math.max(tr, Math.abs(deal.h - deals[i-1].c), Math.abs(deal.l - deals[i-1].c));
+        tr = Math.max(
+          tr,
+          Math.abs(deal.h - deals[i - 1].c),
+          Math.abs(deal.l - deals[i - 1].c),
+        );
       }
       let atr = i === 0 ? tr : (prevAtr * 19 + tr) / 20; // 20-period ATR
       prevAtr = atr;
 
-      const kcWidth = (atr * 1.5) * 2; // Keltner Channel Width (Multiplier 1.5)
-      const bbWidth = (boll_data.bollUb && boll_data.bollLb) ? (boll_data.bollUb - boll_data.bollLb) : 0;
-      
+      const kcWidth = atr * 1.5 * 2; // Keltner Channel Width (Multiplier 1.5)
+      const bbWidth =
+        boll_data.bollUb && boll_data.bollLb
+          ? boll_data.bollUb - boll_data.bollLb
+          : 0;
+
       const isSqueeze = bbWidth < kcWidth; // Squeeze Pro core logic
-      
+
       ema60Series.push(ema60_data.ema || 0);
       const slope = i >= 5 ? (ema60Series[i] - ema60Series[i - 5]) / 5 : 0;
 
@@ -221,8 +234,8 @@ export default function AvgMaKbar({
         const e10 = ema10_data.ema || 0;
         const e60 = ema60_data.ema || 0;
         const isAligned = (e5 > e10 && e10 > e60) || (e5 < e10 && e10 < e60);
-        
-        if (isAligned && Math.abs(slope) > (e60 * 0.0005)) {
+
+        if (isAligned && Math.abs(slope) > e60 * 0.0005) {
           marketType = "趨勢";
           mss = 4;
           diagnostics.push("發散趨勢");
@@ -234,7 +247,7 @@ export default function AvgMaKbar({
       }
 
       // Add momentum boost
-      if (dmi_data.adx > 25 && dmi_data.adx > (response[i-1]?.adx || 0)) {
+      if (dmi_data.adx > 25 && dmi_data.adx > (response[i - 1]?.adx || 0)) {
         mss += 1;
         diagnostics.push("動能強勁");
       }
@@ -252,7 +265,7 @@ export default function AvgMaKbar({
         bw: bbWidth,
         mss,
         marketType,
-        diagnostic: diagnostics.join("|")
+        diagnostic: diagnostics.join("|"),
       });
     }
 
@@ -312,7 +325,6 @@ export default function AvgMaKbar({
     return points;
   }, [chartData]);
 
-
   if (chartData.length === 0) {
     return (
       <Box
@@ -343,7 +355,9 @@ export default function AvgMaKbar({
         <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
           EMA
         </Typography>
-        <Box sx={{ flexGrow: 1, display: "flex", gap: 1.5, alignItems: "center" }}>
+        <Box
+          sx={{ flexGrow: 1, display: "flex", gap: 1.5, alignItems: "center" }}
+        >
           {/* Market Status Badge */}
           {chartData.length > 0 && (
             <Chip
@@ -351,19 +365,21 @@ export default function AvgMaKbar({
               size="small"
               sx={{
                 height: 28,
-                bgcolor: chartData[chartData.length - 1].marketType === "趨勢" 
-                  ? "rgba(33, 150, 243, 0.2)" 
-                  : chartData[chartData.length - 1].marketType === "寬震"
-                    ? "rgba(156, 39, 176, 0.2)"
-                    : "rgba(255, 255, 255, 0.05)",
-                color: chartData[chartData.length - 1].marketType === "趨勢" 
-                  ? "#2196f3" 
-                  : chartData[chartData.length - 1].marketType === "寬震"
-                    ? "#ce93d8"
-                    : "#aaa",
+                bgcolor:
+                  chartData[chartData.length - 1].marketType === "趨勢"
+                    ? "rgba(33, 150, 243, 0.2)"
+                    : chartData[chartData.length - 1].marketType === "寬震"
+                      ? "rgba(156, 39, 176, 0.2)"
+                      : "rgba(255, 255, 255, 0.05)",
+                color:
+                  chartData[chartData.length - 1].marketType === "趨勢"
+                    ? "#2196f3"
+                    : chartData[chartData.length - 1].marketType === "寬震"
+                      ? "#ce93d8"
+                      : "#aaa",
                 border: `1px solid ${
-                  chartData[chartData.length - 1].marketType === "趨勢" 
-                    ? "#2196f3" 
+                  chartData[chartData.length - 1].marketType === "趨勢"
+                    ? "#2196f3"
                     : chartData[chartData.length - 1].marketType === "寬震"
                       ? "#9c27b0"
                       : "rgba(255, 255, 255, 0.1)"
@@ -384,15 +400,21 @@ export default function AvgMaKbar({
             variant="outlined"
             sx={{
               height: 28,
-              bgcolor: isAvgCandle ? "rgba(76, 175, 80, 0.1)" : "rgba(33, 150, 243, 0.1)",
+              bgcolor: isAvgCandle
+                ? "rgba(76, 175, 80, 0.1)"
+                : "rgba(33, 150, 243, 0.1)",
               color: isAvgCandle ? "#4caf50" : "#2196f3",
-              borderColor: isAvgCandle ? "rgba(76, 175, 80, 0.4)" : "rgba(33, 150, 243, 0.4)",
+              borderColor: isAvgCandle
+                ? "rgba(76, 175, 80, 0.4)"
+                : "rgba(33, 150, 243, 0.4)",
               fontWeight: "bold",
               borderRadius: "4px",
               mr: 2,
               transition: "all 0.2s",
               "&:hover": {
-                bgcolor: isAvgCandle ? "rgba(76, 175, 80, 0.2)" : "rgba(33, 150, 243, 0.2)",
+                bgcolor: isAvgCandle
+                  ? "rgba(76, 175, 80, 0.2)"
+                  : "rgba(33, 150, 243, 0.2)",
                 transform: "translateY(-1px)",
               },
               "& .MuiChip-label": { px: 1.5 },
@@ -402,8 +424,16 @@ export default function AvgMaKbar({
           {/* Glowing HUD EMA Toggles */}
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {[
-              { key: "emaShort" as const, label: `EMA${settings.emaShort}`, color: "#589bf3" },
-              { key: "emaLong" as const, label: `EMA${settings.emaLong}`, color: "#ff7300" },
+              {
+                key: "emaShort" as const,
+                label: `EMA${settings.emaShort}`,
+                color: "#589bf3",
+              },
+              {
+                key: "emaLong" as const,
+                label: `EMA${settings.emaLong}`,
+                color: "#ff7300",
+              },
               { key: "ema60" as const, label: `EMA60`, color: "#9c27b0" },
               { key: "sma200" as const, label: `SMA200`, color: "#607d8b" },
             ].map((m) => {
@@ -413,7 +443,12 @@ export default function AvgMaKbar({
                   key={m.key}
                   label={m.label}
                   size="small"
-                  onClick={() => setVisibleMAs(prev => ({ ...prev, [m.key]: !prev[m.key] }))}
+                  onClick={() =>
+                    setVisibleMAs((prev) => ({
+                      ...prev,
+                      [m.key]: !prev[m.key],
+                    }))
+                  }
                   sx={{
                     height: 26,
                     fontSize: "0.7rem",
@@ -425,21 +460,21 @@ export default function AvgMaKbar({
                     border: `1px solid ${isActive ? m.color : "rgba(255,255,255,0.1)"}`,
                     bgcolor: isActive ? m.color : "rgba(0,0,0,0.2)",
                     color: isActive ? "#000" : "rgba(255,255,255,0.5)",
-                    boxShadow: isActive 
-                      ? `0 0 12px ${m.color}88, inset 0 0 4px rgba(255,255,255,0.5)` 
+                    boxShadow: isActive
+                      ? `0 0 12px ${m.color}88, inset 0 0 4px rgba(255,255,255,0.5)`
                       : "none",
                     "& .MuiChip-label": { px: 1.5 },
                     "&:hover": {
                       bgcolor: isActive ? m.color : "rgba(255,255,255,0.1)",
                       transform: "translateY(-1px)",
-                      boxShadow: isActive 
-                        ? `0 0 18px ${m.color}, inset 0 0 4px rgba(255,255,255,0.5)` 
+                      boxShadow: isActive
+                        ? `0 0 18px ${m.color}, inset 0 0 4px rgba(255,255,255,0.5)`
                         : `0 0 8px rgba(255,255,255,0.2)`,
                       color: isActive ? "#000" : "#fff",
                     },
                     "&:active": {
                       transform: "translateY(0px) scale(0.96)",
-                    }
+                    },
                   }}
                 />
               );
@@ -447,7 +482,6 @@ export default function AvgMaKbar({
           </Stack>
         </Box>
       </Stack>
-
 
       <Box
         ref={chartContainerRef}
@@ -471,9 +505,13 @@ export default function AvgMaKbar({
               width={0}
             />
             <ZAxis type="number" range={[10]} />
-            <Tooltip 
-              content={<ChartTooltip hideKeys={["mss", "marketType", "diagnostic", "bw"]} />} 
-              offset={50} 
+            <Tooltip
+              content={
+                <ChartTooltip
+                  hideKeys={["mss", "marketType", "diagnostic", "bw"]}
+                />
+              }
+              offset={50}
             />
 
             <Line
@@ -513,7 +551,11 @@ export default function AvgMaKbar({
               name="開"
             />
 
-            <Customized component={isAvgCandle ? AvgCandlestickRectangle : BaseCandlestickRectangle} />
+            <Customized
+              component={
+                isAvgCandle ? AvgCandlestickRectangle : BaseCandlestickRectangle
+              }
+            />
 
             {/* Volume Bars (Overlay) */}
             <Bar
@@ -536,7 +578,7 @@ export default function AvgMaKbar({
               }}
             />
 
-             {visibleMAs.emaShort && (
+            {visibleMAs.emaShort && (
               <Line
                 dataKey="ema5"
                 stroke="#589bf3"
@@ -677,19 +719,31 @@ export default function AvgMaKbar({
               }}
             />
             <YAxis yAxisId="statusAxis" domain={[0, 1]} hide />
-            <Tooltip content={<ChartTooltip hideKeys={["mss", "marketType", "diagnostic", "bw"]} showMESS={false} showIchimoku={false} showSignals={false} />} />
-            
+            <Tooltip
+              content={
+                <ChartTooltip
+                  hideKeys={["mss", "marketType", "diagnostic", "bw"]}
+                  showMESS={false}
+                  showIchimoku={false}
+                  showSignals={false}
+                />
+              }
+            />
+
             {/* Market Status Ribbon (Background) */}
             <Bar
               dataKey="mss"
               yAxisId="statusAxis"
               isAnimationActive={false}
               shape={(props: any) => {
-                const { x, y, width, height, payload } = props;
-                const { marketType, mss } = payload;
+                const { x, width, payload } = props;
+                const { marketType } = payload;
                 let fill = "rgba(255,255,255,0.02)"; // Ranging (Grey)
                 if (marketType === "趨勢") {
-                  fill = payload.diPlus > payload.diMinus ? "rgba(33, 150, 243, 0.2)" : "rgba(244, 67, 54, 0.2)";
+                  fill =
+                    payload.diPlus > payload.diMinus
+                      ? "rgba(33, 150, 243, 0.2)"
+                      : "rgba(244, 67, 54, 0.2)";
                 } else if (marketType === "寬震") {
                   fill = "rgba(156, 39, 176, 0.12)";
                 } else if (marketType === "擠壓") {
@@ -707,7 +761,12 @@ export default function AvgMaKbar({
               }}
             />
 
-            <ReferenceLine yAxisId="dmiAxis" y={20} stroke="#666" strokeDasharray="3 3" />
+            <ReferenceLine
+              yAxisId="dmiAxis"
+              y={20}
+              stroke="#666"
+              strokeDasharray="3 3"
+            />
             <Line
               yAxisId="dmiAxis"
               dataKey="adx"

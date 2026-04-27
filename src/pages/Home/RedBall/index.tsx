@@ -102,9 +102,10 @@ function csvToStockStore(csv: string): CsvStockType[] {
         record[h] = values[i] || "";
       });
 
+      const rawName = (record["stock_name"] || "").trim();
       return {
         id: (record["stock_id"] || "").trim(),
-        name: (record["stock_name"] || "").trim(),
+        name: (rawName === "null" || !rawName) ? "" : rawName,
         list: (record["list"] || "").trim(),
         type: (record["type"] || "").trim(),
         group: (record["group"] || "").trim(),

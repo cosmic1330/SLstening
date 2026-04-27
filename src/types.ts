@@ -106,6 +106,7 @@ export type SkillsTableType = {
 
 export type TickDealsType = {
   id: string;
+  name?: string;
   ts: number;
   price: number;
   avgPrices: number[];

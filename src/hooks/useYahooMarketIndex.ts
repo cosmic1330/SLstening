@@ -1,46 +1,47 @@
 import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
-import { tauriFetcher } from "../api/http";
+import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
-import { FutureIds } from "../types";
-import { isTaiwanMarketOpen, parseYahooHourlyData, parseYahooTickData } from "../utils/marketUtils";
+import { isTaiwanMarketOpen } from "../utils/marketUtils";
 
 export default function useYahooMarketIndex(
-  id: FutureIds,
-  tickUrl: string,
-  hourlyUrl: string,
+  symbol: string,
   debugKey: "otc" | "twse",
   isVisible: boolean = true,
 ) {
+  // 獲取 Tick 資料
   const {
-    data: tickData,
+    data: tickDeals,
     mutate: mutateTickDeals,
     isValidating: isTickValidating,
   } = useSWR(
-    tickUrl,
-    (url) => {
+    isVisible ? `market/tick/${symbol}` : null,
+    async () => {
       useDebugStore.getState().increment(debugKey);
-      return tauriFetcher(url);
+      return await marketApi.getTickData(symbol);
     },
     {
       isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (isTaiwanMarketOpen() ? 10000 : 0),
+      refreshInterval: () => (isTaiwanMarketOpen() ? 20000 : 0), // 延長至 20 秒，減少後端負擔
+      dedupingInterval: 5000,
     },
   );
 
+  // 獲取歷史資料
   const {
-    data: hourlyData,
+    data: historyData,
     mutate: mutateHourlyDeals,
     isValidating: isHourlyValidating,
   } = useSWR(
-    hourlyUrl,
-    (url) => {
+    isVisible ? `market/history/${symbol}` : null,
+    async () => {
       useDebugStore.getState().increment(debugKey);
-      return tauriFetcher(url);
+      return await marketApi.getHistoryData(symbol, "60m");
     },
     {
       isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (isTaiwanMarketOpen() ? 10000 : 0),
+      refreshInterval: () => (isTaiwanMarketOpen() ? 60000 : 0), // 指數歷史資料不需要頻繁更新
+      dedupingInterval: 10000,
     },
   );
 
@@ -51,28 +52,29 @@ export default function useYahooMarketIndex(
       if (!isHourlyValidating) mutateHourlyDeals();
     }
 
-    if (tickData || hourlyData) {
+    if (tickDeals || historyData) {
       hasFetched.current = true;
     }
   }, [
     isVisible,
     mutateTickDeals,
     mutateHourlyDeals,
-    tickData,
-    hourlyData,
+    tickDeals,
+    historyData,
     isTickValidating,
     isHourlyValidating,
   ]);
 
-  const tickDeals = useMemo(() => {
-    if (!tickData) return null;
-    return parseYahooTickData(tickData, id);
-  }, [tickData, id]);
-
   const deals = useMemo(() => {
-    if (!hourlyData) return null;
-    return parseYahooHourlyData(hourlyData);
-  }, [hourlyData]);
+    if (!historyData) return null;
+    return { 
+      id: historyData.id,
+      name: historyData.name,
+      data: historyData.data, 
+      change: historyData.change ?? 0, 
+      price: historyData.price 
+    };
+  }, [historyData]);
 
   return { deals, tickDeals };
 }

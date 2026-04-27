@@ -5,11 +5,13 @@ use serde::{Serialize, Deserialize};
 use ts_rs::TS;
 use std::time::Duration;
 use crate::error::AppError;
+use dashmap::DashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
 pub struct MarketTick {
     pub id: String,
+    pub name: Option<String>,
     pub price: f64,
     pub change_percent: f64,
     #[ts(type = "number")]
@@ -19,6 +21,29 @@ pub struct MarketTick {
     pub previous_close: f64,
     #[ts(type = "number[]")]
     pub timestamps: Vec<i64>,
+    pub volume: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct HistoryPoint {
+    #[ts(type = "number")]
+    pub t: i64,
+    pub o: f64,
+    pub h: f64,
+    pub l: f64,
+    pub c: f64,
+    pub v: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[ts(export)]
+pub struct MarketHistory {
+    pub id: String,
+    pub name: Option<String>,
+    pub data: Vec<HistoryPoint>,
+    pub price: f64,
+    pub change: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -33,7 +58,13 @@ pub struct MarketIndicators {
 #[ts(export)]
 pub enum MarketEvent {
     Tick(MarketTick),
+    History(MarketHistory),
     Indicators(MarketIndicators),
+}
+
+pub struct MarketCacheItem {
+    pub tick: MarketTick,
+    pub timestamp: std::time::Instant,
 }
 
 pub struct MarketManager {
@@ -41,6 +72,10 @@ pub struct MarketManager {
     pub active_symbols: Arc<DashSet<String>>,
     // 記錄最後一次被封鎖的時間
     pub last_blocked_at: std::sync::Mutex<Option<std::time::Instant>>,
+    // 簡單的資料快取 (Symbol -> (Tick, Timestamp))
+    pub cache: DashMap<String, MarketCacheItem>,
+    // 正在進行中的請求，避免重複發送
+    pub in_flight: DashSet<String>,
 }
 
 impl MarketManager {
@@ -48,6 +83,8 @@ impl MarketManager {
         Self {
             active_symbols: Arc::new(DashSet::new()),
             last_blocked_at: std::sync::Mutex::new(None),
+            cache: DashMap::new(),
+            in_flight: DashSet::new(),
         }
     }
 
@@ -79,6 +116,24 @@ impl MarketManager {
             *last = Some(std::time::Instant::now());
         }
     }
+
+    /// 從快取中獲取資料 (10 秒有效)
+    pub fn get_from_cache(&self, symbol: &str) -> Option<MarketTick> {
+        if let Some(item) = self.cache.get(symbol) {
+            if item.timestamp.elapsed() < Duration::from_secs(10) {
+                return Some(item.tick.clone());
+            }
+        }
+        None
+    }
+
+    /// 更新快取
+    pub fn update_cache(&self, tick: MarketTick) {
+        self.cache.insert(tick.id.clone(), MarketCacheItem {
+            tick,
+            timestamp: std::time::Instant::now(),
+        });
+    }
 }
 
 pub fn init(app: AppHandle) -> Arc<MarketManager> {
@@ -86,7 +141,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
     let manager_clone = Arc::clone(&manager);
     let app_clone = app.clone();
 
-    // 啟動即時報價輪詢 (Tick) - 每 30 秒
+    // 啟動即時報價輪詢 (Tick) - 每 30 秒 (大盤指數則依前端需求更頻繁)
     tauri::async_runtime::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
@@ -103,12 +158,21 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 continue;
             }
 
-            // 分類：需要單獨處理的全球指數 vs 可以批量處理的台灣股票/指數
+            // 分類
             let mut tw_batch = Vec::new();
             let mut other_indices = Vec::new();
 
             for s in symbols {
-                // 加權與櫃買指數在台灣 API 更準，歸類到 tw_batch
+                // 檢查是否有有效快取
+                if manager_clone.get_from_cache(&s).is_some() {
+                    continue;
+                }
+                
+                // 檢查是否正在抓取中
+                if manager_clone.in_flight.contains(&s) {
+                    continue;
+                }
+
                 if s == "^TWII" || s == "^TWOII" {
                     tw_batch.push(s);
                 } else if s.contains("^") || s.contains("=") {
@@ -118,51 +182,152 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 }
             }
 
-            // 1. 處理全球指數 (單獨請求)
+            // 1. 處理全球指數
             for symbol in other_indices {
-                log::info!("Updating market index: {}", symbol);
+                manager_clone.in_flight.insert(symbol.clone());
                 let app_handle = app_clone.clone();
-                match fetch_ticks_batched(&[symbol.clone()]).await {
-                    Ok(ticks) => {
-                        for tick in ticks {
-                            let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
-                        }
-                    },
-                    Err(e) => {
-                        if e.to_string().contains("API_BLOCKED") {
-                            manager_clone.enter_cooldown();
-                            let _ = app_handle.emit("api-blocked", true);
-                        }
-                        log::error!("Failed to fetch index {}: {:?}", symbol, e);
-                    },
-                }
-                tokio::time::sleep(Duration::from_millis(500)).await;
+                let m = Arc::clone(&manager_clone);
+                let sym = symbol.clone();
+                
+                tauri::async_runtime::spawn(async move {
+                    log::info!("Updating market index: {}", sym);
+                    match fetch_ticks_batched(&[sym.clone()]).await {
+                        Ok(ticks) => {
+                            for tick in ticks {
+                                m.update_cache(tick.clone());
+                                let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
+                            }
+                        },
+                        Err(e) => {
+                            if e.to_string().contains("API_BLOCKED") {
+                                m.enter_cooldown();
+                                let _ = app_handle.emit("api-blocked", true);
+                            }
+                        },
+                    }
+                    m.in_flight.remove(&sym);
+                });
+                tokio::time::sleep(Duration::from_millis(300)).await;
             }
 
-            // 2. 處理台灣股票/指數 (批量請求，每 5 檔一組)
-            for chunk in tw_batch.chunks(5) {
-                log::info!("Fetching batch of {} symbols: {:?}", chunk.len(), chunk);
-                let app_handle = app_clone.clone();
-                match fetch_ticks_batched(chunk).await {
-                    Ok(ticks) => {
-                        for tick in ticks {
-                            let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
-                        }
-                    },
-                    Err(e) => {
-                        if e.to_string().contains("API_BLOCKED") {
-                            manager_clone.enter_cooldown();
-                            let _ = app_handle.emit("api-blocked", true);
-                        }
-                        log::error!("Failed to fetch batch {:?}: {:?}", chunk, e);
-                    },
+            // 2. 處理台灣股票/指數 (批量請求)
+            for chunk in tw_batch.chunks(10) {
+                let symbols_to_fetch: Vec<String> = chunk.to_vec();
+                for s in &symbols_to_fetch {
+                    manager_clone.in_flight.insert(s.clone());
                 }
-                tokio::time::sleep(Duration::from_secs(1)).await;
+
+                let app_handle = app_clone.clone();
+                let m = Arc::clone(&manager_clone);
+                
+                tauri::async_runtime::spawn(async move {
+                    log::info!("Fetching batch of {} symbols: {:?}", symbols_to_fetch.len(), symbols_to_fetch);
+                    match fetch_ticks_batched(&symbols_to_fetch).await {
+                        Ok(ticks) => {
+                            for tick in ticks {
+                                m.update_cache(tick.clone());
+                                let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
+                            }
+                        },
+                        Err(e) => {
+                            if e.to_string().contains("API_BLOCKED") {
+                                m.enter_cooldown();
+                                let _ = app_handle.emit("api-blocked", true);
+                            }
+                        },
+                    }
+                    for s in &symbols_to_fetch {
+                        m.in_flight.remove(s);
+                    }
+                });
+                tokio::time::sleep(Duration::from_millis(800)).await;
             }
         }
     });
 
     manager
+}
+
+pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<MarketHistory, AppError> {
+    let url = if symbol.starts_with("^") || symbol.contains("=") {
+        // 全球指數或期貨
+        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range=5d", symbol, period)
+    } else {
+        // 台灣股票
+        format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;period={};symbols=[\"{}\"]", period, symbol)
+    };
+
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+
+    let res = client.get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+        .send()
+        .await
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS || res.status() == reqwest::StatusCode::FORBIDDEN {
+        return Err(AppError::Unknown("API_BLOCKED".to_string()));
+    }
+
+    let body = res.text().await.map_err(|e| AppError::Unknown(e.to_string()))?;
+    let v: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| AppError::Serialization(e.to_string()))?;
+    
+    let item = if v.is_array() { &v[0] } else { &v };
+    let chart = &item["chart"];
+    if chart.is_null() {
+        return Err(AppError::Unknown("No chart data found".to_string()));
+    }
+
+    let result_node = if !chart["result"].is_null() && chart["result"].is_array() && !chart["result"][0].is_null() {
+        &chart["result"][0]
+    } else {
+        chart
+    };
+
+    let meta = &result_node["meta"];
+    let indicators = &result_node["indicators"]["quote"][0];
+    
+    let opens = indicators["open"].as_array();
+    let closes = indicators["close"].as_array();
+    let highs = indicators["high"].as_array();
+    let lows = indicators["low"].as_array();
+    let volumes = indicators["volume"].as_array();
+    let ts = result_node["timestamp"].as_array();
+    
+    let mut history_data = Vec::new();
+    if let (Some(o), Some(c), Some(h), Some(l), Some(v), Some(t)) = (opens, closes, highs, lows, volumes, ts) {
+        for i in 0..o.len() {
+            if let (Some(open), Some(close), Some(high), Some(low), Some(vol), Some(time)) = 
+                (o[i].as_f64(), c[i].as_f64(), h[i].as_f64(), l[i].as_f64(), v[i].as_f64(), t[i].as_i64()) {
+                history_data.push(HistoryPoint {
+                    t: time,
+                    o: open,
+                    h: high,
+                    l: low,
+                    c: close,
+                    v: vol,
+                });
+            }
+        }
+    }
+
+    let price = meta["regularMarketPrice"].as_f64().unwrap_or(0.0);
+    let change = meta["regularMarketChange"].as_f64();
+    let name = meta["longName"].as_str()
+        .or_else(|| meta["shortName"].as_str())
+        .map(|s| s.to_string());
+
+    Ok(MarketHistory {
+        id: symbol.to_string(),
+        name,
+        data: history_data,
+        price,
+        change,
+    })
 }
 
 pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<MarketTick>, AppError> {
@@ -192,7 +357,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         .map_err(|e| AppError::Unknown(e.to_string()))?;
 
     let res = client.get(&url)
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36")
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
         .send()
         .await
         .map_err(|e| AppError::Unknown(e.to_string()))?;
@@ -253,10 +418,12 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let timestamps_raw = result_node["timestamp"].as_array();
         let closes_raw = indicators["close"].as_array();
         let highs_raw = indicators["high"].as_array();
+        let volumes_raw = indicators["volume"].as_array();
 
         let mut timestamps = Vec::new();
         let mut closes = Vec::new();
         let mut highs = Vec::new();
+        let mut volume = None;
 
         if let (Some(ts_arr), Some(cl_arr), Some(hi_arr)) = (timestamps_raw, closes_raw, highs_raw) {
             for ((ts_val, cl_val), hi_val) in ts_arr.iter().zip(cl_arr.iter()).zip(hi_arr.iter()) {
@@ -267,12 +434,27 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
                 }
             }
         }
+        
+        if let Some(v_arr) = volumes_raw {
+            if let Some(last_v) = v_arr.last() {
+                volume = last_v.as_f64();
+            }
+        } else if let Some(v) = meta["regularMarketVolume"].as_f64() {
+            volume = Some(v);
+        }
             
         let mut pre = 0.0;
         let avg_prices: Vec<f64> = highs.iter().enumerate().map(|(i, &h)| { pre += h; pre / (i + 1) as f64 }).collect();
 
+        let name = meta["longName"].as_str()
+            .or_else(|| meta["shortName"].as_str())
+            .or_else(|| quote["longName"].as_str())
+            .or_else(|| quote["shortName"].as_str())
+            .map(|s| s.to_string());
+
         results.push(MarketTick {
             id: matched_id,
+            name,
             price,
             change_percent,
             refreshed_ts,
@@ -280,6 +462,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
             avg_prices,
             previous_close,
             timestamps,
+            volume,
         });
     }
 

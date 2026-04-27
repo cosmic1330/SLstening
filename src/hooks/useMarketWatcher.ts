@@ -28,6 +28,7 @@ export default function useMarketWatcher() {
           // 將 Rust 端的 MarketTick 轉換為前端的 TickDealsType
           const tick: TickDealsType = {
             id: payload.id,
+            name: (payload.name && payload.name !== "null") ? payload.name : undefined,
             price: payload.price,
             changePercent: payload.change_percent,
             ts: payload.refreshed_ts,
@@ -35,6 +36,7 @@ export default function useMarketWatcher() {
             avgPrices: payload.avg_prices,
             previousClose: payload.previous_close,
             timestamps: payload.timestamps,
+            volume: payload.volume || undefined,
           };
           updateTick(tick);
         } else if (type === "Indicators") {

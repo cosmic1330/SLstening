@@ -51,7 +51,8 @@ pub fn run() {
             commands::export::create_csv_from_json,
             commands::storage::get_db_size,
             commands::market::subscribe_stock,
-            commands::market::unsubscribe_stock
+            commands::market::unsubscribe_stock,
+            commands::market::get_market_data
         ])
         .run(tauri::generate_context!()) {
         log::error!("error while running tauri application: {}", e);

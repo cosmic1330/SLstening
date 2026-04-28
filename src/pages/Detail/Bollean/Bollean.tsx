@@ -110,8 +110,6 @@ const ExitArrow = (props: any) => {
   );
 };
 
-
-
 export default function Bollean({
   visibleCount,
   setVisibleCount,
@@ -148,8 +146,6 @@ export default function Bollean({
   const handleCloseChannelSettings = () => {
     setChannelAnchorEl(null);
   };
-
-
 
   const handleResetChannel = () => {
     setChannelPeriod(60);
@@ -536,8 +532,6 @@ export default function Bollean({
               </IconButton>
             </Box>
 
-
-
             {showChannel && (
               <Chip
                 icon={
@@ -617,8 +611,6 @@ export default function Bollean({
             </Button>
           </Box>
         </Menu>
-
-
       </Stack>
 
       <Box
@@ -645,7 +637,13 @@ export default function Bollean({
             <Tooltip
               content={
                 <ChartTooltip
-                  hideKeys={["buySignal", "exitSignal", "supertrend", "trailStop", "direction"]}
+                  hideKeys={[
+                    "buySignal",
+                    "exitSignal",
+                    "supertrend",
+                    "trailStop",
+                    "direction",
+                  ]}
                 />
               }
               offset={50}
@@ -744,8 +742,6 @@ export default function Bollean({
                 />
               </>
             )}
-
-
 
             {/* Signals */}
             <Scatter

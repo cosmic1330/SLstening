@@ -25,6 +25,7 @@ import boll from "../../../cls_tools/boll";
 import dmi from "../../../cls_tools/dmi";
 import ema from "../../../cls_tools/ema";
 import ma from "../../../cls_tools/ma";
+import mss from "../../../cls_tools/mss";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
@@ -165,12 +166,9 @@ export default function AvgMaKbar({
     let sma200_data = ma.init(deals[0], 200);
     let dmi_data = dmi.init(deals[0], 14);
     let boll_data = boll.init(deals[0]);
+    let mss_state = mss.init();
 
     const response: AvgMaChartData[] = [];
-    const ema60Series: number[] = [];
-
-    // Keltner Channel state for Squeeze Pro
-    let prevAtr = 0;
 
     for (let i = 0; i < deals.length; i++) {
       const deal = deals[i];
@@ -195,62 +193,22 @@ export default function AvgMaKbar({
         volMa20 = sumV / 20;
       }
 
-      // --- Squeeze Pro Logic (BB vs KC) ---
-      // 1. Calculate ATR for Keltner Channel
-      let tr = deal.h - deal.l;
-      if (i > 0) {
-        tr = Math.max(
-          tr,
-          Math.abs(deal.h - deals[i - 1].c),
-          Math.abs(deal.l - deals[i - 1].c),
-        );
-      }
-      let atr = i === 0 ? tr : (prevAtr * 19 + tr) / 20; // 20-period ATR
-      prevAtr = atr;
-
-      const kcWidth = atr * 1.5 * 2; // Keltner Channel Width (Multiplier 1.5)
-      const bbWidth =
-        boll_data.bollUb && boll_data.bollLb
-          ? boll_data.bollUb - boll_data.bollLb
-          : 0;
-
-      const isSqueeze = bbWidth < kcWidth; // Squeeze Pro core logic
-
-      ema60Series.push(ema60_data.ema || 0);
-      const slope = i >= 5 ? (ema60Series[i] - ema60Series[i - 5]) / 5 : 0;
-
-      // --- Real-world Market Regime Classification ---
-      let mss = 0;
-      let marketType = "震盪";
-      const diagnostics: string[] = [];
-
-      if (isSqueeze) {
-        marketType = "擠壓"; // Typical for low-vol range
-        mss = 1;
-        diagnostics.push("能量擠壓");
-      } else {
-        // BB > KC, expansion occurring
-        const e5 = ema5_data.ema || 0;
-        const e10 = ema10_data.ema || 0;
-        const e60 = ema60_data.ema || 0;
-        const isAligned = (e5 > e10 && e10 > e60) || (e5 < e10 && e10 < e60);
-
-        if (isAligned && Math.abs(slope) > e60 * 0.0005) {
-          marketType = "趨勢";
-          mss = 4;
-          diagnostics.push("發散趨勢");
-        } else {
-          marketType = "寬震";
-          mss = 2.5;
-          diagnostics.push("擴張洗盤");
-        }
-      }
-
-      // Add momentum boost
-      if (dmi_data.adx > 25 && dmi_data.adx > (response[i - 1]?.adx || 0)) {
-        mss += 1;
-        diagnostics.push("動能強勁");
-      }
+      // --- Market Strength Score (MSS) Logic ---
+      const mssResult = mss.next(
+        deal,
+        i > 0 ? deals[i - 1] : null,
+        mss_state,
+        {
+          ema5: ema5_data.ema || 0,
+          ema10: ema10_data.ema || 0,
+          ema60: ema60_data.ema || 0,
+          bollUb: boll_data.bollUb || null,
+          bollLb: boll_data.bollLb || null,
+          adx: dmi_data.adx || 0,
+        },
+        i,
+      );
+      mss_state = mssResult.state;
 
       response.push({
         ...deal,
@@ -262,10 +220,10 @@ export default function AvgMaKbar({
         diPlus: dmi_data.pDi ?? null,
         diMinus: dmi_data.mDi ?? null,
         adx: dmi_data.adx ?? null,
-        bw: bbWidth,
-        mss,
-        marketType,
-        diagnostic: diagnostics.join("|"),
+        bw: mssResult.bbWidth,
+        mss: mssResult.mss,
+        marketType: mssResult.marketType,
+        diagnostic: mssResult.diagnostic,
       });
     }
 

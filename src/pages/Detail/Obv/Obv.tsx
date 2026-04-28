@@ -39,7 +39,6 @@ interface ObvChartData extends Partial<{
   // Price Indicators
   ma60: number | null;
   ma20: number | null; // Keep for reference
-  volMa20: number | null;
   // OBV Indicators
   obv: number | null;
   obvMa20: number | null;

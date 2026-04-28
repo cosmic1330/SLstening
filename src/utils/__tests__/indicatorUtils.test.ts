@@ -18,14 +18,8 @@ const mockSettings: IndicatorSettings = {
   emaLong: 10,
   cmf: 21,
   cmfEma: 5,
-  hmaLength: 20,
   atrLen: 14,
   atrMult: 2.5,
-  atrVolSwitch: 1,
-  fastLookback: 10,
-  trendFilter: 50,
-  kcLength: 20,
-  kcMult: 2.0,
 };
 
 const generateMockDeals = (count: number): TaType => {
@@ -69,27 +63,6 @@ describe("indicatorUtils", () => {
       expect(result[3].ma5).toBeNull(); // Not enough data yet
     });
 
-    it("should calculate trend correctly", () => {
-      // Create a strong uptrend
-      const count = 300;
-      const deals: TaType = [];
-      for (let i = 0; i < count; i++) {
-        deals.push({
-          t: 20240101 + i,
-          o: 100 + i,
-          h: 105 + i,
-          l: 95 + i,
-          c: 100 + i,
-          v: 1000,
-        });
-      }
-
-      const result = calculateIndicators(deals, mockSettings);
-      const last = result[result.length - 1];
-
-      expect(last.trend).toBe("多頭");
-    });
-
     it("should handle missing data gracefully (null checks)", () => {
       // @ts-ignore
       const result = calculateIndicators(null, mockSettings);
@@ -123,32 +96,13 @@ describe("indicatorUtils", () => {
       expect(last.cmf).not.toBeNull();
     });
 
-    it("should not produce redundant ATR buy/exit signals (V7 Logic)", () => {
-      // Create a scenario where conditions are met for multiple days
-      const deals: TaType = [];
-      // Need EMA 50 to be lower than price, so we start with some history
-      for (let i = 0; i < 100; i++) {
-        deals.push({
-          t: 20240101 + i,
-          o: 100 + i,
-          h: 105 + i,
-          l: 95 + i,
-          c: 100 + i,
-          v: 1000,
-        });
-      }
+    it("should ensure supertrend is null instead of 0 when data is insufficient", () => {
+      const deals = generateMockDeals(5);
+      const result = calculateIndicators(deals, mockSettings);
 
-      const result = calculateIndicators(deals, {
-        ...mockSettings,
-        fastLookback: 5,
-        trendFilter: 20,
+      result.forEach((d) => {
+        expect(d.supertrend).not.toBe(0);
       });
-
-      const buySignals = result.filter((d) => d.buySignal !== null);
-
-      // In a steady uptrend, breakout happens only once or twice depending on slope
-      // But with state machine, we expect only ONE buy signal until exit.
-      expect(buySignals.length).toBeLessThanOrEqual(1);
     });
   });
 });

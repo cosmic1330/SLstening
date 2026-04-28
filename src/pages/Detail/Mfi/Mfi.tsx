@@ -179,32 +179,6 @@ export default function Mfi({
           buySignal = d.l ? d.l * 0.98 : null;
           buyReason = "超賣反轉";
         }
-        // Sell: Overbought (>80) and Turning Down
-        else if (prevMfi > 80 && currMfi < prevMfi) {
-          exitSignal = d.h ? d.h * 1.02 : null;
-          exitReason = "超買反轉";
-        }
-
-        // v2.0 Accumulation Signal (吸籌確認)
-        if (currMfi < 30 && currMfi > prevMfi) {
-          const highs = arr.map((x) => x.h || 0);
-          const lows = arr.map((x) => x.l || 0);
-          const resistance = getExtrema(highs, i, 20, "MAX");
-          const support = getExtrema(lows, i, 20, "MIN");
-          const avgPrice = d.c || 1;
-          const boxWidth = (resistance - support) / avgPrice;
-
-          const isConsolidation =
-            boxWidth < 0.03 || (d.c || 0) < support * 1.02;
-          const isVolLow = (d.v || 0) < (d.volMa20 || 0) * 0.8;
-          const isMacdImproving =
-            (d.macdOsc || 0) < 0 && (d.macdOsc || 0) > (prev.macdOsc || 0);
-
-          if (isConsolidation && isVolLow && isMacdImproving) {
-            accumulationSignal = d.l ? d.l * 0.97 : null;
-            accumulationReason = "吸籌機會 (MFI底背離)";
-          }
-        }
       }
 
       return {

@@ -655,17 +655,16 @@ export default function Donchian({
             {/* Donchian Channel lines */}
             <Line
               dataKey="donchianMa"
-              stroke="#2196f3"
-              strokeWidth={1}
+              stroke="#ff7300"
+              strokeWidth={1.5}
               dot={false}
               activeDot={false}
               name={`DC 中軌 (${settings.donchian})`}
-              opacity={0.5}
             />
             <Line
               dataKey="donchianUb"
               stroke="#00bcd4"
-              strokeWidth={1.7}
+              strokeWidth={2}
               dot={false}
               activeDot={false}
               name={`DC 上軌 (${settings.donchian})`}
@@ -673,7 +672,7 @@ export default function Donchian({
             <Line
               dataKey="donchianLb"
               stroke="#00bcd4"
-              strokeWidth={1.7}
+              strokeWidth={2}
               dot={false}
               activeDot={false}
               name={`DC 下軌 (${settings.donchian})`}

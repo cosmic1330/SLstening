@@ -375,6 +375,16 @@ export default function ATR({
               name="開"
             />
 
+
+            <Line
+              dataKey="ema30"
+              stroke="#ff7300"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={false}
+              name="EMA 30"
+              opacity={0.7}
+            />
             <Customized component={BaseCandlestickRectangle} />
 
             <Bar
@@ -387,21 +397,11 @@ export default function ATR({
 
             <Line
               dataKey="supertrend"
-              stroke="rgba(33, 150, 243, 0.8)"
+              stroke="#589bf3"
               strokeWidth={2}
               dot={false}
               activeDot={false}
               name="SuperTrend"
-            />
-
-            <Line
-              dataKey="ema30"
-              stroke="#eda049"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={false}
-              name="EMA 30"
-              opacity={0.3}
             />
 
             <Scatter

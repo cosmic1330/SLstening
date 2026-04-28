@@ -40,7 +40,7 @@ import atrDoc from "./ATR/ATR.md?raw";
 const MaKbar = lazy(() => import("./Ma/MaKbar"));
 const Obv = lazy(() => import("./Obv/Obv"));
 const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
-const MJ = lazy(() => import("./Mj/MJ"));
+// const MJ = lazy(() => import("./Mj/MJ"));
 const MR = lazy(() => import("./Mr/MR"));
 const Kd = lazy(() => import("./Kd/Kd"));
 const Mfi = lazy(() => import("./Mfi/Mfi"));
@@ -116,16 +116,16 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
   const docMap = useMemo(
     () => ({
-      bollean: { title: "唐奇安通道策略", content: donchianDoc },
-      ma_k: { title: "均線與缺口策略", content: maDoc },
+      donchian: { title: "唐奇安通道策略", content: donchianDoc },
+      ma: { title: "均線與缺口策略", content: maDoc },
       ema: { title: "EMA趨勢策略", content: emaDoc },
+      atr: { title: "ATR Trend 策略說明", content: atrDoc },
       obv: { title: "OBV動能策略", content: obvDoc },
       mj: { title: "MJ雙指標共振", content: mjDoc },
       mr: { title: "MR雙指標共振", content: mrDoc },
       kd: { title: "KD隨機指標策略", content: kdDoc },
       mfi: { title: "MFI資金流便覽", content: mfiDoc },
       ichimoku_cloud: { title: "一目均衡表說明", content: ichimokuDoc },
-      atr: { title: "ATR Trend 策略說明", content: atrDoc },
     }),
     [],
   );
@@ -139,7 +139,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const slides = useMemo(
     () => [
       {
-        id: "bollean",
+        id: "donchian",
         content: (
           <Donchian
             visibleCount={visibleCount}
@@ -150,7 +150,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
         ),
       },
       {
-        id: "ma_k",
+        id: "ma",
         content: (
           <MaKbar
             perd={perd}
@@ -165,6 +165,17 @@ const FullscreenVerticalCarousel: React.FC = () => {
         id: "ema",
         content: (
           <AvgMaKbar
+            visibleCount={visibleCount}
+            setVisibleCount={setVisibleCount}
+            rightOffset={rightOffset}
+            setRightOffset={setRightOffset}
+          />
+        ),
+      },
+      {
+        id: "atr",
+        content: (
+          <ATR
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
             rightOffset={rightOffset}
@@ -188,17 +199,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
         content: (
           <MR
             perd={perd}
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "mj",
-        content: (
-          <MJ
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
             rightOffset={rightOffset}
@@ -231,17 +231,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "ichimoku_cloud",
         content: <IchimokuCloud perd={perd} />,
-      },
-      {
-        id: "atr",
-        content: (
-          <ATR
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
       },
     ],
     [perd, visibleCount, rightOffset],
@@ -422,6 +411,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
             goToSlide={goToSlide}
             pageRef={pageRef}
             onOpenDoc={() => setIsDocOpen(true)}
+            currentId={slides[current].id}
           />
 
           <DocModal

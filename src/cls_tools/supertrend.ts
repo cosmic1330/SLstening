@@ -7,7 +7,7 @@ export interface SupertrendState {
 }
 
 const supertrend = {
-  init(deal: any): SupertrendState {
+  init(_: any): SupertrendState {
     return {
       prevAtr: 0,
       prevFinalUpperBand: 0,

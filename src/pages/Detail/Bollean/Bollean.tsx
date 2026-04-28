@@ -121,7 +121,7 @@ export default function Bollean({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings, updateSetting, resetSettings } = useIndicatorSettings();
+  const { settings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
   const [isLocked, setIsLocked] = useState(false);

@@ -30,24 +30,6 @@ import {
 } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 
-/**
- * Helper to find local extrema
- */
-const getExtrema = (
-  arr: number[],
-  idx: number,
-  window: number,
-  type: "MAX" | "MIN",
-) => {
-  let val = type === "MAX" ? -Infinity : Infinity;
-  const start = Math.max(0, idx - window);
-  for (let i = start; i < idx; i++) {
-    if (type === "MAX") val = Math.max(val, arr[i]);
-    else val = Math.min(val, arr[i]);
-  }
-  return val;
-};
-
 interface MfiChartData extends Partial<EnhancedDealData> {
   buySignal?: number | null;
   exitSignal?: number | null;
@@ -60,7 +42,6 @@ interface MfiChartData extends Partial<EnhancedDealData> {
   macdOsc?: number | null;
   macdDif?: number | null;
 }
-
 
 export default function Mfi({
   visibleCount,
@@ -198,7 +179,6 @@ export default function Mfi({
     );
   }, [deals, settings, visibleCount, rightOffset]);
 
-
   if (chartData.length === 0) {
     return (
       <Box
@@ -232,7 +212,6 @@ export default function Mfi({
           </Typography>
         </MuiTooltip>
       </Stack>
-
 
       <Box
         ref={chartContainerRef}

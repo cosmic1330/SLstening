@@ -3,11 +3,13 @@ import cmf from "../cls_tools/cmf";
 import emaTool from "../cls_tools/ema";
 import kd from "../cls_tools/kd";
 import ma from "../cls_tools/ma";
+import vma from "../cls_tools/vma";
 import supertrendTool from "../cls_tools/supertrend";
 import macd from "../cls_tools/macd";
 import mfi from "../cls_tools/mfi";
 import obv from "../cls_tools/obv";
 import obvEma from "../cls_tools/obvEma";
+import donchianTool from "../cls_tools/donchian";
 import rsi from "../cls_tools/rsi";
 import { IndicatorSettings } from "../hooks/useIndicatorSettings";
 import { TaType } from "../types";
@@ -32,6 +34,7 @@ export interface EnhancedDealData {
   deduction120: number | null;
   deduction240: number | null;
   ema30: number | null;
+  vma20: number | null;
   bollMa: number | null;
   bollUb: number | null;
   bollLb: number | null;
@@ -48,6 +51,9 @@ export interface EnhancedDealData {
   osc: number | null;
   dif: number | null;
   supertrend: number | null;
+  donchianUb: number | null;
+  donchianLb: number | null;
+  donchianMa: number | null;
 }
 
 /**
@@ -65,8 +71,8 @@ export function calculateIndicators(
   let ma60Data = ma.init(deals[0], settings.ma60);
   let ma120Data = ma.init(deals[0], settings.ma120);
   let ma240Data = ma.init(deals[0], settings.ma240);
-  let volMa10Data = ma.init({ ...deals[0], c: deals[0].v }, settings.ma10);
-  let volMa20Data = ma.init({ ...deals[0], c: deals[0].v }, settings.ma20);
+  let vma20Data = vma.init(deals[0], 20);
+  let ema30Data = emaTool.init(deals[0], 30);
   let bollData = boll.init(deals[0]);
   let kdData = kd.init(deals[0], settings.kd);
   let rsiData = rsi.init(deals[0], settings.rsi);
@@ -76,8 +82,8 @@ export function calculateIndicators(
   let obvEmaData = obvEma.init(obvData.obv, 10);
   let obvMa20Data = ma.init({ ...deals[0], c: obvData.obv }, 20);
   let cmfData = cmf.init(deals[0]);
-  let ema30Data = emaTool.init(deals[0], 30);
   let stState = supertrendTool.init(deals[0]);
+  let donchianState = donchianTool.init();
 
   return deals.map((deal, i) => {
     const prevDeal = i > 0 ? deals[i - 1] : null;
@@ -90,8 +96,7 @@ export function calculateIndicators(
       ma120Data = ma.next(deal, ma120Data, settings.ma120);
       ma240Data = ma.next(deal, ma240Data, settings.ma240);
       ema30Data = emaTool.next(deal, ema30Data, 30);
-      volMa10Data = ma.next({ ...deal, c: deal.v }, volMa10Data, settings.ma10);
-      volMa20Data = ma.next({ ...deal, c: deal.v }, volMa20Data, settings.ma20);
+      vma20Data = vma.next(deal, vma20Data, 20);
       bollData = boll.next(deal, bollData, settings.boll);
       kdData = kd.next(deal, kdData, settings.kd);
       rsiData = rsi.next(deal, rsiData, settings.rsi);
@@ -114,6 +119,14 @@ export function calculateIndicators(
     );
     stState = stResult.state;
 
+    // Donchian Channel calculation
+    const donchianResult = donchianTool.next(
+      deal,
+      donchianState,
+      settings.donchian || 20
+    );
+    donchianState = donchianResult.state;
+
     const ma5 = ma5Data.ma ? ma5Data.ma : null;
     const ma10 = ma10Data.ma ? ma10Data.ma : null;
     const ma20 = ma20Data.ma ? ma20Data.ma : null;
@@ -121,6 +134,7 @@ export function calculateIndicators(
     const ma120 = ma120Data.ma ? ma120Data.ma : null;
     const ma240 = ma240Data.ma ? ma240Data.ma : null;
     const ema30 = ema30Data.ema ? ema30Data.ema : null;
+    const vma20 = vma20Data.vma ? vma20Data.vma : null;
 
     const deduction5 =
       ma5Data.dataset && ma5Data.dataset.length >= settings.ma5
@@ -171,6 +185,7 @@ export function calculateIndicators(
       deduction120,
       deduction240,
       ema30,
+      vma20,
       bollMa,
       bollUb,
       bollLb,
@@ -187,6 +202,9 @@ export function calculateIndicators(
       osc: macdData.osc ? macdData.osc : null,
       dif: macdData.dif ? macdData.dif[macdData.dif.length - 1] : null,
       supertrend: stResult.value,
+      donchianUb: donchianResult.upper,
+      donchianLb: donchianResult.lower,
+      donchianMa: donchianResult.middle,
     };
   });
 }

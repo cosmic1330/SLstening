@@ -20,12 +20,12 @@ import { DealsContext } from "../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../types";
 import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
 import formatDateTime from "../../utils/formatDateTime";
-import Bollean from "./Bollean/Bollean";
+import Donchian from "./Donchian/Donchian";
 import AvgMaKbar from "./Ema/EmaKbar";
 import GlassBar from "./GlassBar";
 
 // Import doc assets
-import bolleanDoc from "./Bollean/Bollean.md?raw";
+import donchianDoc from "./Donchian/Donchian.md?raw";
 import emaDoc from "./Ema/Ema.md?raw";
 import ichimokuDoc from "./IchimokuCloud/ichimoku.md?raw";
 import kdDoc from "./Kd/Kd.md?raw";
@@ -116,7 +116,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
   const docMap = useMemo(
     () => ({
-      bollean: { title: "布林通道策略", content: bolleanDoc },
+      bollean: { title: "唐奇安通道策略", content: donchianDoc },
       ma_k: { title: "均線與缺口策略", content: maDoc },
       ema: { title: "EMA趨勢策略", content: emaDoc },
       obv: { title: "OBV動能策略", content: obvDoc },
@@ -141,7 +141,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       {
         id: "bollean",
         content: (
-          <Bollean
+          <Donchian
             visibleCount={visibleCount}
             setVisibleCount={setVisibleCount}
             rightOffset={rightOffset}

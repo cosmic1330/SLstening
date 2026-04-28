@@ -17,6 +17,7 @@ export interface IndicatorSettings {
   cmfEma: number;
   atrLen: number;
   atrMult: number;
+  donchian: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   cmfEma: 5,
   atrLen: 14,
   atrMult: 2.5,
+  donchian: 20,
 };
 
 export default function useIndicatorSettings() {

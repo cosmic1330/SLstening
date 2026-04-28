@@ -20,6 +20,7 @@ const mockSettings: IndicatorSettings = {
   cmfEma: 5,
   atrLen: 14,
   atrMult: 2.5,
+  donchian: 20,
 };
 
 const generateMockDeals = (count: number): TaType => {

@@ -23,10 +23,12 @@ interface IchimokuChartProps {
   data: IchimokuCombinedData[];
   signals: SignalResult[];
   cmfEmaPeriod?: number;
+  timeframeLabel: string;
+  onHoverChange?: (index: number | null) => void;
 }
 
 const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
-  ({ data, signals, cmfEmaPeriod = 5 }, ref) => {
+  ({ data, signals, cmfEmaPeriod = 5, timeframeLabel, onHoverChange }, ref) => {
     // Map signals for easy lookup
     const signalMap = useMemo(
       () => new Map(signals.map((s) => [String(s.t), s])),
@@ -137,73 +139,74 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
       if (futureData.length === 0) return null;
 
       let hasTwist = false;
+      let twistIdx = -1;
       let maxThickness = 0;
-      let sumThickness = 0;
-      let bullCount = 0;
+      let firstThickness = 0;
+      let lastThickness = 0;
 
       for (let i = 0; i < futureData.length; i++) {
         const d = futureData[i];
         if (d.senkouA === null || d.senkouB === null) continue;
 
         const currentBull = d.senkouA > d.senkouB;
-        if (currentBull) bullCount++;
+        const thickness = Math.abs(d.senkouA - d.senkouB);
+        
+        if (i === 0) firstThickness = thickness;
+        if (i === futureData.length - 1) lastThickness = thickness;
+        if (thickness > maxThickness) maxThickness = thickness;
 
         // 檢查翻轉 (Kumo Twist)
         if (i > 0) {
           const prev = futureData[i - 1];
           if (prev.senkouA !== null && prev.senkouB !== null) {
             const prevBull = prev.senkouA > prev.senkouB;
-            if (currentBull !== prevBull) hasTwist = true;
+            if (currentBull !== prevBull) {
+              hasTwist = true;
+              twistIdx = i;
+            }
           }
         }
-
-        const thickness = Math.abs(d.senkouA - d.senkouB);
-        sumThickness += thickness;
-        if (thickness > maxThickness) maxThickness = thickness;
       }
 
       const lastBar = futureData[futureData.length - 1];
       if (!lastBar || lastBar.senkouA === null || lastBar.senkouB === null)
         return null;
 
-      // 判斷未來主要趨勢：以「最後一根預測」為準，這最符合視覺直覺
       const isLastBull = lastBar.senkouA > lastBar.senkouB;
-      const trendSymbol = isLastBull ? "看漲(有支撐)" : "看跌(遇壓力)";
+      const isExpanding = lastThickness > firstThickness * 1.1;
+      
+      // 計算預期壓力/支撐點位 (取最後一期的邊界)
+      const cloudTop = Math.max(lastBar.senkouA, lastBar.senkouB);
+      const cloudBottom = Math.min(lastBar.senkouA, lastBar.senkouB);
+      const targetPrice = isLastBull ? cloudBottom : cloudTop;
+      const priceLabel = isLastBull ? "支撐位" : "壓力位";
 
-      // 使用 MaxThickness 來判斷未來最大的助力/支撐力道
-      const maxThicknessRatio = maxThickness / (avgPrice || 1);
-      const isStrongStructure = maxThicknessRatio > 0.02;
+      // 專業術語判定 (精簡版)
+      let trendStatus = isLastBull ? "多方主導 (支撐)" : "空方主導 (壓力)";
+      let structureStr = `${priceLabel}: ${targetPrice.toFixed(2)}`;
+      
+      if (isExpanding) structureStr += " | 力道強化";
+      else if (lastThickness < firstThickness * 0.9) structureStr += " | 趨勢轉弱";
+      else structureStr += " | 走勢穩";
 
-      let structureStr = "";
-      if (isLastBull) {
-        structureStr = isStrongStructure ? "底部支撐強勁" : "底部支撐薄弱";
-      } else {
-        structureStr = isStrongStructure ? "上方壓力沉重" : "上方壓力較輕";
-      }
-
-      if (hasTwist) {
-        structureStr = `★近期可能變盤 | ${structureStr}`;
+      if (hasTwist && twistIdx !== -1) {
+        structureStr = `★ 第 ${twistIdx} 期預期轉向 | ${structureStr}`;
+      } else if (hasTwist) {
+        structureStr = `★ 預期轉向 | ${structureStr}`;
       }
 
       return {
         isBull: isLastBull,
-        trendSymbol,
+        trendSymbol: trendStatus,
         structureSymbol: structureStr,
-        trend: isLastBull
-          ? "未來趨勢：樂觀 (支撐雲帶)"
-          : "未來趨勢：悲觀 (壓力雲帶)",
-        structure: structureStr,
+        targetPrice,
         lastBarT: lastBar.t,
-        lastBarY: (lastBar.senkouA + lastBar.senkouB) / 2,
         midBarT: futureData[Math.floor(futureData.length / 2)]?.t || lastBar.t,
-        midBarY:
-          ((futureData[Math.floor(futureData.length / 2)]?.senkouA || 0) +
-            (futureData[Math.floor(futureData.length / 2)]?.senkouB || 0)) /
-          2,
+        midBarY: ((futureData[Math.floor(futureData.length / 2)]?.senkouA || 0) + (futureData[Math.floor(futureData.length / 2)]?.senkouB || 0)) / 2,
         futureStart: futureData[0].t,
         futureEnd: lastBar.t,
       };
-    }, [mergedData, todayBarT, avgPrice]);
+    }, [mergedData, todayBarT, avgPrice, timeframeLabel]);
 
     // Calculate max absolute value for CMF y-axis to center 0
     const cmfDomain = useMemo(() => {
@@ -241,6 +244,14 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             data={mergedData}
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
             syncId="ichiSync"
+            onMouseMove={(e) => {
+              if (e.activeTooltipIndex !== undefined && onHoverChange) {
+                onHoverChange(e.activeTooltipIndex);
+              }
+            }}
+            onMouseLeave={() => {
+              if (onHoverChange) onHoverChange(null);
+            }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
             <XAxis dataKey="t" hide />
@@ -250,7 +261,10 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               stroke="rgba(255,255,255,0.3)"
             />
 
-            <RechartsTooltip content={<ChartTooltip showSignals={true} />} />
+            <RechartsTooltip
+              content={<ChartTooltip showSignals={true} />}
+              isAnimationActive={false}
+            />
 
             {/* Invisible Lines for Tooltip Value Access & Candlestick Order */}
             {/* Order MUST be: High, Close, Low, Open for BaseCandlestickRectangle */}
@@ -358,13 +372,24 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                 strokeDasharray="3 3"
               >
                 <Label
-                  value="← 歷史數據 | 未來預測區 →"
+                  value={`歷史 | ${timeframeLabel}預測`}
                   position="top"
                   fill="#90caf9"
                   fontSize={10}
                   offset={10}
                 />
               </ReferenceLine>
+            )}
+
+            {/* 2.5 Support/Resistance Target Line */}
+            {futureAnalysis && (
+              <ReferenceLine
+                y={futureAnalysis.targetPrice}
+                stroke={futureAnalysis.isBull ? "#4caf50" : "#f44336"}
+                strokeDasharray="3 3"
+                strokeOpacity={0.6}
+                strokeWidth={1}
+              />
             )}
 
             {/* 3. Future Trend Analysis Labels */}
@@ -379,7 +404,6 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                   x={futureAnalysis.midBarT}
                   y={futureAnalysis.midBarY}
                   r={0}
-                  // 使用自訂 SVG g 元素來精準控制多行文字與排版
                   shape={(props: any) => {
                     const { cx, cy } = props;
                     const structureParts =
@@ -387,41 +411,54 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
 
                     return (
                       <g>
-                        {/* 1. 趨勢狀態 (例：看漲(有支撐)) */}
+                        {/* 1. 時間區間 */}
                         <text
                           x={cx}
                           y={cy}
-                          dy={-35}
+                          dy={-45}
+                          textAnchor="middle"
+                          fill="rgba(255,255,255,0.7)"
+                          fontSize={11}
+                          fontWeight="bold"
+                        >
+                          {`[ ${timeframeLabel}展望 ]`}
+                        </text>
+
+                        {/* 2. 趨勢狀態 */}
+                        <text
+                          x={cx}
+                          y={cy}
+                          dy={-25}
                           textAnchor="middle"
                           fill="#fff"
-                          fontSize={14}
+                          fontSize={13}
                           fontWeight="bold"
                         >
                           {futureAnalysis.trendSymbol}
                         </text>
 
-                        {/* 2. 結構與力道 (例：★近期可能變盤) */}
+                        {/* 3. 結構與力道 (行1) */}
                         {structureParts.length > 1 && (
                           <text
                             x={cx}
                             y={cy}
-                            dy={-15}
+                            dy={-5}
                             textAnchor="middle"
                             fill="#ffeb3b"
-                            fontSize={12}
+                            fontSize={11}
                           >
                             {structureParts[0]}
                           </text>
                         )}
 
-                        {/* 3. 結構與力道 (例：底部支撐強勁) */}
+                        {/* 4. 結構與力道 (行2) */}
                         <text
                           x={cx}
                           y={cy}
-                          dy={structureParts.length > 1 ? 5 : -15}
+                          dy={structureParts.length > 1 ? 12 : -5}
                           textAnchor="middle"
                           fill="#ffeb3b"
-                          fontSize={12}
+                          fontSize={11}
                         >
                           {structureParts[structureParts.length - 1]}
                         </text>
@@ -435,7 +472,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                           fill="rgba(255,255,255,0.4)"
                           fontSize={10}
                         >
-                          - 未來趨勢預估 -
+                          {`- ${timeframeLabel}格局預估 -`}
                         </text>
                       </g>
                     );

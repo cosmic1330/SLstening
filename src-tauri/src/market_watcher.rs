@@ -338,8 +338,32 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
         }
     }
 
-    let price = meta["regularMarketPrice"].as_f64().unwrap_or(0.0);
-    let change = meta["regularMarketChange"].as_f64();
+    let mut price = meta["regularMarketPrice"].as_f64()
+        .or_else(|| meta["price"].as_f64())
+        .unwrap_or(0.0);
+
+    if price == 0.0 && !history_data.is_empty() {
+        if let Some(last) = history_data.last() {
+            price = last.c;
+        }
+    }
+
+    let previous_close = meta["regularMarketPreviousClose"].as_f64()
+        .or_else(|| meta["previousClose"].as_f64());
+
+    let mut change = meta["regularMarketChange"].as_f64()
+        .or_else(|| meta["change"].as_f64());
+
+    if (change.is_none() || change == Some(0.0)) && price != 0.0 {
+        if let Some(pc) = previous_close {
+            change = Some(price - pc);
+        } else if history_data.len() >= 2 {
+            // Fallback to previous day's close from history data
+            let pc = history_data[history_data.len() - 2].c;
+            change = Some(price - pc);
+        }
+    }
+
     let name = meta["longName"].as_str()
         .or_else(|| meta["shortName"].as_str())
         .map(|s| s.to_string());

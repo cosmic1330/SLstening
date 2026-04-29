@@ -4,18 +4,10 @@ import useSWR from "swr";
 import { tauriFetcher } from "../api/http";
 import useDebugStore from "../store/debug.store";
 import { DealTableType, FutureIds } from "../types";
+import { isNasdaqMarketOpen } from "../utils/marketUtils";
 
 export default function useNasdaqDeals(isVisible: boolean = true) {
-  const checkTimeRange = () => {
-    const taiwanTime = new Date().toLocaleString("en-US", {
-      timeZone: "Asia/Taipei",
-    });
-    const now = new Date(taiwanTime);
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    // 9:00 AM 至 1:30 PM 時間範圍
-    return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
-  };
+
 
   const {
     data: hourlyData,
@@ -29,7 +21,7 @@ export default function useNasdaqDeals(isVisible: boolean = true) {
     },
     {
       isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (checkTimeRange() ? 30000 : 0),
+      refreshInterval: () => (isNasdaqMarketOpen() ? 30000 : 0),
     },
   );
 

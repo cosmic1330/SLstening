@@ -2,6 +2,7 @@ import { Box } from "@mui/material";
 import { forwardRef, useMemo } from "react";
 import {
   Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -498,25 +499,20 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               let label = "Sig";
 
               switch (sig.type) {
-                case "BUY":
-                  color = "#FFD700";
-                  icon = "▲";
-                  label = "Buy";
-                  break;
-                case "FAKE":
-                  color = "#f44336";
-                  icon = "▼";
-                  label = "Fake";
-                  break;
                 case "ACCUMULATION":
                   color = "#2196f3";
                   icon = "●";
                   label = "Accum";
                   break;
-                case "WEAKNESS":
-                  color = "#ff9800";
-                  icon = "X";
-                  label = "Weak";
+                case "DIVERGENCE_BULL":
+                  color = "#ff5252"; // Taiwan Red for Buy
+                  icon = "▲";
+                  label = "底背離";
+                  break;
+                case "DIVERGENCE_BEAR":
+                  color = "#00e676"; // Taiwan Green for Sell
+                  icon = "▼";
+                  label = "頂背離";
                   break;
                 case "EXIT":
                   color = "#4caf50";
@@ -580,6 +576,12 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
             syncId="ichiSync"
           >
+            <defs>
+              <linearGradient id="colorCmf" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#9c27b0" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#9c27b0" stopOpacity={0} />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
             <XAxis dataKey="t" hide />
             <YAxis
@@ -596,20 +598,21 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             />
             <RechartsTooltip
               content={<ChartTooltip showSignals={true} showIchimoku={false} />}
+              isAnimationActive={false}
             />
 
-            <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+            <ReferenceLine y={0} stroke="#fff" strokeOpacity={0.3} />
             <ReferenceLine
               y={0.1}
-              stroke="#4caf50"
+              stroke="#ff4d4f"
               strokeDasharray="3 3"
-              strokeOpacity={0.5}
+              strokeOpacity={0.3}
             />
             <ReferenceLine
               y={-0.1}
-              stroke="#f44336"
+              stroke="#52c41a"
               strokeDasharray="3 3"
-              strokeOpacity={0.5}
+              strokeOpacity={0.3}
             />
 
             <Area
@@ -617,8 +620,29 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               dataKey="cmf"
               stroke="#9c27b0"
               fill="url(#colorCmf)"
-              strokeWidth={1.5}
+              strokeWidth={2}
               name="CMF"
+            />
+            <Bar
+              dataKey="cmf"
+              name="強度"
+              shape={(props: any) => {
+                const { x, y, width, height, payload } = props;
+                if (payload.cmf === null || payload.cmf === undefined)
+                  return <path />;
+                // Taiwan market colors: Red = Bullish, Green = Bearish
+                const fill = payload.cmf > 0 ? "#ff4d4f" : "#52c41a";
+                return (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill={fill}
+                    opacity={0.2}
+                  />
+                );
+              }}
             />
             <Line
               type="monotone"
@@ -628,12 +652,6 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               dot={false}
               name={`EMA${cmfEmaPeriod}`}
             />
-            <defs>
-              <linearGradient id="colorCmf" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#9c27b0" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#9c27b0" stopOpacity={0} />
-              </linearGradient>
-            </defs>
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

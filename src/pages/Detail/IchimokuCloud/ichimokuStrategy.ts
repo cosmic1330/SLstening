@@ -299,10 +299,6 @@ export const calculateIchimokuSignals = (
       price <= cloudTop &&
       price >= cloudBottom;
 
-    // Cloud Thickness (Simple visual approximation: SpanA - SpanB)
-    const cloudThickness = (current.senkouA || 0) - (current.senkouB || 0);
-    const isThickCloud = Math.abs(cloudThickness) > price * 0.005; // Arbitrary threshold for "Thick"
-
     // 2. TK Cross / State
     const isTkGold =
       current.tenkan !== null &&

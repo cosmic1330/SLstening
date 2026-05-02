@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   boll: 30,
   kd: 9,
   mfi: 14,
-  rsi: 5,
+  rsi: 14,
   ma120: 120,
   ma240: 240,
   emaShort: 5,

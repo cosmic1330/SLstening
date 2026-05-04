@@ -1,0 +1,48 @@
+//@version=5
+indicator(title="CCI 買賣訊號版", shorttitle="CCI_Signals", overlay=false, timeframe="", timeframe_gaps=true)
+
+// === 參數設定 ===
+length = input.int(14, title="CCI 週期", minval=1)
+src    = input.source(hlc3, title="來源價格") // 預設使用典型價格 (High+Low+Close)/3
+
+// === 計算邏輯 ===
+ma      = ta.sma(src, length)
+meanDev = ta.sma(math.abs(src - ma), length)
+cci     = (src - ma) / (0.015 * meanDev)
+
+// === 繪製指標線 ===
+plot(cci, title="CCI 線", color=color.new(color.blue, 0), linewidth=2)
+hline(100,  "超買線", color=color.red,   linestyle=hline.style_dashed)
+hline(-100, "超賣線", color=color.green, linestyle=hline.style_dashed)
+hline(0,    "零軸",   color=color.gray,  linestyle=hline.style_dotted)
+
+// === 定義買賣條件 ===
+// 買入：CCI 從下方穿過 -100 (超賣區反彈)
+buySignal  = ta.crossover(cci, -100)
+// 賣出：CCI 從上方跌破 100 (超買區修正)
+sellSignal = ta.crossunder(cci, 100)
+
+// === 在圖上標示買賣點 ===
+// 買入標籤 (顯示在 CCI 線下方)
+plotshape(buySignal, 
+     title="買入標籤", 
+     text="買入", 
+     style=shape.labelup, 
+     location=location.bottom, 
+     color=color.green, 
+     textcolor=color.white, 
+     size=size.small)
+
+// 賣出標籤 (顯示在 CCI 線上方)
+plotshape(sellSignal, 
+     title="賣出標籤", 
+     text="賣出", 
+     style=shape.labeldown, 
+     location=location.top, 
+     color=color.red, 
+     textcolor=color.white, 
+     size=size.small)
+
+// === 背景顏色（視覺輔助） ===
+bgcolor(cci > 100 ? color.new(color.red, 90) : na)
+bgcolor(cci < -100 ? color.new(color.green, 90) : na)

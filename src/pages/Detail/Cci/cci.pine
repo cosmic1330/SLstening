@@ -1,48 +1,53 @@
 //@version=5
-indicator(title="CCI 買賣訊號版", shorttitle="CCI_Signals", overlay=false, timeframe="", timeframe_gaps=true)
+indicator(title="CJ Ultimate (CCI + J) 共振策略", shorttitle="CJ_Ultimate", overlay=true)
 
 // === 參數設定 ===
-length = input.int(14, title="CCI 週期", minval=1)
-src    = input.source(hlc3, title="來源價格") // 預設使用典型價格 (High+Low+Close)/3
+cciLen = input.int(14, title="CCI 週期")
+kLen   = input.int(9,  title="KDJ 週期")
+kSmooth = input.int(3, title="K 平滑")
+dSmooth = input.int(3, title="D 平滑")
+bbLen  = input.int(20, title="布林週期")
+bbMult = input.float(2.0, title="布林倍數")
 
-// === 計算邏輯 ===
-ma      = ta.sma(src, length)
-meanDev = ta.sma(math.abs(src - ma), length)
-cci     = (src - ma) / (0.015 * meanDev)
+// === 1. CCI 計算 ===
+cci = ta.cci(close, cciLen)
 
-// === 繪製指標線 ===
-plot(cci, title="CCI 線", color=color.new(color.blue, 0), linewidth=2)
-hline(100,  "超買線", color=color.red,   linestyle=hline.style_dashed)
-hline(-100, "超賣線", color=color.green, linestyle=hline.style_dashed)
-hline(0,    "零軸",   color=color.gray,  linestyle=hline.style_dotted)
+// === 2. KDJ - J 線計算 ===
+stochK = ta.stoch(close, high, low, kLen)
+k = ta.sma(stochK, kSmooth)
+d = ta.sma(k, dSmooth)
+j = 3 * k - 2 * d
 
-// === 定義買賣條件 ===
-// 買入：CCI 從下方穿過 -100 (超賣區反彈)
-buySignal  = ta.crossover(cci, -100)
-// 賣出：CCI 從上方跌破 100 (超買區修正)
-sellSignal = ta.crossunder(cci, 100)
+// === 3. 布林帶計算 ===
+[bbMid, bbUpper, bbLower] = ta.bb(close, bbLen, bbMult)
 
-// === 在圖上標示買賣點 ===
-// 買入標籤 (顯示在 CCI 線下方)
-plotshape(buySignal, 
-     title="買入標籤", 
-     text="買入", 
-     style=shape.labelup, 
-     location=location.bottom, 
-     color=color.green, 
-     textcolor=color.white, 
-     size=size.small)
+// === 4. 訊號判定邏輯 ===
 
-// 賣出標籤 (顯示在 CCI 線上方)
-plotshape(sellSignal, 
-     title="賣出標籤", 
-     text="賣出", 
-     style=shape.labeldown, 
-     location=location.top, 
-     color=color.red, 
-     textcolor=color.white, 
-     size=size.small)
+// CJ 共振買點 (基礎)：CCI 低檔 + J 線勾頭
+cjBuy = cci < -80 and j > j[1] and j[1] < 10
+// 極強共振買點：滿足 CJ 買點 + (股價觸碰布林下軌 或 放量)
+// 註：Pine Script 中 overlay=true 較好觀察布林位置
+isStrongBuy = cci < -80 and ta.crossunder(low, bbLower) and j > j[1]
 
-// === 背景顏色（視覺輔助） ===
-bgcolor(cci > 100 ? color.new(color.red, 90) : na)
-bgcolor(cci < -100 ? color.new(color.green, 90) : na)
+// CJ 頂部 (基礎)：CCI 高檔 + J 線轉向
+cjSell = cci > 80 and j < j[1] and j[1] > 90
+// 頂部預警：滿足 CJ 頂部 + 股價觸及布林上軌 (乖離過大)
+isTopWarning = cci > 80 and ta.crossover(high, bbUpper) and j < j[1]
+
+// === 5. 繪製與標示 ===
+
+// 繪製布林帶 (輔助觀察)
+plot(bbUpper, color=color.new(color.orange, 70), title="布林上軌")
+plot(bbLower, color=color.new(color.orange, 70), title="布林下軌")
+
+// 標示買入訊號
+plotshape(cjBuy and not isStrongBuy, title="CJ 共振", text="CJ 共振", style=shape.triangleup, location=location.belowbar, color=color.red, size=size.small)
+plotshape(isStrongBuy, title="極強共振", text="極強共振", style=shape.labelup, location=location.belowbar, color=color.red, textcolor=color.white, size=size.normal)
+
+// 標示賣出與預警訊號
+plotshape(cjSell and not isTopWarning, title="CJ 頂部", text="CJ 頂部", style=shape.triangledown, location=location.abovebar, color=color.green, size=size.small)
+plotshape(isTopWarning, title="頂部預警", text="頂部預警", style=shape.labeldown, location=location.abovebar, color=color.green, textcolor=color.white, size=size.normal)
+
+// === 6. Alert 通知設定 ===
+alertcondition(isStrongBuy, title="發現極強共振買點", message="CJ 極強共振買點出現！")
+alertcondition(isTopWarning, title="頂部預警", message="CJ 頂部預警，注意過熱回檔！")

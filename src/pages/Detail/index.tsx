@@ -4,7 +4,6 @@ import { Box, createTheme, styled, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
-  lazy,
   Suspense,
   useCallback,
   useEffect,
@@ -20,34 +19,7 @@ import { DealsContext } from "../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../types";
 import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
 import formatDateTime from "../../utils/formatDateTime";
-import Donchian from "./Donchian/Donchian";
-import AvgMaKbar from "./Ema/EmaKbar";
 import GlassBar from "./GlassBar";
-
-// Import doc assets
-import donchianDoc from "./Donchian/Donchian.md?raw";
-import emaDoc from "./Ema/Ema.md?raw";
-import ichimokuDoc from "./IchimokuCloud/ichimoku.md?raw";
-import kdDoc from "./Kd/Kd.md?raw";
-import maDoc from "./Ma/Ma.md?raw";
-import mfiDoc from "./Mfi/Mfi.md?raw";
-import mjDoc from "./Mj/Mj.md?raw";
-import mrDoc from "./Mr/MR.md?raw";
-import obvDoc from "./Obv/Obv.md?raw";
-import atrDoc from "./ATR/ATR.md?raw";
-import cciDoc from "./Cj/Cj.md?raw";
-
-// lazy load components
-const MaKbar = lazy(() => import("./Ma/MaKbar"));
-const Obv = lazy(() => import("./Obv/Obv"));
-const IchimokuCloud = lazy(() => import("./IchimokuCloud/IchimokuCloud"));
-// const MJ = lazy(() => import("./Mj/MJ"));
-const MR = lazy(() => import("./Mr/MR"));
-const Kd = lazy(() => import("./Kd/Kd"));
-const Mfi = lazy(() => import("./Mfi/Mfi"));
-const ATR = lazy(() => import("./ATR/ATR"));
-const CCI = lazy(() => import("./Cj/Cj"));
-
 const PageContainer = styled(Box)`
   width: 100vw;
   height: 100vh;
@@ -254,15 +226,16 @@ const FullscreenVerticalCarousel: React.FC = () => {
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
-    }
+    },
   );
 
   const deals = useMemo(() => {
     if (!historyData || !historyData.data) return [];
-    
-    const timeType = perd === UrlTaPerdOptions.Hour
-      ? IndicatorsDateTimeType.DateTime
-      : IndicatorsDateTimeType.Date;
+
+    const timeType =
+      perd === UrlTaPerdOptions.Hour
+        ? IndicatorsDateTimeType.DateTime
+        : IndicatorsDateTimeType.Date;
 
     return historyData.data.map((item: any) => {
       let t;
@@ -271,7 +244,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
       } else {
         t = formatDateTime(item.t * 1000);
       }
-      
+
       return {
         t,
         o: item.o,

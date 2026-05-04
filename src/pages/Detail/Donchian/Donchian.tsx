@@ -245,8 +245,8 @@ export default function Donchian({
       // Donchian Breakout Logic
       if (lastSignalState === "buy") {
         // Exit if price breaks below lower band of PREVIOUS bar
-        if (prev.donchianLb !== null && price < prev.donchianLb) {
-          exitSignal = (d.h || 0) * 1.02;
+        if (prev.donchianLb !== null && price > 0 && price < prev.donchianLb) {
+          exitSignal = (d.h || price || 0) * 1.02;
           exitReason = "跌破下軌";
           lastSignalState = "neutral";
         }
@@ -254,17 +254,25 @@ export default function Donchian({
         // Entry if price breaks above upper band of PREVIOUS bar AND volume > vma20
         if (
           prev.donchianUb !== null &&
+          price > 0 &&
           price > prev.donchianUb &&
           d.v > (d.vma20 || 0)
         ) {
-          buySignal = (d.l || 0) * 0.98;
+          buySignal = (d.l || price || 0) * 0.98;
           buyReason = "突破上軌+放量";
           lastSignalState = "buy";
         }
       }
 
-      return {
+      const sanitized = {
         ...d,
+        h: d.h > 0 ? d.h : d.c,
+        l: d.l > 0 ? d.l : d.c,
+        o: d.o > 0 ? d.o : d.c,
+      };
+
+      return {
+        ...sanitized,
         buySignal,
         exitSignal,
         buyReason,
@@ -287,17 +295,17 @@ export default function Donchian({
     let max = -Infinity;
 
     chartData.forEach((d) => {
-      if (d.h != null && d.h > max) max = d.h;
-      if (d.l != null && d.l < min) min = d.l;
+      if (d.h != null && d.h > 0 && d.h > max) max = d.h;
+      if (d.l != null && d.l > 0 && d.l < min) min = d.l;
 
-      if (d.donchianUb != null && d.donchianUb > max) max = d.donchianUb;
-      if (d.donchianLb != null && d.donchianLb < min) min = d.donchianLb;
+      if (d.donchianUb != null && d.donchianUb > 0 && d.donchianUb > max) max = d.donchianUb;
+      if (d.donchianLb != null && d.donchianLb > 0 && d.donchianLb < min) min = d.donchianLb;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
 
     const range = max - min;
-    const padding = range * 0.05;
+    const padding = range * 0.1;
     return [min - padding, max + padding];
   }, [chartData]);
 
@@ -617,18 +625,25 @@ export default function Donchian({
 
       <Box
         ref={chartContainerRef}
-        sx={{ flexGrow: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column" }}
+        sx={{ flexGrow: 1, minHeight: 0, height: "100%", width: "100%" }}
       >
-        {/* Top Chart: Price and Channels */}
-        <ResponsiveContainer width="100%" height="75%">
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={finalChartData}
-            syncId="donchianSync"
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
-            <YAxis domain={yDomain} allowDataOverflow={true} />
+            <YAxis 
+              domain={yDomain} 
+              orientation="left" 
+            />
+            <YAxis
+              yAxisId="vol"
+              orientation="right"
+              domain={[0, (dataMax: number) => dataMax * 4]}
+              hide
+            />
             
             <Tooltip
               content={
@@ -686,6 +701,39 @@ export default function Donchian({
               </>
             )}
 
+            {/* Volume overlay */}
+            <Bar
+              dataKey="v"
+              yAxisId="vol"
+              fill="#90caf9"
+              opacity={0.3}
+              name="Volume"
+              barSize={10}
+              shape={(props: any) => {
+                const { x, y, width, height, payload } = props;
+                const isUp = payload.c > payload.o;
+                return (
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill={isUp ? "#f44336" : "#4caf50"}
+                    opacity={0.4}
+                  />
+                );
+              }}
+            />
+            <Line
+              yAxisId="vol"
+              dataKey="vma20"
+              stroke="#64b5f6"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={false}
+              name="VMA20"
+            />
+
             {/* Signals */}
             <Scatter dataKey="buySignal" shape={<BuyArrow />} legendType="none" />
             <Scatter dataKey="exitSignal" shape={<ExitArrow />} legendType="none" />
@@ -712,59 +760,6 @@ export default function Donchian({
                 }}
               />
             ))}
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        {/* Bottom Chart: Volume and VMA20 */}
-        <ResponsiveContainer width="100%" height="25%">
-          <ComposedChart
-            data={finalChartData}
-            syncId="donchianSync"
-            margin={{ top: 0, right: 0, left: 0, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-            <XAxis dataKey="t" hide />
-            <YAxis 
-              tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 10 }}
-              stroke="rgba(255,255,255,0.1)"
-            />
-            <Tooltip
-              content={
-                <ChartTooltip
-                  hideKeys={["h", "c", "l", "o", "donchianUb", "donchianLb", "donchianMa", "buySignal", "exitSignal"]}
-                  showMESS={false}
-                />
-              }
-            />
-            <Bar
-              dataKey="v"
-              fill="#90caf9"
-              opacity={0.3}
-              name="Volume"
-              barSize={10}
-              shape={(props: any) => {
-                const { x, y, width, height, payload } = props;
-                const isUp = payload.c > payload.o;
-                return (
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={isUp ? "#f44336" : "#4caf50"}
-                    opacity={0.4}
-                  />
-                );
-              }}
-            />
-            <Line
-              dataKey="vma20"
-              stroke="#64b5f6"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={false}
-              name="VMA20"
-            />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

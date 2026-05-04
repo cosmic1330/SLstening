@@ -18,6 +18,7 @@ export interface IndicatorSettings {
   atrLen: number;
   atrMult: number;
   donchian: number;
+  cci: number;
 }
 
 const DEFAULT_SETTINGS: IndicatorSettings = {
@@ -38,6 +39,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   atrLen: 14,
   atrMult: 2.5,
   donchian: 20,
+  cci: 14,
 };
 
 export default function useIndicatorSettings() {

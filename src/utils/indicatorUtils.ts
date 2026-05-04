@@ -11,6 +11,7 @@ import obv from "../cls_tools/obv";
 import obvEma from "../cls_tools/obvEma";
 import donchianTool from "../cls_tools/donchian";
 import rsi from "../cls_tools/rsi";
+import cciTool from "../cls_tools/cci";
 import { IndicatorSettings } from "../hooks/useIndicatorSettings";
 import { TaType } from "../types";
 
@@ -54,6 +55,7 @@ export interface EnhancedDealData {
   donchianUb: number | null;
   donchianLb: number | null;
   donchianMa: number | null;
+  cci: number | null;
 }
 
 /**
@@ -84,6 +86,7 @@ export function calculateIndicators(
   let cmfData = cmf.init(deals[0]);
   let stState = supertrendTool.init(deals[0]);
   let donchianState = donchianTool.init();
+  let cciState = cciTool.init();
 
   return deals.map((deal, i) => {
     const prevDeal = i > 0 ? deals[i - 1] : null;
@@ -107,6 +110,10 @@ export function calculateIndicators(
       obvMa20Data = ma.next({ ...deal, c: obvData.obv }, obvMa20Data, 20);
       cmfData = cmf.next(deal, cmfData, settings.cmf, settings.cmfEma);
     }
+
+    // CCI calculation
+    const cciResult = cciTool.next(deal, cciState, settings.cci || 14);
+    cciState = cciResult.state;
 
     // Supertrend calculation
     const stResult = supertrendTool.next(
@@ -205,6 +212,7 @@ export function calculateIndicators(
       donchianUb: donchianResult.upper,
       donchianLb: donchianResult.lower,
       donchianMa: donchianResult.middle,
+      cci: cciResult.cci,
     };
   });
 }

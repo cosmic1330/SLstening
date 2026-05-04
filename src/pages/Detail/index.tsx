@@ -98,6 +98,8 @@ const darkTheme = createTheme({
   },
 });
 
+import { CHART_CONFIG } from "./constants/chartConfig";
+
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
   const [scrolling, setScrolling] = useState(false);
@@ -116,137 +118,31 @@ const FullscreenVerticalCarousel: React.FC = () => {
   // Documentation modal state
   const [isDocOpen, setIsDocOpen] = useState(false);
 
-  const docMap = useMemo(
-    () => ({
-      donchian: { title: "唐奇安通道策略", content: donchianDoc },
-      ma: { title: "均線與缺口策略", content: maDoc },
-      ema: { title: "EMA趨勢策略", content: emaDoc },
-      atr: { title: "ATR Trend 策略說明", content: atrDoc },
-      obv: { title: "OBV動能策略", content: obvDoc },
-      mj: { title: "MJ雙指標共振", content: mjDoc },
-      mr: { title: "MR雙指標共振", content: mrDoc },
-      kd: { title: "KD隨機指標策略", content: kdDoc },
-      mfi: { title: "MFI資金流便覽", content: mfiDoc },
-      cci: { title: "CJ Ultimate 共振策略", content: cciDoc },
-      ichimoku_cloud: { title: "一目均衡表說明", content: ichimokuDoc },
-    }),
-    [],
-  );
+  const docMap = useMemo(() => {
+    const map: Record<string, { title: string; content: string }> = {};
+    CHART_CONFIG.forEach((cfg) => {
+      map[cfg.id] = { title: cfg.title, content: cfg.docContent };
+    });
+    return map;
+  }, []);
 
   const handleSetPerd = useCallback((newPerd: UrlTaPerdOptions) => {
     localStorage.setItem("detail:perd:type", newPerd);
     setPerd(newPerd);
   }, []);
 
-  // slides 需依賴 perd，移到 useMemo 內
   const slides = useMemo(
-    () => [
-      {
-        id: "donchian",
-        content: (
-          <Donchian
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "ma",
-        content: (
-          <MaKbar
-            perd={perd}
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "ema",
-        content: (
-          <AvgMaKbar
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "atr",
-        content: (
-          <ATR
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "obv",
-        content: (
-          <Obv
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "mr",
-        content: (
-          <MR
-            perd={perd}
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "kd",
-        content: (
-          <Kd
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "mfi",
-        content: (
-          <Mfi
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-      {
-        id: "ichimoku_cloud",
-        content: <IchimokuCloud perd={perd} />,
-      },
-      {
-        id: "cci",
-        content: (
-          <CCI
-            visibleCount={visibleCount}
-            setVisibleCount={setVisibleCount}
-            rightOffset={rightOffset}
-            setRightOffset={setRightOffset}
-          />
-        ),
-      },
-    ],
+    () =>
+      CHART_CONFIG.map((cfg) => ({
+        id: cfg.id,
+        content: cfg.component({
+          perd,
+          visibleCount,
+          setVisibleCount,
+          rightOffset,
+          setRightOffset,
+        }),
+      })),
     [perd, visibleCount, rightOffset],
   );
 

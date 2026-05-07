@@ -56,6 +56,7 @@ export interface EnhancedDealData {
   donchianLb: number | null;
   donchianMa: number | null;
   cci: number | null;
+  ema200: number | null;
 }
 
 /**
@@ -75,6 +76,7 @@ export function calculateIndicators(
   let ma240Data = ma.init(deals[0], settings.ma240);
   let vma20Data = vma.init(deals[0], 20);
   let ema30Data = emaTool.init(deals[0], 30);
+  let ema200Data = emaTool.init(deals[0], 200);
   let bollData = boll.init(deals[0]);
   let kdData = kd.init(deals[0], settings.kd);
   let rsiData = rsi.init(deals[0], settings.rsi);
@@ -99,6 +101,7 @@ export function calculateIndicators(
       ma120Data = ma.next(deal, ma120Data, settings.ma120);
       ma240Data = ma.next(deal, ma240Data, settings.ma240);
       ema30Data = emaTool.next(deal, ema30Data, 30);
+      ema200Data = emaTool.next(deal, ema200Data, 200);
       vma20Data = vma.next(deal, vma20Data, 20);
       bollData = boll.next(deal, bollData, settings.boll);
       kdData = kd.next(deal, kdData, settings.kd);
@@ -141,6 +144,7 @@ export function calculateIndicators(
     const ma120 = ma120Data.ma ? ma120Data.ma : null;
     const ma240 = ma240Data.ma ? ma240Data.ma : null;
     const ema30 = ema30Data.ema ? ema30Data.ema : null;
+    const ema200 = ema200Data.ema ? ema200Data.ema : null;
     const vma20 = vma20Data.vma ? vma20Data.vma : null;
 
     const deduction5 =
@@ -213,6 +217,7 @@ export function calculateIndicators(
       donchianLb: donchianResult.lower,
       donchianMa: donchianResult.middle,
       cci: cciResult.cci,
+      ema200,
     };
   });
 }

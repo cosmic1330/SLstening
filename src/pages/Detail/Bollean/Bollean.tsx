@@ -55,9 +55,10 @@ interface BolleanChartData extends Partial<{
   buySignal?: number | null;
   exitSignal?: number | null;
   buyReason?: string;
-  exitReason?: string;
   channelUb?: number | null;
   channelLb?: number | null;
+  ema200?: number | null;
+  rsi?: number | null;
 }
 
 const BuyArrow = (props: any) => {
@@ -230,7 +231,6 @@ export default function Bollean({
   const allPointsWithIndicators = useMemo((): BolleanChartData[] => {
     if (!deals || deals.length === 0) return [];
     const baseData = calculateIndicators(deals, settings);
-    let lastSignalState: "buy" | "neutral" = "neutral";
     const isNum = (n: any): n is number => typeof n === "number";
 
     return baseData.map((d, i) => {
@@ -240,49 +240,36 @@ export default function Bollean({
       const ub = d.bollUb;
       const lb = d.bollLb;
       const ma = d.bollMa;
-      const width = d.bandWidth;
 
-      if (
-        !isNum(price) ||
-        ub === null ||
-        lb === null ||
-        ma === null ||
-        width === null
-      )
+      if (!isNum(price) || ub === null || lb === null || ma === null) {
         return d as BolleanChartData;
+      }
 
-      const maRising = ma > (prev.bollMa || 0);
-      const priceAboveMa = price > ma;
-      const isSqueeze = width < 0.15;
-      const breakoutUp =
-        isSqueeze && price > ub && (d.v || 0) > (prev.v || 0) * 1.3;
-      const touchedLb = (d.l || 0) <= lb;
-      const closeHigh = price > (d.o || 0);
-      const reversalLong = touchedLb && closeHigh && maRising;
+      const rsi = d.rsi || 0;
+      const ema200 = d.ema200 || 0;
+      const prevClose = prev.c || 0;
+      const prevLb = prev.bollLb || 0;
+      const prevUb = prev.bollUb || 0;
 
-      let score = 0;
-      if (maRising) score += 20;
-      if (priceAboveMa) score += 20;
-      if (breakoutUp) score += 40;
-      if (reversalLong) score += 30;
+      const crossoverLower = prevClose <= prevLb && price > lb;
+      const buySignalTrigger = crossoverLower && rsi > 35 && price > ema200;
+
+      const crossunderUpper = prevClose >= prevUb && price < ub;
+      const sellSignalTrigger = crossunderUpper && rsi < 65;
 
       let buySignal: number | null = null;
       let exitSignal: number | null = null;
       let buyReason: string | undefined;
       let exitReason: string | undefined;
 
-      if (lastSignalState === "buy") {
-        if (price < ma) {
-          exitSignal = (d.h || 0) * 1.02;
-          exitReason = "跌破中軌";
-          lastSignalState = "neutral";
-        }
-      } else {
-        if ((breakoutUp || reversalLong) && score >= 50) {
-          buySignal = (d.l || 0) * 0.98;
-          buyReason = "突破/反轉";
-          lastSignalState = "buy";
-        }
+      if (buySignalTrigger) {
+        buySignal = (d.l || 0) * 0.98;
+        buyReason = "買";
+      }
+
+      if (sellSignalTrigger) {
+        exitSignal = (d.h || 0) * 1.02;
+        exitReason = "賣";
       }
 
       return {
@@ -698,27 +685,35 @@ export default function Bollean({
 
             <Line
               dataKey="bollMa"
-              stroke="#2196f3"
-              strokeWidth={1}
+              stroke="#1976d2"
+              strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name={`${settings.boll} MA (Mid)`}
+              name="中線 (Basis)"
             />
             <Line
               dataKey="bollUb"
-              stroke="#00bcd4"
+              stroke="#808080"
               strokeWidth={1.7}
               dot={false}
               activeDot={false}
-              name="Upper Band"
+              name="上軌"
             />
             <Line
               dataKey="bollLb"
-              stroke="#00bcd4"
+              stroke="#808080"
               strokeWidth={1.7}
               dot={false}
               activeDot={false}
-              name="Lower Band"
+              name="下軌"
+            />
+            <Line
+              dataKey="ema200"
+              stroke="#ffeb3b"
+              strokeWidth={2}
+              dot={false}
+              activeDot={false}
+              name="EMA 200"
             />
 
             {/* Price Channel lines */}

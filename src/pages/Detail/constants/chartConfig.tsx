@@ -9,13 +9,13 @@ const Kd = lazy(() => import("../Kd/Kd"));
 const Mfi = lazy(() => import("../Mfi/Mfi"));
 const ATR = lazy(() => import("../ATR/ATR"));
 const Cj = lazy(() => import("../Cj/Cj"));
-const Donchian = lazy(() => import("../Donchian/Donchian"));
+const Bollean = lazy(() => import("../Bollean/Bollean"));
 const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
 import cjDoc from "../Cj/Cj.md?raw";
-import donchianDoc from "../Donchian/Donchian.md?raw";
+import bolleanDoc from "../Bollean/Bollean.md?raw";
 import emaDoc from "../Ema/Ema.md?raw";
 import ichimokuDoc from "../IchimokuCloud/ichimoku.md?raw";
 import kdDoc from "../Kd/Kd.md?raw";
@@ -35,13 +35,13 @@ export interface ChartDefinition {
 
 export const CHART_CONFIG: ChartDefinition[] = [
   {
-    id: "donchian",
-    label: "唐奇安",
-    title: "唐奇安通道策略",
-    docContent: donchianDoc,
+    id: "bollean",
+    label: "布林",
+    title: "布林通道與EMA",
+    docContent: bolleanDoc,
     timezoneAdvice:
-      "唐奇安通道在日線 (D1) 的有效性最高，標準參數 (20) 能過濾多數噪音，捕捉大波段突破。若切換至短線，需搭配更高週期的趨勢進行過濾。",
-    component: (props) => <Donchian {...props} />,
+      "布林通道策略適合於震盪與突破市場，配合EMA 200能有效判斷大趨勢。",
+    component: (props) => <Bollean {...props} />,
   },
   {
     id: "ma",

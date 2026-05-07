@@ -122,7 +122,7 @@ export default function Bollean({
   rightOffset: number;
   setRightOffset: React.Dispatch<React.SetStateAction<number>>;
 }) {
-  const { settings } = useIndicatorSettings();
+  const { settings, updateSetting, resetSettings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -140,6 +140,14 @@ export default function Bollean({
   const [channelAnchorEl, setChannelAnchorEl] = useState<null | HTMLElement>(
     null,
   );
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
+    setSettingsAnchorEl(event.currentTarget);
+  };
+  const handleCloseSettings = () => {
+    setSettingsAnchorEl(null);
+  };
 
   const handleOpenChannelSettings = (event: React.MouseEvent<HTMLElement>) => {
     setChannelAnchorEl(event.currentTarget);
@@ -451,9 +459,13 @@ export default function Bollean({
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <MuiTooltip title={<Fundamental id={id} />} arrow>
           <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
-            Bolling
+            Bolling ({settings.boll})
           </Typography>
         </MuiTooltip>
+
+        <IconButton size="small" onClick={handleOpenSettings} color="primary" sx={{ mr: 1 }}>
+          <SettingsIcon fontSize="small" />
+        </IconButton>
 
         <Box
           sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}
@@ -596,6 +608,29 @@ export default function Bollean({
             >
               回復預設
             </Button>
+          </Box>
+        </Menu>
+
+        <Menu
+          anchorEl={settingsAnchorEl}
+          open={Boolean(settingsAnchorEl)}
+          onClose={handleCloseSettings}
+          PaperProps={{ sx: { p: 2, width: 250, bgcolor: "background.paper" } }}
+        >
+          <Typography variant="subtitle2" gutterBottom>布林通道參數</Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" color="text.secondary">長度: {settings.boll} 根</Typography>
+            <Slider
+              value={settings.boll}
+              min={10}
+              max={100}
+              step={1}
+              onChange={(_, v) => updateSetting("boll", v as number)}
+              size="small"
+            />
+          </Box>
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button size="small" onClick={resetSettings}>回復預設</Button>
           </Box>
         </Menu>
       </Stack>

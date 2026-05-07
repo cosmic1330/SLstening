@@ -20,6 +20,7 @@ import {
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import {
+  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -47,6 +48,7 @@ interface DonchianChartData extends EnhancedDealData {
   exitReason?: string;
   channelUb?: number | null;
   channelLb?: number | null;
+  donchianRange?: [number, number] | null;
 }
 
 const BuyArrow = (props: any) => {
@@ -271,12 +273,18 @@ export default function Donchian({
         o: d.o > 0 ? d.o : d.c,
       };
 
+      const donchianRange: [number, number] | null = 
+        d.donchianLb !== null && d.donchianUb !== null 
+          ? [d.donchianLb, d.donchianUb] 
+          : null;
+
       return {
         ...sanitized,
         buySignal,
         exitSignal,
         buyReason,
         exitReason,
+        donchianRange,
       } as DonchianChartData;
     });
   }, [deals, settings]);
@@ -300,6 +308,9 @@ export default function Donchian({
 
       if (d.donchianUb != null && d.donchianUb > 0 && d.donchianUb > max) max = d.donchianUb;
       if (d.donchianLb != null && d.donchianLb > 0 && d.donchianLb < min) min = d.donchianLb;
+
+      if (d.ema200 != null && d.ema200 > 0 && d.ema200 > max) max = d.ema200;
+      if (d.ema200 != null && d.ema200 > 0 && d.ema200 < min) min = d.ema200;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -668,9 +679,18 @@ export default function Donchian({
             <Customized component={BaseCandlestickRectangle} />
 
             {/* Donchian Channel lines */}
+            <Area
+              dataKey="donchianRange"
+              stroke="none"
+              fill="#9c27b0"
+              fillOpacity={0.05}
+              activeDot={false}
+              tooltipType="none"
+              name="通道填充"
+            />
             <Line
               dataKey="donchianMa"
-              stroke="#ff7300"
+              stroke="#1976d2"
               strokeWidth={1.5}
               dot={false}
               activeDot={false}
@@ -678,19 +698,27 @@ export default function Donchian({
             />
             <Line
               dataKey="donchianUb"
-              stroke="#00bcd4"
-              strokeWidth={2}
+              stroke="#808080"
+              strokeWidth={1.7}
               dot={false}
               activeDot={false}
               name={`DC 上軌 (${settings.donchian})`}
             />
             <Line
               dataKey="donchianLb"
-              stroke="#00bcd4"
-              strokeWidth={2}
+              stroke="#808080"
+              strokeWidth={1.7}
               dot={false}
               activeDot={false}
               name={`DC 下軌 (${settings.donchian})`}
+            />
+            <Line
+              dataKey="ema200"
+              stroke="#ffeb3b"
+              strokeWidth={2}
+              dot={false}
+              activeDot={false}
+              name="EMA 200"
             />
 
             {/* Price Channel lines */}

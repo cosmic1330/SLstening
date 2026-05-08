@@ -12,6 +12,7 @@ interface StocksState {
   menu: StockStoreType[];
   increase: ({ id, name }: StockStoreType) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  removeStocks: (ids: string[]) => Promise<void>;
   reload: () => Promise<void>;
   clear: () => Promise<void>;
   update_menu: (stocks: StockStoreType[]) => Promise<void>;
@@ -56,6 +57,17 @@ const useStocksStore = create<StocksState>((set, get) => ({
   },
   remove: async (id: string) => {
     const data = get().stocks.filter((stock) => stock.id !== id);
+    const store = await Store.load("settings.json");
+    await store.set("stocks", data);
+    await store.save();
+    set(() => {
+      return {
+        stocks: data,
+      };
+    });
+  },
+  removeStocks: async (ids: string[]) => {
+    const data = get().stocks.filter((stock) => !ids.includes(stock.id));
     const store = await Store.load("settings.json");
     await store.set("stocks", data);
     await store.save();

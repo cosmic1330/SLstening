@@ -75,6 +75,8 @@ function Setting() {
     fetchSupabaseWatchStock,
     addStocks,
     removeSupabaseWatchStock,
+    stocks,
+    removeStocks,
   } = useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   const navigate = useNavigate();
@@ -83,6 +85,9 @@ function Setting() {
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [pendingStocks, setPendingStocks] = useState<any[]>([]);
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteSelectedStocks, setDeleteSelectedStocks] = useState<string[]>([]);
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
@@ -210,6 +215,35 @@ function Setting() {
     [removeSupabaseWatchStock],
   );
 
+  const handleOpenDeleteDialog = useCallback(() => {
+    setDeleteSelectedStocks([]);
+    setDeleteDialogOpen(true);
+  }, []);
+
+  const handleToggleDeleteSelectAll = useCallback(() => {
+    if (deleteSelectedStocks.length === stocks.length) {
+      setDeleteSelectedStocks([]);
+    } else {
+      setDeleteSelectedStocks(stocks.map((s) => s.id));
+    }
+  }, [deleteSelectedStocks, stocks]);
+
+  const handleToggleDeleteStock = useCallback((id: string) => {
+    setDeleteSelectedStocks((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (deleteSelectedStocks.length > 0) {
+      if (window.confirm(`確定要從本地刪除選中的 ${deleteSelectedStocks.length} 檔股票嗎？`)) {
+        await removeStocks(deleteSelectedStocks);
+        sendNotification({ title: "刪除成功", body: `已刪除 ${deleteSelectedStocks.length} 檔股票` });
+        setDeleteDialogOpen(false);
+      }
+    }
+  }, [deleteSelectedStocks, removeStocks]);
+
   const switchStyles = {
     "& .MuiSwitch-switchBase.Mui-checked": { color: "#3D5A45" },
     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
@@ -323,6 +357,45 @@ function Setting() {
                   ) : (
                     "同步"
                   )}
+                </Button>
+              </ListItemSecondaryAction>
+            </ListItem>
+
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
+
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 44 }}>
+                <DeleteOutlineIcon sx={{ color: "#E53935" }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="批次刪除自選股"
+                secondary="快速挑選並刪除不再追蹤的股票"
+                primaryTypographyProps={{ fontWeight: 800, color: "#E53935" }}
+                secondaryTypographyProps={{
+                  color: "#8B7355",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              />
+              <ListItemSecondaryAction>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleOpenDeleteDialog}
+                  sx={{
+                    borderRadius: "10px",
+                    borderColor: "#E53935",
+                    color: "#E53935",
+                    fontWeight: 800,
+                    borderWidth: "2px",
+                    "&:hover": {
+                      borderWidth: "2px",
+                      borderColor: "#E53935",
+                      background: "rgba(229, 57, 53, 0.05)",
+                    },
+                  }}
+                >
+                  挑選
                 </Button>
               </ListItemSecondaryAction>
             </ListItem>
@@ -618,6 +691,111 @@ function Setting() {
             }}
           >
             確認新增 ({selectedStocks.length})
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            background: "#FAF3E0",
+            borderRadius: "24px",
+            border: "2px solid #5D4037",
+            color: "#5D4037",
+            minWidth: "320px",
+            backgroundImage: "none",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 900, color: "#E53935" }}>批次刪除自選股</DialogTitle>
+        <DialogContent>
+          {stocks.length === 0 ? (
+             <Typography variant="body2" sx={{ color: "#8B7355", mt: 2 }}>
+               目前沒有追蹤任何股票
+             </Typography>
+          ) : (
+            <>
+              <Box sx={{ mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={deleteSelectedStocks.length === stocks.length && stocks.length > 0}
+                      indeterminate={
+                        deleteSelectedStocks.length > 0 &&
+                        deleteSelectedStocks.length < stocks.length
+                      }
+                      onChange={handleToggleDeleteSelectAll}
+                      sx={{ color: "#8B7355", "&.Mui-checked": { color: "#E53935" } }}
+                    />
+                  }
+                  label={
+                    <Typography
+                      variant="body2"
+                      sx={{ color: "#5D4037", fontWeight: 700 }}
+                    >
+                      全選
+                    </Typography>
+                  }
+                />
+              </Box>
+              <List dense sx={{ maxHeight: "300px", overflow: "auto" }}>
+                {stocks.map((stock) => (
+                  <ListItem key={stock.id} disablePadding>
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={deleteSelectedStocks.includes(stock.id)}
+                          onChange={() => handleToggleDeleteStock(stock.id)}
+                          sx={{ color: "#8B7355", "&.Mui-checked": { color: "#E53935" } }}
+                        />
+                      }
+                      label={
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: "#5D4037" }}>
+                          {stock.id} - {stock.name}
+                        </Typography>
+                      }
+                      sx={{ width: "100%", ml: 0, mr: 0 }}
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 4 }}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{ 
+                color: "#8B7355", 
+                fontWeight: 800,
+                textDecoration: "underline" 
+            }}
+          >
+            取消
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            disabled={deleteSelectedStocks.length === 0}
+            sx={{
+              borderRadius: "12px",
+              background: "#E53935",
+              color: "#FFF",
+              fontWeight: 900,
+              border: "2px solid #B71C1C",
+              boxShadow: "0 4px 0 #B71C1C",
+              "&:hover": { 
+                background: "#D32F2F",
+                transform: "translateY(2px)",
+                boxShadow: "0 2px 0 #B71C1C",
+              },
+            }}
+          >
+            確認刪除 ({deleteSelectedStocks.length})
           </Button>
         </DialogActions>
       </Dialog>

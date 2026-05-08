@@ -35,7 +35,7 @@ export default function StockWorkspace({
             renderItem={(stock) => (
               <LazyStockBox
                 stock={stock}
-                canDelete={true}
+                canDelete={false}
                 onRemove={() => onRemoveStock(stock.id)}
               />
             )}

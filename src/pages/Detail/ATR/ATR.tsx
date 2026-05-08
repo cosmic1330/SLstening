@@ -212,8 +212,10 @@ export default function ATR({
       if (d.l != null && d.l < min) min = d.l;
       if (d.supertrend != null && d.supertrend > max) max = d.supertrend;
       if (d.supertrend != null && d.supertrend < min) min = d.supertrend;
-      if (d.ema30 != null && d.ema30 > max) max = d.ema30;
-      if (d.ema30 != null && d.ema30 < min) min = d.ema30;
+      if (d.ma20 != null && d.ma20 > max) max = d.ma20;
+      if (d.ma20 != null && d.ma20 < min) min = d.ma20;
+      if (d.ema200 != null && d.ema200 > max) max = d.ema200;
+      if (d.ema200 != null && d.ema200 < min) min = d.ema200;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -377,12 +379,21 @@ export default function ATR({
 
 
             <Line
-              dataKey="ema30"
+              dataKey="ma20"
               stroke="#ff7300"
               strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name="EMA 30"
+              name="MA長"
+              opacity={0.7}
+            />
+            <Line
+              dataKey="ema200"
+              stroke="#ffeb3b"
+              strokeWidth={1.5}
+              dot={false}
+              activeDot={false}
+              name="EMA 200"
               opacity={0.7}
             />
             <Customized component={BaseCandlestickRectangle} />

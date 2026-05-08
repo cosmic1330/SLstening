@@ -14,8 +14,10 @@ const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
-import cjDoc from "../Cj/Cj.md?raw";
 import bolleanDoc from "../Bollean/Bollean.md?raw";
+import cjDoc from "../Cj/Cj.md?raw";
+import Donchian from "../Donchian/Donchian";
+import donchianDoc from "../Donchian/Donchian.md?raw";
 import emaDoc from "../Ema/Ema.md?raw";
 import ichimokuDoc from "../IchimokuCloud/ichimoku.md?raw";
 import kdDoc from "../Kd/Kd.md?raw";
@@ -42,6 +44,14 @@ export const CHART_CONFIG: ChartDefinition[] = [
     timezoneAdvice:
       "布林通道策略適合於震盪與突破市場，配合EMA 200能有效判斷大趨勢。",
     component: (props) => <Bollean {...props} />,
+  },
+  {
+    id: "Donchian",
+    label: "唐奇",
+    title: "唐奇通道",
+    docContent: donchianDoc,
+    timezoneAdvice: "唐奇通道策略，適合於震盪與突破市場。",
+    component: (props) => <Donchian {...props} />,
   },
   {
     id: "ma",

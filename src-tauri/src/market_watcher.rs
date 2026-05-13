@@ -322,10 +322,20 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
     let ts = result_node["timestamp"].as_array();
     
     let mut history_data = Vec::new();
-    if let (Some(o), Some(c), Some(h), Some(l), Some(v), Some(t)) = (opens, closes, highs, lows, volumes, ts) {
+    if let (Some(o), Some(c), Some(h), Some(l), Some(t)) = (opens, closes, highs, lows, ts) {
         for i in 0..o.len() {
-            if let (Some(open), Some(close), Some(high), Some(low), Some(vol), Some(time)) = 
-                (o[i].as_f64(), c[i].as_f64(), h[i].as_f64(), l[i].as_f64(), v[i].as_f64(), t[i].as_i64()) {
+            let open = o[i].as_f64();
+            let close = c[i].as_f64();
+            let high = h[i].as_f64();
+            let low = l[i].as_f64();
+            let time = t[i].as_i64();
+            
+            let vol = volumes
+                .and_then(|v_arr| v_arr.get(i))
+                .and_then(|v_val| v_val.as_f64())
+                .unwrap_or(0.0);
+
+            if let (Some(open), Some(close), Some(high), Some(low), Some(time)) = (open, close, high, low, time) {
                 history_data.push(HistoryPoint {
                     t: time,
                     o: open,

@@ -24,7 +24,6 @@ import {
 import boll from "../../../cls_tools/boll";
 import dmi from "../../../cls_tools/dmi";
 import ema from "../../../cls_tools/ema";
-import ma from "../../../cls_tools/ma";
 import mss from "../../../cls_tools/mss";
 import AvgCandlestickRectangle from "../../../components/RechartCustoms/AvgCandlestickRectangle";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
@@ -43,7 +42,7 @@ interface AvgMaChartData extends Partial<{
   ema5: number | null;
   ema10: number | null;
   ema60: number | null;
-  sma200: number | null;
+  ema200: number | null;
   volMa20?: number | null;
   diPlus: number | null;
   diMinus: number | null;
@@ -56,7 +55,7 @@ interface AvgMaChartData extends Partial<{
 
 interface SignalPoint extends AvgMaChartData {
   type: "golden" | "death";
-  subType: "trend" | "rebound"; // trend = with EMA60/SMA200, rebound = against them
+  subType: "trend" | "rebound"; // trend = with EMA60/EMA200, rebound = against them
 }
 
 export default function AvgMaKbar({
@@ -84,8 +83,7 @@ export default function AvgMaKbar({
   const [visibleMAs, setVisibleMAs] = useState({
     emaShort: true,
     emaLong: true,
-    ema60: true,
-    sma200: true,
+    ema200: true,
   });
 
   const [isAvgCandle, setIsAvgCandle] = useState(true);
@@ -163,7 +161,7 @@ export default function AvgMaKbar({
     let ema5_data = ema.init(deals[0], settings.emaShort);
     let ema10_data = ema.init(deals[0], settings.emaLong);
     let ema60_data = ema.init(deals[0], 60);
-    let sma200_data = ma.init(deals[0], 200);
+    let ema200_data = ema.init(deals[0], 200);
     let dmi_data = dmi.init(deals[0], 14);
     let boll_data = boll.init(deals[0]);
     let mss_state = mss.init();
@@ -178,7 +176,7 @@ export default function AvgMaKbar({
         ema5_data = ema.next(deal, ema5_data, settings.emaShort);
         ema10_data = ema.next(deal, ema10_data, settings.emaLong);
         ema60_data = ema.next(deal, ema60_data, 60);
-        sma200_data = ma.next(deal, sma200_data, 200);
+        ema200_data = ema.next(deal, ema200_data, 200);
         dmi_data = dmi.next(deal, dmi_data, 14);
         boll_data = boll.next(deal, boll_data, 20);
       }
@@ -215,7 +213,7 @@ export default function AvgMaKbar({
         ema5: ema5_data.ema || null,
         ema10: ema10_data.ema || null,
         ema60: ema60_data.ema || null,
-        sma200: sma200_data.ma || null,
+        ema200: ema200_data.ema || null,
         volMa20,
         diPlus: dmi_data.pDi ?? null,
         diMinus: dmi_data.mDi ?? null,
@@ -254,13 +252,13 @@ export default function AvgMaKbar({
       ) {
         const price = curr.c || 0;
         const ema60 = curr.ema60 || 0;
-        const sma200 = curr.sma200 || 0;
+        const ema200 = curr.ema200 || 0;
 
         if (prev.ema5 < prev.ema10 && curr.ema5 > curr.ema10) {
           // Golden Cross
-          // Trend buy if price > ema60 AND price > sma200
+          // Trend buy if price > ema60 AND price > ema200
           const isTrendBuy =
-            ema60 > 0 && sma200 > 0 && price > ema60 && price > sma200;
+            ema60 > 0 && ema200 > 0 && price > ema60 && price > ema200;
 
           points.push({
             ...curr,
@@ -270,7 +268,7 @@ export default function AvgMaKbar({
         } else if (prev.ema5 > prev.ema10 && curr.ema5 < curr.ema10) {
           // Death Cross
           const isTrendSell =
-            ema60 > 0 && sma200 > 0 && price < ema60 && price < sma200;
+            ema60 > 0 && ema200 > 0 && price < ema60 && price < ema200;
 
           points.push({
             ...curr,
@@ -392,8 +390,7 @@ export default function AvgMaKbar({
                 label: `EMA${settings.emaLong}`,
                 color: "#ff7300",
               },
-              { key: "ema60" as const, label: `EMA60`, color: "#9c27b0" },
-              { key: "sma200" as const, label: `SMA200`, color: "#607d8b" },
+              { key: "ema200" as const, label: `EMA200`, color: "#266788ff" },
             ].map((m) => {
               const isActive = visibleMAs[m.key];
               return (
@@ -556,27 +553,15 @@ export default function AvgMaKbar({
                 name={`EMA ${settings.emaLong}`}
               />
             )}
-            {visibleMAs.ema60 && (
+            {visibleMAs.ema200 && (
               <Line
-                dataKey="ema60"
-                stroke="#9c27b0"
-                dot={false}
-                activeDot={false}
-                strokeWidth={1}
-                strokeDasharray="5 5"
-                name={`EMA 60`}
-                opacity={0.8}
-              />
-            )}
-            {visibleMAs.sma200 && (
-              <Line
-                dataKey="sma200"
-                stroke="#607d8b"
+                dataKey="ema200"
+                stroke="#266788ff"
                 dot={false}
                 activeDot={false}
                 strokeWidth={1}
                 strokeDasharray="3 3"
-                name={`SMA 200`}
+                name={`EMA 200`}
                 opacity={0.8}
               />
             )}

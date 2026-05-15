@@ -384,16 +384,7 @@ export default function ATR({
               strokeWidth={1.5}
               dot={false}
               activeDot={false}
-              name="MA長"
-              opacity={0.7}
-            />
-            <Line
-              dataKey="ema200"
-              stroke="#ffeb3b"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={false}
-              name="EMA 200"
+              name={`MA${settings.ma20}`}
               opacity={0.7}
             />
             <Customized component={BaseCandlestickRectangle} />

@@ -8,9 +8,9 @@ import {
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef } from "react";
 import {
+  Area,
   Bar,
   CartesianGrid,
-  Cell,
   ComposedChart,
   Customized,
   Line,
@@ -53,8 +53,8 @@ interface ObvChartData extends Partial<{
   exitWeakness?: number | null;
   stopLoss?: number | null;
   signalReason?: string | null;
-  // Others
-  obvHist?: number | null;
+  obvUpArea?: [number, number] | null;
+  obvDownArea?: [number, number] | null;
 }
 
 export default function Obv({
@@ -172,6 +172,21 @@ export default function Obv({
     const allData = enhancedData.map((d) => {
       const signal = signalMap.get(d.t);
 
+      const obv = d.obv;
+      const obvMa20 = d.obvMa20;
+      let obvUpArea: [number, number] | null = null;
+      let obvDownArea: [number, number] | null = null;
+
+      if (obv !== null && obvMa20 !== null) {
+        if (obv > obvMa20) {
+          obvUpArea = [obvMa20, obv];
+          obvDownArea = [obvMa20, obvMa20];
+        } else {
+          obvUpArea = [obvMa20, obvMa20];
+          obvDownArea = [obv, obvMa20];
+        }
+      }
+
       return {
         ...d,
         obvDivergenceEntry:
@@ -181,7 +196,8 @@ export default function Obv({
         exitWeakness: signal?.type === "EXIT_WEAKNESS" ? d.l * 0.98 : null,
         stopLoss: (signal as any)?.type === "STOP_LOSS" ? d.h * 1.02 : null,
         signalReason: signal?.reason || null,
-        obvHist: d.obv !== null && d.obvMa20 !== null ? d.obv - d.obvMa20 : null,
+        obvUpArea,
+        obvDownArea,
       } as ObvChartData;
     });
 
@@ -475,6 +491,20 @@ export default function Obv({
               }}
             />
             <RechartsTooltip content={<ChartTooltip showSignals={false} />} />
+            <Area
+              dataKey="obvUpArea"
+              stroke="none"
+              fill="#f44336"
+              fillOpacity={0.3}
+              isAnimationActive={false}
+            />
+            <Area
+              dataKey="obvDownArea"
+              stroke="none"
+              fill="#52c41a"
+              fillOpacity={0.3}
+              isAnimationActive={false}
+            />
             <Line
               dataKey="obv"
               stroke="#2196f3"
@@ -491,15 +521,6 @@ export default function Obv({
               name="OBV MA20"
               opacity={0.5}
             />
-            <Bar dataKey="obvHist" name="OBV Histogram">
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={(entry.obvHist || 0) >= 0 ? "#f44336" : "#52c41a"}
-                  fillOpacity={0.3}
-                />
-              ))}
-            </Bar>
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

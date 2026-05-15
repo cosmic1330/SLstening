@@ -18,7 +18,10 @@ export default function useConditionalDeals(
   id: string,
   enabled: boolean = true,
   isVisible: boolean = true,
+  options?: { fetchTick?: boolean; fetchHistory?: boolean }
 ) {
+  const fetchTick = options?.fetchTick ?? true;
+  const fetchHistory = options?.fetchHistory ?? true;
   // 決定是否應該啟動獲取邏輯：必須啟用、可見、且視窗處於焦點
   const shouldFetch =
     enabled &&
@@ -26,9 +29,12 @@ export default function useConditionalDeals(
     typeof window !== "undefined" &&
     document.visibilityState === "visible";
 
+  const shouldFetchTick = shouldFetch && fetchTick;
+  const shouldFetchHistory = shouldFetch && fetchHistory;
+
   // --- Tick 資料 (即時價格與成交明細) ---
   const { data: tickDeals } = useSWR(
-    shouldFetch ? `market/tick/${id}` : null,
+    shouldFetchTick ? `market/tick/${id}` : null,
     async () => {
       useDebugStore.getState().increment("conditional");
       return await marketApi.getTickData(id);
@@ -43,7 +49,7 @@ export default function useConditionalDeals(
 
   // --- Daily 資料 (日 K 線與技術指標) ---
   const { data: historyData } = useSWR(
-    shouldFetch ? `market/history/${id}` : null,
+    shouldFetchHistory ? `market/history/${id}` : null,
     async () => {
       useDebugStore.getState().increment("conditional");
       return await marketApi.getHistoryData(id, "d");
@@ -51,8 +57,8 @@ export default function useConditionalDeals(
     {
       revalidateOnFocus: false,
       revalidateOnMount: true,
-      dedupingInterval: 60000,
-      refreshInterval: () => (isTaiwanMarketOpen() ? 300000 : 0),
+      dedupingInterval: 10000,
+      refreshInterval: () => (isTaiwanMarketOpen() ? 20000 : 0),
     },
   );
 

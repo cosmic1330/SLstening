@@ -29,6 +29,8 @@ import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
 import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
+import MakChart from "../CommonChart/MakChart";
+import useUIStore from "../../store/UI.store";
 
 // Constants
 export const STOCK_BOX_HEIGHT = 280;
@@ -110,15 +112,21 @@ export default function StockBox({
   const containerRef = useRef<HTMLDivElement>(null);
   const isComponentVisible = useIsVisible(containerRef);
   const [isHovered, setIsHovered] = useState(false);
+  const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
 
   // Data Hooks
-  useMarketSubscriber(stock.id, enabled, isComponentVisible);
-  const tickDeals =
-    useMarketDataStore((state) => state.getTick(stock.id)) || null;
+  const fetchTick = stockBoxChartType === "tick";
+  const fetchHistory = stockBoxChartType === "mak";
+
+  useMarketSubscriber(stock.id, enabled && fetchTick, isComponentVisible);
+  const tickDeals = fetchTick
+    ? useMarketDataStore((state) => state.getTick(stock.id)) || null
+    : null;
   const { deals, name } = useConditionalDeals(
     stock.id,
     enabled,
     isComponentVisible,
+    { fetchTick, fetchHistory }
   );
 
   // Indicators
@@ -317,34 +325,40 @@ export default function StockBox({
         {/* Indicators Grid - More Compact */}
         <Box sx={{ mt: 1.5 }}>
           <Grid container spacing={1}>
-            <Grid size={{ xs: 4 }}>
-              <MetricTag>
-                <Ma5 lastPrice={priceInfo.lastPrice} {...maData} />
-              </MetricTag>
-            </Grid>
-            <Grid size={{ xs: 4 }}>
-              <MetricTag>
-                <Ma10 lastPrice={priceInfo.lastPrice} {...maData} />
-              </MetricTag>
-            </Grid>
-            <Grid size={{ xs: 4 }}>
-              <MetricTag>
-                <Ma20 lastPrice={priceInfo.lastPrice} {...maData} />
-              </MetricTag>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <MetricTag>
-                <VolumeRatio {...volumeInfo} />
-              </MetricTag>
-            </Grid>
-            <Grid size={{ xs: 6 }}>
-              <MetricTag>
-                <AvgPrice
-                  lastPrice={priceInfo.lastPrice}
-                  tickDeals={tickDeals}
-                />
-              </MetricTag>
-            </Grid>
+            {stockBoxChartType === "mak" && (
+              <>
+                <Grid size={{ xs: 4 }}>
+                  <MetricTag>
+                    <Ma5 lastPrice={priceInfo.lastPrice} {...maData} />
+                  </MetricTag>
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <MetricTag>
+                    <Ma10 lastPrice={priceInfo.lastPrice} {...maData} />
+                  </MetricTag>
+                </Grid>
+                <Grid size={{ xs: 4 }}>
+                  <MetricTag>
+                    <Ma20 lastPrice={priceInfo.lastPrice} {...maData} />
+                  </MetricTag>
+                </Grid>
+                <Grid size={{ xs: 12 }}>
+                  <MetricTag>
+                    <VolumeRatio {...volumeInfo} />
+                  </MetricTag>
+                </Grid>
+              </>
+            )}
+            {stockBoxChartType === "tick" && (
+              <Grid size={{ xs: 12 }}>
+                <MetricTag>
+                  <AvgPrice
+                    lastPrice={priceInfo.lastPrice}
+                    tickDeals={tickDeals}
+                  />
+                </MetricTag>
+              </Grid>
+            )}
           </Grid>
         </Box>
       </Box>
@@ -361,7 +375,28 @@ export default function StockBox({
           borderTop: "1px solid rgba(255,255,255,0.05)",
         }}
       >
-        {tickDeals ? (
+        {stockBoxChartType === "mak" ? (
+          deals && deals.length > 0 ? (
+             <Box sx={{ width: "100%", height: "100%", overflow: "hidden", pb: 0.5 }}>
+               <MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip />
+             </Box>
+          ) : (
+            <Box
+              sx={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: 0.2,
+              }}
+            >
+              <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>
+                LOADING
+              </Typography>
+            </Box>
+          )
+        ) : tickDeals ? (
           <StockTickChart tickDeals={tickDeals} />
         ) : (
           <Box

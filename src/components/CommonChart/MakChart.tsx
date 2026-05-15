@@ -67,7 +67,7 @@ export default function MakChart({
       <ResponsiveContainer>
         <ComposedChart data={data}>
           <XAxis hide />
-          <YAxis domain={["dataMin", "dataMax"]} dataKey="c" hide />
+          <YAxis domain={["dataMin", "dataMax"]} hide />
           <ZAxis type="number" range={[10]} />
           {!hideTooltip && (
             <Tooltip offset={50} content={<MakChartTooltip />} />

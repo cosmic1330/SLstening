@@ -1,6 +1,7 @@
 import {
   ArrowBackIosNew as ArrowBackIcon,
   BugReport as BugReportIcon,
+  BarChart as ChartIcon,
   DeleteOutline as DeleteOutlineIcon,
   CloudDownload as DownloadIcon,
   DeleteForever as ResetIcon,
@@ -38,8 +39,9 @@ import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
-import useStocksStore from "../../../store/Stock.store";
 import useDebugStore from "../../../store/debug.store";
+import useStocksStore from "../../../store/Stock.store";
+import useUIStore from "../../../store/UI.store";
 import IndicatorSettingsSection from "./IndicatorSettingsSection";
 import StyledListSubheader from "./StyledListSubheader";
 // Important: Make sure this path is correct or hardcode the version
@@ -54,10 +56,12 @@ const PageContainer = styled(Box)`
   height: 100vh;
   overflow: auto;
   position: relative;
-  background: #FDF8F2;
-  backgroundImage: radial-gradient(at 0% 0%, rgba(61, 90, 69, 0.05) 0, transparent 50%), radial-gradient(at 100% 100%, rgba(210, 105, 30, 0.05) 0, transparent 50%);
-  color: #5D4037;
-  padding-bottom: 80px; 
+  background: #fdf8f2;
+  backgroundimage:
+    radial-gradient(at 0% 0%, rgba(61, 90, 69, 0.05) 0, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(210, 105, 30, 0.05) 0, transparent 50%);
+  color: #5d4037;
+  padding-bottom: 80px;
 `;
 
 const GhibliNotebookPaper = styled(Paper)(({ theme }) => ({
@@ -80,6 +84,7 @@ function Setting() {
   } = useStocksStore();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   const navigate = useNavigate();
+  const { stockBoxChartType, setStockBoxChartType } = useUIStore();
 
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
@@ -87,7 +92,9 @@ function Setting() {
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteSelectedStocks, setDeleteSelectedStocks] = useState<string[]>([]);
+  const [deleteSelectedStocks, setDeleteSelectedStocks] = useState<string[]>(
+    [],
+  );
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
@@ -230,15 +237,22 @@ function Setting() {
 
   const handleToggleDeleteStock = useCallback((id: string) => {
     setDeleteSelectedStocks((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
     if (deleteSelectedStocks.length > 0) {
-      if (window.confirm(`確定要從本地刪除選中的 ${deleteSelectedStocks.length} 檔股票嗎？`)) {
+      if (
+        window.confirm(
+          `確定要從本地刪除選中的 ${deleteSelectedStocks.length} 檔股票嗎？`,
+        )
+      ) {
         await removeStocks(deleteSelectedStocks);
-        sendNotification({ title: "刪除成功", body: `已刪除 ${deleteSelectedStocks.length} 檔股票` });
+        sendNotification({
+          title: "刪除成功",
+          body: `已刪除 ${deleteSelectedStocks.length} 檔股票`,
+        });
         setDeleteDialogOpen(false);
       }
     }
@@ -458,6 +472,44 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
+                <ChartIcon sx={{ color: "#3D5A45" }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="卡片圖表顯示"
+                secondary="切換首頁股票卡片底部的圖表類型"
+                primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
+                secondaryTypographyProps={{
+                  color: "#8B7355",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              />
+              <ListItemSecondaryAction>
+                <Stack alignItems="center">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "#3D5A45",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {stockBoxChartType === "mak" ? "K線" : "即時"}
+                  </Typography>
+                  <Switch
+                    checked={stockBoxChartType === "mak"}
+                    onChange={(e) =>
+                      setStockBoxChartType(e.target.checked ? "mak" : "tick")
+                    }
+                    sx={switchStyles}
+                  />
+                </Stack>
+              </ListItemSecondaryAction>
+            </ListItem>
+
+            <Divider sx={{ mx: 2, borderColor: "rgba(93, 64, 55, 0.1)" }} />
+
+            <ListItem>
+              <ListItemIcon sx={{ minWidth: 44 }}>
                 <SettingsIcon sx={{ color: "#3D5A45" }} />
               </ListItemIcon>
               <ListItemText
@@ -577,7 +629,10 @@ function Setting() {
               border: "1px solid #D2B48C",
             }}
           >
-            <Typography variant="caption" sx={{ fontWeight: 800, color: "#5D4037" }}>
+            <Typography
+              variant="caption"
+              sx={{ fontWeight: 800, color: "#5D4037" }}
+            >
               v{VERSION}
             </Typography>
           </Box>
@@ -598,7 +653,9 @@ function Setting() {
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 900, color: "#5D4037" }}>同步缺少的股票</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900, color: "#5D4037" }}>
+          同步缺少的股票
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
             <FormControlLabel
@@ -611,7 +668,10 @@ function Setting() {
                     selectedStocks.length < pendingStocks.length
                   }
                   onChange={handleToggleSelectAll}
-                  sx={{ color: "#8B7355", "&.Mui-checked": { color: "#3D5A45" } }}
+                  sx={{
+                    color: "#8B7355",
+                    "&.Mui-checked": { color: "#3D5A45" },
+                  }}
                 />
               }
               label={
@@ -647,11 +707,17 @@ function Setting() {
                       size="small"
                       checked={selectedStocks.includes(stock.id)}
                       onChange={() => handleToggleStock(stock.id)}
-                      sx={{ color: "#8B7355", "&.Mui-checked": { color: "#3D5A45" } }}
+                      sx={{
+                        color: "#8B7355",
+                        "&.Mui-checked": { color: "#3D5A45" },
+                      }}
                     />
                   }
                   label={
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: "#5D4037" }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: 700, color: "#5D4037" }}
+                    >
                       {stock.id} - {stock.name}
                     </Typography>
                   }
@@ -664,10 +730,10 @@ function Setting() {
         <DialogActions sx={{ p: 4 }}>
           <Button
             onClick={() => setSyncDialogOpen(false)}
-            sx={{ 
-                color: "#8B7355", 
-                fontWeight: 800,
-                textDecoration: "underline" 
+            sx={{
+              color: "#8B7355",
+              fontWeight: 800,
+              textDecoration: "underline",
             }}
           >
             取消
@@ -683,7 +749,7 @@ function Setting() {
               fontWeight: 900,
               border: "2px solid #2D4A35",
               boxShadow: "0 4px 0 #2D4A35",
-              "&:hover": { 
+              "&:hover": {
                 background: "#3D5A45",
                 transform: "translateY(2px)",
                 boxShadow: "0 2px 0 #2D4A35",
@@ -709,12 +775,14 @@ function Setting() {
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 900, color: "#E53935" }}>批次刪除自選股</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900, color: "#E53935" }}>
+          批次刪除自選股
+        </DialogTitle>
         <DialogContent>
           {stocks.length === 0 ? (
-             <Typography variant="body2" sx={{ color: "#8B7355", mt: 2 }}>
-               目前沒有追蹤任何股票
-             </Typography>
+            <Typography variant="body2" sx={{ color: "#8B7355", mt: 2 }}>
+              目前沒有追蹤任何股票
+            </Typography>
           ) : (
             <>
               <Box sx={{ mb: 2 }}>
@@ -722,13 +790,19 @@ function Setting() {
                   control={
                     <Checkbox
                       size="small"
-                      checked={deleteSelectedStocks.length === stocks.length && stocks.length > 0}
+                      checked={
+                        deleteSelectedStocks.length === stocks.length &&
+                        stocks.length > 0
+                      }
                       indeterminate={
                         deleteSelectedStocks.length > 0 &&
                         deleteSelectedStocks.length < stocks.length
                       }
                       onChange={handleToggleDeleteSelectAll}
-                      sx={{ color: "#8B7355", "&.Mui-checked": { color: "#E53935" } }}
+                      sx={{
+                        color: "#8B7355",
+                        "&.Mui-checked": { color: "#E53935" },
+                      }}
                     />
                   }
                   label={
@@ -750,11 +824,17 @@ function Setting() {
                           size="small"
                           checked={deleteSelectedStocks.includes(stock.id)}
                           onChange={() => handleToggleDeleteStock(stock.id)}
-                          sx={{ color: "#8B7355", "&.Mui-checked": { color: "#E53935" } }}
+                          sx={{
+                            color: "#8B7355",
+                            "&.Mui-checked": { color: "#E53935" },
+                          }}
                         />
                       }
                       label={
-                        <Typography variant="body2" sx={{ fontWeight: 700, color: "#5D4037" }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: 700, color: "#5D4037" }}
+                        >
                           {stock.id} - {stock.name}
                         </Typography>
                       }
@@ -769,10 +849,10 @@ function Setting() {
         <DialogActions sx={{ p: 4 }}>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
-            sx={{ 
-                color: "#8B7355", 
-                fontWeight: 800,
-                textDecoration: "underline" 
+            sx={{
+              color: "#8B7355",
+              fontWeight: 800,
+              textDecoration: "underline",
             }}
           >
             取消
@@ -788,7 +868,7 @@ function Setting() {
               fontWeight: 900,
               border: "2px solid #B71C1C",
               boxShadow: "0 4px 0 #B71C1C",
-              "&:hover": { 
+              "&:hover": {
                 background: "#D32F2F",
                 transform: "translateY(2px)",
                 boxShadow: "0 2px 0 #B71C1C",

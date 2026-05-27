@@ -12,7 +12,7 @@ export default function Ichimoku({ perd }: { perd: UrlTaPerdOptions }) {
   const { settings } = useIndicatorSettings();
 
   // --- Zoom & Pan Logic ---
-  const [visibleCount, setVisibleCount] = useState(180);
+  const [visibleCount, setVisibleCount] = useState(120);
   const [rightOffset, setRightOffset] = useState(0);
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);

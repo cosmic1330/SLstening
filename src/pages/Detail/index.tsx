@@ -84,7 +84,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const pageRef = useRef(null);
 
   // Shared zoom and pan state
-  const [visibleCount, setVisibleCount] = useState(180);
+  const [visibleCount, setVisibleCount] = useState(120);
   const [rightOffset, setRightOffset] = useState(0);
 
   // Documentation modal state

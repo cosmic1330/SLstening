@@ -27,6 +27,8 @@
 | REQ-029 | EMA 頁面長期均線統一：將原有的 SMA200 全部改為 EMA200 | Completed | 2026-05-15 | - | v1: 原始需求 | 確保 EMA 策略頁面內的所有均線邏輯連貫一致 |
 | REQ-030 | EMA 頁面圖表優化：移除 EMA60 的畫面顯示與控制面板開關 | Completed | 2026-05-15 | - | v1: 用戶要求不再顯示 EMA60 (內部指標計算保留以供買賣點策略判斷) | 簡化圖表視覺 |
 | REQ-031 | 實現 StockBox 的 Tick 與 MA K 線圖表切換功能 | Adjusted | 2026-05-15 | REQ-031 | v1: 原始需求 / v2: 將 MA K 線圖表的 K 棒顯示數量從 30 增加到 90 / v3: 優化資料獲取與畫面顯示，根據設定（Tick / MA K）獨立拉取對應資料，並隱藏非必要的指標標籤（例如 mak 模式下隱藏 AvgPrice） / v4: 應使用者要求，將 mak 模式的歷史資料更新頻率提高至每 20 秒一次，保持與 tick 同等的即時更新體驗 | 依用戶訊息於 2026-05-15 自動調整，在設定頁面新增切換選項，讓使用者可以選擇在 StockBox 顯示 Tick 或 MA K 線圖表，並動態優化請求與渲染 |
+| REQ-032 | 修復 GitHub Actions 的 pnpm 構建腳本忽略錯誤 (esbuild) | Completed | 2026-05-28 | - | v1: 將 GitHub Actions 的 pnpm 版本鎖定為 10，並新增 .npmrc 檔案明確允許 esbuild 執行構建腳本 | 解決 ERR_PNPM_IGNORED_BUILDS 錯誤，確保 CI/CD 流程順暢 |
+
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |
 |--------|-------------|--------|--------------|---------|-------|

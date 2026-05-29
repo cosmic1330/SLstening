@@ -2,7 +2,6 @@ import { Box } from "@mui/material";
 import { forwardRef, useMemo } from "react";
 import {
   Area,
-  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -106,8 +105,18 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
           }
         }
 
-        const cmfBull = d.cmf !== null && d.cmf !== undefined ? (d.cmf >= 0 ? d.cmf : 0) : null;
-        const cmfBear = d.cmf !== null && d.cmf !== undefined ? (d.cmf < 0 ? d.cmf : 0) : null;
+        const cmfBull =
+          d.cmf !== null && d.cmf !== undefined
+            ? d.cmf >= 0
+              ? d.cmf
+              : 0
+            : null;
+        const cmfBear =
+          d.cmf !== null && d.cmf !== undefined
+            ? d.cmf < 0
+              ? d.cmf
+              : 0
+            : null;
 
         return {
           ...d,
@@ -156,7 +165,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
 
         const currentBull = d.senkouA > d.senkouB;
         const thickness = Math.abs(d.senkouA - d.senkouB);
-        
+
         if (i === 0) firstThickness = thickness;
         if (i === futureData.length - 1) lastThickness = thickness;
         if (thickness > maxThickness) maxThickness = thickness;
@@ -180,7 +189,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
 
       const isLastBull = lastBar.senkouA > lastBar.senkouB;
       const isExpanding = lastThickness > firstThickness * 1.1;
-      
+
       // 計算預期壓力/支撐點位 (取最後一期的邊界)
       const cloudTop = Math.max(lastBar.senkouA, lastBar.senkouB);
       const cloudBottom = Math.min(lastBar.senkouA, lastBar.senkouB);
@@ -190,9 +199,10 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
       // 專業術語判定 (精簡版)
       let trendStatus = isLastBull ? "多方主導 (支撐)" : "空方主導 (壓力)";
       let structureStr = `${priceLabel}: ${targetPrice.toFixed(2)}`;
-      
+
       if (isExpanding) structureStr += " | 力道強化";
-      else if (lastThickness < firstThickness * 0.9) structureStr += " | 趨勢轉弱";
+      else if (lastThickness < firstThickness * 0.9)
+        structureStr += " | 趨勢轉弱";
       else structureStr += " | 走勢穩";
 
       if (hasTwist && twistIdx !== -1) {
@@ -208,7 +218,10 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
         targetPrice,
         lastBarT: lastBar.t,
         midBarT: futureData[Math.floor(futureData.length / 2)]?.t || lastBar.t,
-        midBarY: ((futureData[Math.floor(futureData.length / 2)]?.senkouA || 0) + (futureData[Math.floor(futureData.length / 2)]?.senkouB || 0)) / 2,
+        midBarY:
+          ((futureData[Math.floor(futureData.length / 2)]?.senkouA || 0) +
+            (futureData[Math.floor(futureData.length / 2)]?.senkouB || 0)) /
+          2,
         futureStart: futureData[0].t,
         futureEnd: lastBar.t,
       };
@@ -619,7 +632,11 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             />
 
             {/* Base Reference Lines */}
-            <ReferenceLine y={0} stroke="rgba(255, 255, 255, 0.4)" strokeWidth={1} />
+            <ReferenceLine
+              y={0}
+              stroke="rgba(255, 255, 255, 0.4)"
+              strokeWidth={1}
+            />
             <ReferenceLine
               y={0.1}
               stroke="rgba(255, 77, 79, 0.45)"

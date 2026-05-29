@@ -21,10 +21,8 @@ import {
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
-import { useGapDetection } from "../../../hooks/useGapDetection";
 import {
   Area,
-  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -39,10 +37,13 @@ import {
 } from "recharts";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
+import { useGapDetection } from "../../../hooks/useGapDetection";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import { calculateChannel } from "../../../utils/channelUtils";
-import { calculateIndicators, EnhancedDealData } from "../../../utils/indicatorUtils";
-import ChartTooltip from "../Tooltip/ChartTooltip";
+import {
+  calculateIndicators,
+  EnhancedDealData,
+} from "../../../utils/indicatorUtils";
 import Fundamental from "../Tooltip/Fundamental";
 
 interface DonchianChartData extends EnhancedDealData {
@@ -142,7 +143,9 @@ export default function Donchian({
     null,
   );
 
-  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(
+    null,
+  );
 
   const handleOpenChannelSettings = (event: React.MouseEvent<HTMLElement>) => {
     setChannelAnchorEl(event.currentTarget);
@@ -244,10 +247,11 @@ export default function Donchian({
     let lastSignalState: "buy" | "neutral" = "neutral";
 
     return baseData.map((d, i) => {
-      if (i === 0) return { ...d, buySignal: null, exitSignal: null } as DonchianChartData;
+      if (i === 0)
+        return { ...d, buySignal: null, exitSignal: null } as DonchianChartData;
       const prev = baseData[i - 1];
       const price = d.c;
-      
+
       let buySignal: number | null = null;
       let exitSignal: number | null = null;
       let buyReason: string | undefined;
@@ -282,9 +286,9 @@ export default function Donchian({
         o: d.o > 0 ? d.o : d.c,
       };
 
-      const donchianRange: [number, number] | null = 
-        d.donchianLb !== null && d.donchianUb !== null 
-          ? [d.donchianLb, d.donchianUb] 
+      const donchianRange: [number, number] | null =
+        d.donchianLb !== null && d.donchianUb !== null
+          ? [d.donchianLb, d.donchianUb]
           : null;
 
       return {
@@ -315,8 +319,10 @@ export default function Donchian({
       if (d.h != null && d.h > 0 && d.h > max) max = d.h;
       if (d.l != null && d.l > 0 && d.l < min) min = d.l;
 
-      if (d.donchianUb != null && d.donchianUb > 0 && d.donchianUb > max) max = d.donchianUb;
-      if (d.donchianLb != null && d.donchianLb > 0 && d.donchianLb < min) min = d.donchianLb;
+      if (d.donchianUb != null && d.donchianUb > 0 && d.donchianUb > max)
+        max = d.donchianUb;
+      if (d.donchianLb != null && d.donchianLb > 0 && d.donchianLb < min)
+        min = d.donchianLb;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -474,8 +480,10 @@ export default function Donchian({
           >
             {payload.map((entry: any, index: number) => {
               if (hideKeys.includes(entry.dataKey)) return null;
-              if (entry.name && entry.name.toLowerCase().includes("gap")) return null;
-              if (entry.value === null || entry.value === undefined) return null;
+              if (entry.name && entry.name.toLowerCase().includes("gap"))
+                return null;
+              if (entry.value === null || entry.value === undefined)
+                return null;
 
               const itemColor =
                 entry.color &&
@@ -486,8 +494,7 @@ export default function Donchian({
                   : "#fff";
 
               const isFullWidth =
-                Array.isArray(entry.value) ||
-                entry.name.length > 10;
+                Array.isArray(entry.value) || entry.name.length > 10;
 
               return (
                 <div
@@ -503,11 +510,19 @@ export default function Donchian({
                     paddingBottom: "1px",
                   }}
                 >
-                  <span style={{ opacity: 0.7, marginRight: "8px", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      opacity: 0.7,
+                      marginRight: "8px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {entry.name}:
                   </span>
                   <span style={{ fontWeight: 700, fontFamily: "monospace" }}>
-                    {typeof entry.value === "number" ? entry.value.toFixed(2) : entry.value}
+                    {typeof entry.value === "number"
+                      ? entry.value.toFixed(2)
+                      : entry.value}
                   </span>
                 </div>
               );
@@ -531,9 +546,16 @@ export default function Donchian({
                       fontWeight: "bold",
                     }}
                   >
-                    {g.type === "up" ? "支撐缺口" : "壓力缺口"} ({g.size.toFixed(2)}, {g.sizePercent.toFixed(1)}%)
+                    {g.type === "up" ? "支撐缺口" : "壓力缺口"} (
+                    {g.size.toFixed(2)}, {g.sizePercent.toFixed(1)}%)
                   </p>
-                  <p style={{ color: "#ccc", margin: "2px 0 0 0", fontSize: "0.7rem" }}>
+                  <p
+                    style={{
+                      color: "#ccc",
+                      margin: "2px 0 0 0",
+                      fontSize: "0.7rem",
+                    }}
+                  >
                     缺口上緣: {g.high.toFixed(2)} | 下緣: {g.low.toFixed(2)}
                   </p>
                 </div>
@@ -622,7 +644,12 @@ export default function Donchian({
           </Typography>
         </MuiTooltip>
 
-        <IconButton size="small" onClick={handleOpenSettings} color="primary" sx={{ mr: 1 }}>
+        <IconButton
+          size="small"
+          onClick={handleOpenSettings}
+          color="primary"
+          sx={{ mr: 1 }}
+        >
           <SettingsIcon fontSize="small" />
         </IconButton>
 
@@ -720,21 +747,32 @@ export default function Donchian({
               />
             )}
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 20, alignSelf: "center", borderColor: "rgba(255,255,255,0.1)" }} />
+            <Divider
+              orientation="vertical"
+              flexItem
+              sx={{
+                mx: 0.5,
+                height: 20,
+                alignSelf: "center",
+                borderColor: "rgba(255,255,255,0.1)",
+              }}
+            />
 
             {/* Unified Glassmorphism Control Panel */}
-            <Box sx={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: 2, 
-              px: 2, 
-              py: 0.5,
-              borderRadius: "10px",
-              background: "rgba(255, 255, 255, 0.03)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
-              boxShadow: "inset 0 0 20px rgba(0,0,0,0.2)"
-            }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 2,
+                px: 2,
+                py: 0.5,
+                borderRadius: "10px",
+                background: "rgba(255, 255, 255, 0.03)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.05)",
+                boxShadow: "inset 0 0 20px rgba(0,0,0,0.2)",
+              }}
+            >
               <FormControlLabel
                 control={
                   <Switch
@@ -742,12 +780,25 @@ export default function Donchian({
                     checked={showGaps}
                     onChange={(e) => setShowGaps(e.target.checked)}
                     sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": { color: "#2196f3" },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#2196f3" }
+                      "& .MuiSwitch-switchBase.Mui-checked": {
+                        color: "#2196f3",
+                      },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                        { backgroundColor: "#2196f3" },
                     }}
                   />
                 }
-                label={<Typography variant="caption" sx={{ color: showGaps ? "#fff" : "#888", fontWeight: showGaps ? 600 : 400 }}>缺口</Typography>}
+                label={
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: showGaps ? "#fff" : "#888",
+                      fontWeight: showGaps ? 600 : 400,
+                    }}
+                  >
+                    缺口
+                  </Typography>
+                }
                 sx={{ m: 0 }}
               />
               <FormControlLabel
@@ -758,12 +809,25 @@ export default function Donchian({
                     onChange={(e) => setShowOnlyUnfilled(e.target.checked)}
                     disabled={!showGaps}
                     sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": { color: "#ff9800" },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#ff9800" }
+                      "& .MuiSwitch-switchBase.Mui-checked": {
+                        color: "#ff9800",
+                      },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                        { backgroundColor: "#ff9800" },
                     }}
                   />
                 }
-                label={<Typography variant="caption" sx={{ color: showOnlyUnfilled ? "#fff" : "#888", fontWeight: showOnlyUnfilled ? 600 : 400 }}>僅未補</Typography>}
+                label={
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: showOnlyUnfilled ? "#fff" : "#888",
+                      fontWeight: showOnlyUnfilled ? 600 : 400,
+                    }}
+                  >
+                    僅未補
+                  </Typography>
+                }
                 sx={{ m: 0 }}
               />
             </Box>
@@ -824,9 +888,13 @@ export default function Donchian({
           onClose={handleCloseSettings}
           PaperProps={{ sx: { p: 2, width: 250, bgcolor: "background.paper" } }}
         >
-          <Typography variant="subtitle2" gutterBottom>唐奇安通道參數</Typography>
+          <Typography variant="subtitle2" gutterBottom>
+            唐奇安通道參數
+          </Typography>
           <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">長度: {settings.donchian} 根</Typography>
+            <Typography variant="caption" color="text.secondary">
+              長度: {settings.donchian} 根
+            </Typography>
             <Slider
               value={settings.donchian}
               min={5}
@@ -837,7 +905,9 @@ export default function Donchian({
             />
           </Box>
           <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-            <Button size="small" onClick={resetSettings}>回復預設</Button>
+            <Button size="small" onClick={resetSettings}>
+              回復預設
+            </Button>
           </Box>
         </Menu>
       </Stack>
@@ -853,18 +923,47 @@ export default function Donchian({
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
-            <YAxis 
-              domain={yDomain} 
-              orientation="left" 
-            />
+            <YAxis domain={yDomain} orientation="left" />
 
             <Tooltip content={<CustomTooltip />} offset={50} />
 
-            <Line dataKey="h" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="高" />
-            <Line dataKey="c" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="收" />
-            <Line dataKey="l" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="低" />
-            <Line dataKey="o" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="開" />
-            
+            <Line
+              dataKey="h"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              name="高"
+            />
+            <Line
+              dataKey="c"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              name="收"
+            />
+            <Line
+              dataKey="l"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              name="低"
+            />
+            <Line
+              dataKey="o"
+              stroke="#fff"
+              opacity={0}
+              dot={false}
+              activeDot={false}
+              legendType="none"
+              name="開"
+            />
+
             <Customized component={BaseCandlestickRectangle} />
 
             {/* Donchian Channel lines */}
@@ -902,47 +1001,76 @@ export default function Donchian({
               name={`DC 下軌 (${settings.donchian})`}
             />
 
-
             {/* Price Channel lines */}
             {showChannel && (
               <>
-                <Line dataKey="channelUb" stroke="#d286ee" strokeWidth={2} dot={false} activeDot={false} name="Channel Upper" />
-                <Line dataKey="channelLb" stroke="#d286ee" strokeWidth={2} dot={false} activeDot={false} name="Channel Lower" />
+                <Line
+                  dataKey="channelUb"
+                  stroke="#d286ee"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  name="Channel Upper"
+                />
+                <Line
+                  dataKey="channelLb"
+                  stroke="#d286ee"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={false}
+                  name="Channel Lower"
+                />
               </>
             )}
 
             {/* Gap Visualization (Premium Support/Resistance Area Zones) */}
             {showGaps &&
-              (showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus).map((gap) => {
-                const latestDate = finalChartData[finalChartData.length - 1]?.t;
-                const endDate = gap.filled && gap.fillDate ? gap.fillDate : latestDate;
-                
-                // Traditional Taiwan stock market: Red is support (up gap), Green is resistance (down gap)
-                // Use extremely elegant semi-transparent filled bands that do not block candles (isFront={false})
-                const strokeColor = gap.type === "up" ? "rgba(255, 77, 79, 0.6)" : "rgba(82, 196, 26, 0.6)";
-                const fillColor = gap.type === "up" ? "rgba(255, 77, 79, 0.2)" : "rgba(82, 196, 26, 0.2)";
-                
-                return (
-                  <ReferenceArea
-                    key={`gap-area-${gap.date}`}
-                    x1={gap.date}
-                    x2={endDate}
-                    y1={gap.low}
-                    y2={gap.high}
-                    fill={fillColor}
-                    stroke={strokeColor}
-                    strokeDasharray="4 3"
-                    strokeWidth={1.2}
-                    isFront={false}
-                  />
-                );
-              })}
+              (showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus).map(
+                (gap) => {
+                  const latestDate =
+                    finalChartData[finalChartData.length - 1]?.t;
+                  const endDate =
+                    gap.filled && gap.fillDate ? gap.fillDate : latestDate;
 
+                  // Traditional Taiwan stock market: Red is support (up gap), Green is resistance (down gap)
+                  // Use extremely elegant semi-transparent filled bands that do not block candles (isFront={false})
+                  const strokeColor =
+                    gap.type === "up"
+                      ? "rgba(255, 77, 79, 0.6)"
+                      : "rgba(82, 196, 26, 0.6)";
+                  const fillColor =
+                    gap.type === "up"
+                      ? "rgba(255, 77, 79, 0.2)"
+                      : "rgba(82, 196, 26, 0.2)";
 
+                  return (
+                    <ReferenceArea
+                      key={`gap-area-${gap.date}`}
+                      x1={gap.date}
+                      x2={endDate}
+                      y1={gap.low}
+                      y2={gap.high}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeDasharray="4 3"
+                      strokeWidth={1.2}
+                      isFront={false}
+                    />
+                  );
+                },
+              )}
 
             {/* Signals */}
-            <Scatter dataKey="buySignal" shape={<BuyArrow />} legendType="none" />
-            <Scatter dataKey="exitSignal" shape={<ExitArrow />} legendType="none" />
+            <Scatter
+              dataKey="buySignal"
+              shape={<BuyArrow />}
+              legendType="none"
+            />
+            <Scatter
+              dataKey="exitSignal"
+              shape={<ExitArrow />}
+              legendType="none"
+            />
 
             {/* Deduction Markers */}
             {maDeductionPoints.map((p) => (
@@ -959,8 +1087,27 @@ export default function Donchian({
                   const { x } = viewBox;
                   return (
                     <g>
-                      <rect x={x - 15} y={5} width={30} height={18} fill="#1a1a1a" rx={4} stroke={p.color} strokeWidth={1} opacity={0.8} />
-                      <text x={x} y={18} textAnchor="middle" fill={p.color} fontSize={10} fontWeight="bold">{p.period}</text>
+                      <rect
+                        x={x - 15}
+                        y={5}
+                        width={30}
+                        height={18}
+                        fill="#1a1a1a"
+                        rx={4}
+                        stroke={p.color}
+                        strokeWidth={1}
+                        opacity={0.8}
+                      />
+                      <text
+                        x={x}
+                        y={18}
+                        textAnchor="middle"
+                        fill={p.color}
+                        fontSize={10}
+                        fontWeight="bold"
+                      >
+                        {p.period}
+                      </text>
                     </g>
                   );
                 }}

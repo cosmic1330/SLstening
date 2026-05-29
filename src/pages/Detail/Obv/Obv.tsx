@@ -39,6 +39,9 @@ interface ObvChartData extends Partial<{
   // Price Indicators
   ma60: number | null;
   ma20: number | null; // Keep for reference
+  bollMa?: number | null;
+  bollUb?: number | null;
+  bollLb?: number | null;
   // OBV Indicators
   obv: number | null;
   obvMa20: number | null;
@@ -340,20 +343,30 @@ export default function Obv({
               name="開"
             />
 
-            {/* Price Indicators */}
+            {/* Price Indicators (Bollinger Bands) */}
             <Line
-              dataKey="ma60"
-              stroke="#64b5f6"
+              dataKey="bollUb"
+              stroke="rgba(144, 202, 249, 0.55)"
               strokeWidth={1}
               dot={false}
-              name="MA60"
+              name="布林上軌"
+              strokeDasharray="4 3"
             />
             <Line
-              dataKey="ma20"
-              stroke="#f1af20ff"
-              strokeWidth={0.5}
+              dataKey="bollMa"
+              stroke="rgba(255, 183, 77, 0.45)"
+              strokeWidth={1}
               dot={false}
-              name="MA20"
+              name="布林中軌"
+              strokeDasharray="3 3"
+            />
+            <Line
+              dataKey="bollLb"
+              stroke="rgba(144, 202, 249, 0.55)"
+              strokeWidth={1}
+              dot={false}
+              name="布林下軌"
+              strokeDasharray="4 3"
             />
 
             <Customized

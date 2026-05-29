@@ -33,6 +33,7 @@
 | REQ-035 | 優化唐奇安通道 (Donchian) 圖表顯示：移除 EMA200 折線、成交量長條圖與 VMA20 平均成交量線 | Completed | 2026-05-29 | - | v1: 應使用者最新回饋，為保持唐奇安通道主圖的聚焦度，移除重疊的 EMA200 線、Volume 覆蓋長條圖與 VMA20 線，並修復 Y 軸自適應範圍計算 | 簡化唐奇安通道圖表，提升通道分析專注度 |
 | REQ-036 | 唐奇安通道新增未補缺口顯示：整合跳空缺口偵測，並採用 premium 半透明紅色支撐區間與綠色壓力區間 ReferenceArea 標示，附帶 toolbar 控制面板切換 | Completed | 2026-05-29 | - | v1: 依使用者要求在 Donchian 圖表中渲染未補缺口 / v2: 將原本雜亂的水平雙折線優化為 premium 的半透明 ReferenceArea 紅綠區間填充（Support/Resistance Zones），完美兼顧清晰度與圖表整潔度 | 完美兼顧了缺口的提示功能與整體圖表的清爽度，避免水平線對通道的干擾 |
 | REQ-037 | Supertrend 預設參數優化：將 ATR 長度預設值由 14 調整為 10，倍數由 2.5 調整為 3.0，並實現 localStorage 自動遷移 | Completed | 2026-05-29 | - | v1: 依使用者指示將預設值調整為 10, 3.0，並實作 localStorage 智能遷移 (supertrend-10-3-migrated)，保障已有使用者的參數能直接無縫升級，無須手動重置 | 提升 Supertrend 指標分析的實戰預設準確度，優化使用者初次載入體驗 |
+| REQ-038 | OBV 價格圖表指標切換為布林通道：將原本的單條 MA60 均線替換為高質感布林通道上下軌與中軌虛線 (bollUb, bollMa, bollLb) | Completed | 2026-05-29 | - | v1: 應使用者最新回饋，在 OBV 上半部的價格圖表中移除 MA60 均線，並繪製代表波動幅度的經典布林通道三軌虛線，完美增強波動極限對比 | 提升量價背離分析時價格波動區間的易讀性 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

@@ -346,27 +346,24 @@ export default function Obv({
             {/* Price Indicators (Bollinger Bands) */}
             <Line
               dataKey="bollUb"
-              stroke="rgba(144, 202, 249, 0.55)"
-              strokeWidth={1}
+              stroke="rgba(140, 140, 140, 0.45)"
+              strokeWidth={1.2}
               dot={false}
               name="布林上軌"
-              strokeDasharray="4 3"
             />
             <Line
               dataKey="bollMa"
-              stroke="rgba(255, 183, 77, 0.45)"
-              strokeWidth={1}
+              stroke="rgba(33, 150, 243, 0.5)"
+              strokeWidth={1.2}
               dot={false}
               name="布林中軌"
-              strokeDasharray="3 3"
             />
             <Line
               dataKey="bollLb"
-              stroke="rgba(144, 202, 249, 0.55)"
-              strokeWidth={1}
+              stroke="rgba(140, 140, 140, 0.45)"
+              strokeWidth={1.2}
               dot={false}
               name="布林下軌"
-              strokeDasharray="4 3"
             />
 
             <Customized

@@ -34,6 +34,10 @@
 | REQ-036 | 唐奇安通道新增未補缺口顯示：整合跳空缺口偵測，並採用 premium 半透明紅色支撐區間與綠色壓力區間 ReferenceArea 標示，附帶 toolbar 控制面板切換 | Completed | 2026-05-29 | - | v1: 依使用者要求在 Donchian 圖表中渲染未補缺口 / v2: 將原本雜亂的水平雙折線優化為 premium 的半透明 ReferenceArea 紅綠區間填充（Support/Resistance Zones），完美兼顧清晰度與圖表整潔度 | 完美兼顧了缺口的提示功能與整體圖表的清爽度，避免水平線對通道的干擾 |
 | REQ-037 | Supertrend 預設參數優化：將 ATR 長度預設值由 14 調整為 10，倍數由 2.5 調整為 3.0，並實現 localStorage 自動遷移 | Completed | 2026-05-29 | - | v1: 依使用者指示將預設值調整為 10, 3.0，並實作 localStorage 智能遷移 (supertrend-10-3-migrated)，保障已有使用者的參數能直接無縫升級，無須手動重置 | 提升 Supertrend 指標分析的實戰預設準確度，優化使用者初次載入體驗 |
 | REQ-038 | OBV 價格圖表指標切換為布林通道：將原本的單條 MA60 均線替換為高質感布林通道上下軌與中軌虛線 (bollUb, bollMa, bollLb) | Completed | 2026-05-29 | - | v1: 應使用者最新回饋，在 OBV 上半部的價格圖表中移除 MA60 均線，並繪製代表波動幅度的經典布林通道三軌虛線，完美增強波動極限對比 | 提升量價背離分析時價格波動區間的易讀性 |
+| REQ-039 | MA 均線圖預設隱藏 MA120：將預設開啟狀態改為 false | Completed | 2026-05-29 | - | v1: 依使用者最新要求，在 MaKbar.tsx 中將 ma120 預設顯示設為 false，避免開啟時均線過多造成雜訊 | 優化預設開啟視圖的清爽度 |
+| REQ-040 | ATR 價格圖表 MA 均線視覺降噪：將原先搶戲的橘色實線弱化為朦朧淡黃虛線 | Completed | 2026-05-29 | - | v1: 依使用者回饋弱化 ATR.tsx 中過於醒目的 MA20，將其改為半透明淡黃虛線 (rgba(241, 175, 32, 0.35)，strokeDasharray="4 3"，寬度 1)，釋放焦點予 Supertrend 信號 | 完美回歸輔助參考線定位，消除視覺干擾 |
+| REQ-041 | 布林通道配色與線型跨頁面統一：調整所有包含布林通道的輔助分析頁面線條，改為高清晰平滑實線並統一為天藍色中軌、銀灰色上下軌 | Completed | 2026-05-29 | - | v1: 依使用者回饋，統一修正 Mfi, Kd, Obv, Mr, Cci, MJ 頁面中的布林通道配色為中軌天藍、上下軌銀灰實線，與主 Bollean 頁面保持完全一致 | 大幅提升跨頁面圖表的視覺美感與專業認知度 |
+| REQ-042 | 布林通道頁面新增未補缺口顯示：在 Bollean.tsx 中整合 unfilledGaps 檢測與 premium 半透明紅綠 Support/Resistance Area 填充，並實作 Gap 控制面板 Chips 與 hover 高亮 CustomTooltip | Completed | 2026-05-29 | - | v1: 依使用者最新要求，在 Bollean 頁面主圖中渲染未補缺口，並實作 Toolbar Control Chips 讓使用者自主切換顯示與否，以及 custom tooltip 互動 | 完善 Bollean 主圖的跳空分析能力，提供極致的 Support/Resistance Zones 視覺反饋 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

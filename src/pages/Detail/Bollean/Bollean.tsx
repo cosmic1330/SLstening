@@ -25,6 +25,7 @@ import {
   ComposedChart,
   Customized,
   Line,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Scatter,
@@ -35,9 +36,12 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useGapDetection } from "../../../hooks/useGapDetection";
+import { UrlTaPerdOptions } from "../../../types";
 import { calculateChannel } from "../../../utils/channelUtils";
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
-import ChartTooltip from "../Tooltip/ChartTooltip";
 import Fundamental from "../Tooltip/Fundamental";
 
 interface BolleanChartData extends Partial<{
@@ -112,11 +116,13 @@ const ExitArrow = (props: any) => {
 };
 
 export default function Bollean({
+  perd,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
+  perd?: UrlTaPerdOptions;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;
@@ -125,6 +131,11 @@ export default function Bollean({
   const { settings, updateSetting, resetSettings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
+  const [showGaps, setShowGaps] = useState(true);
+  const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(true);
+  const [hoveredGapDate, setHoveredGapDate] = useState<
+    number | string | undefined
+  >(undefined);
   const [isLocked, setIsLocked] = useState(false);
   const [lockedInfo, setLockedInfo] = useState<{
     slope: number;
@@ -297,6 +308,12 @@ export default function Bollean({
     );
   }, [allPointsWithIndicators, visibleCount, rightOffset]);
 
+  // Gap Detection
+  const { gapsWithFillStatus, unfilledGaps } = useGapDetection(
+    chartData as any,
+    0.7,
+  );
+
   const yDomain = useMemo(() => {
     if (chartData.length === 0) return ["auto", "auto"];
 
@@ -349,6 +366,96 @@ export default function Bollean({
       setIsLocked(false);
       setLockedInfo(null);
     }
+  };
+
+  // 自定義 Tooltip 組件來處理 hover 事件與缺口顯示
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      // 檢查當前 hover 的位置是否有缺口
+      const currentGaps = (
+        showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus
+      ).filter((gap) => gap.date === label);
+
+      if (currentGaps.length > 0) {
+        // 如果有缺口，設置高亮
+        if (hoveredGapDate !== label) {
+          setHoveredGapDate(label);
+        }
+      } else {
+        // 如果沒有缺口，清除高亮
+        if (hoveredGapDate !== undefined) {
+          setHoveredGapDate(undefined);
+        }
+      }
+
+      return (
+        <div
+          style={{
+            backgroundColor: "#222",
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #444",
+            fontSize: "12px",
+            lineHeight: 1.4,
+          }}
+        >
+          <p style={{ color: "#eee", margin: "0 0 5px 0" }}>
+            {perd === UrlTaPerdOptions.Hour
+              ? label
+              : dateFormat(label, Mode.NumberToString)}
+          </p>
+          {payload.map((entry: any, index: number) => {
+            if (entry.name && entry.name.includes("gap")) return null;
+            // Filter out internal hidden keys
+            const hideKeys = ["buySignal", "exitSignal", "supertrend", "trailStop", "direction"];
+            if (hideKeys.includes(entry.dataKey)) return null;
+            return (
+              <p key={index} style={{ color: entry.color, margin: 0 }}>
+                {entry.name}:{" "}
+                {typeof entry.value === "number"
+                  ? entry.value.toFixed(2)
+                  : entry.value}
+              </p>
+            );
+          })}
+          {currentGaps.length > 0 && (
+            <div
+              style={{
+                marginTop: 8,
+                borderTop: "1px solid #555",
+                paddingTop: 4,
+              }}
+            >
+              {currentGaps.map((g) => (
+                <div key={g.date} style={{ marginTop: 4 }}>
+                  <p
+                    style={{
+                      color: g.type === "up" ? "#ff5252" : "#69f0ae",
+                      margin: 0,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {g.type === "up" ? "支撐缺口" : "壓力缺口"} (
+                    {g.size.toFixed(2)}, {g.sizePercent.toFixed(1)}%)
+                  </p>
+                  <p style={{ color: "#eee", margin: 0 }}>
+                    缺口上緣: {g.high.toFixed(2)}
+                  </p>
+                  <p style={{ color: "#eee", margin: 0 }}>
+                    缺口下緣: {g.low.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    // 當沒有 hover 時清除高亮
+    if (hoveredGapDate !== undefined) {
+      setHoveredGapDate(undefined);
+    }
+    return null;
   };
 
   const finalChartData = useMemo(() => {
@@ -561,6 +668,60 @@ export default function Bollean({
               />
             )}
           </Stack>
+
+          <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
+
+          <Stack direction="row" spacing={1} alignItems="center">
+            <Chip
+              icon={
+                showGaps ? (
+                  <VisibilityIcon fontSize="small" />
+                ) : (
+                  <VisibilityOffIcon fontSize="small" />
+                )
+              }
+              label="顯示缺口"
+              size="small"
+              onClick={() => setShowGaps(!showGaps)}
+              variant={showGaps ? "filled" : "outlined"}
+              color={showGaps ? "primary" : "default"}
+              sx={{
+                height: 24,
+                fontSize: "0.75rem",
+                fontWeight: showGaps ? "bold" : "normal",
+                transition: "all 0.2s",
+                borderColor: showGaps ? "primary.main" : "#444",
+                "&:hover": {
+                  transform: "translateY(-1px)",
+                  boxShadow: showGaps
+                    ? "0 2px 8px rgba(33, 150, 243, 0.3)"
+                    : "none",
+                },
+              }}
+            />
+            {showGaps && (
+              <Chip
+                label={showOnlyUnfilled ? "僅未補缺口" : "顯示所有缺口"}
+                size="small"
+                onClick={() => setShowOnlyUnfilled(!showOnlyUnfilled)}
+                variant={showOnlyUnfilled ? "filled" : "outlined"}
+                color={showOnlyUnfilled ? "info" : "default"}
+                sx={{
+                  height: 24,
+                  fontSize: "0.75rem",
+                  fontWeight: showOnlyUnfilled ? "bold" : "normal",
+                  transition: "all 0.2s",
+                  borderColor: showOnlyUnfilled ? "info.main" : "#444",
+                  "&:hover": {
+                    transform: "translateY(-1px)",
+                    boxShadow: showOnlyUnfilled
+                      ? "0 2px 8px rgba(2, 136, 209, 0.3)"
+                      : "none",
+                  },
+                }}
+              />
+            )}
+          </Stack>
         </Box>
         <Menu
           anchorEl={channelAnchorEl}
@@ -656,20 +817,7 @@ export default function Bollean({
               axisLine={false}
             />
 
-            <Tooltip
-              content={
-                <ChartTooltip
-                  hideKeys={[
-                    "buySignal",
-                    "exitSignal",
-                    "supertrend",
-                    "trailStop",
-                    "direction",
-                  ]}
-                />
-              }
-              offset={50}
-            />
+            <Tooltip content={<CustomTooltip />} offset={50} />
 
             <Line
               dataKey="h"
@@ -709,6 +857,42 @@ export default function Bollean({
             />
             <Customized component={BaseCandlestickRectangle} />
 
+            {/* Gap Visualization (Premium Support/Resistance Area Zones) */}
+            {showGaps &&
+              (showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus).map(
+                (gap) => {
+                  const latestDate =
+                    chartData[chartData.length - 1]?.t;
+                  const endDate =
+                    gap.filled && gap.fillDate ? gap.fillDate : latestDate;
+
+                  // Traditional Taiwan stock market: Red is support (up gap), Green is resistance (down gap)
+                  const strokeColor =
+                    gap.type === "up"
+                      ? "rgba(255, 77, 79, 0.6)"
+                      : "rgba(82, 196, 26, 0.6)";
+                  const fillColor =
+                    gap.type === "up"
+                      ? "rgba(255, 77, 79, 0.2)"
+                      : "rgba(82, 196, 26, 0.2)";
+
+                  return (
+                    <ReferenceArea
+                      key={`gap-area-${gap.date}`}
+                      x1={gap.date}
+                      x2={endDate}
+                      y1={gap.low}
+                      y2={gap.high}
+                      fill={fillColor}
+                      stroke={strokeColor}
+                      strokeDasharray="4 3"
+                      strokeWidth={1.2}
+                      isFront={false}
+                    />
+                  );
+                },
+              )}
+
             <Bar
               dataKey="v"
               yAxisId="right"
@@ -745,7 +929,7 @@ export default function Bollean({
             <Line
               dataKey="ema200"
               stroke="#ffeb3b"
-              strokeWidth={2}
+              strokeWidth={1}
               dot={false}
               activeDot={false}
               name="EMA 200"

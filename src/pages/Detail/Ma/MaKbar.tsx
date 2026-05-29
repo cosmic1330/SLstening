@@ -67,7 +67,7 @@ export default function MaKbar({
     ma10: true,
     ma20: true,
     ma60: true,
-    ma120: true,
+    ma120: false,
     ma240: true,
   });
 

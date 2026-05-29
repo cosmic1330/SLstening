@@ -380,12 +380,12 @@ export default function ATR({
 
             <Line
               dataKey="ma20"
-              stroke="#ff7300"
-              strokeWidth={1.5}
+              stroke="rgba(241, 175, 32, 0.35)"
+              strokeWidth={1}
+              strokeDasharray="4 3"
               dot={false}
               activeDot={false}
               name={`MA${settings.ma20}`}
-              opacity={0.7}
             />
             <Customized component={BaseCandlestickRectangle} />
 

@@ -319,27 +319,27 @@ export default function CCI({
             {/* Bollinger Bands */}
             <Line
               dataKey="bollMa"
-              stroke="#2196f3"
-              strokeWidth={1}
+              stroke="rgba(33, 150, 243, 0.5)"
+              strokeWidth={1.2}
               dot={false}
               activeDot={false}
-              opacity={0.5}
+              name={`${settings.boll} MA (Mid)`}
             />
             <Line
               dataKey="bollUb"
-              stroke="#ff9800"
-              strokeDasharray="3 3"
+              stroke="rgba(140, 140, 140, 0.45)"
+              strokeWidth={1.2}
               dot={false}
               activeDot={false}
-              opacity={0.5}
+              name="Upper Band"
             />
             <Line
               dataKey="bollLb"
-              stroke="#ff9800"
-              strokeDasharray="3 3"
+              stroke="rgba(140, 140, 140, 0.45)"
+              strokeWidth={1.2}
               dot={false}
               activeDot={false}
-              opacity={0.5}
+              name="Lower Band"
             />
 
             {/* Signal Markers */}

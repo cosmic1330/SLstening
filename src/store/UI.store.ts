@@ -10,7 +10,7 @@ interface UIState {
 const useUIStore = create<UIState>((set) => ({
   isBottomBarVisible: true,
   setBottomBarVisible: (visible) => set({ isBottomBarVisible: visible }),
-  stockBoxChartType: (localStorage.getItem("slitenting-stockbox-chart") as "tick" | "mak") || "tick",
+  stockBoxChartType: (localStorage.getItem("slitenting-stockbox-chart") as "tick" | "mak") || "mak",
   setStockBoxChartType: (type) => {
     localStorage.setItem("slitenting-stockbox-chart", type);
     set({ stockBoxChartType: type });

@@ -10,15 +10,18 @@ import {
   CircularProgress,
   Container,
   Divider,
+  FormControlLabel,
   IconButton,
   Menu,
   Tooltip as MuiTooltip,
   Slider,
   Stack,
+  Switch,
   Typography,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
+import { useGapDetection } from "../../../hooks/useGapDetection";
 import {
   Area,
   Bar,
@@ -26,6 +29,7 @@ import {
   ComposedChart,
   Customized,
   Line,
+  ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
   Scatter,
@@ -118,6 +122,11 @@ export default function Donchian({
   const deals = useContext(DealsContext);
   const [showChannel, setShowChannel] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [showGaps, setShowGaps] = useState(true);
+  const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(true);
+  const [hoveredGapDate, setHoveredGapDate] = useState<
+    number | string | undefined
+  >(undefined);
   const [lockedInfo, setLockedInfo] = useState<{
     slope: number;
     upperIntercept: number;
@@ -308,9 +317,6 @@ export default function Donchian({
 
       if (d.donchianUb != null && d.donchianUb > 0 && d.donchianUb > max) max = d.donchianUb;
       if (d.donchianLb != null && d.donchianLb > 0 && d.donchianLb < min) min = d.donchianLb;
-
-      if (d.ema200 != null && d.ema200 > 0 && d.ema200 > max) max = d.ema200;
-      if (d.ema200 != null && d.ema200 > 0 && d.ema200 < min) min = d.ema200;
     });
 
     if (min === Infinity || max === -Infinity) return ["auto", "auto"];
@@ -388,6 +394,160 @@ export default function Donchian({
       return { ...d, channelUb, channelLb };
     });
   }, [chartData, channelInfo, isLocked, lockedInfo, allPointsWithIndicators]);
+
+  // Gap Detection
+  const { gapsWithFillStatus, unfilledGaps } = useGapDetection(
+    finalChartData,
+    0.7,
+  );
+
+  // Helper to format YYYYMMDD number to Date string
+  const formatDateTick = (tick: number | string) => {
+    const str = tick.toString();
+    if (str.length === 8) {
+      return `${str.slice(0, 4)}/${str.slice(4, 6)}/${str.slice(6)}`;
+    }
+    return str;
+  };
+
+  // Custom Tooltip with Gap analysis info
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length && label !== undefined) {
+      const currentGaps = (
+        showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus
+      ).filter((gap) => gap.date === label);
+
+      if (currentGaps.length > 0) {
+        if (hoveredGapDate !== label) {
+          setHoveredGapDate(label);
+        }
+      } else {
+        if (hoveredGapDate !== undefined) {
+          setHoveredGapDate(undefined);
+        }
+      }
+
+      const dateStr = formatDateTick(label);
+
+      // Hide keys that we don't want to show
+      const hideKeys = [
+        "buySignal",
+        "exitSignal",
+        "supertrend",
+        "trailStop",
+        "direction",
+      ];
+
+      return (
+        <div
+          style={{
+            backgroundColor: "rgba(20, 20, 30, 0.9)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(4px)",
+            borderRadius: 8,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+            padding: "12px",
+            textAlign: "left",
+            color: "#fff",
+            fontSize: "12px",
+          }}
+        >
+          <p
+            style={{
+              color: "#eee",
+              margin: "0 0 8px 0",
+              fontWeight: "bold",
+              fontSize: "0.85rem",
+            }}
+          >
+            {dateStr}
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "4px 12px",
+              borderTop: "1px solid rgba(255,255,255,0.1)",
+              paddingTop: "6px",
+            }}
+          >
+            {payload.map((entry: any, index: number) => {
+              if (hideKeys.includes(entry.dataKey)) return null;
+              if (entry.name && entry.name.toLowerCase().includes("gap")) return null;
+              if (entry.value === null || entry.value === undefined) return null;
+
+              const itemColor =
+                entry.color &&
+                entry.color !== "#000" &&
+                entry.color !== "#000000" &&
+                entry.color !== "none"
+                  ? entry.color
+                  : "#fff";
+
+              const isFullWidth =
+                Array.isArray(entry.value) ||
+                entry.name.length > 10;
+
+              return (
+                <div
+                  key={index}
+                  style={{
+                    gridColumn: isFullWidth ? "span 2" : "auto",
+                    color: itemColor,
+                    fontSize: "0.75rem",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderBottom: "1px solid rgba(255,255,255,0.03)",
+                    paddingBottom: "1px",
+                  }}
+                >
+                  <span style={{ opacity: 0.7, marginRight: "8px", whiteSpace: "nowrap" }}>
+                    {entry.name}:
+                  </span>
+                  <span style={{ fontWeight: 700, fontFamily: "monospace" }}>
+                    {typeof entry.value === "number" ? entry.value.toFixed(2) : entry.value}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {currentGaps.length > 0 && (
+            <div
+              style={{
+                marginTop: 8,
+                borderTop: "1px solid rgba(255,255,255,0.15)",
+                paddingTop: 6,
+              }}
+            >
+              {currentGaps.map((g) => (
+                <div key={g.date} style={{ marginTop: 4 }}>
+                  <p
+                    style={{
+                      color: g.type === "up" ? "#ff4d4f" : "#52c41a",
+                      margin: 0,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {g.type === "up" ? "支撐缺口" : "壓力缺口"} ({g.size.toFixed(2)}, {g.sizePercent.toFixed(1)}%)
+                  </p>
+                  <p style={{ color: "#ccc", margin: "2px 0 0 0", fontSize: "0.7rem" }}>
+                    缺口上緣: {g.high.toFixed(2)} | 下緣: {g.low.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    if (hoveredGapDate !== undefined) {
+      setHoveredGapDate(undefined);
+    }
+    return null;
+  };
 
   const maDeductionPoints = useMemo(() => {
     if (chartData.length === 0) return [];
@@ -559,6 +719,54 @@ export default function Donchian({
                 }}
               />
             )}
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 20, alignSelf: "center", borderColor: "rgba(255,255,255,0.1)" }} />
+
+            {/* Unified Glassmorphism Control Panel */}
+            <Box sx={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 2, 
+              px: 2, 
+              py: 0.5,
+              borderRadius: "10px",
+              background: "rgba(255, 255, 255, 0.03)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              boxShadow: "inset 0 0 20px rgba(0,0,0,0.2)"
+            }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={showGaps}
+                    onChange={(e) => setShowGaps(e.target.checked)}
+                    sx={{
+                      "& .MuiSwitch-switchBase.Mui-checked": { color: "#2196f3" },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#2196f3" }
+                    }}
+                  />
+                }
+                label={<Typography variant="caption" sx={{ color: showGaps ? "#fff" : "#888", fontWeight: showGaps ? 600 : 400 }}>缺口</Typography>}
+                sx={{ m: 0 }}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    size="small"
+                    checked={showOnlyUnfilled}
+                    onChange={(e) => setShowOnlyUnfilled(e.target.checked)}
+                    disabled={!showGaps}
+                    sx={{
+                      "& .MuiSwitch-switchBase.Mui-checked": { color: "#ff9800" },
+                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#ff9800" }
+                    }}
+                  />
+                }
+                label={<Typography variant="caption" sx={{ color: showOnlyUnfilled ? "#fff" : "#888", fontWeight: showOnlyUnfilled ? 600 : 400 }}>僅未補</Typography>}
+                sx={{ m: 0 }}
+              />
+            </Box>
           </Stack>
         </Box>
         <Menu
@@ -649,27 +857,8 @@ export default function Donchian({
               domain={yDomain} 
               orientation="left" 
             />
-            <YAxis
-              yAxisId="vol"
-              orientation="right"
-              domain={[0, (dataMax: number) => dataMax * 4]}
-              hide
-            />
-            
-            <Tooltip
-              content={
-                <ChartTooltip
-                  hideKeys={[
-                    "buySignal",
-                    "exitSignal",
-                    "supertrend",
-                    "trailStop",
-                    "direction",
-                  ]}
-                />
-              }
-              offset={50}
-            />
+
+            <Tooltip content={<CustomTooltip />} offset={50} />
 
             <Line dataKey="h" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="高" />
             <Line dataKey="c" stroke="#fff" opacity={0} dot={false} activeDot={false} legendType="none" name="收" />
@@ -712,14 +901,7 @@ export default function Donchian({
               activeDot={false}
               name={`DC 下軌 (${settings.donchian})`}
             />
-            <Line
-              dataKey="ema200"
-              stroke="#ffeb3b"
-              strokeWidth={2}
-              dot={false}
-              activeDot={false}
-              name="EMA 200"
-            />
+
 
             {/* Price Channel lines */}
             {showChannel && (
@@ -729,38 +911,34 @@ export default function Donchian({
               </>
             )}
 
-            {/* Volume overlay */}
-            <Bar
-              dataKey="v"
-              yAxisId="vol"
-              fill="#90caf9"
-              opacity={0.3}
-              name="Volume"
-              barSize={10}
-              shape={(props: any) => {
-                const { x, y, width, height, payload } = props;
-                const isUp = payload.c > payload.o;
+            {/* Gap Visualization (Premium Support/Resistance Area Zones) */}
+            {showGaps &&
+              (showOnlyUnfilled ? unfilledGaps : gapsWithFillStatus).map((gap) => {
+                const latestDate = finalChartData[finalChartData.length - 1]?.t;
+                const endDate = gap.filled && gap.fillDate ? gap.fillDate : latestDate;
+                
+                // Traditional Taiwan stock market: Red is support (up gap), Green is resistance (down gap)
+                // Use extremely elegant semi-transparent filled bands that do not block candles (isFront={false})
+                const strokeColor = gap.type === "up" ? "rgba(255, 77, 79, 0.6)" : "rgba(82, 196, 26, 0.6)";
+                const fillColor = gap.type === "up" ? "rgba(255, 77, 79, 0.2)" : "rgba(82, 196, 26, 0.2)";
+                
                 return (
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={isUp ? "#f44336" : "#4caf50"}
-                    opacity={0.4}
+                  <ReferenceArea
+                    key={`gap-area-${gap.date}`}
+                    x1={gap.date}
+                    x2={endDate}
+                    y1={gap.low}
+                    y2={gap.high}
+                    fill={fillColor}
+                    stroke={strokeColor}
+                    strokeDasharray="4 3"
+                    strokeWidth={1.2}
+                    isFront={false}
                   />
                 );
-              }}
-            />
-            <Line
-              yAxisId="vol"
-              dataKey="vma20"
-              stroke="#64b5f6"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={false}
-              name="VMA20"
-            />
+              })}
+
+
 
             {/* Signals */}
             <Scatter dataKey="buySignal" shape={<BuyArrow />} legendType="none" />

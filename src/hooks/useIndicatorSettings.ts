@@ -36,8 +36,8 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   emaLong: 10,
   cmf: 21,
   cmfEma: 5,
-  atrLen: 14,
-  atrMult: 2.5,
+  atrLen: 10,
+  atrMult: 3.0,
   donchian: 20,
   cci: 14,
 };
@@ -48,18 +48,33 @@ export default function useIndicatorSettings() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
+        let modified = false;
+
         if (!localStorage.getItem("slitenting-indicator-settings-ma30-migrated")) {
           if (parsed.ma20 === 20) parsed.ma20 = 30;
           if (parsed.boll === 20) parsed.boll = 30;
           localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
+          modified = true;
+        }
+
+        if (!localStorage.getItem("slitenting-indicator-settings-supertrend-10-3-migrated")) {
+          parsed.atrLen = 10;
+          parsed.atrMult = 3.0;
+          localStorage.setItem("slitenting-indicator-settings-supertrend-10-3-migrated", "true");
+          modified = true;
+        }
+
+        if (modified) {
           localStorage.setItem("slitenting-indicator-settings", JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
         }
+
         return { ...DEFAULT_SETTINGS, ...parsed };
       } catch (e) {
         return DEFAULT_SETTINGS;
       }
     }
     localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
+    localStorage.setItem("slitenting-indicator-settings-supertrend-10-3-migrated", "true");
     return DEFAULT_SETTINGS;
   });
 

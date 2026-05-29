@@ -30,6 +30,9 @@
 | REQ-032 | 修復 GitHub Actions 的 pnpm 構建腳本忽略錯誤 (esbuild) | Completed | 2026-05-28 | - | v1: 將 GitHub Actions 的 pnpm 版本鎖定為 10，並新增 .npmrc 檔案明確允許 esbuild 執行構建腳本 | 解決 ERR_PNPM_IGNORED_BUILDS 錯誤，確保 CI/CD 流程順暢 |
 | REQ-033 | CMF 資金流圖表重新設計：移除重疊柱狀圖、實作紅綠分離漸層 Area、銀白霓虹發光 CMF 主線與低調 EMA 訊號線 | Completed | 2026-05-29 | - | v1: 應使用者要求進行資金流 CMF 圖表重設計，實現 Glowing HUD 專業化視覺，並將 EMA 訊號線改為低飽和度虛線 | 大幅提升資金流圖表的易讀性與視覺質感 |
 | REQ-034 | 將 CJ 指標重構為純 CCI 指標：刪除 KDJ J 線與說明，重命名資料夾與檔案名稱為 Cci | Completed | 2026-05-29 | - | v1: 依使用者最新指示，徹底移除 J 線以簡化圖表視覺，同步修正資料夾名為 Cci、檔案名為 Cci.tsx、Cci.md，並修改 chartConfig 載入配置 | 簡化技術指標分析介面，移除多餘的 J 線雜訊 |
+| REQ-035 | 優化唐奇安通道 (Donchian) 圖表顯示：移除 EMA200 折線、成交量長條圖與 VMA20 平均成交量線 | Completed | 2026-05-29 | - | v1: 應使用者最新回饋，為保持唐奇安通道主圖的聚焦度，移除重疊的 EMA200 線、Volume 覆蓋長條圖與 VMA20 線，並修復 Y 軸自適應範圍計算 | 簡化唐奇安通道圖表，提升通道分析專注度 |
+| REQ-036 | 唐奇安通道新增未補缺口顯示：整合跳空缺口偵測，並採用 premium 半透明紅色支撐區間與綠色壓力區間 ReferenceArea 標示，附帶 toolbar 控制面板切換 | Completed | 2026-05-29 | - | v1: 依使用者要求在 Donchian 圖表中渲染未補缺口 / v2: 將原本雜亂的水平雙折線優化為 premium 的半透明 ReferenceArea 紅綠區間填充（Support/Resistance Zones），完美兼顧清晰度與圖表整潔度 | 完美兼顧了缺口的提示功能與整體圖表的清爽度，避免水平線對通道的干擾 |
+| REQ-037 | Supertrend 預設參數優化：將 ATR 長度預設值由 14 調整為 10，倍數由 2.5 調整為 3.0，並實現 localStorage 自動遷移 | Completed | 2026-05-29 | - | v1: 依使用者指示將預設值調整為 10, 3.0，並實作 localStorage 智能遷移 (supertrend-10-3-migrated)，保障已有使用者的參數能直接無縫升級，無須手動重置 | 提升 Supertrend 指標分析的實戰預設準確度，優化使用者初次載入體驗 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

@@ -106,6 +106,9 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
           }
         }
 
+        const cmfBull = d.cmf !== null && d.cmf !== undefined ? (d.cmf >= 0 ? d.cmf : 0) : null;
+        const cmfBear = d.cmf !== null && d.cmf !== undefined ? (d.cmf < 0 ? d.cmf : 0) : null;
+
         return {
           ...d,
           signalReason: sig ? sig.reason : undefined,
@@ -114,6 +117,8 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             isBull || d.senkouA === d.senkouB ? [d.senkouB, d.senkouA] : null,
           bearCloud:
             isBear || d.senkouA === d.senkouB ? [d.senkouA, d.senkouB] : null,
+          cmfBull,
+          cmfBear,
           isFuture,
           futureTrend,
           futureReason,
@@ -577,12 +582,23 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             syncId="ichiSync"
           >
             <defs>
-              <linearGradient id="colorCmf" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#9c27b0" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#9c27b0" stopOpacity={0} />
+              {/* Bullish CMF Area Gradient (Taiwan Red) */}
+              <linearGradient id="colorCmfBull" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#ff4d4f" stopOpacity={0.24} />
+                <stop offset="100%" stopColor="#ff4d4f" stopOpacity={0.0} />
               </linearGradient>
+              {/* Bearish CMF Area Gradient (Taiwan Green) - Fades from bottom up to 0 */}
+              <linearGradient id="colorCmfBear" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stopColor="#52c41a" stopOpacity={0.24} />
+                <stop offset="100%" stopColor="#52c41a" stopOpacity={0.0} />
+              </linearGradient>
+              {/* Premium Glow Filter for CMF Line */}
+              <filter id="cmfGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1.5" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+              </filter>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="#fff" />
+            <CartesianGrid strokeDasharray="3 3" opacity={0.06} stroke="#fff" />
             <XAxis dataKey="t" hide />
             <YAxis
               domain={cmfDomain as any}
@@ -593,7 +609,8 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                 value: "CMF",
                 angle: -90,
                 position: "insideLeft",
-                fill: "#9c27b0",
+                fill: "rgba(255, 255, 255, 0.7)",
+                style: { fontSize: 10, fontWeight: "bold" },
               }}
             />
             <RechartsTooltip
@@ -601,55 +618,82 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
               isAnimationActive={false}
             />
 
-            <ReferenceLine y={0} stroke="#fff" strokeOpacity={0.3} />
+            {/* Base Reference Lines */}
+            <ReferenceLine y={0} stroke="rgba(255, 255, 255, 0.4)" strokeWidth={1} />
             <ReferenceLine
               y={0.1}
-              stroke="#ff4d4f"
+              stroke="rgba(255, 77, 79, 0.45)"
               strokeDasharray="3 3"
-              strokeOpacity={0.3}
+              label={{
+                value: "+0.10 強勢吸籌",
+                position: "insideBottomLeft",
+                fill: "rgba(255, 77, 79, 0.75)",
+                fontSize: 10,
+                fontWeight: "bold",
+              }}
             />
             <ReferenceLine
               y={-0.1}
-              stroke="#52c41a"
+              stroke="rgba(82, 196, 26, 0.45)"
               strokeDasharray="3 3"
-              strokeOpacity={0.3}
-            />
-
-            <Area
-              type="monotone"
-              dataKey="cmf"
-              stroke="#9c27b0"
-              fill="url(#colorCmf)"
-              strokeWidth={2}
-              name="CMF"
-            />
-            <Bar
-              dataKey="cmf"
-              name="強度"
-              shape={(props: any) => {
-                const { x, y, width, height, payload } = props;
-                if (payload.cmf === null || payload.cmf === undefined)
-                  return <path />;
-                // Taiwan market colors: Red = Bullish, Green = Bearish
-                const fill = payload.cmf > 0 ? "#ff4d4f" : "#52c41a";
-                return (
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={fill}
-                    opacity={0.2}
-                  />
-                );
+              label={{
+                value: "-0.10 資金流出",
+                position: "insideTopLeft",
+                fill: "rgba(82, 196, 26, 0.75)",
+                fontSize: 10,
+                fontWeight: "bold",
               }}
             />
+
+            {/* Bullish Positive Flow Area */}
+            <Area
+              type="monotone"
+              dataKey="cmfBull"
+              stroke="none"
+              fill="url(#colorCmfBull)"
+              baseValue={0}
+              connectNulls={false}
+              isAnimationActive={false}
+              legendType="none"
+            />
+
+            {/* Bearish Negative Flow Area */}
+            <Area
+              type="monotone"
+              dataKey="cmfBear"
+              stroke="none"
+              fill="url(#colorCmfBear)"
+              baseValue={0}
+              connectNulls={false}
+              isAnimationActive={false}
+              legendType="none"
+            />
+
+            {/* Premium Silver-White CMF Line */}
+            <Line
+              type="monotone"
+              dataKey="cmf"
+              stroke="rgba(255, 255, 255, 0.85)"
+              strokeWidth={1.8}
+              dot={false}
+              activeDot={{
+                r: 4,
+                stroke: "rgba(255, 255, 255, 0.95)",
+                strokeWidth: 1,
+                fill: "#fff",
+              }}
+              name="CMF"
+            />
+
+            {/* Muted and Subdued CMF EMA Line */}
             <Line
               type="monotone"
               dataKey="cmfEma5"
-              stroke="#ff9800"
-              strokeWidth={1}
+              stroke="rgba(255, 183, 77, 0.45)"
+              strokeWidth={1.2}
+              strokeDasharray="4 3"
               dot={false}
+              activeDot={false}
               name={`EMA${cmfEmaPeriod}`}
             />
           </ComposedChart>

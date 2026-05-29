@@ -8,14 +8,14 @@ const MR = lazy(() => import("../Mr/MR"));
 const Kd = lazy(() => import("../Kd/Kd"));
 const Mfi = lazy(() => import("../Mfi/Mfi"));
 const ATR = lazy(() => import("../ATR/ATR"));
-const Cj = lazy(() => import("../Cj/Cj"));
+const Cci = lazy(() => import("../Cci/Cci"));
 const Bollean = lazy(() => import("../Bollean/Bollean"));
 const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
 import bolleanDoc from "../Bollean/Bollean.md?raw";
-import cjDoc from "../Cj/Cj.md?raw";
+import cciDoc from "../Cci/Cci.md?raw";
 import Donchian from "../Donchian/Donchian";
 import donchianDoc from "../Donchian/Donchian.md?raw";
 import emaDoc from "../Ema/Ema.md?raw";
@@ -90,13 +90,13 @@ export const CHART_CONFIG: ChartDefinition[] = [
     component: (props) => <Obv {...props} />,
   },
   {
-    id: "cj",
-    label: "CJ",
-    title: "CJ Ultimate 共振策略",
-    docContent: cjDoc,
+    id: "cci",
+    label: "CCI",
+    title: "CCI 順勢指標",
+    docContent: cciDoc,
     timezoneAdvice:
-      "CJ 策略在 1 小時 (H1) 極具實戰價值，能捕捉到日內波段的明確起漲點。在 15 分鐘 (M15) 時，交叉會非常頻繁，此時必須嚴格遵守「只做與日線方向一致」的訊號。",
-    component: (props) => <Cj {...props} />,
+      "CCI 策略在日線 (D1) 與 1 小時 (H1) 具有高實戰價值，能精準捕捉突破與超賣勾頭波段。在短線使用時，務必遵守「順大勢、做小勢」原則。",
+    component: (props) => <Cci {...props} />,
   },
   {
     id: "mr",

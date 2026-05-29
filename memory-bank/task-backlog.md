@@ -28,6 +28,8 @@
 | REQ-030 | EMA 頁面圖表優化：移除 EMA60 的畫面顯示與控制面板開關 | Completed | 2026-05-15 | - | v1: 用戶要求不再顯示 EMA60 (內部指標計算保留以供買賣點策略判斷) | 簡化圖表視覺 |
 | REQ-031 | 實現 StockBox 的 Tick 與 MA K 線圖表切換功能 | Adjusted | 2026-05-15 | REQ-031 | v1: 原始需求 / v2: 將 MA K 線圖表的 K 棒顯示數量從 30 增加到 90 / v3: 優化資料獲取與畫面顯示，根據設定（Tick / MA K）獨立拉取對應資料，並隱藏非必要的指標標籤（例如 mak 模式下隱藏 AvgPrice） / v4: 應使用者要求，將 mak 模式的歷史資料更新頻率提高至每 20 秒一次，保持與 tick 同等的即時更新體驗 | 依用戶訊息於 2026-05-15 自動調整，在設定頁面新增切換選項，讓使用者可以選擇在 StockBox 顯示 Tick 或 MA K 線圖表，並動態優化請求與渲染 |
 | REQ-032 | 修復 GitHub Actions 的 pnpm 構建腳本忽略錯誤 (esbuild) | Completed | 2026-05-28 | - | v1: 將 GitHub Actions 的 pnpm 版本鎖定為 10，並新增 .npmrc 檔案明確允許 esbuild 執行構建腳本 | 解決 ERR_PNPM_IGNORED_BUILDS 錯誤，確保 CI/CD 流程順暢 |
+| REQ-033 | CMF 資金流圖表重新設計：移除重疊柱狀圖、實作紅綠分離漸層 Area、銀白霓虹發光 CMF 主線與低調 EMA 訊號線 | Completed | 2026-05-29 | - | v1: 應使用者要求進行資金流 CMF 圖表重設計，實現 Glowing HUD 專業化視覺，並將 EMA 訊號線改為低飽和度虛線 | 大幅提升資金流圖表的易讀性與視覺質感 |
+| REQ-034 | 將 CJ 指標重構為純 CCI 指標：刪除 KDJ J 線與說明，重命名資料夾與檔案名稱為 Cci | Completed | 2026-05-29 | - | v1: 依使用者最新指示，徹底移除 J 線以簡化圖表視覺，同步修正資料夾名為 Cci、檔案名為 Cci.tsx、Cci.md，並修改 chartConfig 載入配置 | 簡化技術指標分析介面，移除多餘的 J 線雜訊 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

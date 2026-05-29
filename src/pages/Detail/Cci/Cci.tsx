@@ -35,7 +35,6 @@ interface CciChartData extends Partial<{
   v: number | null;
 }> {
   cci: number | null;
-  j: number | null;
   bollMa: number | null;
   bollUb: number | null;
   bollLb: number | null;
@@ -136,8 +135,8 @@ export default function CCI({
     return allData
       .map((item) => ({
         ...item,
-        cciOverbought: (item.cci || 0) > 80 ? item.cci : null,
-        cciOversold: (item.cci || 0) < -80 ? item.cci : null,
+        cciOverbought: (item.cci || 0) > 100 ? item.cci : null,
+        cciOversold: (item.cci || 0) < -100 ? item.cci : null,
       }))
       .slice(
         -(visibleCount + rightOffset),
@@ -145,13 +144,9 @@ export default function CCI({
       );
   }, [allData, visibleCount, rightOffset]);
 
-  // Calculate Signals based on cci.pine logic
+  // Calculate Signals based on CCI crossings (+100, -100)
   const signals = useMemo(() => {
     const result = [];
-    // We need to look back at the original data to detect crossunder/crossover accurately
-    // However, for performance and simplicity in this view, we'll check based on the current window
-    // and a bit of lookback from allData.
-
     const startIndex = Math.max(1, deals.length - (visibleCount + rightOffset));
     const endIndex = deals.length - rightOffset;
 
@@ -162,30 +157,38 @@ export default function CCI({
       if (!curr || !prev) continue;
 
       const cciVal = curr.cci || 0;
-      const jVal = curr.j || 0;
-      const prevJVal = prev.j || 0;
-      const highVal = curr.h;
-      const bbUpper = curr.bollUb;
-      const prevHigh = prev.h;
-      const prevBbUpper = prev.bollUb;
+      const prevCciVal = prev.cci || 0;
 
-      // 1. CJ Sell (Only when touching/crossing BB Upper)
-      const crossoverBB =
-        prevHigh !== null &&
-        prevBbUpper !== null &&
-        highVal !== null &&
-        bbUpper !== null &&
-        highVal >= bbUpper;
-      const isTopWarning =
-        cciVal > 80 && crossoverBB && jVal < prevJVal && prevJVal > 85;
-
-      if (isTopWarning) {
+      // 1. CCI 向上突破 +100
+      if (prevCciVal < 100 && cciVal >= 100) {
         result.push({
           t: curr.t,
-          type: "top_warning",
-          price: curr.h,
-          text: "CJ 頂部",
+          type: "cci_buy",
+          price: curr.l,
+          text: "CCI 突破",
         });
+      }
+      // 2. CCI 向下跌破 -100
+      else if (prevCciVal > -100 && cciVal <= -100) {
+        result.push({
+          t: curr.t,
+          type: "cci_sell",
+          price: curr.h,
+          text: "CCI 跌破",
+        });
+      }
+      // 3. CCI 從超賣區拉回 (-100 以下勾頭向上)
+      else if (prevCciVal < -100 && cciVal > prevCciVal && cciVal < -80) {
+        const prevPrev = i > 1 ? allData[i - 2] : null;
+        const prevPrevCciVal = prevPrev ? prevPrev.cci || 0 : -100;
+        if (prevCciVal < prevPrevCciVal) {
+          result.push({
+            t: curr.t,
+            type: "cci_rebound",
+            price: curr.l,
+            text: "CCI 勾頭",
+          });
+        }
       }
     }
     return result;
@@ -219,7 +222,7 @@ export default function CCI({
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
         <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
-          CJ
+          CCI
         </Typography>
       </Stack>
 
@@ -307,7 +310,7 @@ export default function CCI({
                     y={y}
                     width={width}
                     height={height}
-                    fill={isUp ? "#f44336" : "#4caf50"}
+                    fill={isUp ? "#ff4d4f" : "#52c41a"}
                   />
                 );
               }}
@@ -341,11 +344,8 @@ export default function CCI({
 
             {/* Signal Markers */}
             {signals.map((signal) => {
-              const isBuy = signal.type.includes("buy");
-              const isStrong =
-                signal.type.includes("strong") ||
-                signal.type.includes("warning");
-              const color = isBuy ? "#f44336" : "#4caf50";
+              const isBuy = signal.type.includes("buy") || signal.type.includes("rebound");
+              const color = isBuy ? "#ff4d4f" : "#52c41a";
               const yPos = isBuy ? signal.price * 0.99 : signal.price * 1.01;
 
               return (
@@ -374,8 +374,8 @@ export default function CCI({
                           y={isBuy ? cy + 20 : cy - 15}
                           textAnchor="middle"
                           fill={color}
-                          fontSize={isStrong ? 12 : 10}
-                          fontWeight={isStrong ? "bold" : "normal"}
+                          fontSize={11}
+                          fontWeight="bold"
                         >
                           {signal.text}
                         </text>
@@ -388,7 +388,7 @@ export default function CCI({
           </ComposedChart>
         </ResponsiveContainer>
 
-        {/* CCI & J Line Chart (40%) */}
+        {/* CCI Chart (40%) */}
         <ResponsiveContainer width="100%" height="40%">
           <ComposedChart
             data={chartData}
@@ -404,25 +404,25 @@ export default function CCI({
             {/* Threshold Lines */}
             <ReferenceLine
               y={100}
-              stroke="#ff5252"
+              stroke="#ff4d4f"
               strokeDasharray="3 3"
               opacity={0.5}
               label={{
                 value: "100",
                 position: "right",
-                fill: "#ff5252",
+                fill: "#ff4d4f",
                 fontSize: 10,
               }}
             />
             <ReferenceLine
               y={-100}
-              stroke="#448aff"
+              stroke="#52c41a"
               strokeDasharray="3 3"
               opacity={0.5}
               label={{
                 value: "-100",
                 position: "right",
-                fill: "#448aff",
+                fill: "#52c41a",
                 fontSize: 10,
               }}
             />
@@ -431,35 +431,28 @@ export default function CCI({
             {/* CCI Areas */}
             <Area
               dataKey="cciOverbought"
-              fill="#ff5252"
+              fill="#ff4d4f"
               stroke="none"
               opacity={0.2}
-              baseValue={80}
+              baseValue={100}
             />
             <Area
               dataKey="cciOversold"
-              fill="#448aff"
+              fill="#52c41a"
               stroke="none"
               opacity={0.2}
-              baseValue={-80}
+              baseValue={-100}
             />
 
             {/* Indicators */}
             <Line
+              type="monotone"
               dataKey="cci"
               stroke="#fff"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
               name="CCI"
-            />
-            <Line
-              dataKey="j"
-              stroke="#ffeb3b"
-              strokeWidth={1.5}
-              dot={false}
-              activeDot={{ r: 4 }}
-              name="J Line"
             />
           </ComposedChart>
         </ResponsiveContainer>

@@ -1,5 +1,5 @@
-import LockIcon from "@mui/icons-material/Lock";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
+import { dateFormat } from "@ch20026103/anysis";
+import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import SettingsIcon from "@mui/icons-material/Settings";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
@@ -9,7 +9,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Divider,
   IconButton,
   Menu,
   Tooltip as MuiTooltip,
@@ -35,12 +34,9 @@ import {
 } from "recharts";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
-import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import { useGapDetection } from "../../../hooks/useGapDetection";
+import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import { UrlTaPerdOptions } from "../../../types";
-import { calculateChannel } from "../../../utils/channelUtils";
-import { dateFormat } from "@ch20026103/anysis";
-import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import Fundamental from "../Tooltip/Fundamental";
 
@@ -59,8 +55,6 @@ interface BolleanChartData extends Partial<{
   buySignal?: number | null;
   exitSignal?: number | null;
   buyReason?: string;
-  channelUb?: number | null;
-  channelLb?: number | null;
   ema200?: number | null;
   rsi?: number | null;
 }
@@ -130,27 +124,11 @@ export default function Bollean({
 }) {
   const { settings, updateSetting, resetSettings } = useIndicatorSettings();
   const deals = useContext(DealsContext);
-  const [showChannel, setShowChannel] = useState(false);
   const [showGaps, setShowGaps] = useState(true);
   const [showOnlyUnfilled, setShowOnlyUnfilled] = useState(true);
   const [hoveredGapDate, setHoveredGapDate] = useState<
     number | string | undefined
   >(undefined);
-  const [isLocked, setIsLocked] = useState(false);
-  const [lockedInfo, setLockedInfo] = useState<{
-    slope: number;
-    upperIntercept: number;
-    lowerIntercept: number;
-    anchorTime: number | string;
-    type: string;
-  } | null>(null);
-
-  // LRC Dynamic Parameters
-  const [channelPeriod, setChannelPeriod] = useState(60);
-  const [channelMultiplier, setChannelMultiplier] = useState(2.0);
-  const [channelAnchorEl, setChannelAnchorEl] = useState<null | HTMLElement>(
-    null,
-  );
   const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleOpenSettings = (event: React.MouseEvent<HTMLElement>) => {
@@ -158,18 +136,6 @@ export default function Bollean({
   };
   const handleCloseSettings = () => {
     setSettingsAnchorEl(null);
-  };
-
-  const handleOpenChannelSettings = (event: React.MouseEvent<HTMLElement>) => {
-    setChannelAnchorEl(event.currentTarget);
-  };
-  const handleCloseChannelSettings = () => {
-    setChannelAnchorEl(null);
-  };
-
-  const handleResetChannel = () => {
-    setChannelPeriod(60);
-    setChannelMultiplier(2.0);
   };
 
   const { id } = useParams();
@@ -337,36 +303,7 @@ export default function Bollean({
     return [min - padding, max + padding];
   }, [chartData]);
 
-  const channelInfo = useMemo(() => {
-    if (isLocked && lockedInfo) return lockedInfo;
-    if (chartData.length === 0) return null;
 
-    // Requirements: dynamic points based on channelPeriod
-    const n = Math.min(channelPeriod, chartData.length);
-    const calculationSlice = chartData.slice(-n);
-
-    const highs = calculationSlice.map((d) => d.h as number | null);
-    const lows = calculationSlice.map((d) => d.l as number | null);
-
-    return calculateChannel(highs, lows, channelMultiplier);
-  }, [chartData, isLocked, lockedInfo, channelPeriod, channelMultiplier]);
-
-  const handleToggleLock = (checked: boolean) => {
-    if (checked) {
-      if (!channelInfo || chartData.length === 0) return;
-      const n = Math.min(channelPeriod, chartData.length);
-      const anchorPoint = chartData[chartData.length - n];
-      if (!anchorPoint || anchorPoint.t === undefined) return;
-      setLockedInfo({
-        ...channelInfo,
-        anchorTime: anchorPoint.t,
-      });
-      setIsLocked(true);
-    } else {
-      setIsLocked(false);
-      setLockedInfo(null);
-    }
-  };
 
   // 自定義 Tooltip 組件來處理 hover 事件與缺口顯示
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -458,44 +395,7 @@ export default function Bollean({
     return null;
   };
 
-  const finalChartData = useMemo(() => {
-    if (!channelInfo) return chartData;
 
-    let anchorIdx = -1;
-    if (isLocked && lockedInfo) {
-      anchorIdx = allPointsWithIndicators.findIndex(
-        (p) => p.t === lockedInfo.anchorTime,
-      );
-    } else {
-      const n = Math.min(channelPeriod, chartData.length);
-      const startIndex = chartData.length - n;
-      return chartData.map((d, i) => {
-        const relativeIndex = i - startIndex;
-        const channelUb =
-          channelInfo.slope * relativeIndex + channelInfo.upperIntercept;
-        const channelLb =
-          channelInfo.slope * relativeIndex + channelInfo.lowerIntercept;
-        return { ...d, channelUb, channelLb };
-      });
-    }
-
-    if (anchorIdx === -1) return chartData;
-
-    return chartData.map((d) => {
-      const currentFullIdx = allPointsWithIndicators.findIndex(
-        (p) => p.t === d.t,
-      );
-      if (currentFullIdx === -1) return d;
-
-      const relativeIndex = currentFullIdx - anchorIdx;
-      const channelUb =
-        channelInfo.slope * relativeIndex + channelInfo.upperIntercept;
-      const channelLb =
-        channelInfo.slope * relativeIndex + channelInfo.lowerIntercept;
-
-      return { ...d, channelUb, channelLb };
-    });
-  }, [chartData, channelInfo, isLocked, lockedInfo, allPointsWithIndicators]);
 
   const maDeductionPoints = useMemo(() => {
     if (chartData.length === 0) return [];
@@ -577,100 +477,6 @@ export default function Bollean({
         <Box
           sx={{ flexGrow: 1, display: "flex", gap: 2, alignItems: "center" }}
         >
-          {channelInfo && (
-            <Chip
-              label={
-                channelInfo.type === "ascending"
-                  ? "上升通道"
-                  : channelInfo.type === "descending"
-                    ? "下降通道"
-                    : "橫盤通道"
-              }
-              color="secondary"
-              variant="filled"
-              size="small"
-              sx={{ height: 24, fontSize: "0.75rem" }}
-            />
-          )}
-
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
-
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <Chip
-                icon={
-                  showChannel ? (
-                    <VisibilityIcon fontSize="small" />
-                  ) : (
-                    <VisibilityOffIcon fontSize="small" />
-                  )
-                }
-                label="通道"
-                size="small"
-                onClick={() => setShowChannel(!showChannel)}
-                variant={showChannel ? "filled" : "outlined"}
-                color={showChannel ? "secondary" : "default"}
-                sx={{
-                  height: 24,
-                  fontSize: "0.75rem",
-                  fontWeight: showChannel ? "bold" : "normal",
-                  transition: "all 0.2s",
-                  borderColor: showChannel ? "secondary.main" : "#444",
-                  "&:hover": {
-                    transform: "translateY(-1px)",
-                    boxShadow: showChannel
-                      ? "0 2px 8px rgba(156, 39, 176, 0.3)"
-                      : "none",
-                  },
-                }}
-              />
-              <IconButton
-                size="small"
-                onClick={handleOpenChannelSettings}
-                color="secondary"
-                sx={{
-                  p: 0.4,
-                  transition: "transform 0.2s",
-                  "&:hover": { transform: "rotate(45deg)" },
-                }}
-              >
-                <SettingsIcon sx={{ fontSize: "1rem" }} />
-              </IconButton>
-            </Box>
-
-            {showChannel && (
-              <Chip
-                icon={
-                  isLocked ? (
-                    <LockIcon fontSize="small" />
-                  ) : (
-                    <LockOpenIcon fontSize="small" />
-                  )
-                }
-                label="固定"
-                size="small"
-                onClick={() => handleToggleLock(!isLocked)}
-                variant={isLocked ? "filled" : "outlined"}
-                color={isLocked ? "warning" : "default"}
-                sx={{
-                  height: 24,
-                  fontSize: "0.75rem",
-                  fontWeight: isLocked ? "bold" : "normal",
-                  transition: "all 0.2s",
-                  borderColor: isLocked ? "warning.main" : "#444",
-                  "&:hover": {
-                    transform: "translateY(-1px)",
-                    boxShadow: isLocked
-                      ? "0 2px 8px rgba(237, 108, 2, 0.3)"
-                      : "none",
-                  },
-                }}
-              />
-            )}
-          </Stack>
-
-          <Divider orientation="vertical" flexItem sx={{ mx: 1, height: 24 }} />
-
           <Stack direction="row" spacing={1} alignItems="center">
             <Chip
               icon={
@@ -723,54 +529,6 @@ export default function Bollean({
             )}
           </Stack>
         </Box>
-        <Menu
-          anchorEl={channelAnchorEl}
-          open={Boolean(channelAnchorEl)}
-          onClose={handleCloseChannelSettings}
-          PaperProps={{
-            sx: { p: 2, width: 250, bgcolor: "background.paper" },
-          }}
-        >
-          <Typography variant="subtitle2" gutterBottom>
-            通道參數調校
-          </Typography>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              計算長度: {channelPeriod} 根
-            </Typography>
-            <Slider
-              value={channelPeriod}
-              min={10}
-              max={200}
-              step={1}
-              onChange={(_, v) => setChannelPeriod(v as number)}
-              size="small"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              標準差倍數: {channelMultiplier.toFixed(1)}
-            </Typography>
-            <Slider
-              value={channelMultiplier}
-              min={0.5}
-              max={5.0}
-              step={0.1}
-              onChange={(_, v) => setChannelMultiplier(v as number)}
-              size="small"
-              color="secondary"
-            />
-          </Box>
-          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-            <Button
-              size="small"
-              onClick={handleResetChannel}
-              sx={{ color: "secondary.main", fontWeight: "bold" }}
-            >
-              回復預設
-            </Button>
-          </Box>
-        </Menu>
 
         <Menu
           anchorEl={settingsAnchorEl}
@@ -802,7 +560,7 @@ export default function Bollean({
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={finalChartData}
+            data={chartData}
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -935,27 +693,7 @@ export default function Bollean({
               name="EMA 200"
             />
 
-            {/* Price Channel lines */}
-            {showChannel && (
-              <>
-                <Line
-                  dataKey="channelUb"
-                  stroke="#d286ee"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={false}
-                  name="Channel Upper"
-                />
-                <Line
-                  dataKey="channelLb"
-                  stroke="#d286ee"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={false}
-                  name="Channel Lower"
-                />
-              </>
-            )}
+
 
             {/* Signals */}
             <Scatter

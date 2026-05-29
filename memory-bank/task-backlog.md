@@ -38,6 +38,7 @@
 | REQ-040 | ATR 價格圖表 MA 均線視覺降噪：將原先搶戲的橘色實線弱化為朦朧淡黃虛線 | Completed | 2026-05-29 | - | v1: 依使用者回饋弱化 ATR.tsx 中過於醒目的 MA20，將其改為半透明淡黃虛線 (rgba(241, 175, 32, 0.35)，strokeDasharray="4 3"，寬度 1)，釋放焦點予 Supertrend 信號 | 完美回歸輔助參考線定位，消除視覺干擾 |
 | REQ-041 | 布林通道配色與線型跨頁面統一：調整所有包含布林通道的輔助分析頁面線條，改為高清晰平滑實線並統一為天藍色中軌、銀灰色上下軌 | Completed | 2026-05-29 | - | v1: 依使用者回饋，統一修正 Mfi, Kd, Obv, Mr, Cci, MJ 頁面中的布林通道配色為中軌天藍、上下軌銀灰實線，與主 Bollean 頁面保持完全一致 | 大幅提升跨頁面圖表的視覺美感與專業認知度 |
 | REQ-042 | 布林通道頁面新增未補缺口顯示：在 Bollean.tsx 中整合 unfilledGaps 檢測與 premium 半透明紅綠 Support/Resistance Area 填充，並實作 Gap 控制面板 Chips 與 hover 高亮 CustomTooltip | Completed | 2026-05-29 | - | v1: 依使用者最新要求，在 Bollean 頁面主圖中渲染未補缺口，並實作 Toolbar Control Chips 讓使用者自主切換顯示與否，以及 custom tooltip 互動 | 完善 Bollean 主圖的跳空分析能力，提供極致的 Support/Resistance Zones 視覺反饋 |
+| REQ-043 | 布林通道頁面移除上升下降通道邏輯和相關 UI | Completed | 2026-05-29 | - | v1: 依使用者最新指示，在 Bollean.tsx 中移除線性回歸通道 (LRC) 邏輯、設置選單、控制晶片與圖表中的上下軌通道線渲染 | 簡化布林通道圖表，消除通道干擾與視覺雜訊 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

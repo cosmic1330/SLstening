@@ -245,6 +245,7 @@ export default function VirtualizedStockList({
         itemData={itemData}
         outerElementType={OuterElement}
         innerElementType={InnerElement}
+        overscanCount={2}
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",

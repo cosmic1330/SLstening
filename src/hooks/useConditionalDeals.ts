@@ -1,6 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
@@ -22,10 +22,25 @@ export default function useConditionalDeals(
 ) {
   const fetchTick = options?.fetchTick ?? true;
   const fetchHistory = options?.fetchHistory ?? true;
+
+  // 實作可見性防抖，防止快速滑過時產生大量請求
+  const [debouncedIsVisible, setDebouncedIsVisible] = useState(false);
+
+  useEffect(() => {
+    if (!isVisible) {
+      setDebouncedIsVisible(false);
+      return;
+    }
+    const handler = setTimeout(() => {
+      setDebouncedIsVisible(true);
+    }, 300); // 300ms 防抖
+    return () => clearTimeout(handler);
+  }, [isVisible]);
+
   // 決定是否應該啟動獲取邏輯：必須啟用、可見、且視窗處於焦點
   const shouldFetch =
     enabled &&
-    isVisible &&
+    debouncedIsVisible &&
     typeof window !== "undefined" &&
     document.visibilityState === "visible";
 
@@ -36,13 +51,14 @@ export default function useConditionalDeals(
   const { data: tickDeals } = useSWR(
     shouldFetchTick ? `market/tick/${id}` : null,
     async () => {
+      console.log(`📡 [SWR Fetch] 真正發送 IPC 請求拉取 [TICK] 報價: ${id}`);
       useDebugStore.getState().increment("conditional");
       return await marketApi.getTickData(id);
     },
     {
       revalidateOnFocus: false,
-      revalidateOnMount: true,
-      dedupingInterval: 10000,
+      revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
+      dedupingInterval: 15000, // 15秒內避免重複請求
       refreshInterval: () => (isTaiwanMarketOpen() ? 20000 : 0),
     },
   );
@@ -51,14 +67,15 @@ export default function useConditionalDeals(
   const { data: historyData } = useSWR(
     shouldFetchHistory ? `market/history/${id}` : null,
     async () => {
+      console.log(`📈 [SWR Fetch] 真正發送 IPC 請求拉取 [HISTORY] 日K: ${id}`);
       useDebugStore.getState().increment("conditional");
       return await marketApi.getHistoryData(id, "d");
     },
     {
       revalidateOnFocus: false,
-      revalidateOnMount: true,
-      dedupingInterval: 10000,
-      refreshInterval: () => (isTaiwanMarketOpen() ? 20000 : 0),
+      revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
+      dedupingInterval: 300000, // 5分鐘內完全重用快取，滾動不發送新請求
+      refreshInterval: 0, // 歷史日 K 資料盤中幾乎靜態，完全不輪詢
     },
   );
 

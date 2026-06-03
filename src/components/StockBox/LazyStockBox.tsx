@@ -1,6 +1,5 @@
 import { Box, Grid, Skeleton, Typography, styled } from "@mui/material";
-import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useIsVisible } from "../../hooks/useIsVisible";
 import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
@@ -35,12 +34,20 @@ export default function LazyStockBox({
   // 改為自主探測可見性，減少父組件重繪壓力
   const isVisible = useIsVisible(containerRef);
 
+  // 引入 hasBeenVisible 機制，避免快速滾動時在 Skeleton 和 StockBox 間來回銷毀/掛載
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  useEffect(() => {
+    if (isVisible) {
+      setHasBeenVisible(true);
+    }
+  }, [isVisible]);
+
   // 取得監測中的股票列表
   const { stocks: monitoredStocks } = useStocksStore();
 
-  // 只有在可見時才計算監測狀態
+  // 只有在曾經可見時才計算監測狀態
   const { canDelete: calculatedCanDelete, canAdd } = useMemo(() => {
-    if (!isVisible) {
+    if (!hasBeenVisible) {
       return { canDelete: false, canAdd: false };
     }
 
@@ -51,109 +58,91 @@ export default function LazyStockBox({
       canDelete: isMonitored,
       canAdd: !isMonitored,
     };
-  }, [isVisible, monitoredStocks, stock.id]);
+  }, [hasBeenVisible, monitoredStocks, stock.id]);
 
   const finalCanDelete =
     forcedCanDelete !== undefined ? forcedCanDelete : calculatedCanDelete;
 
   return (
     <Box ref={containerRef} sx={{ height: "100%" }}>
-      <AnimatePresence mode="wait">
-        {!isVisible ? (
-          <motion.div
-            key="skeleton"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            style={{ height: "100%" }}
-          >
-            <StyledBox>
-              <Box>
-                <Grid container alignItems="center" spacing={2} mb={3}>
-                  <Grid size={5}>
-                    <Skeleton
-                      variant="rectangular"
-                      width="100%"
-                      height={40}
-                      sx={{
-                        bgcolor: "rgba(255, 255, 255, 0.05)",
-                        borderRadius: "12px",
-                      }}
-                    />
-                  </Grid>
-                  <Grid size={7}>
-                    <Skeleton
-                      variant="text"
-                      width="60%"
-                      height={24}
-                      sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
-                    />
-                  </Grid>
-                </Grid>
-
-                <Grid container spacing={2} mb={2}>
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Grid size={6} key={index}>
-                      <Skeleton
-                        variant="text"
-                        width="40%"
-                        sx={{ bgcolor: "rgba(255, 255, 255, 0.03)" }}
-                      />
-                      <Skeleton
-                        variant="text"
-                        width="80%"
-                        height={32}
-                        sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-
-              <Box>
+      {!hasBeenVisible ? (
+        <StyledBox>
+          <Box>
+            <Grid container alignItems="center" spacing={2} mb={3}>
+              <Grid size={5}>
                 <Skeleton
                   variant="rectangular"
                   width="100%"
-                  height={60}
+                  height={40}
                   sx={{
-                    bgcolor: "rgba(255, 255, 255, 0.03)",
-                    borderRadius: "16px",
+                    bgcolor: "rgba(255, 255, 255, 0.05)",
+                    borderRadius: "12px",
                   }}
                 />
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: "rgba(255, 255, 255, 0.3)",
-                    display: "block",
-                    textAlign: "center",
-                    mt: 1,
-                    fontWeight: 600,
-                  }}
-                >
-                  {stock.id} {stock.name}
-                </Typography>
-              </Box>
-            </StyledBox>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="content"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            style={{ height: "100%" }}
-          >
-            <StockBox
-              stock={stock}
-              canDelete={finalCanDelete}
-              canAdd={canAdd}
-              enabled={true}
-              onRemove={onRemove}
+              </Grid>
+              <Grid size={7}>
+                <Skeleton
+                  variant="text"
+                  width="60%"
+                  height={24}
+                  sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2} mb={2}>
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Grid size={6} key={index}>
+                  <Skeleton
+                    variant="text"
+                    width="40%"
+                    sx={{ bgcolor: "rgba(255, 255, 255, 0.03)" }}
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="80%"
+                    height={32}
+                    sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
+                  />
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          <Box>
+            <Skeleton
+              variant="rectangular"
+              width="100%"
+              height={60}
+              sx={{
+                bgcolor: "rgba(255, 255, 255, 0.03)",
+                borderRadius: "16px",
+              }}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Typography
+              variant="caption"
+              sx={{
+                color: "rgba(255, 255, 255, 0.3)",
+                display: "block",
+                textAlign: "center",
+                mt: 1,
+                fontWeight: 600,
+              }}
+            >
+              {stock.id} {stock.name}
+            </Typography>
+          </Box>
+        </StyledBox>
+      ) : (
+        <StockBox
+          stock={stock}
+          canDelete={finalCanDelete}
+          canAdd={canAdd}
+          enabled={true}
+          onRemove={onRemove}
+          isVisible={isVisible}
+        />
+      )}
     </Box>
   );
 }

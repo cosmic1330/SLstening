@@ -15,7 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import MakChart from "../../../../components/CommonChart/MakChart";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
@@ -114,6 +114,14 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
 
+  // 引入 hasBeenVisible 機制，避免快速滾動時在 Skeleton 和 卡片內容間來回銷毀/掛載
+  const [hasBeenVisible, setHasBeenVisible] = useState(false);
+  useEffect(() => {
+    if (isVisible) {
+      setHasBeenVisible(true);
+    }
+  }, [isVisible]);
+
   if (!stock || !stock.id) return null;
 
   // 市場訂閱機制
@@ -196,7 +204,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
     };
   }, [deals, percent, lastPrice]);
 
-  if (!isVisible) {
+  if (!hasBeenVisible) {
     return (
       <CardContainer ref={containerRef} sx={{ p: 1.5 }}>
         <Skeleton width="60%" />

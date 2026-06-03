@@ -16,7 +16,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
-import { useIsVisible } from "../../hooks/useIsVisible";
 import useMaDeduction from "../../hooks/useMaDeduction";
 import useMarketSubscriber from "../../hooks/useMarketSubscriber";
 import useMarketDataStore from "../../store/MarketData.store";
@@ -101,6 +100,7 @@ export interface StockBoxProps {
   canAdd?: boolean;
   enabled?: boolean;
   onRemove?: () => void;
+  isVisible?: boolean; // 新增外部傳入的可見性狀態
 }
 
 export default function StockBox({
@@ -108,9 +108,10 @@ export default function StockBox({
   enabled = true,
   canDelete = true,
   onRemove,
+  isVisible,
 }: StockBoxProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isComponentVisible = useIsVisible(containerRef);
+  const isComponentVisible = isVisible ?? true;
   const [isHovered, setIsHovered] = useState(false);
   const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
 

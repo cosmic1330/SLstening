@@ -33,3 +33,6 @@
 - `/src/hooks`: 自定義 React hooks (例如 `useStockStore`)。
 - `/src-tauri/src`: Rust 指令與應用邏輯。
 - `/memory-bank`: 本專案的知識與進度追蹤庫。
+
+## 效能與請求調優架構
+- **自選股與推薦股清單滾動效能優化**: 詳細的滾動 DOM 持久化（`hasBeenVisible`）、可見性防抖（300ms）、訂閱安全防抖（1.5s）以及 SWR 快取配置調優架構，請參閱專案文件：[docs/list-performance-optimization.md](file:///Users/yangjunyu/rust_project/SLstening/docs/list-performance-optimization.md)。

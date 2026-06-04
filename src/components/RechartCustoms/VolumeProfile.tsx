@@ -1,5 +1,3 @@
-import React from "react";
-
 interface FormattedGraphicalItem {
   props: {
     points: {
@@ -27,9 +25,7 @@ const VolumeProfile = (props: any) => {
   }
 
   // Extract visible deals from payloads
-  const visibleDeals = points
-    .map((p) => p?.payload)
-    .filter(Boolean);
+  const visibleDeals = points.map((p) => p?.payload).filter(Boolean);
 
   if (visibleDeals.length === 0) {
     return null;
@@ -77,10 +73,7 @@ const VolumeProfile = (props: any) => {
         const binMax = minPrice + (i + 1) * binSize;
 
         // Overlap between candle range [l, h] and bin range [binMin, binMax]
-        const overlap = Math.max(
-          0,
-          Math.min(h, binMax) - Math.max(l, binMin),
-        );
+        const overlap = Math.max(0, Math.min(h, binMax) - Math.max(l, binMin));
         if (overlap > 0) {
           const fraction = overlap / barRange;
           const distributedVol = v * fraction;
@@ -144,8 +137,8 @@ const VolumeProfile = (props: any) => {
         const buyWidth = (bin.buyVolume / total) * barWidth;
 
         const isBuyDominant = bin.buyVolume > bin.sellVolume;
-        const buyFillOpacity = 0.30;
-        const sellFillOpacity = 0.30;
+        const buyFillOpacity = 0.3;
+        const sellFillOpacity = 0.3;
 
         return (
           <g key={`vp-bin-${i}`}>
@@ -169,7 +162,7 @@ const VolumeProfile = (props: any) => {
                 height={height - 1}
                 fill="none"
                 stroke="#52c41a"
-                strokeOpacity={0.50}
+                strokeOpacity={0.5}
                 strokeWidth={1}
               />
             )}
@@ -193,7 +186,7 @@ const VolumeProfile = (props: any) => {
                 height={height - 1}
                 fill="none"
                 stroke="#ff4d4f"
-                strokeOpacity={0.50}
+                strokeOpacity={0.5}
                 strokeWidth={1}
               />
             )}

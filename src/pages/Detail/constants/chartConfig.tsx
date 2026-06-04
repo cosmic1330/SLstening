@@ -131,7 +131,7 @@ export const CHART_CONFIG: ChartDefinition[] = [
     title: "一目均衡表說明",
     docContent: ichimokuDoc,
     timezoneAdvice:
-      "一目均衡表在日線 (D1) 與週線 (W1) 最有效。如果在 15 分鐘或 1 小時圖使用，CMF 的噪音會淹沒所有訊號。",
+      "一目均衡表在日線 (D1) 與週線 (W1) 最有效。如果在 15 分鐘 or 1 小時圖使用，CMF 的噪音會淹沒所有訊號。",
     component: (props) => <IchimokuCloud perd={props.perd} />,
   },
 ];

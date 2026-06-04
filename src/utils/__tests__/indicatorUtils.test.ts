@@ -106,5 +106,6 @@ describe("indicatorUtils", () => {
         expect(d.supertrend).not.toBe(0);
       });
     });
+
   });
 });

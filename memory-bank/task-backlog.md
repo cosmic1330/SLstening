@@ -40,6 +40,7 @@
 | REQ-042 | 布林通道頁面新增未補缺口顯示：在 Bollean.tsx 中整合 unfilledGaps 檢測與 premium 半透明紅綠 Support/Resistance Area 填充，並實作 Gap 控制面板 Chips 與 hover 高亮 CustomTooltip | Completed | 2026-05-29 | - | v1: 依使用者最新要求，在 Bollean 頁面主圖中渲染未補缺口，並實作 Toolbar Control Chips 讓使用者自主切換顯示與否，以及 custom tooltip 互動 | 完善 Bollean 主圖的跳空分析能力，提供極致的 Support/Resistance Zones 視覺反饋 |
 | REQ-043 | 布林通道頁面移除上升下降通道邏輯和相關 UI | Completed | 2026-05-29 | - | v1: 依使用者最新指示，在 Bollean.tsx 中移除線性回歸通道 (LRC) 邏輯、設置選單、控制晶片與圖表中的上下軌通道線渲染 | 簡化布林通道圖表，消除通道干擾與視覺雜訊 |
 | REQ-044 | 自選股清單列表滾動效能優化與 SWR 請求降噪 | In-Progress | 2026-06-03 | - | v1: 原始需求 | 降低 CPU 與 IPC 請求風暴，提升列表滾動流暢度 |
+| REQ-045 | 詳情頁面 MFI 整合分價成交量分佈 (Volume Profile)，並移除布林通道，且優化強勢量能柱與外框對比度使其更為低調與美觀 | Completed | 2026-06-04 | REQ-045 | v1: 新增 CVD 獨立頁面 / v2: 取消 CVD 獨立頁面，改將 Volume Profile 整合至 MFI 詳情頁面並移除布林通道 / v3: 依使用者要求降低強勢量能柱顏色亮度 / v4: 依使用者要求降低外框描邊不透明度 / v5: 僅在主導方顯示外框 / v6: 消除填充色亮度偏差 (統一為 0.30) 並保留主導方描邊外框 (0.50) / v7: 依使用者要求將外框調整為內描邊 (Inner Stroke) 避免溢出邊界 | 提供簡潔的分價量能分析視角 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

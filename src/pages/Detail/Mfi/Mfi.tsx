@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
+import VolumeProfile from "../../../components/RechartCustoms/VolumeProfile";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
@@ -206,7 +207,7 @@ export default function Mfi({
       }}
     >
       <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title="MFI 較敏感，MACD 較穩重。兩者結合可減少 MFI 頻繁震盪產生的雜訊。\n 價格是否觸碰布林軌道邊界?MACD 是否出現轉向交叉? 有的話可信度越高">
+        <MuiTooltip title="MFI 較敏感，MACD 較穩重。左側的分價成交量分佈 (Volume Profile) 可提供成交密集區的強力支撐與壓力防線。">
           <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
             MFI
           </Typography>
@@ -279,6 +280,7 @@ export default function Mfi({
               name="開"
             />
             <Customized component={BaseCandlestickRectangle} />
+            <Customized component={VolumeProfile} />
 
             <Bar
               dataKey="v"
@@ -298,31 +300,6 @@ export default function Mfi({
                   />
                 );
               }}
-            />
-
-            <Line
-              dataKey="bollMa"
-              stroke="rgba(33, 150, 243, 0.5)"
-              strokeWidth={1.2}
-              dot={false}
-              activeDot={false}
-              name={`${settings.boll} MA (Mid)`}
-            />
-            <Line
-              dataKey="bollUb"
-              stroke="rgba(140, 140, 140, 0.45)"
-              strokeWidth={1.2}
-              dot={false}
-              activeDot={false}
-              name="Upper Band"
-            />
-            <Line
-              dataKey="bollLb"
-              stroke="rgba(140, 140, 140, 0.45)"
-              strokeWidth={1.2}
-              dot={false}
-              activeDot={false}
-              name="Lower Band"
             />
 
             {chartData.map((d) => {

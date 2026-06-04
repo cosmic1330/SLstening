@@ -144,7 +144,7 @@ export default function CCI({
       );
   }, [allData, visibleCount, rightOffset]);
 
-  // Calculate Signals based on CCI crossings (+100, -100)
+  // Calculate Signals based on CCI crossings (-100, 100)
   const signals = useMemo(() => {
     const result = [];
     const startIndex = Math.max(1, deals.length - (visibleCount + rightOffset));
@@ -159,36 +159,23 @@ export default function CCI({
       const cciVal = curr.cci || 0;
       const prevCciVal = prev.cci || 0;
 
-      // 1. CCI 向上突破 +100
-      if (prevCciVal < 100 && cciVal >= 100) {
+      // 1. CCI 由下往上突破 -100 (超賣區拉回，買入訊號)
+      if (prevCciVal < -100 && cciVal >= -100) {
         result.push({
           t: curr.t,
           type: "cci_buy",
           price: curr.l,
-          text: "CCI 突破",
+          text: "CCI 買入",
         });
       }
-      // 2. CCI 向下跌破 -100
-      else if (prevCciVal > -100 && cciVal <= -100) {
+      // 2. CCI 由上往下跌破 100 (超買區回落，賣出訊號)
+      else if (prevCciVal > 100 && cciVal <= 100) {
         result.push({
           t: curr.t,
           type: "cci_sell",
           price: curr.h,
-          text: "CCI 跌破",
+          text: "CCI 賣出",
         });
-      }
-      // 3. CCI 從超賣區拉回 (-100 以下勾頭向上)
-      else if (prevCciVal < -100 && cciVal > prevCciVal && cciVal < -80) {
-        const prevPrev = i > 1 ? allData[i - 2] : null;
-        const prevPrevCciVal = prevPrev ? prevPrev.cci || 0 : -100;
-        if (prevCciVal < prevPrevCciVal) {
-          result.push({
-            t: curr.t,
-            type: "cci_rebound",
-            price: curr.l,
-            text: "CCI 勾頭",
-          });
-        }
       }
     }
     return result;
@@ -344,7 +331,7 @@ export default function CCI({
 
             {/* Signal Markers */}
             {signals.map((signal) => {
-              const isBuy = signal.type.includes("buy") || signal.type.includes("rebound");
+              const isBuy = signal.type === "cci_buy";
               const color = isBuy ? "#ff4d4f" : "#52c41a";
               const yPos = isBuy ? signal.price * 0.99 : signal.price * 1.01;
 

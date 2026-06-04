@@ -39,7 +39,7 @@ const DEFAULT_SETTINGS: IndicatorSettings = {
   atrLen: 10,
   atrMult: 3.0,
   donchian: 20,
-  cci: 14,
+  cci: 26,
 };
 
 export default function useIndicatorSettings() {
@@ -64,6 +64,12 @@ export default function useIndicatorSettings() {
           modified = true;
         }
 
+        if (!localStorage.getItem("slitenting-indicator-settings-cci-26-migrated")) {
+          parsed.cci = 26;
+          localStorage.setItem("slitenting-indicator-settings-cci-26-migrated", "true");
+          modified = true;
+        }
+
         if (modified) {
           localStorage.setItem("slitenting-indicator-settings", JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
         }
@@ -75,6 +81,7 @@ export default function useIndicatorSettings() {
     }
     localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
     localStorage.setItem("slitenting-indicator-settings-supertrend-10-3-migrated", "true");
+    localStorage.setItem("slitenting-indicator-settings-cci-26-migrated", "true");
     return DEFAULT_SETTINGS;
   });
 

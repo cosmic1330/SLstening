@@ -75,6 +75,7 @@ export default function IndicatorSettingsSection() {
     { key: "mfi", label: "MFI (14)" },
     { key: "cmf", label: "CMF (21)" },
     { key: "cmfEma", label: "CMF EMA (5)" },
+    { key: "cci", label: "CCI (26)" },
   ] as const;
 
   return (

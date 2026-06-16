@@ -63,6 +63,8 @@ export default function useConditionalDeals(
     },
   );
 
+  const isMarketOpen = isTaiwanMarketOpen();
+
   // --- Daily 資料 (日 K 線與技術指標) ---
   const { data: historyData } = useSWR(
     shouldFetchHistory ? `market/history/${id}` : null,
@@ -74,8 +76,8 @@ export default function useConditionalDeals(
     {
       revalidateOnFocus: false,
       revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
-      dedupingInterval: 300000, // 5分鐘內完全重用快取，滾動不發送新請求
-      refreshInterval: 0, // 歷史日 K 資料盤中幾乎靜態，完全不輪詢
+      dedupingInterval: isMarketOpen ? 15000 : 300000, // 盤中快取15秒以利20秒更新；盤後快取5分鐘
+      refreshInterval: isMarketOpen ? 20000 : 0, // 盤中每 20 秒輪詢一次最新資料，盤後不輪詢
     },
   );
 

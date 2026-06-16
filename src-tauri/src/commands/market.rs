@@ -113,8 +113,31 @@ pub async fn get_market_data(
     } else {
         // 歷史資料 (K線)
         let p = period.unwrap_or_else(|| "d".to_string());
-        match crate::market_watcher::fetch_history_data(&symbol, &p).await {
-            Ok(history) => Ok(MarketEvent::History(history)),
+        
+        // 1. 檢查快取
+        if let Some(history) = manager.get_history_from_cache(&symbol, &p) {
+            return Ok(MarketEvent::History(history));
+        }
+
+        // 2. 避免重複抓取
+        let cache_key = (symbol.clone(), p.clone());
+        if manager.in_flight_history.contains(&cache_key) {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            if let Some(history) = manager.get_history_from_cache(&symbol, &p) {
+                return Ok(MarketEvent::History(history));
+            }
+        }
+
+        // 3. 抓取新資料
+        manager.in_flight_history.insert(cache_key.clone());
+        let res = crate::market_watcher::fetch_history_data(&symbol, &p).await;
+        manager.in_flight_history.remove(&cache_key);
+
+        match res {
+            Ok(history) => {
+                manager.update_history_cache(&symbol, &p, history.clone());
+                Ok(MarketEvent::History(history))
+            }
             Err(e) => {
                 if e.to_string().contains("API_BLOCKED") {
                     manager.enter_cooldown();

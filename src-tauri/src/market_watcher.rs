@@ -68,6 +68,11 @@ pub struct MarketCacheItem {
     pub timestamp: std::time::Instant,
 }
 
+pub struct MarketHistoryCacheItem {
+    pub history: MarketHistory,
+    pub timestamp: std::time::Instant,
+}
+
 pub struct MarketManager {
     // 使用 DashSet 提供線程安全的訂閱管理
     pub active_symbols: Arc<DashSet<String>>,
@@ -77,6 +82,10 @@ pub struct MarketManager {
     pub cache: DashMap<String, MarketCacheItem>,
     // 正在進行中的請求，避免重複發送
     pub in_flight: DashSet<String>,
+    // 歷史資料快取 ((Symbol, Period) -> (History, Timestamp))
+    pub history_cache: DashMap<(String, String), MarketHistoryCacheItem>,
+    // 正在進行中的歷史資料請求，避免重複發送
+    pub in_flight_history: DashSet<(String, String)>,
 }
 
 impl MarketManager {
@@ -86,6 +95,8 @@ impl MarketManager {
             last_blocked_at: std::sync::Mutex::new(None),
             cache: DashMap::new(),
             in_flight: DashSet::new(),
+            history_cache: DashMap::new(),
+            in_flight_history: DashSet::new(),
         }
     }
 
@@ -135,6 +146,69 @@ impl MarketManager {
             timestamp: std::time::Instant::now(),
         });
     }
+
+    /// 從快取中獲取歷史資料 (盤中 20 秒有效，盤後 300 秒有效)
+    pub fn get_history_from_cache(&self, symbol: &str, period: &str) -> Option<MarketHistory> {
+        let key = (symbol.to_string(), period.to_string());
+        if let Some(item) = self.history_cache.get(&key) {
+            let is_open = is_any_market_open_for_symbol(symbol);
+            let lifetime = if is_open {
+                Duration::from_secs(20)
+            } else {
+                Duration::from_secs(300)
+            };
+            if item.timestamp.elapsed() < lifetime {
+                return Some(item.history.clone());
+            }
+        }
+        None
+    }
+
+    /// 更新歷史資料快取
+    pub fn update_history_cache(&self, symbol: &str, period: &str, history: MarketHistory) {
+        let key = (symbol.to_string(), period.to_string());
+        self.history_cache.insert(key, MarketHistoryCacheItem {
+            history,
+            timestamp: std::time::Instant::now(),
+        });
+    }
+}
+
+/// 判斷是否在任何市場的交易時間內
+fn is_any_market_open_for_symbol(_symbol: &str) -> bool {
+    let now = std::time::SystemTime::now();
+    let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    let timestamp = since_the_epoch.as_secs();
+
+    // 台北時間是 UTC + 8 小時
+    let taipei_timestamp = timestamp + 8 * 3600;
+
+    // 計算星期幾 (Unix epoch 1970-01-01 是星期四)
+    let days_since_epoch = taipei_timestamp / 86400;
+    let weekday = (days_since_epoch + 4) % 7; // 0: Sunday, 1: Monday, ..., 6: Saturday
+
+    // 計算當天的秒數
+    let seconds_in_day = taipei_timestamp % 86400;
+    let hour = seconds_in_day / 3600;
+
+    // 判斷是否為週末
+    if weekday == 0 || weekday == 6 {
+        // 週六 00:00 - 05:00 是週五夜盤交易時段
+        if weekday == 6 && hour < 5 {
+            return true;
+        }
+        return false;
+    }
+
+    // 週一至週五：
+    // 週一的 00:00 - 05:00 沒有夜盤 (基本上這段時間不算交易)
+    if weekday == 1 && hour < 5 {
+        return false;
+    }
+
+    // 星期一至星期五的 08:00 - 24:00 以及 00:00 - 05:00 都算是潛在交易時段
+    let is_weekday_trading_hour = (hour >= 8) || (hour < 5);
+    is_weekday_trading_hour
 }
 
 pub fn init(app: AppHandle) -> Arc<MarketManager> {

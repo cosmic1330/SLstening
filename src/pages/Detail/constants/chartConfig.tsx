@@ -11,6 +11,7 @@ const ATR = lazy(() => import("../ATR/ATR"));
 const Cci = lazy(() => import("../Cci/Cci"));
 const Bollean = lazy(() => import("../Bollean/Bollean"));
 const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
+const VolumeProfileChart = lazy(() => import("../VolumeProfile/VolumeProfileChart"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
@@ -25,6 +26,7 @@ import maDoc from "../Ma/Ma.md?raw";
 import mfiDoc from "../Mfi/Mfi.md?raw";
 import mrDoc from "../Mr/MR.md?raw";
 import obvDoc from "../Obv/Obv.md?raw";
+import volumeProfileDoc from "../VolumeProfile/VolumeProfile.md?raw";
 
 export interface ChartDefinition {
   id: string;
@@ -88,6 +90,15 @@ export const CHART_CONFIG: ChartDefinition[] = [
     timezoneAdvice:
       "OBV 指標在 60 分鐘 (H1) 最能體現「主力資金」的進出意圖。建議在 H1 作為進場參考時，同步觀察日線 (D1) 的 OBV 趨勢。若 D1 處於長期底背離吸籌期，則 H1 的真突破勝率大幅提升。",
     component: (props) => <Obv {...props} />,
+  },
+  {
+    id: "volume_profile",
+    label: "量價",
+    title: "成交量輪廓",
+    docContent: volumeProfileDoc,
+    timezoneAdvice:
+      "成交量輪廓 (Volume Profile) 適合用於判斷可見區間內的資金密集區。POC 提供了極強的防禦與主力持倉成本參考，VAH/VAL 區間能有效辨識目前的盤整或突破狀態。",
+    component: (props) => <VolumeProfileChart {...props} />,
   },
   {
     id: "cci",

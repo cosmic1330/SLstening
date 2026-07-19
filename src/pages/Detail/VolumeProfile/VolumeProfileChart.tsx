@@ -5,15 +5,14 @@ import {
   Container,
   FormControlLabel,
   FormGroup,
-  Tooltip as MuiTooltip,
+  MenuItem,
+  Select,
   Slider,
   Stack,
   Switch,
   ToggleButton,
   ToggleButtonGroup,
-  Typography,
-  Select,
-  MenuItem,
+  Typography
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -88,8 +87,6 @@ const CustomVolumeProfile = (props: any) => {
         if (align === "right") {
           startX = width - (margin?.right || 0) - barWidth;
         }
-
-        const isBuyDominant = bin.buyVolume > bin.sellVolume;
 
         return (
           <g key={`volume-bar-${i}`}>
@@ -285,7 +282,6 @@ const profileMetrics = useMemo(() => {
 
         if (isLastBar) {
           // 對最新一筆使用更保守的分配方式
-          const currentPrice = c; // 使用目前收盤價作為基準
           const realizedLow = Math.min(l, c);
           const realizedHigh = Math.max(h, c); // 至少包含已實現範圍
           overlap = Math.max(0, Math.min(realizedHigh, bin.priceMax) - Math.max(realizedLow, bin.priceMin));

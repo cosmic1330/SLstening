@@ -1,4 +1,4 @@
-import { AlignHorizontalLeft, AlignHorizontalRight, HelpOutline } from "@mui/icons-material";
+import { AlignHorizontalLeft, AlignHorizontalRight } from "@mui/icons-material";
 import {
   Box,
   CircularProgress,
@@ -12,6 +12,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -38,13 +40,12 @@ interface VolumeBin {
   buyVolume: number;
   sellVolume: number;
   totalVolume: number;
-  isHVN?: boolean;
   priceCenter: number;
 }
 
 // Customized Volume Profile Component
 const CustomVolumeProfile = (props: any) => {
-  const { formattedGraphicalItems, width, margin, yAxisMap, bins, align, showHVN } = props;
+  const { formattedGraphicalItems, width, margin, yAxisMap, bins, align } = props;
 
   if (!formattedGraphicalItems || formattedGraphicalItems.length === 0 || !bins || bins.length === 0) {
     return null;
@@ -67,56 +68,6 @@ const CustomVolumeProfile = (props: any) => {
 
   return (
     <g key="volume-profile-overlay" className="volume-profile-overlay">
-      {/* HVN 高亮 + 價格標籤 */}
-      {showHVN &&
-        bins.map((bin: VolumeBin, i: number) => {
-          if (!bin.isHVN || bin.totalVolume === 0) return null;
-
-          const yMin = yScale(bin.priceMin);
-          const yMax = yScale(bin.priceMax);
-          if (isNaN(yMin) || isNaN(yMax)) return null;
-
-          const y = Math.min(yMin, yMax);
-          const height = Math.max(Math.abs(yMin - yMax) - 0.8, 1.2);
-          const barWidth = (bin.totalVolume / maxTotalVolume) * maxProfileWidth;
-
-          let startX = leftX;
-          if (align === "right") {
-            startX = width - (margin?.right || 0) - barWidth;
-          }
-
-          const centerY = y + height / 1.65
-
-          return (
-            <g key={`hvn-${i}`}>
-              {/* HVN 背景與邊框 */}
-              <rect
-                x={startX}
-                y={y}
-                width={barWidth}
-                height={height}
-                fill="#ffd700"
-                fillOpacity={0.09}
-                stroke="#ffeb3b"
-                strokeWidth={2.8}
-                strokeDasharray="2 1"
-              />
-              {/* HVN 價格標籤 */}
-              <text
-                x={align === "left" ? startX + barWidth + 10 : startX - 10}
-                y={centerY + 3.5}
-                fill="#ffeb3b"
-                fontSize={10}
-                fontWeight="600"
-                textAnchor={align === "left" ? "start" : "end"}
-                dominantBaseline="middle"
-                style={{ textShadow: "0 0 4px rgba(0,0,0,0.8)" }}
-              >
-                {bin.priceCenter.toFixed(2)}
-              </text>
-            </g>
-          );
-        })}
 
       {/* 買賣量長條 */}
       {bins.map((bin: VolumeBin, i: number) => {
@@ -196,6 +147,8 @@ const CustomVolumeProfile = (props: any) => {
   );
 };
 
+const binsOptions: (number | "Auto")[] = ["Auto", 60, 80, 100, 120, 150, 180, 200];
+
 export default function VolumeProfileChart({
   visibleCount,
   setVisibleCount,
@@ -209,13 +162,12 @@ export default function VolumeProfileChart({
 }) {
   const deals = useContext(DealsContext);
 
-  const [binsCount, setBinsCount] = useState<number>(30);
+  const [binsCount, setBinsCount] = useState<number | "Auto">("Auto");
   const [vaRatio, setVaRatio] = useState<number>(70);
   const [align, setAlign] = useState<"left" | "right">("left");
 
   const [showPoc, setShowPoc] = useState<boolean>(true);
   const [showVa, setShowVa] = useState<boolean>(true);
-  const [showHVN, setShowHVN] = useState<boolean>(true);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -285,6 +237,10 @@ const profileMetrics = useMemo(() => {
     return { bins: [], minPrice: 0, maxPrice: 0, pocPrice: 0, vahPrice: 0, valPrice: 0 };
   }
 
+  const actualBinsCount = binsCount === "Auto"
+    ? Math.min(Math.max(Math.round(visibleCount * 1.2), 80), 180)
+    : binsCount;
+
   let maxPrice = -Infinity;
   let minPrice = Infinity;
   for (const deal of chartData) {
@@ -296,14 +252,13 @@ const profileMetrics = useMemo(() => {
     return { bins: [], minPrice, maxPrice, pocPrice: minPrice, vahPrice: minPrice, valPrice: minPrice };
   }
 
-  const binSize = (maxPrice - minPrice) / binsCount;
-  const bins: VolumeBin[] = Array.from({ length: binsCount }, (_, idx) => ({
+  const binSize = (maxPrice - minPrice) / actualBinsCount;
+  const bins: VolumeBin[] = Array.from({ length: actualBinsCount }, (_, idx) => ({
     priceMin: minPrice + idx * binSize,
     priceMax: minPrice + (idx + 1) * binSize,
     buyVolume: 0,
     sellVolume: 0,
     totalVolume: 0,
-    isHVN: false,
     priceCenter: minPrice + (idx + 0.5) * binSize,
   }));
 
@@ -316,14 +271,14 @@ const profileMetrics = useMemo(() => {
     totalVolume += v;
 
     if (h === l || binSize === 0) {
-      const idx = Math.min(binsCount - 1, Math.max(0, Math.floor((c - minPrice) / binSize)));
+      const idx = Math.min(actualBinsCount - 1, Math.max(0, Math.floor((c - minPrice) / binSize)));
       if (isUp) bins[idx].buyVolume += v;
       else bins[idx].sellVolume += v;
       bins[idx].totalVolume += v;
     } else {
       const candleRange = h - l;
 
-      for (let i = 0; i < binsCount; i++) {
+      for (let i = 0; i < actualBinsCount; i++) {
         const bin = bins[i];
 
         let overlap = 0;
@@ -351,10 +306,10 @@ const profileMetrics = useMemo(() => {
     }
   });
 
-  // POC & HVN & Value Area（保持原本邏輯）
+  // POC & Value Area
   let pocIdx = 0;
   let maxBinVol = 0;
-  for (let i = 0; i < binsCount; i++) {
+  for (let i = 0; i < actualBinsCount; i++) {
     if (bins[i].totalVolume > maxBinVol) {
       maxBinVol = bins[i].totalVolume;
       pocIdx = i;
@@ -362,26 +317,13 @@ const profileMetrics = useMemo(() => {
   }
   const pocPrice = minPrice + (pocIdx + 0.5) * binSize;
 
-  const avgVolume = bins.reduce((sum, b) => sum + b.totalVolume, 0) / binsCount;
-  const hvnThreshold = avgVolume * 1.75;
-
-  bins.forEach((bin, idx) => {
-    if (idx === pocIdx) {
-      bin.isHVN = false;
-      return;
-    }
-    const isLocalMax = (idx === 0 || bin.totalVolume >= bins[idx - 1].totalVolume) &&
-                      (idx === binsCount - 1 || bin.totalVolume >= bins[idx + 1].totalVolume);
-    bin.isHVN = bin.totalVolume > hvnThreshold && isLocalMax;
-  });
-
   // Value Area（不變）
   const targetVolume = totalVolume * (vaRatio / 100);
   let currentVolume = bins[pocIdx].totalVolume;
   let upIdx = pocIdx, downIdx = pocIdx;
 
   while (currentVolume < targetVolume) {
-    const volUp = upIdx + 1 < binsCount ? bins[upIdx + 1].totalVolume : 0;
+    const volUp = upIdx + 1 < actualBinsCount ? bins[upIdx + 1].totalVolume : 0;
     const volDown = downIdx - 1 >= 0 ? bins[downIdx - 1].totalVolume : 0;
     if (volUp === 0 && volDown === 0) break;
     if (volUp >= volDown) { currentVolume += volUp; upIdx++; }
@@ -392,7 +334,7 @@ const profileMetrics = useMemo(() => {
   const vahPrice = minPrice + (upIdx + 1) * binSize;
 
   return { bins, minPrice, maxPrice, pocPrice, vahPrice, valPrice };
-}, [chartData, binsCount, vaRatio]);
+}, [chartData, binsCount, vaRatio, visibleCount]);
 
   const { bins, pocPrice, vahPrice, valPrice } = profileMetrics;
 
@@ -410,16 +352,67 @@ const profileMetrics = useMemo(() => {
       <Stack spacing={2} direction={{ xs: "column", md: "row" }} alignItems={{ xs: "stretch", md: "center" }} justifyContent="space-between" sx={{ mb: 1.5, p: 1.5, bgcolor: "rgba(30,30,40,0.45)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}>
         <Stack direction="row" alignItems="center" spacing={1}>
           <Typography variant="h6" color="white" sx={{ fontWeight: 600 }}>成交量輪廓</Typography>
-          <MuiTooltip title="HVN 已加上價格標籤，可清楚比較價位">
-            <HelpOutline fontSize="small" sx={{ color: "primary.main", cursor: "pointer" }} />
-          </MuiTooltip>
         </Stack>
 
         <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 2, sm: 3 }} alignItems="center">
-          <Box sx={{ width: 140 }}>
-            <Typography variant="caption" color="rgba(255,255,255,0.6)">分桶數: {binsCount}</Typography>
-            <Slider value={binsCount} onChange={(_, val) => setBinsCount(val as number)} min={10} max={100} step={5} size="small" />
-          </Box>
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 120 }}>
+            <Typography variant="caption" color="rgba(255,255,255,0.6)">分桶數:</Typography>
+            <Select
+              value={binsCount}
+              onChange={(e) => setBinsCount(e.target.value as number | "Auto")}
+              size="small"
+              sx={{
+                color: "white",
+                fontSize: 12,
+                height: 28,
+                minWidth: 70,
+                bgcolor: "rgba(255, 255, 255, 0.05)",
+                borderRadius: "6px",
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.12)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(255,255,255,0.25)",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "primary.main",
+                },
+                "& .MuiSelect-select": {
+                  py: 0.5,
+                  px: 1,
+                },
+              }}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  sx: {
+                    bgcolor: "rgba(30, 30, 40, 0.95)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    "& .MuiMenuItem-root": {
+                      fontSize: 12,
+                      color: "white",
+                      "&.Mui-selected": {
+                        bgcolor: "rgba(144, 202, 249, 0.15)",
+                      },
+                      "&.Mui-selected:hover": {
+                        bgcolor: "rgba(144, 202, 249, 0.25)",
+                      },
+                      "&:hover": {
+                        bgcolor: "rgba(255, 255, 255, 0.08)",
+                      },
+                    },
+                  },
+                },
+              }}
+            >
+              {binsOptions.map((opt) => (
+                <MenuItem key={opt} value={opt}>
+                  {opt}
+                </MenuItem>
+              ))}
+            </Select>
+          </Stack>
           <Box sx={{ width: 140 }}>
             <Typography variant="caption" color="rgba(255,255,255,0.6)">價值區: {vaRatio}%</Typography>
             <Slider value={vaRatio} onChange={(_, val) => setVaRatio(val as number)} min={50} max={95} step={5} size="small" />
@@ -428,7 +421,6 @@ const profileMetrics = useMemo(() => {
           <FormGroup row sx={{ gap: 1 }}>
             <FormControlLabel control={<Switch checked={showPoc} onChange={e => setShowPoc(e.target.checked)} color="warning" size="small" />} label="POC" />
             <FormControlLabel control={<Switch checked={showVa} onChange={e => setShowVa(e.target.checked)} size="small" />} label="價值區" />
-            <FormControlLabel control={<Switch checked={showHVN} onChange={e => setShowHVN(e.target.checked)} color="warning" size="small" />} label="HVN" />
           </FormGroup>
 
           <ToggleButtonGroup value={align} exclusive onChange={(_, val) => val && setAlign(val)} size="small">
@@ -457,7 +449,7 @@ const profileMetrics = useMemo(() => {
             {showVa && vahPrice > valPrice && <ReferenceArea y1={valPrice} y2={vahPrice} fill="rgba(144, 202, 249, 0.04)" />}
 
             <Customized component={BaseCandlestickRectangle} />
-            <Customized component={(props: any) => <CustomVolumeProfile {...props} bins={bins} align={align} showHVN={showHVN} />} />
+            <Customized component={(props: any) => <CustomVolumeProfile {...props} bins={bins} align={align} />} />
 
             {/* POC / VA Lines */}
             {showPoc && pocPrice > 0 && (

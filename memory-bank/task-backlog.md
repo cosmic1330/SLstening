@@ -43,6 +43,7 @@
 | REQ-045 | 詳情頁面 MFI 整合分價成交量分佈 (Volume Profile)，並移除布林通道，且優化強勢量能柱與外框對比度使其更為低調與美觀 | Completed | 2026-06-04 | REQ-045 | v1: 新增 CVD 獨立頁面 / v2: 取消 CVD 獨立頁面，改將 Volume Profile 整合至 MFI 詳情頁面並移除布林通道 / v3: 依使用者要求降低強勢量能柱顏色亮度 / v4: 依使用者要求降低外框描邊不透明度 / v5: 僅在主導方顯示外框 / v6: 消除填充色亮度偏差 (統一為 0.30) 並保留主導方描邊外框 (0.50) / v7: 依使用者要求將外框調整為內描邊 (Inner Stroke) 避免溢出邊界 | 提供簡潔的分價量能分析視角 |
 | REQ-046 | CCI 訊號簡化與參數設定支援：將預設值調整為 26，並於設定頁面新增 CCI 設定欄位，同時將訊號簡化為突破 -100 (買入) 與跌破 100 (賣出) | Completed | 2026-06-04 | - | v1: 原始需求 | 減少指標訊號雜訊並提升參數可自訂性 |
 | REQ-047 | 建立獨立的 Volume Profile 價量分析頁面與說明文件，提供 Bins / 價值區比例 / 左右對齊等控制面板 | Completed | 2026-07-17 | - | v1: 原始需求 | 提供更彈性且專業的量價分佈分析介面 |
+| REQ-048 | 移除成交量輪廓圖表 (Volume Profile) 的 HVN 顯示與相關 UI 控制開關，並優化分桶數 (Bins) 的自適應與選擇功能 | Completed | 2026-07-19 | - | v1: 隱藏 HVN 相關圖形與 UI 開關，同步更新說明文件 / v2: 將分桶數 (Bins) 從 Slider 改為 Select 下拉式選單，支援 "Auto" 自適應分桶數 `Math.min(Math.max(visibleCount * 1.2, 80), 180)` 以及 `[60, 80, 100, 120, 150, 180, 200]` 等專業分桶數選項，預設為 "Auto" | 消除視覺干擾，大幅提升分桶數的實用性與自適應表現 |
 
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |

@@ -4,10 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
+import useMarketDataStore from "../store/MarketData.store";
 import { TaType } from "../types";
 import { isTaiwanMarketOpen } from "../utils/marketUtils";
 import { IndicatorsDateTimeType } from "../utils/analyzeIndicatorsData";
 import formatDateTime from "../utils/formatDateTime";
+
+const TICK_STALE_AFTER_MS = 30_000;
 
 /**
  * useConditionalDeals Hook
@@ -44,26 +47,59 @@ export default function useConditionalDeals(
     typeof window !== "undefined" &&
     document.visibilityState === "visible";
 
-  const shouldFetchTick = shouldFetch && fetchTick;
+  const isMarketOpen = isTaiwanMarketOpen();
+  const shouldMonitorTick = shouldFetch && fetchTick && isMarketOpen;
+  const tickDeals = useMarketDataStore((state) => state.getTick(id));
+  const lastTickUpdatedAt = useMarketDataStore((state) =>
+    state.tickUpdatedAt.get(id),
+  );
+  const [isTickStale, setIsTickStale] = useState(false);
+
+  useEffect(() => {
+    if (!shouldMonitorTick) {
+      setIsTickStale(false);
+      return;
+    }
+
+    // 尚未收到第一筆訂閱資料時，先給訂閱 30 秒完成初始載入。
+    const baseline = lastTickUpdatedAt ?? Date.now();
+    const remaining = TICK_STALE_AFTER_MS - (Date.now() - baseline);
+
+    if (remaining <= 0) {
+      setIsTickStale(true);
+      return;
+    }
+
+    setIsTickStale(false);
+    const timeoutId = window.setTimeout(() => {
+      setIsTickStale(true);
+    }, remaining);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [id, lastTickUpdatedAt, shouldMonitorTick]);
+
+  const shouldFetchTick = shouldMonitorTick && isTickStale;
   const shouldFetchHistory = shouldFetch && fetchHistory;
 
   // --- Tick 資料 (即時價格與成交明細) ---
-  const { data: tickDeals } = useSWR(
+  useSWR(
     shouldFetchTick ? `market/tick/${id}` : null,
     async () => {
       console.log(`📡 [SWR Fetch] 真正發送 IPC 請求拉取 [TICK] 報價: ${id}`);
       useDebugStore.getState().increment("conditional");
-      return await marketApi.getTickData(id);
+      const tick = await marketApi.getTickData(id);
+      if (tick) {
+        useMarketDataStore.getState().updateTick(tick);
+      }
+      return tick;
     },
     {
       revalidateOnFocus: false,
-      revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
+      revalidateIfStale: true,
       dedupingInterval: 15000, // 15秒內避免重複請求
-      refreshInterval: () => (isTaiwanMarketOpen() ? 20000 : 0),
+      refreshInterval: TICK_STALE_AFTER_MS,
     },
   );
-
-  const isMarketOpen = isTaiwanMarketOpen();
 
   // --- Daily 資料 (日 K 線與技術指標) ---
   const { data: historyData } = useSWR(

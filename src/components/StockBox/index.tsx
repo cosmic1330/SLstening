@@ -18,7 +18,6 @@ import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useMaDeduction from "../../hooks/useMaDeduction";
 import useMarketSubscriber from "../../hooks/useMarketSubscriber";
-import useMarketDataStore from "../../store/MarketData.store";
 import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import estimateVolume from "../../utils/estimateVolume";
@@ -120,15 +119,13 @@ export default function StockBox({
   const fetchHistory = stockBoxChartType === "mak";
 
   useMarketSubscriber(stock.id, enabled && fetchTick, isComponentVisible);
-  const tickDeals = fetchTick
-    ? useMarketDataStore((state) => state.getTick(stock.id)) || null
-    : null;
-  const { deals, name } = useConditionalDeals(
+  const { deals, name, tickDeals: storedTickDeals } = useConditionalDeals(
     stock.id,
     enabled,
     isComponentVisible,
     { fetchTick, fetchHistory }
   );
+  const tickDeals = fetchTick ? storedTickDeals || null : null;
 
   // Indicators
   const maData = useMaDeduction(deals);

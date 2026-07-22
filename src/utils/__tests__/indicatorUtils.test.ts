@@ -66,7 +66,7 @@ describe("indicatorUtils", () => {
     });
 
     it("should handle missing data gracefully (null checks)", () => {
-      // @ts-ignore
+      // @ts-expect-error Runtime guard is intentionally tested with invalid input.
       const result = calculateIndicators(null, mockSettings);
       expect(result).toEqual([]);
     });

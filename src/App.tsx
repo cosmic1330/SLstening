@@ -19,6 +19,52 @@ const List = lazy(() => import("./pages/Home/List"));
 const RedBall = lazy(() => import("./pages/Home/RedBall"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
 
+export function AppRoutes() {
+  return (
+    <Routes>
+      <Route index element={<Login />} />
+      <Route path="register" element={<Register />} />
+      <Route path="add" element={<Add />} />
+      <Route path="detail/:id" element={<Detail />} />
+      <Route path="dashboard" element={<Home />}>
+        <Route
+          index
+          element={
+            <Suspense fallback={<div>載入中...</div>}>
+              <List />
+            </Suspense>
+          }
+        />
+        <Route
+          path="setting"
+          element={
+            <Suspense fallback={<div>載入中...</div>}>
+              <Setting />
+            </Suspense>
+          }
+        />
+        <Route
+          path="redball"
+          element={
+            <Suspense fallback={<div>載入中...</div>}>
+              <RedBall />
+            </Suspense>
+          }
+        />
+        <Route
+          path="category"
+          element={
+            <Suspense fallback={<div>載入中...</div>}>
+              <Category />
+            </Suspense>
+          }
+        />
+        <Route path="*" element={<Navigate to="/dashboard" />} />
+      </Route>
+    </Routes>
+  );
+}
+
 function App() {
   const { reload } = useStocksStore();
   
@@ -42,47 +88,7 @@ function App() {
   return (
       <UserProvider>
         <BrowserRouter>
-          <Routes>
-            <Route index element={<Login />} />
-            <Route path="register" element={<Register />} />
-            <Route path="add" element={<Add />} />
-            <Route path="detail/:id" element={<Detail />} />
-            <Route path="dashboard" element={<Home />}>
-              <Route
-                index
-                element={
-                  <Suspense fallback={<div>載入中...</div>}>
-                    <List />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="setting"
-                element={
-                  <Suspense fallback={<div>載入中...</div>}>
-                    <Setting />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="redball"
-                element={
-                  <Suspense fallback={<div>載入中...</div>}>
-                    <RedBall />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="category"
-                element={
-                  <Suspense fallback={<div>載入中...</div>}>
-                    <Category />
-                  </Suspense>
-                }
-              />
-              <Route path="*" element={<Navigate to="/dashboard" />} />
-            </Route>
-          </Routes>
+          <AppRoutes />
           <DebugInfo />
           <ToastContainer
             position="top-right"

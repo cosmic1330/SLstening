@@ -77,7 +77,7 @@ describe('detectGaps', () => {
         { sizePercent: 5 },
         { sizePercent: 1 },
     ];
-    // @ts-ignore
+    // @ts-expect-error Minimal fixture intentionally omits unrelated gap fields.
     const sorted = sortGapsBySize(gaps, false); // Descending
     expect(sorted[0].sizePercent).toBe(5);
     expect(sorted[2].sizePercent).toBe(1);

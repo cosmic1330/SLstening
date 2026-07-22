@@ -9,11 +9,14 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "app": "tauri dev",
-    "package": "npm run test:all && tauri build",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "tsc --noEmit --pretty false",
     "test": "vitest",
     "test:frontend": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:backend": "cd src-tauri && cargo test",
-    "test:all": "npm run test:frontend && npm run test:backend"
+    "test:all": "npm run test:frontend && npm run test:backend",
+    "package": "npm run test:all && tauri build"
   },
   "dependencies": {
     "@ch20026103/anysis": "0.0.20-alpha.0",

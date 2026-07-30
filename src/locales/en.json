@@ -42,6 +42,108 @@
         "daily": "Daily",
         "weekly": "Weekly"
       }
+    },
+    "Detail": {
+      "GlassBar": {
+        "navigation": "Analysis chart toolbar",
+        "previous": "Previous chart",
+        "next": "Next chart",
+        "selectChart": "Select analysis chart",
+        "period": "Chart period",
+        "hourShort": "H",
+        "dayShort": "D",
+        "weekShort": "W",
+        "help": "View current chart guide",
+        "details": "Chart details; click for full guide",
+        "settings": "Adjust chart parameters"
+      },
+      "Chip": {
+        "title": "Positioning",
+        "summary": "Positioning summary",
+        "score": "Positioning score",
+        "loading": "Loading end-of-day positioning…",
+        "retry": "Retry",
+        "error": "Positioning data is temporarily unavailable. Please try again later.",
+        "twOnly": "Positioning data currently supports Taiwan stocks only.",
+        "tabs": {
+          "label": "Positioning views",
+          "overview": "Overview",
+          "trend": "20-day trend",
+          "analysis": "Events & score"
+        },
+        "light": {
+          "title": "Positioning signals",
+          "institutional": "Institutions",
+          "foreignHolding": "Foreign holding",
+          "lendingPressure": "Lending pressure",
+          "lots": "lots",
+          "status": {
+            "buying": "Buying",
+            "selling": "Selling",
+            "neutral": "Flat",
+            "increasing": "Rising",
+            "decreasing": "Falling",
+            "stable": "Stable",
+            "high": "High",
+            "normal": "Normal",
+            "easing": "Easing",
+            "unavailable": "Pending"
+          },
+          "summary": {
+            "favorable": "Multiple positioning measures are improving; the structure looks relatively stable.",
+            "cautious": "Positioning pressure is rising across measures; near-term caution is warranted.",
+            "mixed": "Positioning measures disagree, with no clear combined signal yet."
+          }
+        },
+        "verdict": {
+          "stable_buying": "Stable accumulation",
+          "distribution": "Distribution",
+          "mixed": "Mixed positioning",
+          "retail_crowded": "Retail crowding"
+        },
+        "explanation": {
+          "stable_buying": "Institutions lean net-buy while margin has not chased sharply; positioning is relatively orderly.",
+          "distribution": "Institutions lean net-sell over the medium term; avoid treating a price bounce alone as confirmation.",
+          "mixed": "Institutional and margin signals disagree, so positioning is currently unclear.",
+          "retail_crowded": "Institutions are selling while margin balances rise quickly, increasing retail crowding risk."
+        },
+        "institutional": "Institutional investors",
+        "fiveDaysLots": "5 days / lots",
+        "foreign": "Foreign",
+        "trust": "Investment trust",
+        "dealer": "Dealer",
+        "total": "Institutional total",
+        "margin": "Margin and short",
+        "marginBalance": "Margin balance / lots",
+        "marginChange": "5-day margin change",
+        "shortRatio": "Short/margin ratio",
+        "trend": "20-day trend",
+        "priceChange20d": "Price 20d",
+        "institutional5d": "Institutions 5d",
+        "institutional20d": "Institutions 20d",
+        "priceTrend": "Price trend (close)",
+        "dailyInstitutional": "Daily institutional net flow (lots)",
+        "institutionalLegend": "Red buy | Green sell | White price",
+        "close": "Close",
+        "institutionalFlow": "Institutional net lots",
+        "signals": "Positioning events",
+        "noSignals": "No material positioning divergence in the last five days.",
+        "signal": {
+          "price_down_institution_buy": "Price fell while institutions bought: possible accumulation at lower levels.",
+          "price_up_institution_sell": "Price rose while institutions sold: watch for distribution into strength.",
+          "margin_chasing": "Price and margin balances rose quickly: retail chasing risk increased.",
+          "trust_streak": "Investment trusts bought for three straight days: medium-term positioning strengthened."
+        },
+        "scoreBreakdown": "Why this score?",
+        "baseScore": "Base score",
+        "factor": {
+          "foreign_5d": "5-day foreign direction",
+          "trust_5d": "5-day trust direction",
+          "dealer_5d": "5-day dealer direction",
+          "institutional_20d": "20-day institutional direction",
+          "margin_5d": "5-day margin change"
+        }
+      }
     }
   }
 }

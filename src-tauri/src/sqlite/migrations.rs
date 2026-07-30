@@ -174,7 +174,6 @@ pub fn value() -> Vec<Migration> {
             ",
             kind: MigrationKind::Up,
         },
-
         Migration {
             version: 6,
             description: "add_avg_year_dividend_yield_column_to_fundamental",

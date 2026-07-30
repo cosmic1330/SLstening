@@ -20,7 +20,10 @@ pub async fn update(app: tauri::AppHandle) -> Result<(), AppError> {
                     |chunk_length, content_length| {
                         downloaded += chunk_length;
                         if let Some(total) = content_length {
-                            log::info!("downloaded {:.2}%", (downloaded as f64 / total as f64) * 100.0);
+                            log::info!(
+                                "downloaded {:.2}%",
+                                (downloaded as f64 / total as f64) * 100.0
+                            );
                         } else {
                             log::info!("downloaded {} bytes", downloaded);
                         }

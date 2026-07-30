@@ -1,5 +1,5 @@
-use crate::error::AppError;
 use crate::csv_processor::write_entities_to_csv;
+use crate::error::AppError;
 use crate::models::{DataEntity, Deal, Skills};
 use serde_json::from_str;
 use std::fs;
@@ -29,11 +29,20 @@ pub fn create_csv_from_json(
     let entities: Vec<DataEntity> = match data_type.as_str() {
         "Deal" => from_str::<Vec<Deal>>(&json_data)
             .map(|deals| deals.into_iter().map(DataEntity::Deal).collect())
-            .map_err(|e| AppError::Database(format!("JSON 解析失敗 (Deal): {}，表: {}", e, &csv_name)))?,
+            .map_err(|e| {
+                AppError::Database(format!("JSON 解析失敗 (Deal): {}，表: {}", e, &csv_name))
+            })?,
         "Skills" => from_str::<Vec<Skills>>(&json_data)
             .map(|skills| skills.into_iter().map(DataEntity::Skills).collect())
-            .map_err(|e| AppError::Database(format!("JSON 解析失敗 (Skills): {}，表:  {}", e, &csv_name)))?,
-        _ => return Err(AppError::Unknown(format!("未知的 data_type: {}", data_type))),
+            .map_err(|e| {
+                AppError::Database(format!("JSON 解析失敗 (Skills): {}，表:  {}", e, &csv_name))
+            })?,
+        _ => {
+            return Err(AppError::Unknown(format!(
+                "未知的 data_type: {}",
+                data_type
+            )))
+        }
     };
 
     write_entities_to_csv(&entities, &csv_path)?;

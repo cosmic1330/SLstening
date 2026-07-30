@@ -1,11 +1,4 @@
-import {
-  Box,
-  CircularProgress,
-  Container,
-  Tooltip as MuiTooltip,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, CircularProgress, Container } from "@mui/material";
 import { useContext, useEffect, useMemo, useRef } from "react";
 import {
   Bar,
@@ -22,7 +15,6 @@ import {
   YAxis,
 } from "recharts";
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
-import VolumeProfile from "../../../components/RechartCustoms/VolumeProfile";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import {
@@ -183,7 +175,7 @@ export default function Mfi({
   if (chartData.length === 0) {
     return (
       <Box
-        height="100vh"
+        height="100%"
         display="flex"
         alignItems="center"
         justifyContent="center"
@@ -198,7 +190,7 @@ export default function Mfi({
       component="main"
       maxWidth={false}
       sx={{
-        height: "100vh",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         pt: 1,
@@ -206,14 +198,6 @@ export default function Mfi({
         pb: 1,
       }}
     >
-      <Stack spacing={2} direction="row" alignItems="center" sx={{ mb: 1 }}>
-        <MuiTooltip title="MFI 較敏感，MACD 較穩重。左側的分價成交量分佈 (Volume Profile) 可提供成交密集區的強力支撐與壓力防線。">
-          <Typography variant="h6" component="div" color="white" sx={{ mr: 2 }}>
-            MFI
-          </Typography>
-        </MuiTooltip>
-      </Stack>
-
       <Box
         ref={chartContainerRef}
         sx={{
@@ -280,27 +264,7 @@ export default function Mfi({
               name="開"
             />
             <Customized component={BaseCandlestickRectangle} />
-            <Customized component={VolumeProfile} />
 
-            <Bar
-              dataKey="v"
-              yAxisId="volAxis"
-              name="Volume"
-              shape={(props: any) => {
-                const { x, y, width, height, payload } = props;
-                const isUp = payload.c > payload.o;
-                return (
-                  <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    fill={isUp ? "#f44336" : "#4caf50"}
-                    opacity={0.2}
-                  />
-                );
-              }}
-            />
 
             {chartData.map((d) => {
               const isBuy = typeof d.buySignal === "number";

@@ -43,9 +43,9 @@ pub struct Skills {
     pub d: f64,           // D
     pub rsi5: f64,        // RSI5
     pub rsi10: f64,       // RSI10
-    pub boll_ub: f64,      // Bollinger Upper Band
-    pub boll_ma: f64,      // Bollinger Middle Band
-    pub boll_lb: f64,      // Bollinger Lower Band
+    pub boll_ub: f64,     // Bollinger Upper Band
+    pub boll_ma: f64,     // Bollinger Middle Band
+    pub boll_lb: f64,     // Bollinger Lower Band
     pub obv: f64,         // OBV
     pub obv5: f64,        // OBV5
     pub j: Option<f64>,   // J 指標 (Migration v4 加入)

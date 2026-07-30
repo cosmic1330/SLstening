@@ -49,15 +49,15 @@ pub fn write_entities_to_csv(entities: &[DataEntity], path: &Path) -> Result<(),
 
     match &entities[0] {
         DataEntity::Deal(_) => write_deal_csv(entities, path),
-        DataEntity::Skills(_) => write_skills_csv(entities, path)
+        DataEntity::Skills(_) => write_skills_csv(entities, path),
     }
 }
 
 fn write_deal_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> {
     let mut writer = Writer::from_path(path)?;
-    
+
     writer.write_record(&["stock_id", "t", "c", "o", "h", "l", "v"])?;
-    
+
     for entity in entities {
         if let DataEntity::Deal(deal) = entity {
             writer.write_record(&[
@@ -71,7 +71,7 @@ fn write_deal_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> 
             ])?;
         }
     }
-    
+
     writer.flush()?;
     Ok(())
 }
@@ -87,17 +87,15 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
-        let deals = vec![
-            DataEntity::Deal(Deal {
-                stock_id: "2330".to_string(),
-                t: "20240101".to_string(),
-                c: 100.0,
-                o: 99.0,
-                h: 101.0,
-                l: 98.0,
-                v: 1000,
-            }),
-        ];
+        let deals = vec![DataEntity::Deal(Deal {
+            stock_id: "2330".to_string(),
+            t: "20240101".to_string(),
+            c: 100.0,
+            o: 99.0,
+            h: 101.0,
+            l: 98.0,
+            v: 1000,
+        })];
 
         let result = write_entities_to_csv(&deals, path);
         assert!(result.is_ok());
@@ -112,35 +110,33 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
-        let skills = vec![
-            DataEntity::Skills(Skills {
-                stock_id: "2330".to_string(),
-                t: "20240101".to_string(),
-                ma5: 100.0,
-                ma5_ded: 99.0,
-                ma10: 101.0,
-                ma10_ded: 98.0,
-                ma20: 102.0,
-                ma20_ded: 97.0,
-                ma60: 103.0,
-                ma60_ded: 96.0,
-                ma120: 104.0,
-                ma120_ded: 95.0,
-                macd: 1.0,
-                dif: 0.5,
-                osc: 0.5,
-                k: 50.0,
-                d: 50.0,
-                j: Some(50.0),
-                rsi5: 60.0,
-                rsi10: 55.0,
-                boll_ub: 110.0,
-                boll_ma: 100.0,
-                boll_lb: 90.0,
-                obv: 10000.0,
-                obv5: 9000.0,
-            }),
-        ];
+        let skills = vec![DataEntity::Skills(Skills {
+            stock_id: "2330".to_string(),
+            t: "20240101".to_string(),
+            ma5: 100.0,
+            ma5_ded: 99.0,
+            ma10: 101.0,
+            ma10_ded: 98.0,
+            ma20: 102.0,
+            ma20_ded: 97.0,
+            ma60: 103.0,
+            ma60_ded: 96.0,
+            ma120: 104.0,
+            ma120_ded: 95.0,
+            macd: 1.0,
+            dif: 0.5,
+            osc: 0.5,
+            k: 50.0,
+            d: 50.0,
+            j: Some(50.0),
+            rsi5: 60.0,
+            rsi10: 55.0,
+            boll_ub: 110.0,
+            boll_ma: 100.0,
+            boll_lb: 90.0,
+            obv: 10000.0,
+            obv5: 9000.0,
+        })];
 
         let result = write_entities_to_csv(&skills, path);
         assert!(result.is_ok());
@@ -163,9 +159,12 @@ mod tests {
         let invalid_err = CsvError::InvalidDataType;
         assert_eq!(format!("{}", invalid_err), "無效的數據類型");
 
-        let io_err = CsvError::IoError(std::io::Error::new(std::io::ErrorKind::NotFound, "not found"));
+        let io_err = CsvError::IoError(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "not found",
+        ));
         assert_eq!(format!("{}", io_err), "IO 錯誤: not found");
-        
+
         use std::error::Error;
         assert!(invalid_err.source().is_none());
         assert!(io_err.source().is_some());
@@ -174,13 +173,34 @@ mod tests {
 
 fn write_skills_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError> {
     let mut writer = Writer::from_path(path)?;
-    
+
     writer.write_record(&[
-        "stock_id", "t", "ma5", "ma5_ded", "ma10", "ma10_ded", "ma20", "ma20_ded", 
-        "ma60", "ma60_ded", "ma120", "ma120_ded", "macd", "dif", "osc", "k", "d", 
-        "rsi5", "rsi10", "bollUb", "bollMa", "bollLb", "obv", "obv5"
+        "stock_id",
+        "t",
+        "ma5",
+        "ma5_ded",
+        "ma10",
+        "ma10_ded",
+        "ma20",
+        "ma20_ded",
+        "ma60",
+        "ma60_ded",
+        "ma120",
+        "ma120_ded",
+        "macd",
+        "dif",
+        "osc",
+        "k",
+        "d",
+        "rsi5",
+        "rsi10",
+        "bollUb",
+        "bollMa",
+        "bollLb",
+        "obv",
+        "obv5",
     ])?;
-    
+
     for entity in entities {
         if let DataEntity::Skills(skills) = entity {
             writer.write_record(&[
@@ -211,7 +231,7 @@ fn write_skills_csv(entities: &[DataEntity], path: &Path) -> Result<(), CsvError
             ])?;
         }
     }
-    
+
     writer.flush()?;
     Ok(())
 }

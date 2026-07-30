@@ -1,7 +1,7 @@
-use tauri::{AppHandle, Emitter, State};
-use crate::market_watcher::{MarketManager, MarketEvent, fetch_ticks_batched};
+use crate::market_watcher::{fetch_ticks_batched, MarketEvent, MarketManager};
 use std::sync::Arc;
 use std::time::Duration;
+use tauri::{AppHandle, Emitter, State};
 
 #[tauri::command]
 pub async fn subscribe_stock(
@@ -10,7 +10,7 @@ pub async fn subscribe_stock(
     manager: State<'_, Arc<MarketManager>>,
 ) -> Result<(), String> {
     manager.subscribe(symbol.clone());
-    
+
     // 如果處於冷卻期，就不進行立即抓取，避免雪上加霜
     if manager.is_in_cooldown() {
         return Ok(());
@@ -30,7 +30,7 @@ pub async fn subscribe_stock(
     // 立即抓取一次並發送事件
     let sym = symbol.clone();
     let manager_clone = manager.inner().clone();
-    
+
     tauri::async_runtime::spawn(async move {
         manager_clone.in_flight.insert(sym.clone());
         match fetch_ticks_batched(&[sym.clone()]).await {
@@ -49,7 +49,7 @@ pub async fn subscribe_stock(
         }
         manager_clone.in_flight.remove(&sym);
     });
-    
+
     Ok(())
 }
 
@@ -113,7 +113,7 @@ pub async fn get_market_data(
     } else {
         // 歷史資料 (K線)
         let p = period.unwrap_or_else(|| "d".to_string());
-        
+
         // 1. 檢查快取
         if let Some(history) = manager.get_history_from_cache(&symbol, &p) {
             return Ok(MarketEvent::History(history));

@@ -8,7 +8,6 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { useNavigate, useParams } from "react-router";
@@ -25,6 +24,8 @@ const PageContainer = styled(Box)`
   height: 100vh;
   overflow: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
   background-color: #0f1214;
   background-image:
     radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
@@ -37,6 +38,13 @@ const PageContainer = styled(Box)`
     100% 100%,
     200px 200px;
   background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+`;
+
+const ChartViewport = styled(Box)`
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 `;
 
 // --- Styled Components ---
@@ -80,9 +88,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
       UrlTaPerdOptions.Hour,
   );
   const { id } = useParams();
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const pageRef = useRef(null);
-
   // Shared zoom and pan state
   const [visibleCount, setVisibleCount] = useState(120);
   const [rightOffset, setRightOffset] = useState(0);
@@ -258,41 +263,37 @@ const FullscreenVerticalCarousel: React.FC = () => {
 
   return (
     <ThemeProvider theme={darkTheme}>
-      <PageContainer ref={pageRef}>
+      <PageContainer>
         <DealsContext.Provider value={deals}>
-          <AnimatePresence custom={direction(current)} mode="wait">
-            <motion.div
-              key={slides[current].id}
-              custom={direction(current)}
-              variants={slideVariants}
-              initial="initial"
-              animate="animate"
-              exit="exit"
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Suspense fallback={<div>Loading...</div>}>
-                {slides[current].content}
-              </Suspense>
-            </motion.div>
-          </AnimatePresence>
+          <ChartViewport>
+            <AnimatePresence custom={direction(current)} mode="wait">
+              <motion.div
+                key={slides[current].id}
+                custom={direction(current)}
+                variants={slideVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Suspense fallback={<div>Loading...</div>}>
+                  {slides[current].content}
+                </Suspense>
+              </motion.div>
+            </AnimatePresence>
+          </ChartViewport>
 
           <GlassBar
             perd={perd}
             setPerd={setPerd}
-            isCollapsed={isCollapsed}
-            setIsCollapsed={setIsCollapsed}
             current={current}
             goToSlide={goToSlide}
-            pageRef={pageRef}
             onOpenDoc={() => setIsDocOpen(true)}
             currentId={slides[current].id}
           />

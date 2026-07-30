@@ -1,10 +1,10 @@
+mod commands;
 mod csv_processor;
 mod error;
+mod market_watcher;
 mod models;
 mod sqlite;
 mod updater;
-mod commands;
-mod market_watcher;
 use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,7 +32,7 @@ pub fn run() {
         )
         .setup(|app| {
             let handle = app.handle().clone();
-            
+
             // 監聽更新
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = updater::update(handle).await {
@@ -52,9 +52,11 @@ pub fn run() {
             commands::storage::get_db_size,
             commands::market::subscribe_stock,
             commands::market::unsubscribe_stock,
-            commands::market::get_market_data
+            commands::market::get_market_data,
+            commands::chip::get_chip_data
         ])
-        .run(tauri::generate_context!()) {
+        .run(tauri::generate_context!())
+    {
         log::error!("error while running tauri application: {}", e);
     }
 }

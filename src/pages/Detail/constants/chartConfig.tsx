@@ -12,6 +12,7 @@ const Cci = lazy(() => import("../Cci/Cci"));
 const Bollean = lazy(() => import("../Bollean/Bollean"));
 const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
 const VolumeProfileChart = lazy(() => import("../VolumeProfile/VolumeProfileChart"));
+const Chip = lazy(() => import("../Chip/Chip"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
@@ -27,6 +28,7 @@ import mfiDoc from "../Mfi/Mfi.md?raw";
 import mrDoc from "../Mr/MR.md?raw";
 import obvDoc from "../Obv/Obv.md?raw";
 import volumeProfileDoc from "../VolumeProfile/VolumeProfile.md?raw";
+import chipDoc from "../Chip/Chip.md?raw";
 
 export interface ChartDefinition {
   id: string;
@@ -135,6 +137,15 @@ export const CHART_CONFIG: ChartDefinition[] = [
     timezoneAdvice:
       "MFI 在日線 (D1) 非常穩健，用於判別大資金進盤與離巢。在 1 小時 (H1) 或 15 分鐘 (M15) 反應迅速，常用於捕捉情緒極點。建議 H1 出現超賣時進場，但須確保 D1 趨勢仍向上。",
     component: (props) => <Mfi {...props} />,
+  },
+  {
+    id: "chip",
+    label: "籌碼",
+    title: "籌碼面",
+    docContent: chipDoc,
+    timezoneAdvice:
+      "籌碼資料為盤後更新，以免費的三大法人與融資融券資料判斷方向。",
+    component: () => <Chip />,
   },
   {
     id: "ichimoku_cloud",

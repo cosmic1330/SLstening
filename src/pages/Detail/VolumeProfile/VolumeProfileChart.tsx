@@ -6,6 +6,7 @@ import {
   FormControlLabel,
   FormGroup,
   MenuItem,
+  Popover,
   Select,
   Slider,
   Stack,
@@ -31,6 +32,7 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import ChartTooltip from "../Tooltip/ChartTooltip";
+import useToolbarSettings from "../GlassBar/useToolbarSettings";
 
 // Interface for Volume Profile Bin
 interface VolumeBin {
@@ -145,6 +147,7 @@ const CustomVolumeProfile = (props: any) => {
 };
 
 const binsOptions: (number | "Auto")[] = ["Auto", 60, 80, 100, 120, 150, 180, 200];
+const synchronizedChartMargin = { top: 5, right: 34, left: 0, bottom: 5 };
 
 export default function VolumeProfileChart({
   visibleCount,
@@ -165,6 +168,10 @@ export default function VolumeProfileChart({
 
   const [showPoc, setShowPoc] = useState<boolean>(true);
   const [showVa, setShowVa] = useState<boolean>(true);
+  const [settingsAnchorEl, setSettingsAnchorEl] = useState<HTMLElement | null>(
+    null,
+  );
+  useToolbarSettings(setSettingsAnchorEl);
 
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -333,24 +340,60 @@ const profileMetrics = useMemo(() => {
 }, [chartData, binsCount, vaRatio, visibleCount]);
 
   const { bins, pocPrice, vahPrice, valPrice } = profileMetrics;
+  const priceDomain = useMemo<[number | "auto", number | "auto"]>(() => {
+    if (chartData.length === 0) return ["auto", "auto"];
+
+    let minimum = Math.min(...chartData.map((item) => item.l));
+    let maximum = Math.max(...chartData.map((item) => item.h));
+
+    if (showPoc && Number.isFinite(pocPrice)) {
+      minimum = Math.min(minimum, pocPrice);
+      maximum = Math.max(maximum, pocPrice);
+    }
+    if (showVa && Number.isFinite(vahPrice) && Number.isFinite(valPrice)) {
+      minimum = Math.min(minimum, valPrice);
+      maximum = Math.max(maximum, vahPrice);
+    }
+
+    const padding = Math.max(
+      (maximum - minimum) * 0.05,
+      Math.abs(maximum) * 0.005,
+    );
+    return [minimum - padding, maximum + padding];
+  }, [chartData, pocPrice, showPoc, showVa, vahPrice, valPrice]);
 
   if (chartData.length === 0) {
     return (
-      <Box height="100vh" display="flex" alignItems="center" justifyContent="center">
+      <Box height="100%" display="flex" alignItems="center" justifyContent="center">
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Container component="main" maxWidth={false} sx={{ height: "100vh", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}>
-      {/* Toolbar */}
-      <Stack spacing={2} direction={{ xs: "column", md: "row" }} alignItems={{ xs: "stretch", md: "center" }} justifyContent="space-between" sx={{ mb: 1.5, p: 1.5, bgcolor: "rgba(30,30,40,0.45)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px" }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography variant="h6" color="white" sx={{ fontWeight: 600 }}>成交量輪廓</Typography>
-        </Stack>
-
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={{ xs: 2, sm: 3 }} alignItems="center">
+    <Container component="main" maxWidth={false} sx={{ height: "100%", display: "flex", flexDirection: "column", pt: 1, px: 2, pb: 1 }}>
+      <Popover
+        anchorEl={settingsAnchorEl}
+        open={Boolean(settingsAnchorEl)}
+        onClose={() => setSettingsAnchorEl(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            sx: {
+              mb: 1,
+              width: 280,
+              p: 2,
+              bgcolor: "rgba(24,28,35,0.98)",
+              border: "1px solid rgba(255,255,255,0.12)",
+            },
+          },
+        }}
+      >
+        <Stack spacing={2}>
+          <Typography variant="subtitle2" fontWeight={750}>
+            成交量輪廓參數
+          </Typography>
           <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 120 }}>
             <Typography variant="caption" color="rgba(255,255,255,0.6)">分桶數:</Typography>
             <Select
@@ -409,7 +452,7 @@ const profileMetrics = useMemo(() => {
               ))}
             </Select>
           </Stack>
-          <Box sx={{ width: 140 }}>
+          <Box>
             <Typography variant="caption" color="rgba(255,255,255,0.6)">價值區: {vaRatio}%</Typography>
             <Slider value={vaRatio} onChange={(_, val) => setVaRatio(val as number)} min={50} max={95} step={5} size="small" />
           </Box>
@@ -424,16 +467,30 @@ const profileMetrics = useMemo(() => {
             <ToggleButton value="right"><AlignHorizontalRight fontSize="small" /></ToggleButton>
           </ToggleButtonGroup>
         </Stack>
-      </Stack>
+      </Popover>
 
       {/* Charts */}
       <Box ref={chartContainerRef} sx={{ flexGrow: 1, minHeight: 0, width: "100%", display: "flex", flexDirection: "column" }}>
         <ResponsiveContainer width="100%" height="70%">
-          <ComposedChart data={chartData} syncId="volumeProfileSync" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+          <ComposedChart data={chartData} syncId="volumeProfileSync" margin={synchronizedChartMargin}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
             <XAxis dataKey="t" hide />
-            <YAxis domain={[(dataMin: number) => dataMin * 0.985, (dataMax: number) => dataMax * 1.015]} orientation="left" stroke="#888" fontSize={10} />
-            <YAxis yAxisId="volAxis" orientation="right" hide />
+            <YAxis
+              width={48}
+              domain={priceDomain}
+              allowDataOverflow={false}
+              orientation="left"
+              stroke="#888"
+              fontSize={10}
+              tickFormatter={(value: number) =>
+                value.toLocaleString("zh-TW", {
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits:
+                    Math.abs(value) >= 100 ? 1 : Math.abs(value) >= 10 ? 2 : 3,
+                })
+              }
+            />
+            <YAxis yAxisId="volAxis" orientation="right" width={0} hide />
 
             <Tooltip content={<ChartTooltip />} />
 
@@ -462,10 +519,23 @@ const profileMetrics = useMemo(() => {
 
         {/* Volume Bar Chart */}
         <ResponsiveContainer width="100%" height="30%">
-          <ComposedChart data={chartData} syncId="volumeProfileSync" margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+          <ComposedChart data={chartData} syncId="volumeProfileSync" margin={synchronizedChartMargin}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
             <XAxis dataKey="t" stroke="#888" fontSize={9} />
-            <YAxis stroke="#888" fontSize={9} />
+            <YAxis
+              width={48}
+              stroke="#888"
+              fontSize={9}
+              tickFormatter={(value: number) => {
+                if (Math.abs(value) >= 1_000_000) {
+                  return `${(value / 1_000_000).toFixed(1)}M`;
+                }
+                if (Math.abs(value) >= 1_000) {
+                  return `${(value / 1_000).toFixed(1)}K`;
+                }
+                return `${Math.round(value)}`;
+              }}
+            />
             <Tooltip content={<ChartTooltip />} />
 
             <Bar dataKey="v" shape={(props: any) => {

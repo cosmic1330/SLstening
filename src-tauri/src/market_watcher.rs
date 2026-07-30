@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use dashmap::DashSet;
-use tauri::{AppHandle, Emitter};
-use serde::{Serialize, Deserialize};
-use ts_rs::TS;
-use std::time::Duration;
 use crate::error::AppError;
 use dashmap::DashMap;
+use dashmap::DashSet;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter};
+use ts_rs::TS;
 use urlencoding::{decode, encode};
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
@@ -141,10 +141,13 @@ impl MarketManager {
 
     /// 更新快取
     pub fn update_cache(&self, tick: MarketTick) {
-        self.cache.insert(tick.id.clone(), MarketCacheItem {
-            tick,
-            timestamp: std::time::Instant::now(),
-        });
+        self.cache.insert(
+            tick.id.clone(),
+            MarketCacheItem {
+                tick,
+                timestamp: std::time::Instant::now(),
+            },
+        );
     }
 
     /// 從快取中獲取歷史資料 (盤中 20 秒有效，盤後 300 秒有效)
@@ -167,17 +170,22 @@ impl MarketManager {
     /// 更新歷史資料快取
     pub fn update_history_cache(&self, symbol: &str, period: &str, history: MarketHistory) {
         let key = (symbol.to_string(), period.to_string());
-        self.history_cache.insert(key, MarketHistoryCacheItem {
-            history,
-            timestamp: std::time::Instant::now(),
-        });
+        self.history_cache.insert(
+            key,
+            MarketHistoryCacheItem {
+                history,
+                timestamp: std::time::Instant::now(),
+            },
+        );
     }
 }
 
 /// 判斷是否在任何市場的交易時間內
 fn is_any_market_open_for_symbol(_symbol: &str) -> bool {
     let now = std::time::SystemTime::now();
-    let since_the_epoch = now.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+    let since_the_epoch = now
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
     let timestamp = since_the_epoch.as_secs();
 
     // 台北時間是 UTC + 8 小時
@@ -221,7 +229,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
         let mut interval = tokio::time::interval(Duration::from_secs(30));
         loop {
             interval.tick().await;
-            
+
             // 檢查是否處於熔斷冷卻期
             if manager_clone.is_in_cooldown() {
                 log::warn!("System is in cooldown, skipping update cycle...");
@@ -242,7 +250,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 if manager_clone.get_from_cache(&s).is_some() {
                     continue;
                 }
-                
+
                 // 檢查是否正在抓取中
                 if manager_clone.in_flight.contains(&s) {
                     continue;
@@ -263,7 +271,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 let app_handle = app_clone.clone();
                 let m = Arc::clone(&manager_clone);
                 let sym = symbol.clone();
-                
+
                 tauri::async_runtime::spawn(async move {
                     log::info!("Updating market index: {}", sym);
                     match fetch_ticks_batched(&[sym.clone()]).await {
@@ -272,13 +280,13 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                                 m.update_cache(tick.clone());
                                 let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
                             }
-                        },
+                        }
                         Err(e) => {
                             if e.to_string().contains("API_BLOCKED") {
                                 m.enter_cooldown();
                                 let _ = app_handle.emit("api-blocked", true);
                             }
-                        },
+                        }
                     }
                     m.in_flight.remove(&sym);
                 });
@@ -294,22 +302,26 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
 
                 let app_handle = app_clone.clone();
                 let m = Arc::clone(&manager_clone);
-                
+
                 tauri::async_runtime::spawn(async move {
-                    log::info!("Fetching batch of {} symbols: {:?}", symbols_to_fetch.len(), symbols_to_fetch);
+                    log::info!(
+                        "Fetching batch of {} symbols: {:?}",
+                        symbols_to_fetch.len(),
+                        symbols_to_fetch
+                    );
                     match fetch_ticks_batched(&symbols_to_fetch).await {
                         Ok(ticks) => {
                             for tick in ticks {
                                 m.update_cache(tick.clone());
                                 let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
                             }
-                        },
+                        }
                         Err(e) => {
                             if e.to_string().contains("API_BLOCKED") {
                                 m.enter_cooldown();
                                 let _ = app_handle.emit("api-blocked", true);
                             }
-                        },
+                        }
                     }
                     for s in &symbols_to_fetch {
                         m.in_flight.remove(s);
@@ -323,17 +335,20 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
     manager
 }
 
-pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<MarketHistory, AppError> {
+pub(crate) async fn fetch_history_data(
+    symbol: &str,
+    period: &str,
+) -> Result<MarketHistory, AppError> {
     // Decode then encode to handle both raw symbols and already-encoded symbols
     let decoded_symbol = decode(symbol).unwrap_or(std::borrow::Cow::Borrowed(symbol));
     let encoded_symbol = encode(&decoded_symbol);
-    
+
     // Determine if it's a Global symbol (Indices/Futures) or a Taiwan symbol
     // Taiwan stocks (e.g. "2330") and Taiwan indices ("^TWII", "^TWOII") use Yahoo Taiwan API.
     // Global symbols (e.g. "^IXIC", "NQ=F") use Yahoo Finance's international API.
-    let is_global = (decoded_symbol.starts_with("^") || decoded_symbol.contains("=")) && 
-                    decoded_symbol != "^TWII" && 
-                    decoded_symbol != "^TWOII";
+    let is_global = (decoded_symbol.starts_with("^") || decoded_symbol.contains("="))
+        && decoded_symbol != "^TWII"
+        && decoded_symbol != "^TWOII";
 
     let url = if !is_global {
         // Taiwan stocks and indices use Yahoo Taiwan's API
@@ -351,7 +366,10 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
             "m" => ("1mo", "10y"),
             _ => ("1d", "10y"),
         };
-        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range={}", encoded_symbol, interval, range)
+        format!(
+            "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval={}&range={}",
+            encoded_symbol, interval, range
+        )
     };
 
     let client = reqwest::Client::builder()
@@ -365,21 +383,29 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
         .await
         .map_err(|e| AppError::Unknown(e.to_string()))?;
 
-    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS || res.status() == reqwest::StatusCode::FORBIDDEN {
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS
+        || res.status() == reqwest::StatusCode::FORBIDDEN
+    {
         return Err(AppError::Unknown("API_BLOCKED".to_string()));
     }
 
-    let body = res.text().await.map_err(|e| AppError::Unknown(e.to_string()))?;
-    let v: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| AppError::Serialization(e.to_string()))?;
-    
+    let body = res
+        .text()
+        .await
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+    let v: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| AppError::Serialization(e.to_string()))?;
+
     let item = if v.is_array() { &v[0] } else { &v };
     let chart = &item["chart"];
     if chart.is_null() {
         return Err(AppError::Unknown("No chart data found".to_string()));
     }
 
-    let result_node = if !chart["result"].is_null() && chart["result"].is_array() && !chart["result"][0].is_null() {
+    let result_node = if !chart["result"].is_null()
+        && chart["result"].is_array()
+        && !chart["result"][0].is_null()
+    {
         &chart["result"][0]
     } else {
         chart
@@ -387,14 +413,14 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
 
     let meta = &result_node["meta"];
     let indicators = &result_node["indicators"]["quote"][0];
-    
+
     let opens = indicators["open"].as_array();
     let closes = indicators["close"].as_array();
     let highs = indicators["high"].as_array();
     let lows = indicators["low"].as_array();
     let volumes = indicators["volume"].as_array();
     let ts = result_node["timestamp"].as_array();
-    
+
     let mut history_data = Vec::new();
     if let (Some(o), Some(c), Some(h), Some(l), Some(t)) = (opens, closes, highs, lows, ts) {
         for i in 0..o.len() {
@@ -403,13 +429,15 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
             let high = h[i].as_f64();
             let low = l[i].as_f64();
             let time = t[i].as_i64();
-            
+
             let vol = volumes
                 .and_then(|v_arr| v_arr.get(i))
                 .and_then(|v_val| v_val.as_f64())
                 .unwrap_or(0.0);
 
-            if let (Some(open), Some(close), Some(high), Some(low), Some(time)) = (open, close, high, low, time) {
+            if let (Some(open), Some(close), Some(high), Some(low), Some(time)) =
+                (open, close, high, low, time)
+            {
                 history_data.push(HistoryPoint {
                     t: time,
                     o: open,
@@ -422,7 +450,8 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
         }
     }
 
-    let mut price = meta["regularMarketPrice"].as_f64()
+    let mut price = meta["regularMarketPrice"]
+        .as_f64()
         .or_else(|| meta["price"].as_f64())
         .unwrap_or(0.0);
 
@@ -432,10 +461,12 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
         }
     }
 
-    let previous_close = meta["regularMarketPreviousClose"].as_f64()
+    let previous_close = meta["regularMarketPreviousClose"]
+        .as_f64()
         .or_else(|| meta["previousClose"].as_f64());
 
-    let mut change = meta["regularMarketChange"].as_f64()
+    let mut change = meta["regularMarketChange"]
+        .as_f64()
         .or_else(|| meta["change"].as_f64());
 
     if (change.is_none() || change == Some(0.0)) && price != 0.0 {
@@ -448,7 +479,8 @@ pub(crate) async fn fetch_history_data(symbol: &str, period: &str) -> Result<Mar
         }
     }
 
-    let name = meta["longName"].as_str()
+    let name = meta["longName"]
+        .as_str()
         .or_else(|| meta["shortName"].as_str())
         .map(|s| s.to_string());
 
@@ -467,17 +499,22 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
     }
 
     // 判斷是否為「非台灣」的全球指數
-    let is_global_index = symbols.len() == 1 && 
-        (symbols[0].contains("^") || symbols[0].contains("=")) && 
-        symbols[0] != "^TWII" && symbols[0] != "^TWOII";
-    
+    let is_global_index = symbols.len() == 1
+        && (symbols[0].contains("^") || symbols[0].contains("="))
+        && symbols[0] != "^TWII"
+        && symbols[0] != "^TWOII";
+
     let url = if is_global_index {
         let decoded = decode(&symbols[0]).unwrap_or(std::borrow::Cow::Borrowed(&symbols[0]));
         let encoded = encode(&decoded);
-        format!("https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d", encoded)
+        format!(
+            "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d",
+            encoded
+        )
     } else {
         // 台灣股票/指數批量 API
-        let symbols_str = symbols.iter()
+        let symbols_str = symbols
+            .iter()
             .map(|s| {
                 let decoded = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
                 format!("\"{}\"", encode(&decoded))
@@ -486,7 +523,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
             .join(",");
         format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;symbols=[{}];type=tick", symbols_str)
     };
-    
+
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -498,22 +535,36 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         .await
         .map_err(|e| AppError::Unknown(e.to_string()))?;
 
-    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS || res.status() == reqwest::StatusCode::FORBIDDEN {
+    if res.status() == reqwest::StatusCode::TOO_MANY_REQUESTS
+        || res.status() == reqwest::StatusCode::FORBIDDEN
+    {
         return Err(AppError::Unknown("API_BLOCKED".to_string()));
     }
 
-    let body = res.text().await.map_err(|e| AppError::Unknown(e.to_string()))?;
-    let v: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| AppError::Serialization(e.to_string()))?;
-    
+    let body = res
+        .text()
+        .await
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+    let v: serde_json::Value =
+        serde_json::from_str(&body).map_err(|e| AppError::Serialization(e.to_string()))?;
+
     let mut results = Vec::new();
-    let items = if v.is_array() { v.as_array().unwrap().clone() } else { vec![v] };
+    let items = if v.is_array() {
+        v.as_array().unwrap().clone()
+    } else {
+        vec![v]
+    };
 
     for item in items {
         let chart = &item["chart"];
-        if chart.is_null() { continue; }
+        if chart.is_null() {
+            continue;
+        }
 
-        let result_node = if !chart["result"].is_null() && chart["result"].is_array() && !chart["result"][0].is_null() {
+        let result_node = if !chart["result"].is_null()
+            && chart["result"].is_array()
+            && !chart["result"][0].is_null()
+        {
             &chart["result"][0]
         } else {
             chart
@@ -524,23 +575,34 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let yahoo_symbol = meta["symbol"].as_str().unwrap_or("unknown").to_string();
 
         // ID 匹配邏輯 (解碼後比較以確保 WTX&.TW 等符號匹配成功)
-        let decoded_yahoo = decode(&yahoo_symbol).unwrap_or(std::borrow::Cow::Borrowed(&yahoo_symbol));
-        let matched_id = symbols.iter()
+        let decoded_yahoo =
+            decode(&yahoo_symbol).unwrap_or(std::borrow::Cow::Borrowed(&yahoo_symbol));
+        let matched_id = symbols
+            .iter()
             .find(|&s| {
                 let decoded_s = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
-                decoded_yahoo.starts_with(decoded_s.as_ref()) || decoded_s.starts_with(decoded_yahoo.as_ref())
+                decoded_yahoo.starts_with(decoded_s.as_ref())
+                    || decoded_s.starts_with(decoded_yahoo.as_ref())
             })
             .cloned()
             .unwrap_or(yahoo_symbol);
 
-        let quote = if !chart["quote"].is_null() { &chart["quote"] } else if !result_node["quote"].is_null() { &result_node["quote"] } else { meta };
+        let quote = if !chart["quote"].is_null() {
+            &chart["quote"]
+        } else if !result_node["quote"].is_null() {
+            &result_node["quote"]
+        } else {
+            meta
+        };
 
-        let price = meta["regularMarketPrice"].as_f64()
+        let price = meta["regularMarketPrice"]
+            .as_f64()
             .or_else(|| meta["price"].as_f64())
             .or_else(|| quote["price"].as_f64())
             .unwrap_or(0.0);
 
-        let previous_close = meta["previousClose"].as_f64()
+        let previous_close = meta["previousClose"]
+            .as_f64()
             .or_else(|| quote["previousClose"].as_f64())
             .unwrap_or(price);
 
@@ -551,7 +613,8 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         };
         let change_percent = (change_percent * 100.0).round() / 100.0;
 
-        let refreshed_ts = meta["regularMarketTime"].as_i64()
+        let refreshed_ts = meta["regularMarketTime"]
+            .as_i64()
             .or_else(|| quote["refreshedTs"].as_i64())
             .unwrap_or(0);
 
@@ -565,16 +628,19 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let mut highs = Vec::new();
         let mut volume = None;
 
-        if let (Some(ts_arr), Some(cl_arr), Some(hi_arr)) = (timestamps_raw, closes_raw, highs_raw) {
+        if let (Some(ts_arr), Some(cl_arr), Some(hi_arr)) = (timestamps_raw, closes_raw, highs_raw)
+        {
             for ((ts_val, cl_val), hi_val) in ts_arr.iter().zip(cl_arr.iter()).zip(hi_arr.iter()) {
-                if let (Some(ts), Some(cl), Some(hi)) = (ts_val.as_i64(), cl_val.as_f64(), hi_val.as_f64()) {
+                if let (Some(ts), Some(cl), Some(hi)) =
+                    (ts_val.as_i64(), cl_val.as_f64(), hi_val.as_f64())
+                {
                     timestamps.push(ts);
                     closes.push(cl);
                     highs.push(hi);
                 }
             }
         }
-        
+
         if let Some(v_arr) = volumes_raw {
             if let Some(last_v) = v_arr.last() {
                 volume = last_v.as_f64();
@@ -582,11 +648,19 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         } else if let Some(v) = meta["regularMarketVolume"].as_f64() {
             volume = Some(v);
         }
-            
-        let mut pre = 0.0;
-        let avg_prices: Vec<f64> = highs.iter().enumerate().map(|(i, &h)| { pre += h; pre / (i + 1) as f64 }).collect();
 
-        let name = meta["longName"].as_str()
+        let mut pre = 0.0;
+        let avg_prices: Vec<f64> = highs
+            .iter()
+            .enumerate()
+            .map(|(i, &h)| {
+                pre += h;
+                pre / (i + 1) as f64
+            })
+            .collect();
+
+        let name = meta["longName"]
+            .as_str()
             .or_else(|| meta["shortName"].as_str())
             .or_else(|| quote["longName"].as_str())
             .or_else(|| quote["shortName"].as_str())

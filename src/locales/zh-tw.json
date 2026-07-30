@@ -42,6 +42,108 @@
         "daily": "日線",
         "weekly": "周線"
       }
+    },
+    "Detail": {
+      "GlassBar": {
+        "navigation": "分析圖表工具列",
+        "previous": "上一個圖表",
+        "next": "下一個圖表",
+        "selectChart": "選擇分析圖表",
+        "period": "圖表週期",
+        "hourShort": "時",
+        "dayShort": "日",
+        "weekShort": "週",
+        "help": "查看目前圖表說明",
+        "details": "圖表資訊；點擊查看完整說明",
+        "settings": "調整圖表參數"
+      },
+      "Chip": {
+        "title": "籌碼面",
+        "summary": "籌碼判讀摘要",
+        "score": "籌碼分數",
+        "loading": "正在整理盤後籌碼…",
+        "retry": "重試",
+        "error": "暫時無法取得籌碼資料，請稍後再試。",
+        "twOnly": "籌碼資料目前只支援台灣股票。",
+        "tabs": {
+          "label": "籌碼資訊分類",
+          "overview": "概覽",
+          "trend": "20 日趨勢",
+          "analysis": "事件與分數"
+        },
+        "light": {
+          "title": "籌碼燈號",
+          "institutional": "法人動向",
+          "foreignHolding": "外資持股",
+          "lendingPressure": "借券壓力",
+          "lots": "張",
+          "status": {
+            "buying": "偏買",
+            "selling": "偏賣",
+            "neutral": "持平",
+            "increasing": "增加",
+            "decreasing": "減少",
+            "stable": "持平",
+            "high": "升高",
+            "normal": "正常",
+            "easing": "降溫",
+            "unavailable": "待更新"
+          },
+          "summary": {
+            "favorable": "多項籌碼同步改善，整體結構偏穩定。",
+            "cautious": "籌碼壓力同時升高，短線宜提高警覺。",
+            "mixed": "各項籌碼方向不同，暫時沒有一致訊號。"
+          }
+        },
+        "verdict": {
+          "stable_buying": "穩定承接",
+          "distribution": "籌碼鬆動",
+          "mixed": "方向混雜",
+          "retail_crowded": "散戶擁擠"
+        },
+        "explanation": {
+          "stable_buying": "法人方向偏買，融資未明顯追高；籌碼結構相對整齊。",
+          "distribution": "法人中期偏賣，籌碼正在流出；不宜只因股價反彈追進。",
+          "mixed": "法人與信用籌碼沒有形成一致方向，暫時視為凌亂。",
+          "retail_crowded": "法人賣超但融資快速增加，散戶接法人籌碼的風險較高。"
+        },
+        "institutional": "三大法人",
+        "fiveDaysLots": "近 5 日／張",
+        "foreign": "外資",
+        "trust": "投信",
+        "dealer": "自營商",
+        "total": "法人合計",
+        "margin": "融資融券",
+        "marginBalance": "融資餘額／張",
+        "marginChange": "融資 5 日變化",
+        "shortRatio": "券資比",
+        "trend": "20 日趨勢",
+        "priceChange20d": "股價 20 日",
+        "institutional5d": "法人 5 日",
+        "institutional20d": "法人 20 日",
+        "priceTrend": "股價走勢（收盤價）",
+        "dailyInstitutional": "法人每日買賣超（張）",
+        "institutionalLegend": "紅買｜綠賣｜白線股價",
+        "close": "收盤價",
+        "institutionalFlow": "法人買賣超（張）",
+        "signals": "籌碼事件",
+        "noSignals": "近 5 日沒有明顯籌碼背離。",
+        "signal": {
+          "price_down_institution_buy": "股價下跌但法人買超：可能出現低檔承接。",
+          "price_up_institution_sell": "股價上漲但法人賣超：留意拉高調節。",
+          "margin_chasing": "股價上漲且融資快速增加：散戶追價風險升高。",
+          "trust_streak": "投信連續 3 日買超：中期布局訊號增強。"
+        },
+        "scoreBreakdown": "為什麼是這個分數？",
+        "baseScore": "基準分",
+        "factor": {
+          "foreign_5d": "外資近 5 日方向",
+          "trust_5d": "投信近 5 日方向",
+          "dealer_5d": "自營商近 5 日方向",
+          "institutional_20d": "法人 20 日方向",
+          "margin_5d": "融資 5 日變化"
+        }
+      }
     }
   }
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SLstening Frontend Design"
+  short_description: "Design and verify the SLstening trading interface"
+  default_prompt: "Use $slstening-frontend-design to design or review this SLstening interface change."

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
+import { ThemeProvider } from "@mui/material/styles";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
 import "./App.css";
@@ -13,6 +14,7 @@ import Register from "./pages/Register";
 import useStocksStore from "./store/Stock.store";
 import useDebugStore from "./store/debug.store";
 import useMarketWatcher from "./hooks/useMarketWatcher";
+import { appTheme } from "./theme";
 
 // 懶加載組件
 const List = lazy(() => import("./pages/Home/List"));
@@ -86,6 +88,7 @@ function App() {
   }, []);
 
   return (
+    <ThemeProvider theme={appTheme}>
       <UserProvider>
         <BrowserRouter>
           <AppRoutes />
@@ -104,6 +107,7 @@ function App() {
           />
         </BrowserRouter>
       </UserProvider>
+    </ThemeProvider>
   );
 }
 

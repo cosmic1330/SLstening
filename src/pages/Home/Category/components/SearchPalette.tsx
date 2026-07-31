@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../../theme";
 import SearchIcon from "@mui/icons-material/Search";
 import { Autocomplete, InputAdornment } from "@mui/material";
 import { useRef, useState } from "react";
@@ -76,7 +77,7 @@ export default function SearchPalette({
               ...params.InputProps,
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "#3D5A45", ml: 1 }} />
+                  <SearchIcon sx={{ color: semanticTokens.app.primary, ml: 1 }} />
                 </InputAdornment>
               ),
             }}

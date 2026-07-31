@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import { Typography } from "@mui/material";
 
 // Helper to format YYYYMMDD number to Date string
@@ -127,7 +128,7 @@ const ChartTooltip = ({
               variant="caption"
               display="block"
               style={{
-                color: "#90caf9",
+                color: semanticTokens.analysis.focus,
                 fontWeight: "bold",
                 marginBottom: 4,
                 textTransform: "uppercase",
@@ -175,7 +176,7 @@ const ChartTooltip = ({
               variant="caption"
               display="block"
               style={{
-                color: "#90caf9",
+                color: semanticTokens.analysis.focus,
                 fontWeight: "bold",
                 marginBottom: 4,
                 textTransform: "uppercase",

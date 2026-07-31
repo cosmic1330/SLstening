@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import { TrendingUp as TrendingIcon } from "@mui/icons-material";
 import {
   Box,
@@ -13,7 +14,7 @@ import {
 import { useEffect, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
-import useWindowSize from "../../../hooks/useWindowSize";
+import useElementHeight from "../../../hooks/useElementHeight";
 import RedBallCard, { RED_BALL_CARD_HEIGHT } from "./components/RedBallCard";
 
 type CsvStockType = {
@@ -28,7 +29,7 @@ type CsvStockType = {
 
 const PageContainer = styled(Box)`
   width: 100%;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   position: relative;
   background: #fdf8f2;
@@ -63,7 +64,7 @@ const StyledTab = styled(Tab)(({ theme }) => ({
   color: "#8B7355",
   opacity: 0.6,
   "&.Mui-selected": {
-    color: "#3D5A45",
+    color: semanticTokens.app.primary,
     opacity: 1,
   },
 }));
@@ -115,7 +116,8 @@ function csvToStockStore(csv: string): CsvStockType[] {
 }
 
 export default function RedBall() {
-  const { height: windowHeight } = useWindowSize();
+  const { ref: listContainerRef, height: listHeight } =
+    useElementHeight<HTMLDivElement>();
   const [loading, setLoading] = useState(true);
   const [stocks, setStocks] = useState<CsvStockType[]>([]);
   const [selectedList, setSelectedList] = useState<string>("");
@@ -173,12 +175,12 @@ export default function RedBall() {
               sx={{
                 p: 1,
                 borderRadius: "10px",
-                background: "#3D5A45",
+                background: semanticTokens.app.primary,
                 boxShadow: "0 4px 0 #2D4A35",
                 display: "flex",
               }}
             >
-              <TrendingIcon sx={{ color: "#F1E5AC" }} />
+              <TrendingIcon sx={{ color: semanticTokens.app.onPrimary }} />
             </Box>
             <Typography
               variant="h5"
@@ -198,7 +200,7 @@ export default function RedBall() {
               sx={{
                 minHeight: 48,
                 "& .MuiTabs-indicator": {
-                  backgroundColor: "#3D5A45",
+                  backgroundColor: semanticTokens.app.primary,
                   height: 4,
                   borderRadius: "4px 4px 0 0",
                   boxShadow: "0 -2px 0 rgba(61, 90, 69, 0.2)",
@@ -213,7 +215,10 @@ export default function RedBall() {
         </Container>
       </GhibliHeader>
 
-      <Box sx={{ flex: 1, overflow: "hidden", position: "relative" }}>
+      <Box
+        ref={listContainerRef}
+        sx={{ flex: 1, minHeight: 0, overflow: "hidden", position: "relative" }}
+      >
         {loading ? (
           <Box
             sx={{
@@ -224,7 +229,7 @@ export default function RedBall() {
             }}
           >
             <Stack alignItems="center" spacing={2}>
-              <CircularProgress size={40} sx={{ color: "#3D5A45" }} />
+              <CircularProgress size={40} sx={{ color: semanticTokens.app.primary }} />
               <Typography
                 variant="body2"
                 sx={{ color: "#8B7355", fontWeight: 700 }}
@@ -234,11 +239,14 @@ export default function RedBall() {
             </Stack>
           </Box>
         ) : (
-          <Container maxWidth="lg" sx={{ height: "100%", pt: 1, pb: 10 }}>
+          <Container
+            maxWidth="lg"
+            sx={{ height: "100%", pt: 1, boxSizing: "border-box" }}
+          >
             {filteredStocks.length > 0 && (
               <VirtualizedStockList
                 stocks={filteredStocks as any}
-                height={windowHeight - 170}
+                height={Math.max(listHeight - 8, 0)}
                 itemHeight={RED_BALL_CARD_HEIGHT}
                 renderItem={(stock) => <RedBallCard stock={stock} />}
               />

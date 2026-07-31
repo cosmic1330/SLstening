@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import { ExpandLess, ShowChart } from "@mui/icons-material";
 import { Button, Menu, MenuItem, Typography } from "@mui/material";
 import React, { useState } from "react";
@@ -75,7 +76,7 @@ const ChartMenu: React.FC<ChartMenuProps> = ({ current, goToSlide }) => {
               mx: 0.5,
               borderRadius: 1,
               "&.Mui-selected": {
-                color: "#90caf9",
+                color: semanticTokens.analysis.focus,
                 bgcolor: "rgba(144,202,249,0.14)",
               },
             }}

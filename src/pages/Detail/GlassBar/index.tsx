@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import {
   ArrowBackIosNew,
   ArrowForwardIos,
@@ -145,7 +146,7 @@ const GlassBar: React.FC<GlassBarProps> = ({
                 )
               }
               aria-label={t("Pages.Detail.GlassBar.settings")}
-              sx={{ width: 40, height: 40, color: "#90caf9" }}
+              sx={{ width: 40, height: 40, color: semanticTokens.analysis.focus }}
             >
               <Settings sx={{ fontSize: 19 }} />
             </IconButton>
@@ -166,7 +167,7 @@ const GlassBar: React.FC<GlassBarProps> = ({
           <IconButton
             onClick={onOpenDoc}
             aria-label={t("Pages.Detail.GlassBar.details")}
-            sx={{ width: 40, height: 40, color: "#90caf9" }}
+            sx={{ width: 40, height: 40, color: semanticTokens.analysis.focus }}
           >
             <InfoOutlined sx={{ fontSize: 19 }} />
           </IconButton>

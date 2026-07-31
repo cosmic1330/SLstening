@@ -1,4 +1,4 @@
-import { Box, Button, Container as MuiContainer, Stack, Typography, createTheme, ThemeProvider, styled } from "@mui/material";
+import { Box, Button, Container as MuiContainer, Stack, Typography, ThemeProvider, styled } from "@mui/material";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback } from "react";
@@ -9,6 +9,7 @@ import Menu from "./Menu";
 import type FormData from "./type";
 import { info } from "@tauri-apps/plugin-log";
 import { t } from "i18next";
+import { analysisTheme, primitiveTokens, semanticTokens } from "../../theme";
 
 // --- Styled Components (Shared style with Login) ---
 
@@ -19,7 +20,7 @@ const Container = styled(MuiContainer)`
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #0f1214;
+  background-color: ${semanticTokens.analysis.canvas};
   background-image: 
     radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
     radial-gradient(at 50% 0%, hsla(225,39%,25%,1) 0, transparent 50%), 
@@ -30,12 +31,12 @@ const Container = styled(MuiContainer)`
 `;
 
 const GlassCard = styled(Box)(({ theme }) => ({
-  background: "rgba(30, 30, 40, 0.6)",
+  background: semanticTokens.analysis.surfaceGlass,
   backdropFilter: "blur(16px)",
   WebkitBackdropFilter: "blur(16px)",
-  borderRadius: "20px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.3)",
+  borderRadius: primitiveTokens.radius.xl,
+  border: `1px solid ${semanticTokens.analysis.borderSubtle}`,
+  boxShadow: primitiveTokens.shadow.floating,
   padding: theme.spacing(3),
   width: "100%",
   maxWidth: "360px",
@@ -92,13 +93,7 @@ function Add() {
   }, []);
 
   return (
-    <ThemeProvider
-      theme={createTheme({
-        palette: {
-          mode: "dark",
-        },
-      })}
-    >
+    <ThemeProvider theme={analysisTheme}>
       <Container>
         <GlassCard>
             {/* Removed redundant header for conciseness */}

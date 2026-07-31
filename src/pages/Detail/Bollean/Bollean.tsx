@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -663,7 +664,7 @@ export default function Bollean({
             <Bar
               dataKey="v"
               yAxisId="right"
-              fill="#90caf9"
+              fill={semanticTokens.analysis.focus}
               opacity={0.3}
               name="Volume"
               barSize={10}

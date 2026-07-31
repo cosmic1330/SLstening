@@ -20,6 +20,7 @@ import GoogleOauthButton from "../../components/GoogleOauthButton";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
+import { primitiveTokens, semanticTokens } from "../../theme";
 
 // Animation Variants
 const containerVariants: Variants = {
@@ -29,9 +30,9 @@ const containerVariants: Variants = {
     y: 0,
     rotate: 0,
     transition: {
-      duration: 0.8,
+      duration: primitiveTokens.motion.duration.deliberate / 1000,
       ease: [0.22, 1, 0.36, 1],
-      staggerChildren: 0.1,
+      staggerChildren: primitiveTokens.motion.duration.fast / 2500,
     },
   },
 };
@@ -43,15 +44,11 @@ const itemVariants: Variants = {
 
 // Ghibli Parchment Paper Card
 const GhibliPaperCard = styled(motion.div)(({ theme }) => ({
-  background: "#FAF3E0", // 古紙色
-  backgroundImage:
-    "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.2) 0%, transparent 100%)",
-  borderRadius: "24px",
-  border: "2px solid #5D4037", // 深木棕
-  boxShadow: `
-    0 10px 30px rgba(0, 0, 0, 0.2),
-    inset 0 0 60px rgba(139, 115, 85, 0.1)
-  `,
+  background: semanticTokens.auth.surface, // 古紙色
+  backgroundImage: semanticTokens.auth.paperHighlight,
+  borderRadius: primitiveTokens.radius.xl + primitiveTokens.spacing.xs,
+  border: `2px solid ${semanticTokens.auth.text}`, // 深木棕
+  boxShadow: primitiveTokens.shadow.authCard,
   padding: theme.spacing(6),
   width: "100%",
   maxWidth: "420px",
@@ -59,7 +56,7 @@ const GhibliPaperCard = styled(motion.div)(({ theme }) => ({
   flexDirection: "column",
   alignItems: "center",
   position: "relative",
-  zIndex: 2,
+  zIndex: primitiveTokens.layer.raised,
 
   // 封蠟裝飾 (Wax Seal Shorthand)
   "&::before": {
@@ -70,11 +67,11 @@ const GhibliPaperCard = styled(motion.div)(({ theme }) => ({
     transform: "translateX(-50%)",
     width: "50px",
     height: "50px",
-    background: "#B22222", // 火漆紅
+    background: semanticTokens.auth.wax, // 火漆紅
     borderRadius: "50%",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(0,0,0,0.2)",
-    border: "4px solid #A52A2A",
-    zIndex: 3,
+    boxShadow: primitiveTokens.shadow.authSeal,
+    border: `4px solid ${semanticTokens.auth.waxBorder}`,
+    zIndex: primitiveTokens.layer.raised + 1,
   },
 
   [theme.breakpoints.down("sm")]: {
@@ -86,34 +83,37 @@ const GhibliPaperCard = styled(motion.div)(({ theme }) => ({
 // Hand-drawn TextField
 const HanddrawnTextField = styled(TextField)(() => ({
   "& .MuiOutlinedInput-root": {
-    borderRadius: "8px",
-    backgroundColor: "rgba(255, 255, 255, 0.4)",
-    transition: "all 0.3s ease",
+    borderRadius: primitiveTokens.radius.sm,
+    backgroundColor: semanticTokens.auth.field,
+    transition: [
+      `background-color ${primitiveTokens.motion.duration.standard}ms ${primitiveTokens.motion.easing.standard}`,
+      `border-color ${primitiveTokens.motion.duration.standard}ms ${primitiveTokens.motion.easing.standard}`,
+    ].join(", "),
     "& fieldset": {
-      borderColor: "#8B7355", // 暖土棕
+      borderColor: semanticTokens.auth.textMuted, // 暖土棕
       borderWidth: "1.5px",
     },
     "&:hover fieldset": {
-      borderColor: "#5D4037",
+      borderColor: semanticTokens.auth.text,
     },
     "&.Mui-focused fieldset": {
-      borderColor: "#3D5A45", // 林綠
+      borderColor: semanticTokens.auth.primary, // 林綠
       borderWidth: "2px",
     },
     "&.Mui-focused": {
-      backgroundColor: "white",
+      backgroundColor: semanticTokens.auth.fieldFocus,
     },
   },
   "& .MuiInputLabel-root": {
-    color: "#8B7355",
+    color: semanticTokens.auth.textMuted,
     fontWeight: 600,
   },
   "& .MuiInputLabel-root.Mui-focused": {
-    color: "#3D5A45",
+    color: semanticTokens.auth.primary,
   },
   "& input": {
     padding: "14px 16px",
-    color: "#5D4037",
+    color: semanticTokens.auth.text,
     fontWeight: 600,
   },
 }));
@@ -122,22 +122,26 @@ const ForestButton = styled(motion.button)(() => ({
   width: "100%",
   padding: "14px",
   borderRadius: "12px",
-  border: "2px solid #2D4A35",
-  background: "#3D5A45",
-  color: "#F1E5AC", // 暖奶油黃字
+  border: `2px solid ${semanticTokens.auth.primaryStrong}`,
+  background: semanticTokens.auth.primary,
+  color: semanticTokens.auth.onPrimary, // 暖奶油黃字
   fontWeight: 800,
   fontSize: "1rem",
   cursor: "pointer",
-  boxShadow: "0 4px 0 #2D4A35",
-  transition: "all 0.1s ease",
+  boxShadow: `0 4px 0 ${semanticTokens.auth.primaryStrong}`,
+  transition: [
+    `transform ${primitiveTokens.motion.duration.fast}ms ${primitiveTokens.motion.easing.standard}`,
+    `box-shadow ${primitiveTokens.motion.duration.fast}ms ${primitiveTokens.motion.easing.standard}`,
+  ].join(", "),
+  "@media (prefers-reduced-motion: reduce)": { transition: "none" },
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
   "&:disabled": {
-    background: "#A8B5AA",
-    border: "2px solid #8A968C",
+    background: semanticTokens.auth.disabledSurface,
+    border: `2px solid ${semanticTokens.auth.disabledBorder}`,
     boxShadow: "none",
-    color: "#E0E0E0",
+    color: semanticTokens.auth.disabledText,
   },
 }));
 
@@ -206,12 +210,12 @@ const Content = () => {
               height: "64px",
               margin: "0 auto 12px",
               borderRadius: "50%",
-              background: "#F1E5AC",
-              border: "2px solid #5D4037",
+              background: semanticTokens.auth.onPrimary,
+              border: `2px solid ${semanticTokens.auth.text}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+              boxShadow: primitiveTokens.shadow.authLogo,
             }}
           >
             <img
@@ -226,13 +230,13 @@ const Content = () => {
           <Typography
             variant="h5"
             fontWeight="900"
-            sx={{ color: "#5D4037", letterSpacing: "-0.5px", mb: 0.5 }}
+            sx={{ color: semanticTokens.auth.text, letterSpacing: "-0.5px", mb: 0.5 }}
           >
             {t("Pages.Login.welcomeBack")}
           </Typography>
           <Typography
             variant="body2"
-            sx={{ color: "#8B7355", fontWeight: 700, fontStyle: "italic" }}
+            sx={{ color: semanticTokens.auth.textMuted, fontWeight: 700, fontStyle: "italic" }}
           >
             {t("Pages.Login.enterCredentials")}
           </Typography>
@@ -253,11 +257,11 @@ const Content = () => {
             sx={{
               mb: 2,
               borderRadius: "12px",
-              backgroundColor: "#FFF1EB",
-              color: "#A52A2A",
-              border: "1px solid #A52A2A",
+              backgroundColor: semanticTokens.auth.dangerSurface,
+              color: semanticTokens.auth.danger,
+              border: `1px solid ${semanticTokens.auth.danger}`,
               fontWeight: 700,
-              "& .MuiAlert-icon": { color: "#A52A2A" },
+              "& .MuiAlert-icon": { color: semanticTokens.auth.danger },
             }}
             onClose={() => setErrorMsg("")}
           >
@@ -313,15 +317,15 @@ const Content = () => {
                 sx={{
                   padding: 0,
                   marginRight: 1,
-                  color: "#8B7355",
+                  color: semanticTokens.auth.textMuted,
                   "&.Mui-checked": {
-                    color: "#3D5A45",
+                    color: semanticTokens.auth.primary,
                   },
                 }}
               />
               <Typography
                 variant="body2"
-                sx={{ color: "#8B7355", fontWeight: 700, userSelect: "none" }}
+                sx={{ color: semanticTokens.auth.textMuted, fontWeight: 700, userSelect: "none" }}
               >
                 {t("Pages.Login.rememberMe")}
               </Typography>
@@ -332,7 +336,6 @@ const Content = () => {
         <motion.div variants={itemVariants}>
           <ForestButton
             type="submit"
-            onClick={signIn}
             disabled={loading || !email || !password}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98, translateY: 2 }}
@@ -343,14 +346,14 @@ const Content = () => {
 
         <motion.div variants={itemVariants}>
           <Box my={3.5} display="flex" alignItems="center">
-            <Divider sx={{ flex: 1, borderColor: "#D2B48C" }} />
+            <Divider sx={{ flex: 1, borderColor: semanticTokens.auth.border }} />
             <Typography
               variant="caption"
-              sx={{ color: "#8B7355", mx: 2, fontWeight: 900 }}
+              sx={{ color: semanticTokens.auth.textMuted, mx: 2, fontWeight: 900 }}
             >
               {t("Pages.Login.or").toUpperCase()}
             </Typography>
-            <Divider sx={{ flex: 1, borderColor: "#D2B48C" }} />
+            <Divider sx={{ flex: 1, borderColor: semanticTokens.auth.border }} />
           </Box>
         </motion.div>
 
@@ -364,12 +367,12 @@ const Content = () => {
               fullWidth
               sx={{
                 py: 1,
-                color: "#5D4037",
+                color: semanticTokens.auth.text,
                 borderRadius: "12px",
                 fontWeight: 800,
                 textDecoration: "underline",
                 "&:hover": {
-                  background: "rgba(93, 64, 55, 0.05)",
+                  background: semanticTokens.auth.surfaceTint,
                 },
               }}
             >

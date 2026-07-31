@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../../theme";
 import {
   Add as AddIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -151,7 +152,7 @@ export default function Header({
               sx={{
                 background: "rgba(61, 90, 69, 0.15)",
                 backdropFilter: "blur(4px)",
-                color: "#3D5A45",
+                color: semanticTokens.app.primary,
                 "&:hover": { background: "rgba(61, 90, 69, 0.25)" },
               }}
             >
@@ -184,7 +185,7 @@ export default function Header({
               sx={{
                 background: "rgba(61, 90, 69, 0.15)",
                 backdropFilter: "blur(4px)",
-                color: "#3D5A45",
+                color: semanticTokens.app.primary,
                 "&:hover": { background: "rgba(61, 90, 69, 0.25)" },
               }}
             >

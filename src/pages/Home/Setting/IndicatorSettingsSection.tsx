@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import { Box, Grid, styled, Typography } from "@mui/material";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
 import StyledListSubheader from "./StyledListSubheader";
@@ -18,7 +19,7 @@ const SettingGridItem = styled(Box)(({ theme }) => ({
   },
   "&:focus-within": {
     background: "rgba(93, 64, 55, 0.1)",
-    border: "2px solid #3D5A45",
+    border: `2px solid ${semanticTokens.app.primary}`,
   },
 }));
 
@@ -38,9 +39,9 @@ const StyledInput = styled("input")({
 });
 
 const ResetButton = styled("button")({
-  background: "#3D5A45",
+  background: semanticTokens.app.primary,
   border: "2px solid #2D4A35",
-  color: "#F1E5AC",
+  color: semanticTokens.app.onPrimary,
   borderRadius: "8px",
   padding: "4px 12px",
   fontSize: "0.75rem",

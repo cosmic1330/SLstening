@@ -1,10 +1,6 @@
-import {
-  createTheme,
-  Box,
-  styled,
-  ThemeProvider,
-} from "@mui/material";
+import { Box, styled, ThemeProvider } from "@mui/material";
 import Version from "../../components/Version";
+import { authTheme, primitiveTokens } from "../../theme";
 import Content from "./Content";
 
 const Container = styled(Box)`
@@ -31,44 +27,13 @@ const Container = styled(Box)`
 
 const Register = () => {
   return (
-    <ThemeProvider
-      theme={createTheme({
-        palette: {
-          mode: "light",
-          primary: {
-            main: "#3D5A45", // 林綠色
-          },
-          secondary: {
-            main: "#D2691E", // 磚紅色
-          },
-        },
-        typography: {
-          fontFamily: '"Outfit", "Inter", -apple-system, sans-serif',
-        },
-        components: {
-          MuiButton: {
-            styleOverrides: {
-              root: {
-                borderRadius: "8px",
-                textTransform: "none",
-                fontWeight: 700,
-                boxShadow: "0 4px 0 rgba(0,0,0,0.1)",
-                "&:hover": {
-                  boxShadow: "0 2px 0 rgba(0,0,0,0.1)",
-                  transform: "translateY(2px)",
-                },
-              },
-            },
-          },
-        },
-      })}
-    >
+    <ThemeProvider theme={authTheme}>
       <Container>
-        <Box sx={{ position: "relative", zIndex: 10, width: "100%", display: "flex", justifyContent: "center" }}>
+        <Box sx={{ position: "relative", zIndex: primitiveTokens.layer.raised, width: "100%", display: "flex", justifyContent: "center" }}>
           <Content />
         </Box>
         
-        <Box sx={{ position: "absolute", bottom: 24, width: "100%", textAlign: "center", zIndex: 11 }}>
+        <Box sx={{ position: "absolute", bottom: 24, width: "100%", textAlign: "center", zIndex: primitiveTokens.layer.raised + 1 }}>
           <Version />
         </Box>
       </Container>

@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../../theme";
 import { Delete as DeleteIcon, Edit as EditIcon } from "@mui/icons-material";
 import {
   Button,
@@ -104,15 +105,15 @@ export default function ManageDialogs({
             onClick={handleCreate}
             variant="contained"
             sx={{
-              background: "#3D5A45", // 森林綠
-              color: "#F1E5AC",
+              background: semanticTokens.app.primary, // 森林綠
+              color: semanticTokens.app.onPrimary,
               borderRadius: "12px",
               px: 4,
               fontWeight: 900,
               border: "2px solid #2D4A35",
               boxShadow: "0 4px 0 #2D4A35",
               "&:hover": { 
-                background: "#3D5A45",
+                background: semanticTokens.app.primary,
                 transform: "translateY(2px)",
                 boxShadow: "0 2px 0 #2D4A35",
               },
@@ -149,7 +150,7 @@ export default function ManageDialogs({
                   <IconButton
                     edge="end"
                     onClick={() => onRemoveCategory(c.id)}
-                    sx={{ color: "#D2691E" }}
+                    sx={{ color: semanticTokens.app.accent }}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>

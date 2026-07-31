@@ -1,6 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { Box, createTheme, styled, ThemeProvider } from "@mui/material";
+import { Box, styled, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import React, {
@@ -18,6 +18,7 @@ import { DealsContext } from "../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../types";
 import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
 import formatDateTime from "../../utils/formatDateTime";
+import { analysisTheme, semanticTokens } from "../../theme";
 import GlassBar from "./GlassBar";
 const PageContainer = styled(Box)`
   width: 100vw;
@@ -26,7 +27,7 @@ const PageContainer = styled(Box)`
   position: relative;
   display: flex;
   flex-direction: column;
-  background-color: #0f1214;
+  background-color: ${semanticTokens.analysis.canvas};
   background-image:
     radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
     radial-gradient(at 50% 0%, hsla(225, 39%, 25%, 1) 0, transparent 50%),
@@ -46,37 +47,6 @@ const ChartViewport = styled(Box)`
   min-height: 0;
   overflow: hidden;
 `;
-
-// --- Styled Components ---
-
-// Create a dark theme instance
-const darkTheme = createTheme({
-  palette: {
-    mode: "dark",
-    primary: {
-      main: "#90caf9",
-    },
-    background: {
-      default: "transparent",
-      paper: "rgba(30, 30, 40, 0.6)",
-    },
-    text: {
-      primary: "#ffffff",
-      secondary: "rgba(255, 255, 255, 0.7)",
-    },
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          backgroundColor: "rgba(30, 30, 40, 0.6)",
-          backdropFilter: "blur(12px)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-        },
-      },
-    },
-  },
-});
 
 import { CHART_CONFIG } from "./constants/chartConfig";
 
@@ -262,7 +232,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
   }, [historyData, perd]);
 
   return (
-    <ThemeProvider theme={darkTheme}>
+    <ThemeProvider theme={analysisTheme}>
       <PageContainer>
         <DealsContext.Provider value={deals}>
           <ChartViewport>

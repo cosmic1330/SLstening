@@ -61,10 +61,16 @@
         "title": "籌碼面",
         "summary": "籌碼判讀摘要",
         "score": "籌碼分數",
+        "confidence": {
+          "label": "資料可信度",
+          "high": "高",
+          "medium": "中"
+        },
         "loading": "正在整理盤後籌碼…",
         "retry": "重試",
         "error": "暫時無法取得籌碼資料，請稍後再試。",
         "twOnly": "籌碼資料目前只支援台灣股票。",
+        "trendEmpty": "尚無足夠的 20 日資料可繪製趨勢。",
         "tabs": {
           "label": "籌碼資訊分類",
           "overview": "概覽",

@@ -13,7 +13,7 @@ import { info } from "@tauri-apps/plugin-log";
 import { memo, useEffect, useMemo, useState } from "react";
 import { STOCK_BOX_HEIGHT } from "../../../components/StockBox";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
-import useWindowSize from "../../../hooks/useWindowSize";
+import useElementHeight from "../../../hooks/useElementHeight";
 import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
 import useStocksStore from "../../../store/Stock.store";
 import { FutureIds } from "../../../types";
@@ -181,7 +181,8 @@ const DashboardHeader = memo(
 function List() {
   const { stocks = [], reload } = useStocksStore();
   const visibility = useShowMarketInfo();
-  const { height: windowHeight } = useWindowSize();
+  const { ref: listContainerRef, height: listHeight } =
+    useElementHeight<HTMLDivElement>();
   const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
@@ -257,16 +258,19 @@ function List() {
       maxWidth="xl"
       disableGutters
       sx={{ 
-        height: "100vh", 
+        height: "100%",
         display: "flex", 
         flexDirection: "column",
         overflow: "hidden" 
       }}
     >
-      <Box sx={{ flex: 1, minHeight: 0, position: "relative" }}>
+      <Box
+        ref={listContainerRef}
+        sx={{ flex: 1, minHeight: 0, position: "relative" }}
+      >
         <VirtualizedStockList
           stocks={stocks}
-          height={windowHeight - 80}
+          height={listHeight}
           itemHeight={STOCK_BOX_HEIGHT}
           header={dashboardHeader}
         />

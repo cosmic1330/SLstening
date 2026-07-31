@@ -61,10 +61,16 @@
         "title": "Positioning",
         "summary": "Positioning summary",
         "score": "Positioning score",
+        "confidence": {
+          "label": "Data confidence",
+          "high": "High",
+          "medium": "Medium"
+        },
         "loading": "Loading end-of-day positioning…",
         "retry": "Retry",
         "error": "Positioning data is temporarily unavailable. Please try again later.",
         "twOnly": "Positioning data currently supports Taiwan stocks only.",
+        "trendEmpty": "There is not enough 20-day data to draw the trend yet.",
         "tabs": {
           "label": "Positioning views",
           "overview": "Overview",

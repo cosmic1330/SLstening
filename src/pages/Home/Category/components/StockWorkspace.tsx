@@ -6,7 +6,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { STOCK_BOX_HEIGHT } from "../../../../components/StockBox";
 import LazyStockBox from "../../../../components/StockBox/LazyStockBox";
 import VirtualizedStockList from "../../../../components/VirtualizedStockList";
-import useWindowSize from "../../../../hooks/useWindowSize";
+import useElementHeight from "../../../../hooks/useElementHeight";
 import { StockStoreType } from "../../../../types";
 
 interface StockWorkspaceProps {
@@ -22,14 +22,15 @@ export default function StockWorkspace({
   onRemoveStock,
   header,
 }: StockWorkspaceProps) {
-  const { height: windowHeight } = useWindowSize();
+  const { ref: workspaceRef, height: workspaceHeight } =
+    useElementHeight<HTMLDivElement>();
   return (
-    <Box sx={{ width: "100%", height: "100%" }}>
+    <Box ref={workspaceRef} sx={{ width: "100%", height: "100%" }}>
       {hasCategory ? (
         stocks.length > 0 ? (
           <VirtualizedStockList
             stocks={stocks}
-            height={windowHeight}
+            height={workspaceHeight}
             itemHeight={STOCK_BOX_HEIGHT}
             header={header}
             renderItem={(stock) => (

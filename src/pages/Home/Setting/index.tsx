@@ -1,3 +1,4 @@
+import { semanticTokens } from "../../../theme";
 import {
   ArrowBackIosNew as ArrowBackIcon,
   BugReport as BugReportIcon,
@@ -53,7 +54,7 @@ const VERSION = pkg.version || "0.1.0";
 
 const PageContainer = styled(Box)`
   width: 100%;
-  height: 100vh;
+  height: 100%;
   overflow: auto;
   position: relative;
   background: #fdf8f2;
@@ -259,9 +260,9 @@ function Setting() {
   }, [deleteSelectedStocks, removeStocks]);
 
   const switchStyles = {
-    "& .MuiSwitch-switchBase.Mui-checked": { color: "#3D5A45" },
+    "& .MuiSwitch-switchBase.Mui-checked": { color: semanticTokens.app.primary },
     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-      backgroundColor: "#3D5A45",
+      backgroundColor: semanticTokens.app.primary,
     },
   };
 
@@ -311,13 +312,13 @@ function Setting() {
                   disabled={disable}
                   sx={{
                     borderRadius: "10px",
-                    borderColor: "#3D5A45",
-                    color: "#3D5A45",
+                    borderColor: semanticTokens.app.primary,
+                    color: semanticTokens.app.primary,
                     fontWeight: 800,
                     borderWidth: "2px",
                     "&:hover": {
                       borderWidth: "2px",
-                      borderColor: "#3D5A45",
+                      borderColor: semanticTokens.app.primary,
                       background: "rgba(61, 90, 69, 0.05)",
                     },
                   }}
@@ -335,7 +336,7 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <SyncIcon sx={{ color: "#3D5A45" }} />
+                <SyncIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
                 primary="同步Schoice自選股票"
@@ -355,13 +356,13 @@ function Setting() {
                   disabled={syncLoading}
                   sx={{
                     borderRadius: "10px",
-                    borderColor: "#3D5A45",
-                    color: "#3D5A45",
+                    borderColor: semanticTokens.app.primary,
+                    color: semanticTokens.app.primary,
                     fontWeight: 800,
                     borderWidth: "2px",
                     "&:hover": {
                       borderWidth: "2px",
-                      borderColor: "#3D5A45",
+                      borderColor: semanticTokens.app.primary,
                       background: "rgba(61, 90, 69, 0.05)",
                     },
                   }}
@@ -418,12 +419,12 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <ResetIcon sx={{ color: "#D2691E" }} />
+                <ResetIcon sx={{ color: semanticTokens.app.accent }} />
               </ListItemIcon>
               <ListItemText
                 primary="回到原廠設定"
                 secondary="清除快取並重設資料庫"
-                primaryTypographyProps={{ fontWeight: 800, color: "#D2691E" }}
+                primaryTypographyProps={{ fontWeight: 800, color: semanticTokens.app.accent }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
                   fontSize: "0.75rem",
@@ -472,7 +473,7 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <ChartIcon sx={{ color: "#3D5A45" }} />
+                <ChartIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
                 primary="卡片圖表顯示"
@@ -489,7 +490,7 @@ function Setting() {
                   <Typography
                     variant="caption"
                     sx={{
-                      color: "#3D5A45",
+                      color: semanticTokens.app.primary,
                       fontWeight: 700,
                     }}
                   >
@@ -510,7 +511,7 @@ function Setting() {
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
-                <SettingsIcon sx={{ color: "#3D5A45" }} />
+                <SettingsIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
                 primary="顯示大盤資訊"
@@ -670,7 +671,7 @@ function Setting() {
                   onChange={handleToggleSelectAll}
                   sx={{
                     color: "#8B7355",
-                    "&.Mui-checked": { color: "#3D5A45" },
+                    "&.Mui-checked": { color: semanticTokens.app.primary },
                   }}
                 />
               }
@@ -695,7 +696,7 @@ function Setting() {
                     aria-label="delete"
                     size="small"
                     onClick={() => handleDeleteCloudStock(stock.id, stock.name)}
-                    sx={{ color: "#D2691E" }}
+                    sx={{ color: semanticTokens.app.accent }}
                   >
                     <DeleteOutlineIcon fontSize="small" />
                   </IconButton>
@@ -709,7 +710,7 @@ function Setting() {
                       onChange={() => handleToggleStock(stock.id)}
                       sx={{
                         color: "#8B7355",
-                        "&.Mui-checked": { color: "#3D5A45" },
+                        "&.Mui-checked": { color: semanticTokens.app.primary },
                       }}
                     />
                   }
@@ -744,13 +745,13 @@ function Setting() {
             disabled={selectedStocks.length === 0}
             sx={{
               borderRadius: "12px",
-              background: "#3D5A45",
-              color: "#F1E5AC",
+              background: semanticTokens.app.primary,
+              color: semanticTokens.app.onPrimary,
               fontWeight: 900,
               border: "2px solid #2D4A35",
               boxShadow: "0 4px 0 #2D4A35",
               "&:hover": {
-                background: "#3D5A45",
+                background: semanticTokens.app.primary,
                 transform: "translateY(2px)",
                 boxShadow: "0 2px 0 #2D4A35",
               },

@@ -6,9 +6,10 @@ import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
 import useMarketDataStore from "../store/MarketData.store";
 import { TaType } from "../types";
-import { isTaiwanMarketOpen } from "../utils/marketUtils";
 import { IndicatorsDateTimeType } from "../utils/analyzeIndicatorsData";
 import formatDateTime from "../utils/formatDateTime";
+import { deriveMarketResourceState } from "../utils/marketResourceState";
+import { useDocumentVisibility, useFreshnessNow, useMarketSession } from "./useMarketSession";
 
 const TICK_STALE_AFTER_MS = 30_000;
 
@@ -25,6 +26,7 @@ export default function useConditionalDeals(
 ) {
   const fetchTick = options?.fetchTick ?? true;
   const fetchHistory = options?.fetchHistory ?? true;
+  const documentVisible = useDocumentVisibility();
 
   // 實作可見性防抖，防止快速滑過時產生大量請求
   const [debouncedIsVisible, setDebouncedIsVisible] = useState(false);
@@ -42,12 +44,10 @@ export default function useConditionalDeals(
 
   // 決定是否應該啟動獲取邏輯：必須啟用、可見、且視窗處於焦點
   const shouldFetch =
-    enabled &&
-    debouncedIsVisible &&
-    typeof window !== "undefined" &&
-    document.visibilityState === "visible";
+    enabled && debouncedIsVisible && documentVisible;
 
-  const isMarketOpen = isTaiwanMarketOpen();
+  const marketSession = useMarketSession(id);
+  const isMarketOpen = marketSession === "open";
   const shouldMonitorTick = shouldFetch && fetchTick && isMarketOpen;
   const tickDeals = useMarketDataStore((state) => state.getTick(id));
   const lastTickUpdatedAt = useMarketDataStore((state) =>
@@ -78,11 +78,12 @@ export default function useConditionalDeals(
     return () => window.clearTimeout(timeoutId);
   }, [id, lastTickUpdatedAt, shouldMonitorTick]);
 
-  const shouldFetchTick = shouldMonitorTick && isTickStale;
+  // A cold launch needs one snapshot even after close; only poll/fallback while open.
+  const shouldFetchTick = shouldFetch && fetchTick && (!tickDeals || (shouldMonitorTick && isTickStale));
   const shouldFetchHistory = shouldFetch && fetchHistory;
 
   // --- Tick 資料 (即時價格與成交明細) ---
-  useSWR(
+  const tickSWR = useSWR(
     shouldFetchTick ? `market/tick/${id}` : null,
     async () => {
       console.log(`📡 [SWR Fetch] 真正發送 IPC 請求拉取 [TICK] 報價: ${id}`);
@@ -97,12 +98,13 @@ export default function useConditionalDeals(
       revalidateOnFocus: false,
       revalidateIfStale: true,
       dedupingInterval: 15000, // 15秒內避免重複請求
-      refreshInterval: TICK_STALE_AFTER_MS,
+      refreshInterval: isMarketOpen ? TICK_STALE_AFTER_MS : 0,
     },
   );
 
   // --- Daily 資料 (日 K 線與技術指標) ---
-  const { data: historyData } = useSWR(
+  const [historyUpdatedAt, setHistoryUpdatedAt] = useState<number>();
+  const historySWR = useSWR(
     shouldFetchHistory ? `market/history/${id}` : null,
     async () => {
       console.log(`📈 [SWR Fetch] 真正發送 IPC 請求拉取 [HISTORY] 日K: ${id}`);
@@ -114,8 +116,10 @@ export default function useConditionalDeals(
       revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
       dedupingInterval: isMarketOpen ? 15000 : 300000, // 盤中快取15秒以利20秒更新；盤後快取5分鐘
       refreshInterval: isMarketOpen ? 20000 : 0, // 盤中每 20 秒輪詢一次最新資料，盤後不輪詢
+      onSuccess: () => setHistoryUpdatedAt(Date.now()),
     },
   );
+  const { data: historyData } = historySWR;
 
   // 追蹤活躍執行個體 (Debug 用)
   useEffect(() => {
@@ -159,5 +163,33 @@ export default function useConditionalDeals(
     return rawName;
   }, [historyData, tickDeals]);
 
-  return { deals, name, tickDeals };
+  const tickNow = useFreshnessNow(lastTickUpdatedAt, TICK_STALE_AFTER_MS, marketSession);
+  const historyNow = useFreshnessNow(historyUpdatedAt, 30_000, marketSession);
+  const effectiveTickError = tickSWR.error && (!lastTickUpdatedAt || isTickStale) ? tickSWR.error : undefined;
+  const tickState = useMemo(() => deriveMarketResourceState({
+    enabled: shouldFetch && fetchTick,
+    hasData: Boolean(tickDeals),
+    resolved: tickSWR.data !== undefined,
+    isLoading: tickSWR.isLoading,
+    isValidating: tickSWR.isValidating,
+    error: effectiveTickError,
+    updatedAt: lastTickUpdatedAt,
+    marketSession,
+    staleAfterMs: TICK_STALE_AFTER_MS,
+    now: tickNow,
+  }), [shouldFetch, fetchTick, tickDeals, tickSWR.data, tickSWR.isLoading, tickSWR.isValidating, effectiveTickError, lastTickUpdatedAt, marketSession, tickNow]);
+  const historyState = useMemo(() => deriveMarketResourceState({
+    enabled: shouldFetch && fetchHistory,
+    hasData: deals.length > 0,
+    resolved: historyData !== undefined,
+    isLoading: historySWR.isLoading,
+    isValidating: historySWR.isValidating,
+    error: historySWR.error,
+    updatedAt: historyUpdatedAt,
+    marketSession,
+    staleAfterMs: 30_000,
+    now: historyNow,
+  }), [shouldFetch, fetchHistory, deals.length, historyData, historySWR.isLoading, historySWR.isValidating, historySWR.error, historyUpdatedAt, marketSession, historyNow]);
+
+  return { deals, name, tickDeals, tickState, historyState, retryTick: tickSWR.mutate, retryHistory: historySWR.mutate };
 }

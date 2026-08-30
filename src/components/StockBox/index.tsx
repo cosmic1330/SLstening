@@ -14,6 +14,7 @@ import {
 import { open } from "@tauri-apps/plugin-shell";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
 import useMaDeduction from "../../hooks/useMaDeduction";
@@ -29,6 +30,8 @@ import VolumeRatio from "./Items/VolumeRatio";
 import StockTickChart from "./StockTickChart";
 import MakChart from "../CommonChart/MakChart";
 import useUIStore from "../../store/UI.store";
+import MarketDataStatus from "../MarketDataStatus";
+import { hasSamples, hasVolumeBaseline } from "../../utils/marketMetrics";
 
 // Constants
 export const STOCK_BOX_HEIGHT = 280;
@@ -112,6 +115,7 @@ export default function StockBox({
   const containerRef = useRef<HTMLDivElement>(null);
   const isComponentVisible = isVisible ?? true;
   const [isHovered, setIsHovered] = useState(false);
+  const { t } = useTranslation();
   const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
 
   // Data Hooks
@@ -119,13 +123,15 @@ export default function StockBox({
   const fetchHistory = stockBoxChartType === "mak";
 
   useMarketSubscriber(stock.id, enabled && fetchTick, isComponentVisible);
-  const { deals, name, tickDeals: storedTickDeals } = useConditionalDeals(
+  const { deals, name, tickDeals: storedTickDeals, tickState, historyState, retryTick, retryHistory } = useConditionalDeals(
     stock.id,
     enabled,
     isComponentVisible,
     { fetchTick, fetchHistory }
   );
   const tickDeals = fetchTick ? storedTickDeals || null : null;
+  const activeState = stockBoxChartType === "tick" ? tickState : historyState;
+  const retry = stockBoxChartType === "tick" ? retryTick : retryHistory;
 
   // Indicators
   const maData = useMaDeduction(deals);
@@ -139,18 +145,18 @@ export default function StockBox({
 
   const priceInfo = useMemo(() => {
     const lastPrice =
-      tickDeals?.price || (deals.length > 0 ? deals[deals.length - 1].c : 0);
+      tickDeals?.price ?? (deals.length > 0 ? deals[deals.length - 1].c : null);
     const percent =
-      tickDeals?.changePercent ||
+      tickDeals?.changePercent ??
       (deals.length >= 2
         ? Math.round(
-            ((lastPrice - deals[deals.length - 2].c) /
+              ((lastPrice! - deals[deals.length - 2].c) /
               deals[deals.length - 2].c) *
               10000,
           ) / 100
-        : 0);
-    const isUp = percent > 0;
-    const isDown = percent < 0;
+        : null);
+    const isUp = (percent ?? 0) > 0;
+    const isDown = (percent ?? 0) < 0;
     const mainColor = isUp ? COLORS.up : isDown ? COLORS.down : COLORS.neutral;
 
     return { lastPrice, percent, isUp, isDown, mainColor };
@@ -298,7 +304,7 @@ export default function StockBox({
                 lineHeight: 1,
               }}
             >
-              {priceInfo.lastPrice}
+              {priceInfo.lastPrice ?? "—"}
             </Typography>
             <Stack
               direction="row"
@@ -313,8 +319,7 @@ export default function StockBox({
                   color: priceInfo.mainColor,
                 }}
               >
-                {priceInfo.percent > 0 ? "+" : ""}
-                {priceInfo.percent}%
+                {priceInfo.percent === null ? "—" : `${priceInfo.percent > 0 ? "+" : ""}${priceInfo.percent}%`}
               </Typography>
             </Stack>
           </Box>
@@ -323,35 +328,42 @@ export default function StockBox({
         {/* Indicators Grid - More Compact */}
         <Box sx={{ mt: 1.5 }}>
           <Grid container spacing={1}>
-            {stockBoxChartType === "mak" && (
+            {stockBoxChartType === "mak" && activeState.phase === "ready" && (
               <>
+                {(!hasSamples(deals, 20) || !hasVolumeBaseline(deals)) && (
+                  <Grid size={{ xs: 12 }}>
+                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                      {t("marketData.insufficient")}
+                    </Typography>
+                  </Grid>
+                )}
                 <Grid size={{ xs: 4 }}>
                   <MetricTag>
-                    <Ma5 lastPrice={priceInfo.lastPrice} {...maData} />
+                    {hasSamples(deals, 5) ? <Ma5 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA5 · —</Typography>}
                   </MetricTag>
                 </Grid>
                 <Grid size={{ xs: 4 }}>
                   <MetricTag>
-                    <Ma10 lastPrice={priceInfo.lastPrice} {...maData} />
+                    {hasSamples(deals, 10) ? <Ma10 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA10 · —</Typography>}
                   </MetricTag>
                 </Grid>
                 <Grid size={{ xs: 4 }}>
                   <MetricTag>
-                    <Ma20 lastPrice={priceInfo.lastPrice} {...maData} />
+                    {hasSamples(deals, 20) ? <Ma20 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA20 · —</Typography>}
                   </MetricTag>
                 </Grid>
                 <Grid size={{ xs: 12 }}>
                   <MetricTag>
-                    <VolumeRatio {...volumeInfo} />
+                    {hasVolumeBaseline(deals) ? <VolumeRatio {...volumeInfo} /> : <Typography variant="caption">Vol · —</Typography>}
                   </MetricTag>
                 </Grid>
               </>
             )}
-            {stockBoxChartType === "tick" && (
+            {stockBoxChartType === "tick" && activeState.phase === "ready" && (
               <Grid size={{ xs: 12 }}>
                 <MetricTag>
                   <AvgPrice
-                    lastPrice={priceInfo.lastPrice}
+                    lastPrice={priceInfo.lastPrice ?? 0}
                     tickDeals={tickDeals}
                   />
                 </MetricTag>
@@ -378,40 +390,11 @@ export default function StockBox({
              <Box sx={{ width: "100%", height: "100%", overflow: "hidden", pb: 0.5 }}>
                <MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip />
              </Box>
-          ) : (
-            <Box
-              sx={{
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: 0.2,
-              }}
-            >
-              <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>
-                LOADING
-              </Typography>
-            </Box>
-          )
+          ) : <MarketDataStatus state={activeState} retry={retry} compact />
         ) : tickDeals ? (
           <StockTickChart tickDeals={tickDeals} />
-        ) : (
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: 0.2,
-            }}
-          >
-            <Typography sx={{ fontSize: "9px", fontWeight: 900 }}>
-              LOADING
-            </Typography>
-          </Box>
-        )}
+        ) : <MarketDataStatus state={activeState} retry={retry} compact />}
+        {activeState.phase === "ready" && <MarketDataStatus state={activeState} retry={retry} compact overlay />}
       </Box>
     </StyledCard>
   );

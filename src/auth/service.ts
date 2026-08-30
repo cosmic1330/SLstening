@@ -40,16 +40,41 @@ export function parseOAuthCallback(rawUrl: string): OAuthCallback {
   }
 }
 
-const exchangedCallbackUrls = new Set<string>();
+const inFlightExchanges = new Map<string, Promise<OAuthCallback>>();
+const completedExchangeCodes = new Set<string>();
+const MAX_EXCHANGED_CODES = 32;
 
 export async function exchangeOAuthCallback(client: SupabaseClient, rawUrl: string) {
   const callback = parseOAuthCallback(rawUrl);
   if (callback.kind !== "code") return callback;
-  if (exchangedCallbackUrls.has(rawUrl)) return { kind: "invalid" } as OAuthCallback;
-
-  exchangedCallbackUrls.add(rawUrl);
-  const { error } = await client.auth.exchangeCodeForSession(callback.code);
-  return error ? ({ kind: "error" } as OAuthCallback) : callback;
+  if (completedExchangeCodes.has(callback.code)) return callback;
+  const existing = inFlightExchanges.get(callback.code);
+  if (existing) return existing;
+  let exchange: Promise<OAuthCallback>;
+  const removeInFlight = () => {
+    if (inFlightExchanges.get(callback.code) === exchange) inFlightExchanges.delete(callback.code);
+  };
+  exchange = Promise.resolve()
+    .then(() => client.auth.exchangeCodeForSession(callback.code))
+    .then(({ error }) => {
+      if (error) {
+        removeInFlight();
+        return { kind: "error" } as OAuthCallback;
+      }
+      completedExchangeCodes.delete(callback.code);
+      completedExchangeCodes.add(callback.code);
+      if (completedExchangeCodes.size > MAX_EXCHANGED_CODES) completedExchangeCodes.delete(completedExchangeCodes.values().next().value!);
+      return callback;
+    })
+    .catch(() => {
+      removeInFlight();
+      return { kind: "error" } as OAuthCallback;
+    })
+    .finally(() => {
+      if (inFlightExchanges.get(callback.code) === exchange) inFlightExchanges.delete(callback.code);
+    });
+  inFlightExchanges.set(callback.code, exchange);
+  return exchange;
 }
 
 export async function startGoogleOAuth(client: SupabaseClient) {

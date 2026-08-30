@@ -1,5 +1,31 @@
 {
+  "marketData": {
+    "loading": "Loading market data…",
+    "empty": "No market data is available.",
+    "error": "Market data could not be updated.",
+    "retry": "Retry",
+    "refreshing": "Refreshing…",
+    "stale": "Showing the last available data.",
+    "staleError": "Update failed. Showing the last available data.",
+    "closed": "Market closed"
+    ,"updated": "Updated {{time}}"
+    ,"insufficient": "Insufficient data"
+    ,"unavailable": "Unavailable"
+  },
   "Pages": {
+    "Auth": {
+      "retry": "Retry",
+      "sessionInitError": "Your saved session could not be checked. Please retry.",
+      "errors": {
+        "invalidCredentials": "Email or password is incorrect.",
+        "emailAlreadyRegistered": "This email address is already registered.",
+        "emailNotConfirmed": "Please confirm your email address before signing in.",
+        "oauthCancelled": "Google sign-in was cancelled. You can try again.",
+        "oauthFailed": "Google sign-in could not be completed. Please try again.",
+        "sessionUnavailable": "Sign-in did not create a session. Please try again.",
+        "generic": "Authentication could not be completed. Please try again."
+      }
+    },
     "Login": {
       "rememberMe": "Remember my email",
       "rememberEmailHint": "Only your email address is stored on this device.",

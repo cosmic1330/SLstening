@@ -10,6 +10,8 @@ interface UserContextType {
   isPaid: boolean;
   session: Session | null;
   isLoading: boolean;
+  initError: boolean;
+  retrySessionInitialization: () => void;
   oauthCallbackStatus: OAuthCallbackStatus;
 }
 
@@ -20,13 +22,21 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPaid, setIsPaid] = useState(false);
   const [oauthCallbackStatus, setOauthCallbackStatus] = useState<OAuthCallbackStatus>("idle");
+  const [initError, setInitError] = useState(false);
+  const [initializationAttempt, setInitializationAttempt] = useState(0);
 
   useEffect(() => {
     removeLegacyPasswordStorage();
     let active = true;
-    void supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+    void supabase.auth.getSession().then(({ data: { session: initialSession }, error }) => {
       if (active) {
         setSession(initialSession);
+        setInitError(Boolean(error));
+        setIsLoading(false);
+      }
+    }).catch(() => {
+      if (active) {
+        setInitError(true);
         setIsLoading(false);
       }
     });
@@ -40,6 +50,12 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       active = false;
       listener.subscription.unsubscribe();
     };
+  }, [initializationAttempt]);
+
+  const retrySessionInitialization = useCallback(() => {
+    setInitError(false);
+    setIsLoading(true);
+    setInitializationAttempt((attempt) => attempt + 1);
   }, []);
 
   useEffect(() => {
@@ -66,14 +82,18 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const handleOAuthUrl = useCallback(async (url: string) => {
     setOauthCallbackStatus("processing");
-    const result = await exchangeOAuthCallback(supabase, url);
-    setOauthCallbackStatus(result.kind === "code" ? "idle" : "error");
+    try {
+      const result = await exchangeOAuthCallback(supabase, url);
+      setOauthCallbackStatus(result.kind === "code" ? "idle" : "error");
+    } catch {
+      setOauthCallbackStatus("error");
+    }
   }, []);
 
   useTauriOAuthCallback(handleOAuthUrl);
 
   return (
-    <UserContext.Provider value={{ isPaid, session, isLoading, oauthCallbackStatus }}>
+    <UserContext.Provider value={{ isPaid, session, isLoading, initError, retrySessionInitialization, oauthCallbackStatus }}>
       {children}
     </UserContext.Provider>
   );

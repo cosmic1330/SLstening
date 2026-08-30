@@ -11,9 +11,10 @@ import {
 import { motion, Variants } from "framer-motion";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { authErrorKey } from "../../auth/errors";
+import { intendedDestination } from "../../auth/navigation";
 import { supabase } from "../../supabase";
-import translateError from "../../utils/translateError";
 import { primitiveTokens, semanticTokens } from "../../theme";
 
 // Animation Variants
@@ -148,6 +149,7 @@ function Content() {
   const [loading, setLoading] = useState(false);
   const [confirmationNeeded, setConfirmationNeeded] = useState(false);
   let navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -156,9 +158,7 @@ function Content() {
 
   const signUp = async () => {
     if (password !== confirmPassword) {
-      setErrorMsg(
-        t("Pages.Register.passwordMismatch") || "Passwords do not match!",
-      );
+      setErrorMsg(t("Pages.Register.passwordMismatch"));
       return;
     }
     setErrorMsg("");
@@ -170,14 +170,14 @@ function Content() {
       });
 
       if (signUpError) {
-        setErrorMsg(translateError(signUpError.message));
+        setErrorMsg(t(`Pages.Auth.errors.${authErrorKey(signUpError)}`));
       } else if (data.session) {
-        navigate("/dashboard");
+        navigate(intendedDestination(location.state), { replace: true });
       } else {
         setConfirmationNeeded(true);
       }
     } catch (e) {
-      setErrorMsg(translateError(e instanceof Error ? e.message : String(e)));
+      setErrorMsg(t(`Pages.Auth.errors.${authErrorKey(e)}`));
     }
     setLoading(false);
   };
@@ -319,7 +319,7 @@ function Content() {
                 textDecoration: "underline",
                 "&:hover": { color: semanticTokens.auth.primary },
               }}
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/auth/login", { state: location.state })}
             >
               {t("Pages.Register.haveAccount")}
             </Typography>

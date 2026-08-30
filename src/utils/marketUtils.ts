@@ -3,38 +3,38 @@ import { DealTableType, FutureIds, TickDealsType } from "../types";
 /**
  * 判斷當前是否為台股交易時段 (09:00 - 13:30)
  */
-export const isTaiwanMarketOpen = (): boolean => {
-  const taiwanTime = new Date().toLocaleString("en-US", {
-    timeZone: "Asia/Taipei",
-  });
-  const now = new Date(taiwanTime);
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
+const zonedParts = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(date);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "0";
+  return { day: value("weekday"), hour: Number(value("hour")), minute: Number(value("minute")) };
+};
+const weekday = (day: string) => day !== "Sat" && day !== "Sun";
+const atOrAfter = (hour: number, minute: number, targetHour: number, targetMinute: number) => hour > targetHour || (hour === targetHour && minute >= targetMinute);
+const before = (hour: number, minute: number, targetHour: number, targetMinute: number) => hour < targetHour || (hour === targetHour && minute < targetMinute);
 
-  return hours >= 9 && (hours < 13 || (hours === 13 && minutes <= 30));
+/** Regular sessions only; exchange holidays are not covered. */
+export const isTaiwanMarketOpen = (date = new Date()): boolean => {
+  const now = zonedParts(date, "Asia/Taipei");
+  return weekday(now.day) && atOrAfter(now.hour, now.minute, 9, 0) && before(now.hour, now.minute, 13, 30);
 };
 
 /**
  * 判斷當前是否為台指期交易時段 (08:45 - 13:45, 15:00 - 05:00)
  */
-export const isWtxMarketOpen = (): boolean => {
-  const taiwanTime = new Date().toLocaleString("en-US", {
-    timeZone: "Asia/Taipei",
-  });
-  const now = new Date(taiwanTime);
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  const day = now.getDay(); // 0 is Sunday, 6 is Saturday
+export const isWtxMarketOpen = (date = new Date()): boolean => {
+  const now = zonedParts(date, "Asia/Taipei");
+  const { hour: hours, minute: minutes } = now;
+  const day = now.day;
 
   // 周六 05:00 到周一 08:45 休市 (簡單處理)
-  if (day === 6 && hours >= 5) return false;
-  if (day === 0) return false;
-  if (day === 1 && (hours < 8 || (hours === 8 && minutes < 45))) return false;
+  if (day === "Sat" && hours >= 5) return false;
+  if (day === "Sun") return false;
+  if (day === "Mon" && !atOrAfter(hours, minutes, 8, 45)) return false;
 
   // 日盤 08:45 - 13:45
   if (hours === 8 && minutes >= 45) return true;
   if (hours >= 9 && hours < 13) return true;
-  if (hours === 13 && minutes <= 45) return true;
+  if (hours === 13 && minutes < 45) return true;
 
   // 夜盤 15:00 - 05:00
   if (hours >= 15) return true;
@@ -47,18 +47,9 @@ export const isWtxMarketOpen = (): boolean => {
  * 判斷當前是否為美股交易時段 (夏令 21:30 - 04:00, 冬令 22:30 - 05:00)
  * 這裡簡化判斷，主要用於控制刷新頻率
  */
-export const isNasdaqMarketOpen = (): boolean => {
-  const taiwanTime = new Date().toLocaleString("en-US", {
-    timeZone: "Asia/Taipei",
-  });
-  const now = new Date(taiwanTime);
-  const hours = now.getHours();
-  const day = now.getDay();
-
-  if (day === 0 || day === 6) return false;
-
-  // 概略範圍 21:00 - 06:00
-  return hours >= 21 || hours <= 6;
+export const isNasdaqMarketOpen = (date = new Date()): boolean => {
+  const now = zonedParts(date, "America/New_York");
+  return weekday(now.day) && atOrAfter(now.hour, now.minute, 9, 30) && before(now.hour, now.minute, 16, 0);
 };
 
 /**

@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { useMemo, useRef, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import MakChart from "../../../../components/CommonChart/MakChart";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
@@ -26,6 +27,8 @@ import useStocksStore from "../../../../store/Stock.store";
 import { useIsVisible } from "../../../../hooks/useIsVisible";
 import { StockStoreType, TaType } from "../../../../types";
 import estimateVolume from "../../../../utils/estimateVolume";
+import MarketDataStatus from "../../../../components/MarketDataStatus";
+import { hasSamples, hasVolumeBaseline } from "../../../../utils/marketMetrics";
 
 export const RED_BALL_CARD_HEIGHT = 360;
 
@@ -113,6 +116,7 @@ interface RedBallCardProps {
 export default function RedBallCard({ stock }: RedBallCardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isVisible = useIsVisible(containerRef);
+  const { t } = useTranslation();
 
   // 引入 hasBeenVisible 機制，避免快速滾動時在 Skeleton 和 卡片內容間來回銷毀/掛載
   const [hasBeenVisible, setHasBeenVisible] = useState(false);
@@ -131,7 +135,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
   const tickDeals = useMarketDataStore((state) => state.getTick(stock.id));
 
   const recommendationReason = stock.type || "策略選股";
-  const { deals, name } = useConditionalDeals(stock.id, true, isVisible);
+  const { deals, name, historyState, retryHistory } = useConditionalDeals(stock.id, true, isVisible);
   const { ma5, ma20 } = useMaDeduction(deals);
   const { openDetailWindow } = useDetailWebviewWindow({
     id: stock.id,
@@ -141,30 +145,31 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
 
   const lastPrice = useMemo(() => {
     if (tickDeals?.price) return tickDeals.price;
-    return deals.length > 0 ? deals[deals.length - 1].c : 0;
+    return deals.length > 0 ? deals[deals.length - 1].c : null;
   }, [deals, tickDeals]);
 
   const percent = useMemo(() => {
     if (tickDeals?.changePercent) return tickDeals.changePercent;
-    if (!deals || deals.length < 2) return 0;
-    const current = Number(lastPrice) || 0;
-    const prePrice = Number(deals[deals.length - 2].c) || 0;
-    if (prePrice === 0) return 0;
+    if (!deals || deals.length < 2 || lastPrice === null) return null;
+    const current = Number(lastPrice);
+    const prePrice = Number(deals[deals.length - 2].c);
+    if (prePrice === 0) return null;
     return Math.round(((current - prePrice) / prePrice) * 10000) / 100;
   }, [deals, tickDeals, lastPrice]);
 
+  const volumeAvailable = hasVolumeBaseline(deals);
   const avgDaysVolume = useMemo(() => {
-    if (!deals || deals.length < 11) return 0;
+    if (!volumeAvailable) return null;
     const pastDeals = deals.slice(-11, -1);
     const totalVolume = pastDeals.reduce(
       (acc: number, deal: TaType[0]) => acc + (Number(deal?.v) || 0),
       0,
     );
     return Math.round(totalVolume / pastDeals.length);
-  }, [deals]);
+  }, [deals, volumeAvailable]);
 
   const { estimatedVolume } = useMemo(() => {
-    if (deals && deals.length > 0) {
+    if (volumeAvailable && avgDaysVolume !== null) {
       return estimateVolume({
         currentVolume: deals[deals.length - 1].v,
         currentTime: new Date(),
@@ -172,16 +177,16 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
         avg5DaysVolume: avgDaysVolume,
       });
     }
-    return { estimatedVolume: 0 };
-  }, [deals, avgDaysVolume]);
+    return { estimatedVolume: null };
+  }, [deals, avgDaysVolume, volumeAvailable]);
 
   const volumeRatio = useMemo(() => {
-    if (avgDaysVolume === 0) return 0;
+    if (avgDaysVolume === null || estimatedVolume === null) return null;
     return Math.round((estimatedVolume / avgDaysVolume) * 100) / 100;
   }, [estimatedVolume, avgDaysVolume]);
 
   const volumeStatus = useMemo(
-    () => getVolumeStatus(volumeRatio),
+    () => volumeRatio === null ? null : getVolumeStatus(volumeRatio),
     [volumeRatio],
   );
 
@@ -191,8 +196,8 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
     [stocks, stock.id],
   );
 
-  const isPositive = percent > 0;
-  const isNegative = percent < 0;
+  const isPositive = (percent ?? 0) > 0;
+  const isNegative = (percent ?? 0) < 0;
   const mainColor = isPositive ? "#ef4444" : isNegative ? "#10b981" : "#94a3b8";
 
   const makDeals = useMemo(() => {
@@ -292,13 +297,12 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
                 fontFamily: "monospace",
               }}
             >
-              {(Number(lastPrice) || 0).toFixed(2)}
+              {lastPrice === null ? "—" : Number(lastPrice).toFixed(2)}
             </Typography>
             <Typography
               sx={{ fontWeight: 700, color: mainColor, fontSize: 12 }}
             >
-              {isPositive ? "+" : ""}
-              {percent}%
+              {percent === null ? "—" : `${isPositive ? "+" : ""}${percent}%`}
             </Typography>
           </Box>
         </Stack>
@@ -332,7 +336,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
           ))}
         </Stack>
 
-        <Stack spacing={0.2} sx={{ mb: 1 }}>
+        {historyState.phase === "ready" ? <Stack spacing={0.2} sx={{ mb: 1 }}>
           <CompactMetric>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
               量能狀態
@@ -340,12 +344,14 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
             <Typography
               variant="caption"
               sx={{
-                color: volumeStatus.color,
+                color: volumeStatus?.color ?? "text.secondary",
                 fontWeight: 800,
                 letterSpacing: "0.5px",
               }}
             >
-              {volumeStatus.title} ({volumeRatio}x)
+              {volumeStatus && volumeRatio !== null
+                ? `${volumeStatus.title} (${volumeRatio}x)`
+                : `— · ${t("marketData.insufficient")}`}
             </Typography>
           </CompactMetric>
           <CompactMetric>
@@ -353,35 +359,47 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
               預估量
             </Typography>
             <Typography variant="caption" sx={{ color: "white", fontWeight: 700 }}>
-              {Math.round(estimatedVolume).toLocaleString()}
+              {estimatedVolume === null
+                ? `— · ${t("marketData.insufficient")}`
+                : Math.round(estimatedVolume).toLocaleString()}
             </Typography>
           </CompactMetric>
           <CompactMetric>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
-              MA5 / MA20
+              MA5 / MA20{(!hasSamples(deals, 5) || !hasSamples(deals, 20))
+                ? ` · ${t("marketData.insufficient")}`
+                : ""}
             </Typography>
             <Box sx={{ display: "flex", gap: 1 }}>
               <Typography
                 variant="caption"
                 sx={{
-                  color: Number(lastPrice) >= Number(ma5) ? "#ef4444" : "#10b981",
+                  color: hasSamples(deals, 5)
+                    ? Number(lastPrice) >= Number(ma5) ? "#ef4444" : "#10b981"
+                    : "text.secondary",
                   fontWeight: 700,
                 }}
               >
-                {(Number(ma5) || 0).toFixed(1)}
+                {hasSamples(deals, 5)
+                  ? Number(ma5).toFixed(1)
+                  : "—"}
               </Typography>
               <Typography
                 variant="caption"
                 sx={{
-                  color: Number(lastPrice) >= Number(ma20) ? "#ef4444" : "#10b981",
+                  color: hasSamples(deals, 20)
+                    ? Number(lastPrice) >= Number(ma20) ? "#ef4444" : "#10b981"
+                    : "text.secondary",
                   fontWeight: 700,
                 }}
               >
-                {(Number(ma20) || 0).toFixed(1)}
+                {hasSamples(deals, 20)
+                  ? Number(ma20).toFixed(1)
+                  : "—"}
               </Typography>
             </Box>
           </CompactMetric>
-        </Stack>
+        </Stack> : <MarketDataStatus state={historyState} retry={retryHistory} />}
       </Box>
 
       <Box
@@ -395,22 +413,8 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
       >
         {makDeals ? (
           <MakChart deals={makDeals} height={100} />
-        ) : (
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            height="100%"
-          >
-            <Typography
-              variant="caption"
-              color="rgba(255,255,255,0.2)"
-              sx={{ fontStyle: "italic" }}
-            >
-              載入數據中...
-            </Typography>
-          </Box>
-        )}
+        ) : <MarketDataStatus state={historyState} retry={retryHistory} compact />}
+        {historyState.phase === "ready" && <MarketDataStatus state={historyState} retry={retryHistory} compact overlay />}
       </Box>
     </CardContainer>
   );

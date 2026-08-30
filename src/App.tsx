@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { ThemeProvider } from "@mui/material/styles";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { currentDestination, intendedDestination } from "./auth/navigation";
 import { ToastContainer } from "react-toastify";
 import "./App.css";
 import DebugInfo from "./components/DebugInfo";
@@ -24,9 +25,12 @@ const Setting = lazy(() => import("./pages/Home/Setting"));
 export function AppRoutes() {
   return (
     <Routes>
+      <Route index element={<Navigate to="/auth/login" replace />} />
       <Route element={<RedirectAuthenticated />}>
-        <Route index element={<Login />} />
-        <Route path="register" element={<Register />} />
+        <Route path="auth/login" element={<Login />} />
+        <Route path="auth/register" element={<Register />} />
+        <Route path="login" element={<Navigate to="/auth/login" replace />} />
+        <Route path="register" element={<Navigate to="/auth/register" replace />} />
       </Route>
       <Route element={<RequireAuth />}>
         <Route path="add" element={<Add />} />
@@ -73,14 +77,16 @@ export function AppRoutes() {
 
 export function RequireAuth() {
   const { isLoading, session } = useUser();
+  const location = useLocation();
   if (isLoading) return null;
-  return session ? <Outlet /> : <Navigate to="/" replace />;
+  return session ? <Outlet /> : <Navigate to="/auth/login" replace state={{ from: currentDestination(location) }} />;
 }
 
 export function RedirectAuthenticated() {
   const { isLoading, session } = useUser();
+  const location = useLocation();
   if (isLoading) return null;
-  return session ? <Navigate to="/dashboard" replace /> : <Outlet />;
+  return session ? <Navigate to={intendedDestination(location.state)} replace /> : <Outlet />;
 }
 
 function App() {

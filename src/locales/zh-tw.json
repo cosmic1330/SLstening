@@ -1,5 +1,31 @@
 {
+  "marketData": {
+    "loading": "載入市場資料中…",
+    "empty": "目前沒有可用的市場資料。",
+    "error": "無法更新市場資料。",
+    "retry": "重試",
+    "refreshing": "更新中…",
+    "stale": "顯示最後可用資料。",
+    "staleError": "更新失敗，顯示最後可用資料。",
+    "closed": "市場已收盤"
+    ,"updated": "更新於 {{time}}"
+    ,"insufficient": "資料不足"
+    ,"unavailable": "無法取得"
+  },
   "Pages": {
+    "Auth": {
+      "retry": "重試",
+      "sessionInitError": "無法檢查已儲存的工作階段，請重試。",
+      "errors": {
+        "invalidCredentials": "電子郵件或密碼不正確。",
+        "emailAlreadyRegistered": "此電子郵件已註冊。",
+        "emailNotConfirmed": "請先確認電子郵件地址再登入。",
+        "oauthCancelled": "Google 登入已取消，您可以再試一次。",
+        "oauthFailed": "無法完成 Google 登入，請再試一次。",
+        "sessionUnavailable": "登入未建立工作階段，請再試一次。",
+        "generic": "無法完成驗證，請再試一次。"
+      }
+    },
     "Login": {
       "rememberMe": "記住我的電子郵件",
       "rememberEmailHint": "此裝置只會儲存您的電子郵件地址。",

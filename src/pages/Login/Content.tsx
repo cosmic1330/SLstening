@@ -14,13 +14,14 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { motion, Variants } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
+import { authErrorKey } from "../../auth/errors";
+import { intendedDestination } from "../../auth/navigation";
 import GoogleOauthButton from "../../components/GoogleOauthButton";
 import { rememberedEmail, removeLegacyPasswordStorage, saveRememberedEmail } from "../../auth/service";
 import { useUser } from "../../context/UserContext";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { supabase } from "../../supabase";
-import translateError from "../../utils/translateError";
 import { primitiveTokens, semanticTokens } from "../../theme";
 
 // Animation Variants
@@ -156,42 +157,45 @@ const Content = () => {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   let navigate = useNavigate();
-  const { oauthCallbackStatus } = useUser();
+  const location = useLocation();
+  const { oauthCallbackStatus, initError, retrySessionInitialization } = useUser();
 
   useEffect(() => {
     removeLegacyPasswordStorage();
   }, []);
 
   useEffect(() => {
-    if (oauthCallbackStatus === "error") setErrorMsg(t("Pages.Login.oauthCallbackError"));
+    if (oauthCallbackStatus === "error") setErrorMsg(t("Pages.Auth.errors.oauthFailed"));
   }, [oauthCallbackStatus, t]);
 
   const signIn = async () => {
     setErrorMsg("");
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        setErrorMsg(translateError(error.message));
+        setErrorMsg(t(`Pages.Auth.errors.${authErrorKey(error)}`));
+      } else if (!data.session?.user) {
+        setErrorMsg(t("Pages.Auth.errors.sessionUnavailable"));
       } else {
         saveRememberedEmail(remember, email);
         const alwaysOnTop =
           localStorage.getItem("slitenting-alwaysOnTop") === "true";
         if ("__TAURI_INTERNALS__" in window) await getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
-        navigate("/dashboard");
+        navigate(intendedDestination(location.state), { replace: true });
       }
     } catch (e) {
-      setErrorMsg(translateError(e instanceof Error ? e.message : String(e)));
+      setErrorMsg(t(`Pages.Auth.errors.${authErrorKey(e)}`));
     }
     setLoading(false);
   };
 
   const register = async () => {
-    navigate("/register");
+    navigate("/auth/register", { state: location.state });
   };
 
   return (
@@ -253,6 +257,11 @@ const Content = () => {
           signIn();
         }}
       >
+        <Collapse in={initError}>
+          <Alert severity="warning" sx={{ mb: 2 }} action={<Button color="inherit" size="small" onClick={retrySessionInitialization}>{t("Pages.Auth.retry")}</Button>}>
+            {t("Pages.Auth.sessionInitError")}
+          </Alert>
+        </Collapse>
         <Collapse in={!!errorMsg}>
           <Alert
             severity="error"
@@ -309,7 +318,10 @@ const Content = () => {
             <Stack direction="row" alignItems="center">
               <Checkbox
                 checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
+                onChange={(e) => {
+                  setRemember(e.target.checked);
+                  if (!e.target.checked) saveRememberedEmail(false, email);
+                }}
                 inputProps={{ "aria-label": t("Pages.Login.rememberMe") }}
                 size="small"
                 sx={{
@@ -360,7 +372,7 @@ const Content = () => {
 
         <motion.div variants={itemVariants}>
           <Stack spacing={2}>
-            <GoogleOauthButton onError={(message) => setErrorMsg(translateError(message))} />
+            <GoogleOauthButton callbackStatus={oauthCallbackStatus} onError={(key) => setErrorMsg(t(`Pages.Auth.errors.${key}`))} />
 
             <Button
               onClick={register}

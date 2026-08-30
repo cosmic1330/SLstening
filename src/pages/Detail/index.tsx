@@ -19,6 +19,9 @@ import { UrlTaPerdOptions } from "../../types";
 import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
 import formatDateTime from "../../utils/formatDateTime";
 import { analysisTheme, semanticTokens } from "../../theme";
+import MarketDataStatus from "../../components/MarketDataStatus";
+import { deriveMarketResourceState } from "../../utils/marketResourceState";
+import { useFreshnessNow, useMarketSession } from "../../hooks/useMarketSession";
 import GlassBar from "./GlassBar";
 const PageContainer = styled(Box)`
   width: 100vw;
@@ -58,6 +61,8 @@ const FullscreenVerticalCarousel: React.FC = () => {
       UrlTaPerdOptions.Hour,
   );
   const { id } = useParams();
+  const marketSession = useMarketSession(id ?? "");
+  const [historySuccess, setHistorySuccess] = useState<{ key: string; updatedAt: number } | null>(null);
   // Shared zoom and pan state
   const [visibleCount, setVisibleCount] = useState(120);
   const [rightOffset, setRightOffset] = useState(0);
@@ -193,14 +198,18 @@ const FullscreenVerticalCarousel: React.FC = () => {
     };
   }, [navigate]);
 
-  const { data: historyData } = useSWR(
-    id && perd ? `market/history/${id}/${perd}` : null,
+  const historyKey = id && perd ? `market/history/${id}/${perd}` : null;
+  const { data: historyData, error, isLoading, isValidating, mutate } = useSWR(
+    historyKey,
     async () => {
       return await marketApi.getHistoryData(id as string, perd);
     },
     {
       revalidateOnFocus: false,
       dedupingInterval: 30000,
+      onSuccess: () => {
+        if (historyKey) setHistorySuccess({ key: historyKey, updatedAt: Date.now() });
+      },
     },
   );
 
@@ -230,12 +239,16 @@ const FullscreenVerticalCarousel: React.FC = () => {
       };
     });
   }, [historyData, perd]);
+  const historyUpdatedAt = historySuccess?.key === historyKey ? historySuccess.updatedAt : undefined;
+  const now = useFreshnessNow(historyUpdatedAt, 30_000, marketSession);
+  const historyState = useMemo(() => deriveMarketResourceState({ enabled: Boolean(id && perd), hasData: deals.length > 0, resolved: historyData !== undefined, isLoading, isValidating, error, updatedAt: historyUpdatedAt, marketSession, staleAfterMs: 30_000, now }), [id, perd, deals.length, historyData, isLoading, isValidating, error, historyUpdatedAt, marketSession, now]);
 
   return (
     <ThemeProvider theme={analysisTheme}>
       <PageContainer>
-        <DealsContext.Provider value={deals}>
+          <DealsContext.Provider value={deals}>
           <ChartViewport>
+            {historyState.phase !== "ready" ? <Box sx={{ position: "absolute", inset: 0, zIndex: 2, display: "grid", placeItems: "center", px: 2 }}><MarketDataStatus state={historyState} retry={mutate} /></Box> : null}
             <AnimatePresence custom={direction(current)} mode="wait">
               <motion.div
                 key={slides[current].id}
@@ -257,6 +270,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
                 </Suspense>
               </motion.div>
             </AnimatePresence>
+            {historyState.phase === "ready" ? <Box sx={{ position: "absolute", top: 4, right: 8, zIndex: 3 }}><MarketDataStatus state={historyState} retry={mutate} compact /></Box> : null}
           </ChartViewport>
 
           <GlassBar

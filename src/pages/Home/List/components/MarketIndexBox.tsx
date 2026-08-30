@@ -7,8 +7,9 @@ import { useIsVisible } from "../../../../hooks/useIsVisible";
 import useMarketSubscriber from "../../../../hooks/useMarketSubscriber";
 import useNasdaqDeals from "../../../../hooks/useNasdaqDeals";
 import useWtxDeals from "../../../../hooks/useWtxDeals";
-import useMarketDataStore from "../../../../store/MarketData.store";
 import { FutureIds } from "../../../../types";
+import useConditionalDeals from "../../../../hooks/useConditionalDeals";
+import MarketDataStatus from "../../../../components/MarketDataStatus";
 
 const StyledIndexCard = styled(Box)(() => ({
   position: "relative",
@@ -42,26 +43,26 @@ interface MarketIndexBoxProps {
  */
 const MarketIndexItemLayout = ({
   name,
-  price = 0,
-  percent = 0,
-  change = 0,
+  price,
+  percent,
+  change,
   mainColor,
   children,
   onClick,
   containerRef,
 }: {
   name: string;
-  price: number;
-  percent: number;
-  change: number;
+  price: number | null;
+  percent: number | null;
+  change: number | null;
   mainColor: string;
   children: React.ReactNode;
   onClick: () => void;
   containerRef: React.RefObject<HTMLDivElement>;
 }) => {
-  const safePrice = Number(price) || 0;
-  const safePercent = Number(percent) || 0;
-  const safeChange = Number(change) || 0;
+  const safePrice = Number.isFinite(price) ? Number(price) : null;
+  const safePercent = Number.isFinite(percent) ? Number(percent) : null;
+  const safeChange = Number.isFinite(change) ? Number(change) : null;
 
   return (
     <StyledIndexCard ref={containerRef} onClick={onClick}>
@@ -91,7 +92,7 @@ const MarketIndexItemLayout = ({
               lineHeight: 1,
             }}
           >
-            {safePrice.toLocaleString(undefined, {
+            {safePrice === null ? "—" : safePrice.toLocaleString(undefined, {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
             })}
@@ -106,8 +107,7 @@ const MarketIndexItemLayout = ({
               lineHeight: 1.2,
             }}
           >
-            {safeChange > 0 ? "+" : ""}
-            {safeChange.toFixed(1)}
+            {safeChange === null ? "—" : `${safeChange > 0 ? "+" : ""}${safeChange.toFixed(1)}`}
           </Typography>
           <Typography
             sx={{
@@ -118,8 +118,7 @@ const MarketIndexItemLayout = ({
               lineHeight: 1.2,
             }}
           >
-            ({safePercent > 0 ? "+" : ""}
-            {safePercent.toFixed(2)}%)
+            {safePercent === null ? "—" : `(${safePercent > 0 ? "+" : ""}${safePercent.toFixed(2)}%)`}
           </Typography>
         </Box>
       </Stack>
@@ -148,14 +147,14 @@ function MarketIndexNasdaqItem({
   openDetailWindow,
   containerRef,
 }: any) {
-  const { deals } = useNasdaqDeals(isVisible);
+  const { deals, state, retry } = useNasdaqDeals(isVisible);
 
   const { price, percent, change, mainColor } = useMemo(() => {
-    const p = deals?.price || 0;
-    const c = deals?.change || 0;
-    const prevPrice = p - c;
-    const pct = prevPrice !== 0 ? (c / prevPrice) * 100 : 0;
-    const color = c > 0 ? "#FF5252" : c < 0 ? "#69F0AE" : "#94A3B8";
+    const p = deals?.price ?? null;
+    const c = deals?.change ?? null;
+    const prevPrice = p !== null && c !== null ? p - c : null;
+    const pct = prevPrice ? (c! / prevPrice) * 100 : null;
+    const color = (c ?? 0) > 0 ? "#FF5252" : (c ?? 0) < 0 ? "#69F0AE" : "#94A3B8";
     return { price: p, percent: pct, change: c, mainColor: color };
   }, [deals]);
 
@@ -169,11 +168,12 @@ function MarketIndexNasdaqItem({
       onClick={openDetailWindow}
       containerRef={containerRef}
     >
-      {deals ? (
-        <MakChart deals={deals} hideTooltip={true} />
+      {deals?.data.length ? (
+        <MakChart deals={deals} height={64} hideTooltip={true} />
       ) : (
-        <LoadingPlaceholder />
+        <MarketDataStatus state={state} retry={retry} compact />
       )}
+      {deals?.data.length ? <MarketDataStatus state={state} retry={retry} compact overlay /> : null}
     </MarketIndexItemLayout>
   );
 }
@@ -187,14 +187,14 @@ function MarketIndexWtxItem({
   openDetailWindow,
   containerRef,
 }: any) {
-  const { deals } = useWtxDeals(isVisible);
+  const { deals, state, retry } = useWtxDeals(isVisible);
 
   const { price, percent, change, mainColor } = useMemo(() => {
-    const p = deals?.price || 0;
-    const c = deals?.change || 0;
-    const prevPrice = p - c;
-    const pct = prevPrice !== 0 ? (c / prevPrice) * 100 : 0;
-    const color = c > 0 ? "#FF5252" : c < 0 ? "#69F0AE" : "#94A3B8";
+    const p = deals?.price ?? null;
+    const c = deals?.change ?? null;
+    const prevPrice = p !== null && c !== null ? p - c : null;
+    const pct = prevPrice ? (c! / prevPrice) * 100 : null;
+    const color = (c ?? 0) > 0 ? "#FF5252" : (c ?? 0) < 0 ? "#69F0AE" : "#94A3B8";
     return { price: p, percent: pct, change: c, mainColor: color };
   }, [deals]);
 
@@ -208,11 +208,12 @@ function MarketIndexWtxItem({
       onClick={openDetailWindow}
       containerRef={containerRef}
     >
-      {deals ? (
-        <MakChart deals={deals} hideTooltip={true} />
+      {deals?.data?.length ? (
+        <MakChart deals={deals} height={64} hideTooltip={true} />
       ) : (
-        <LoadingPlaceholder />
+        <MarketDataStatus state={state} retry={retry} compact />
       )}
+      {deals?.data?.length ? <MarketDataStatus state={state} retry={retry} compact overlay /> : null}
     </MarketIndexItemLayout>
   );
 }
@@ -228,13 +229,13 @@ function MarketIndexTickItem({
   containerRef,
 }: any) {
   useMarketSubscriber(id, true, isVisible);
-  const tickDeals = useMarketDataStore((state) => state.getTick(id)) || null;
+  const { tickDeals, tickState, retryTick } = useConditionalDeals(id, true, isVisible, { fetchTick: true, fetchHistory: false });
 
   const { price, percent, change, mainColor } = useMemo(() => {
-    const p = tickDeals?.price || 0;
-    const pct = tickDeals?.changePercent || 0;
-    const c = p - (tickDeals?.previousClose || p);
-    const color = pct > 0 ? "#FF5252" : pct < 0 ? "#69F0AE" : "#94A3B8";
+    const p = tickDeals?.price ?? null;
+    const pct = tickDeals?.changePercent ?? null;
+    const c = p !== null && tickDeals?.previousClose !== undefined ? p - tickDeals.previousClose : null;
+    const color = (pct ?? 0) > 0 ? "#FF5252" : (pct ?? 0) < 0 ? "#69F0AE" : "#94A3B8";
     return { price: p, percent: pct, change: c, mainColor: color };
   }, [tickDeals]);
 
@@ -251,21 +252,12 @@ function MarketIndexTickItem({
       {tickDeals ? (
         <StockTickChart tickDeals={tickDeals} />
       ) : (
-        <LoadingPlaceholder />
+        <MarketDataStatus state={tickState} retry={retryTick} compact />
       )}
+      {tickDeals ? <MarketDataStatus state={tickState} retry={retryTick} compact overlay /> : null}
     </MarketIndexItemLayout>
   );
 }
-
-const LoadingPlaceholder = () => (
-  <Box display="flex" alignItems="center" justifyContent="center" height="100%">
-    <Typography
-      sx={{ fontSize: "9px", fontWeight: 900, color: "rgba(255,255,255,0.2)" }}
-    >
-      LOADING
-    </Typography>
-  </Box>
-);
 
 export default function MarketIndexBox({
   id,

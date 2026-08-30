@@ -2,6 +2,7 @@ import { semanticTokens } from "../../../../theme";
 import SearchIcon from "@mui/icons-material/Search";
 import { Autocomplete, InputAdornment } from "@mui/material";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StockStoreType } from "../../../../types";
 import { CommandInput, CommandSearchBox } from "../styles";
 
@@ -16,6 +17,7 @@ export default function SearchPalette({
   menu,
   onAddStock,
 }: SearchPaletteProps) {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState("");
   const { setBottomBarVisible } = useUIStore();
@@ -72,7 +74,8 @@ export default function SearchPalette({
             inputRef={inputRef}
             onFocus={() => setBottomBarVisible(false)}
             onBlur={() => setBottomBarVisible(true)}
-            placeholder="輸入簡稱或代號加入此自選..."
+            placeholder={t("category.search")}
+            inputProps={{ ...params.inputProps, "aria-label": t("category.search") }}
             InputProps={{
               ...params.InputProps,
               startAdornment: (

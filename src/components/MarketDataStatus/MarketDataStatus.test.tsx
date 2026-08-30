@@ -59,6 +59,7 @@ describe("MarketDataStatus", () => {
     expect(screen.getByText("Update failed. Showing the last available data.")).toBeTruthy();
     expect(screen.getByText("Market closed")).toBeTruthy();
     expect(screen.getByText(/Updated/)).toBeTruthy();
+    expect(getComputedStyle(screen.getByRole("alert")).zIndex).toBe("30");
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledTimes(1);

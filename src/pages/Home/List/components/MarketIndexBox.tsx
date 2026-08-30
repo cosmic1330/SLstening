@@ -1,7 +1,7 @@
 import { Box, Stack, Typography, styled } from "@mui/material";
-import { useMemo, useRef } from "react";
-import MakChart from "../../../../components/CommonChart/MakChart";
-import StockTickChart from "../../../../components/StockBox/StockTickChart";
+import { lazy, Suspense, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLanguage } from "../../../../i18n";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
 import { useIsVisible } from "../../../../hooks/useIsVisible";
 import useMarketSubscriber from "../../../../hooks/useMarketSubscriber";
@@ -10,6 +10,19 @@ import useWtxDeals from "../../../../hooks/useWtxDeals";
 import { FutureIds } from "../../../../types";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import MarketDataStatus from "../../../../components/MarketDataStatus";
+
+const MakChart = lazy(() => import("../../../../components/CommonChart/MakChart"));
+const StockTickChart = lazy(() => import("../../../../components/StockBox/StockTickChart"));
+
+function ChartAreaFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <Box role="status" aria-live="polite" sx={{ height: 64, display: "grid", placeItems: "center", color: "text.secondary" }}>
+      <Typography variant="caption">{t("app.loading")}</Typography>
+    </Box>
+  );
+}
 
 const StyledIndexCard = styled(Box)(() => ({
   position: "relative",
@@ -30,6 +43,16 @@ const StyledIndexCard = styled(Box)(() => ({
     borderColor: "rgba(255, 255, 255, 0.2)",
     boxShadow: "0 8px 30px rgba(0, 0, 0, 0.5)",
   },
+  "&:focus-visible": {
+    outline: "3px solid #90CAF9",
+    outlineOffset: 2,
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    "&:hover": {
+      transform: "none",
+    },
+  },
 }));
 
 interface MarketIndexBoxProps {
@@ -41,7 +64,7 @@ interface MarketIndexBoxProps {
 /**
  * 基礎佈局組件，用於統一市場指標卡片的外觀
  */
-const MarketIndexItemLayout = ({
+export const MarketIndexItemLayout = ({
   name,
   price,
   percent,
@@ -49,6 +72,8 @@ const MarketIndexItemLayout = ({
   mainColor,
   children,
   onClick,
+  ariaLabel,
+  primaryActionEnabled,
   containerRef,
 }: {
   name: string;
@@ -58,14 +83,42 @@ const MarketIndexItemLayout = ({
   mainColor: string;
   children: React.ReactNode;
   onClick: () => void;
+  ariaLabel: string;
+  primaryActionEnabled: boolean;
   containerRef: React.RefObject<HTMLDivElement>;
 }) => {
+  const { i18n } = useTranslation();
+  const locale = normalizeLanguage(i18n.resolvedLanguage);
   const safePrice = Number.isFinite(price) ? Number(price) : null;
   const safePercent = Number.isFinite(percent) ? Number(percent) : null;
   const safeChange = Number.isFinite(change) ? Number(change) : null;
 
   return (
-    <StyledIndexCard ref={containerRef} onClick={onClick}>
+    <StyledIndexCard
+      ref={containerRef}
+      sx={{ cursor: primaryActionEnabled ? "pointer" : "default" }}
+    >
+      {primaryActionEnabled ? (
+        <Box
+          component="button"
+          type="button"
+          aria-label={ariaLabel}
+          onClick={onClick}
+          sx={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 5,
+            border: 0,
+            p: 0,
+            bgcolor: "transparent",
+            cursor: "pointer",
+            "&:focus-visible": {
+              outline: "3px solid #90CAF9",
+              outlineOffset: -3,
+            },
+          }}
+        />
+      ) : null}
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -92,7 +145,7 @@ const MarketIndexItemLayout = ({
               lineHeight: 1,
             }}
           >
-            {safePrice === null ? "—" : safePrice.toLocaleString(undefined, {
+            {safePrice === null ? "—" : safePrice.toLocaleString(locale, {
               minimumFractionDigits: 1,
               maximumFractionDigits: 1,
             })}
@@ -128,7 +181,6 @@ const MarketIndexItemLayout = ({
           flex: 1,
           height: 64,
           position: "relative",
-          zIndex: 1,
           mt: "auto",
         }}
       >
@@ -148,6 +200,7 @@ function MarketIndexNasdaqItem({
   containerRef,
 }: any) {
   const { deals, state, retry } = useNasdaqDeals(isVisible);
+  const { t } = useTranslation();
 
   const { price, percent, change, mainColor } = useMemo(() => {
     const p = deals?.price ?? null;
@@ -166,10 +219,12 @@ function MarketIndexNasdaqItem({
       change={change}
       mainColor={mainColor}
       onClick={openDetailWindow}
+      ariaLabel={t("a11y.openMarket", { name })}
+      primaryActionEnabled={state.phase === "ready"}
       containerRef={containerRef}
     >
       {deals?.data.length ? (
-        <MakChart deals={deals} height={64} hideTooltip={true} />
+        <Box role="img" aria-label={t("a11y.stockChart", { name })}><Suspense fallback={<ChartAreaFallback />}><MakChart deals={deals} height={64} hideTooltip={true} /></Suspense></Box>
       ) : (
         <MarketDataStatus state={state} retry={retry} compact />
       )}
@@ -188,6 +243,7 @@ function MarketIndexWtxItem({
   containerRef,
 }: any) {
   const { deals, state, retry } = useWtxDeals(isVisible);
+  const { t } = useTranslation();
 
   const { price, percent, change, mainColor } = useMemo(() => {
     const p = deals?.price ?? null;
@@ -206,10 +262,12 @@ function MarketIndexWtxItem({
       change={change}
       mainColor={mainColor}
       onClick={openDetailWindow}
+      ariaLabel={t("a11y.openMarket", { name })}
+      primaryActionEnabled={state.phase === "ready"}
       containerRef={containerRef}
     >
       {deals?.data?.length ? (
-        <MakChart deals={deals} height={64} hideTooltip={true} />
+        <Box role="img" aria-label={t("a11y.stockChart", { name })}><Suspense fallback={<ChartAreaFallback />}><MakChart deals={deals} height={64} hideTooltip={true} /></Suspense></Box>
       ) : (
         <MarketDataStatus state={state} retry={retry} compact />
       )}
@@ -229,6 +287,7 @@ function MarketIndexTickItem({
   containerRef,
 }: any) {
   useMarketSubscriber(id, true, isVisible);
+  const { t } = useTranslation();
   const { tickDeals, tickState, retryTick } = useConditionalDeals(id, true, isVisible, { fetchTick: true, fetchHistory: false });
 
   const { price, percent, change, mainColor } = useMemo(() => {
@@ -247,10 +306,12 @@ function MarketIndexTickItem({
       change={change}
       mainColor={mainColor}
       onClick={openDetailWindow}
+      ariaLabel={t("a11y.openMarket", { name })}
+      primaryActionEnabled={tickState.phase === "ready"}
       containerRef={containerRef}
     >
       {tickDeals ? (
-        <StockTickChart tickDeals={tickDeals} />
+        <Box role="img" aria-label={t("a11y.stockChart", { name })}><Suspense fallback={<ChartAreaFallback />}><StockTickChart tickDeals={tickDeals} /></Suspense></Box>
       ) : (
         <MarketDataStatus state={tickState} retry={retryTick} compact />
       )}

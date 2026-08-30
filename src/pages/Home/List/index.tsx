@@ -25,6 +25,7 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import ListAltIcon from "@mui/icons-material/ListAlt";
 import SpeedIcon from "@mui/icons-material/Speed";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import { useTranslation } from "react-i18next";
 
 /**
  * DashboardHeader 元件
@@ -32,60 +33,61 @@ import TrendingUpIcon from "@mui/icons-material/TrendingUp";
  */
 const DashboardHeader = memo(
   ({ stocksCount, visibility }: { stocksCount: number; visibility: any }) => {
+    const { t } = useTranslation();
     const marketIndices = useMemo(
       () =>
         [
           {
             id: FutureIds.TWSE,
-            name: "加權指數",
+            name: t("home.indices.twse"),
             group: "大盤",
             visible: visibility?.twse ?? true,
           },
           {
             id: FutureIds.OTC,
-            name: "櫃買指數",
+            name: t("home.indices.otc"),
             group: "大盤",
             visible: visibility?.otc ?? true,
           },
           {
             id: FutureIds.NASDAQ,
-            name: "那斯達克",
+            name: t("home.indices.nasdaq"),
             group: "美股",
             visible: visibility?.nasdaq ?? true,
           },
           {
             id: FutureIds.WTX,
-            name: "台指期",
+            name: t("home.indices.wtx"),
             group: "期權",
             visible: visibility?.wtx ?? true,
           },
         ].filter((i) => i.visible),
-      [visibility],
+      [t, visibility],
     );
 
     const marketLinks = useMemo(
       () =>
         [
           {
-            title: "CNN 恐懼貪婪",
+            title: t("home.links.cnn"),
             url: "https://www.macromicro.me/charts/50108/cnn-fear-and-greed",
             icon: <SpeedIcon />,
             visible: visibility?.cnn ?? true,
           },
           {
-            title: "MM 恐懼貪婪",
+            title: t("home.links.mm"),
             url: "https://www.macromicro.me/charts/128747/taiwan-mm-fear-and-greed-index-vs-taiex",
             icon: <AnalyticsIcon />,
             visible: visibility?.mm ?? true,
           },
           {
-            title: "台股 融資維持率",
+            title: t("home.links.margin"),
             url: "https://www.macromicro.me/charts/53117/taiwan-taiex-maintenance-margin",
             icon: <TrendingUpIcon />,
             visible: visibility?.margin ?? true,
           },
         ].filter((l) => l.visible),
-      [visibility],
+      [t, visibility],
     );
 
     return (
@@ -101,7 +103,7 @@ const DashboardHeader = memo(
               textTransform: "uppercase",
             }}
           >
-            市場脈動 Overview
+            {t("home.marketOverview")}
           </Typography>
         </Stack>
 
@@ -138,7 +140,7 @@ const DashboardHeader = memo(
                   mr: 1,
                 }}
               >
-                宏觀指標:
+                {t("home.macro")}
               </Typography>
               {marketLinks.map((link) => (
                 <MarketLinkBox key={link.title} {...link} />
@@ -160,7 +162,7 @@ const DashboardHeader = memo(
               textTransform: "uppercase",
             }}
           >
-            我的選股清單 Watchlist
+            {t("home.watchlist")}
           </Typography>
           <Box sx={{ flex: 1 }} />
           <Typography
@@ -170,7 +172,7 @@ const DashboardHeader = memo(
               color: "rgba(255,255,255,0.4)",
             }}
           >
-            已追蹤 {stocksCount} 檔
+            {t("home.trackedCount", { count: stocksCount })}
           </Typography>
         </Stack>
       </Box>
@@ -179,6 +181,7 @@ const DashboardHeader = memo(
 );
 
 function List() {
+  const { t } = useTranslation();
   const { stocks = [], reload } = useStocksStore();
   const visibility = useShowMarketInfo();
   const { ref: listContainerRef, height: listHeight } =
@@ -244,13 +247,13 @@ function List() {
             <Typography
               sx={{ color: "rgba(255,255,255,0.3)", fontWeight: 700 }}
             >
-              尚未添加任何股票，請點擊上方搜尋框添加
+              {t("home.emptyWatchlist")}
             </Typography>
           </Box>
         )}
       </>
     ),
-    [stocks?.length, visibility],
+    [stocks?.length, t, visibility],
   );
 
   return (
@@ -288,7 +291,7 @@ function List() {
           variant="filled"
           sx={{ width: "100%", fontWeight: 700 }}
         >
-          Yahoo API 暫時限制連線 (冷卻中)，請稍候再試
+          {t("home.yahooRateLimited")}
         </Alert>
       </Snackbar>
     </Container>

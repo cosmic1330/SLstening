@@ -1,13 +1,14 @@
 import { Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 const sections = [
-  { min: 0, max: 0.5, title: "極限縮量", color: "#69F0AE" },
-  { min: 0.5, max: 0.8, title: "量縮", color: "#69F0AE" },
-  { min: 0.8, max: 1.5, title: "常態", color: "rgba(255,255,255,0.8)" },
-  { min: 1.5, max: 2.5, title: "溫和放量", color: "#FF5252" },
-  { min: 2.5, max: 5, title: "放量", color: "#FF5252" },
-  { min: 5, max: Infinity, title: "巨量", color: "#FF5252" },
+  { min: 0, max: 0.5, labelKey: "extremelyLow", color: "#69F0AE" },
+  { min: 0.5, max: 0.8, labelKey: "low", color: "#69F0AE" },
+  { min: 0.8, max: 1.5, labelKey: "normal", color: "rgba(255,255,255,0.8)" },
+  { min: 1.5, max: 2.5, labelKey: "moderatelyHigh", color: "#FF5252" },
+  { min: 2.5, max: 5, labelKey: "high", color: "#FF5252" },
+  { min: 5, max: Infinity, labelKey: "extreme", color: "#FF5252" },
 ];
 
 export default function VolumeRatio({
@@ -17,6 +18,7 @@ export default function VolumeRatio({
   estimatedVolume: number;
   avgDaysVolume: number;
 }) {
+  const { t } = useTranslation();
   const ratio = useMemo(
     () => Math.round((estimatedVolume / avgDaysVolume) * 10) / 10,
     [estimatedVolume, avgDaysVolume],
@@ -27,7 +29,7 @@ export default function VolumeRatio({
   }, [ratio]);
 
   return (
-    <Tooltip title={`預估量 / 十日均量: ${ratio}倍`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.volumeRatio")}: ${ratio}`} arrow enterTouchDelay={0}>
       <Stack
         direction="column"
         spacing={0}
@@ -42,7 +44,7 @@ export default function VolumeRatio({
             textTransform: "uppercase",
           }}
         >
-          Vol Ratio
+          {t("stock.volumeRatio")}
         </Typography>
         <Typography
           sx={{
@@ -52,7 +54,7 @@ export default function VolumeRatio({
             lineHeight: 1.2,
           }}
         >
-          {section.title} {ratio}
+          {t(`stock.volumeRatioStatus.${section.labelKey}`)} {ratio}
         </Typography>
       </Stack>
     </Tooltip>

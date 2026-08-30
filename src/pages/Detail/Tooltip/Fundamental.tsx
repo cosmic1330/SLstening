@@ -1,5 +1,7 @@
 import { Box, Grid, Skeleton, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { normalizeLanguage } from "../../../i18n";
 import { supabase } from "../../../supabase";
 import {
   FinancialMetricTableType,
@@ -7,6 +9,7 @@ import {
 } from "../../../types";
 
 export default function Fundamental({ id }: { id: string | undefined }) {
+  const { t, i18n } = useTranslation();
   const [financialMetrics, setFinancialMetrics] =
     useState<FinancialMetricTableType | null>(null);
   const [recentFundamental, setRecentFundamental] =
@@ -65,9 +68,9 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     decimals: number = 2
   ) => {
     if (val === null || val === undefined || val === "" || isNaN(val)) {
-      return "N/A";
+      return t("Pages.Detail.tooltip.unavailable");
     }
-    return `${Number(val).toFixed(decimals)}${suffix}`;
+    return `${new Intl.NumberFormat(normalizeLanguage(i18n.resolvedLanguage), { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(Number(val))}${suffix}`;
   };
 
   const getNumberColor = (val: any) => {
@@ -163,32 +166,32 @@ export default function Fundamental({ id }: { id: string | undefined }) {
                 pb: 0.5,
               }}
             >
-              📊 估值指標
+              {t("Pages.Detail.tooltip.valuation")}
             </Typography>
             <Box>
               <MetricItem
                 flex={false}
-                label="本益比 (PE)"
+                label={t("Pages.Detail.tooltip.pe")}
                 value={financialMetrics.pe}
-                suffix="倍"
+                suffix={t("Pages.Detail.tooltip.times")}
               />
               <MetricItem
                 flex={false}
-                label="股價淨值比 (PB)"
+                label={t("Pages.Detail.tooltip.pb")}
                 value={financialMetrics.pb}
-                suffix="倍"
+                suffix={t("Pages.Detail.tooltip.times")}
               />
               <MetricItem
                 flex={false}
-                label="殖利率"
+                label={t("Pages.Detail.tooltip.yield")}
                 value={financialMetrics.dividend_yield}
                 suffix="%"
               />
               <MetricItem
                 flex={false}
-                label="每股淨值"
+                label={t("Pages.Detail.tooltip.bookValue")}
                 value={financialMetrics.book_value_per_share}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
             </Box>
           </Grid>
@@ -208,49 +211,49 @@ export default function Fundamental({ id }: { id: string | undefined }) {
                 pb: 0.5,
               }}
             >
-              📈 近期 EPS
+              {t("Pages.Detail.tooltip.recentEps")}
             </Typography>
             <Box>
               <MetricItem
-                label={recentFundamental.eps_recent_q1_name || "近一季"}
+                label={recentFundamental.eps_recent_q1_name || t("Pages.Detail.tooltip.recentQuarter", { count: 1 })}
                 value={recentFundamental.eps_recent_q1}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_q2_name || "近二季"}
+                label={recentFundamental.eps_recent_q2_name || t("Pages.Detail.tooltip.recentQuarter", { count: 2 })}
                 value={recentFundamental.eps_recent_q2}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_q3_name || "近三季"}
+                label={recentFundamental.eps_recent_q3_name || t("Pages.Detail.tooltip.recentQuarter", { count: 3 })}
                 value={recentFundamental.eps_recent_q3}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_q4_name || "近四季"}
+                label={recentFundamental.eps_recent_q4_name || t("Pages.Detail.tooltip.recentQuarter", { count: 4 })}
                 value={recentFundamental.eps_recent_q4}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_y1_name || "近一年"}
+                label={recentFundamental.eps_recent_y1_name || t("Pages.Detail.tooltip.recentYear", { count: 1 })}
                 value={recentFundamental.eps_recent_y1}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_y2_name || "近二年"}
+                label={recentFundamental.eps_recent_y2_name || t("Pages.Detail.tooltip.recentYear", { count: 2 })}
                 value={recentFundamental.eps_recent_y2}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
               <MetricItem
-                label={recentFundamental.eps_recent_y3_name || "近三年"}
+                label={recentFundamental.eps_recent_y3_name || t("Pages.Detail.tooltip.recentYear", { count: 3 })}
                 value={recentFundamental.eps_recent_y3}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
 
               <MetricItem
-                label={recentFundamental.eps_recent_y4_name || "近四年"}
+                label={recentFundamental.eps_recent_y4_name || t("Pages.Detail.tooltip.recentYear", { count: 4 })}
                 value={recentFundamental.eps_recent_y4}
-                suffix="元"
+                suffix={t("Pages.Detail.tooltip.currency")}
               />
             </Box>
           </Grid>
@@ -270,7 +273,7 @@ export default function Fundamental({ id }: { id: string | undefined }) {
                 pb: 0.5,
               }}
             >
-              💰 近期營收 mom(%) / yoy(%)
+              {t("Pages.Detail.tooltip.revenue")}
             </Typography>
             <Box>
               {[1, 2, 3, 4].map((month) => {
@@ -284,7 +287,7 @@ export default function Fundamental({ id }: { id: string | undefined }) {
                 return (
                   <MetricItem
                     key={month}
-                    label={String(recentFundamental[nameKey]) || `近${month}月`}
+                    label={String(recentFundamental[nameKey] ?? "") || t("Pages.Detail.tooltip.recentMonth", { count: month })}
                     value={[
                       recentFundamental[momKey],
                       recentFundamental[yoyKey],
@@ -301,7 +304,7 @@ export default function Fundamental({ id }: { id: string | undefined }) {
       {!financialMetrics && !recentFundamental && (
         <Box sx={{ textAlign: "center", py: 3 }}>
           <Typography variant="body2" color="text.secondary">
-            暫無財務數據
+            {t("Pages.Detail.tooltip.noFinancialData")}
           </Typography>
         </Box>
       )}

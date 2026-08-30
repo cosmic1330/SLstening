@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CategoryType } from "../../../../types";
 import { CommandInput } from "../styles";
 
@@ -38,6 +39,7 @@ export default function ManageDialogs({
   onRenameCategory,
   onRemoveCategory,
 }: ManageDialogsProps) {
+  const { t } = useTranslation();
   const [newCatName, setNewCatName] = useState("");
   const [editingCat, setEditingCat] = useState<{
     id: string;
@@ -76,16 +78,16 @@ export default function ManageDialogs({
         PaperProps={{ sx: paperStyles }}
       >
         <DialogTitle sx={{ fontWeight: 900, pt: 4, color: "#5D4037" }}>
-          建立全新自選分類
+          {t("category.newTitle")}
         </DialogTitle>
         <DialogContent>
           <CommandInput
             autoFocus
             fullWidth
-            label="分類名稱"
+            label={t("category.name")}
             value={newCatName}
             onChange={(e) => setNewCatName(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleCreate()}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             sx={{ mt: 2 }}
           />
         </DialogContent>
@@ -99,7 +101,7 @@ export default function ManageDialogs({
               "&:hover": { background: "transparent", color: "#5D4037" }
             }}
           >
-            取消
+            {t("category.cancel")}
           </Button>
           <Button
             onClick={handleCreate}
@@ -119,7 +121,7 @@ export default function ManageDialogs({
               },
             }}
           >
-            建立
+            {t("category.create")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -132,7 +134,7 @@ export default function ManageDialogs({
         PaperProps={{ sx: paperStyles }}
       >
         <DialogTitle sx={{ fontWeight: 900, pt: 4, color: "#5D4037" }}>
-          自選分類管理
+          {t("category.manageTitle")}
         </DialogTitle>
         <DialogContent>
           <List sx={{ mt: 1 }}>
@@ -150,6 +152,7 @@ export default function ManageDialogs({
                   <IconButton
                     edge="end"
                     onClick={() => onRemoveCategory(c.id)}
+                    aria-label={t("category.delete", { name: c.name })}
                     sx={{ color: semanticTokens.app.accent }}
                   >
                     <DeleteIcon fontSize="small" />
@@ -167,7 +170,8 @@ export default function ManageDialogs({
                       setEditingCat({ ...editingCat, name: e.target.value })
                     }
                     onBlur={handleRename}
-                    onKeyPress={(e) => e.key === "Enter" && handleRename()}
+                    onKeyDown={(e) => e.key === "Enter" && handleRename()}
+                    inputProps={{ "aria-label": t("category.edit", { name: c.name }) }}
                     InputProps={{
                       disableUnderline: true,
                       sx: { color: "#5D4037", fontWeight: 800, py: 0.5 },
@@ -195,6 +199,7 @@ export default function ManageDialogs({
                     <IconButton
                       size="small"
                       onClick={() => setEditingCat({ id: c.id, name: c.name })}
+                      aria-label={t("category.edit", { name: c.name })}
                       sx={{ color: "#8B7355" }}
                     >
                       <EditIcon sx={{ fontSize: 18 }} />
@@ -208,7 +213,7 @@ export default function ManageDialogs({
                 variant="body2"
                 sx={{ color: "#8B7355", textAlign: "center", py: 3, fontWeight: 700, fontStyle: "italic" }}
               >
-                目前沒有任何分類
+                {t("category.noCategories")}
               </Typography>
             )}
           </List>
@@ -225,7 +230,7 @@ export default function ManageDialogs({
               "&:hover": { background: "rgba(93, 64, 55, 0.05)" }
             }}
           >
-            關閉
+            {t("category.close")}
           </Button>
         </DialogActions>
       </Dialog>

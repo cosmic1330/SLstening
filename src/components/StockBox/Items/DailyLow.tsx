@@ -1,6 +1,7 @@
 import { Stack, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { TaType } from "../../../types";
+import { useTranslation } from "react-i18next";
 
 export default function DailyLow({
   deals,
@@ -9,6 +10,7 @@ export default function DailyLow({
   deals: TaType;
   lastPrice: number;
 }) {
+  const { t } = useTranslation();
   const { low, color } = useMemo(() => {
     if (deals.length >= 2) {
       const low = deals[deals.length - 2].l;
@@ -28,7 +30,7 @@ export default function DailyLow({
       width="100%"
     >
       <Typography variant="caption" fontWeight={600} color="#fff">
-        日均低
+        {t("stock.dailyLow")}
       </Typography>
       <Typography variant="body2" color={color} fontWeight="bold">
         {low}

@@ -1,7 +1,8 @@
 import { Box, styled, Tooltip, Typography } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useTranslation } from "react-i18next";
 
-const StyledLinkChip = styled(Box)(({ theme }) => ({
+const StyledLinkChip = styled("a")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   padding: "4px 12px",
@@ -10,6 +11,8 @@ const StyledLinkChip = styled(Box)(({ theme }) => ({
   borderRadius: "20px",
   border: "1px solid rgba(255, 255, 255, 0.08)",
   cursor: "pointer",
+  color: "inherit",
+  textDecoration: "none",
   transition: "all 0.2s ease",
   "&:hover": {
     background: "rgba(255, 255, 255, 0.12)",
@@ -29,14 +32,16 @@ export default function MarketLinkBox({
   url,
   icon,
 }: MarketLinkBoxProps) {
-  const handleClick = (e: React.MouseEvent) => {
+  const { t } = useTranslation();
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.stopPropagation();
+    e.preventDefault();
     openUrl(url);
   };
 
   return (
-    <Tooltip title={`前往 ${title}`} arrow>
-      <StyledLinkChip onClick={handleClick}>
+    <Tooltip title={t("a11y.openExternal", { title })} arrow>
+      <StyledLinkChip href={url} onClick={handleClick} aria-label={t("a11y.openExternal", { title })}>
         <Box
           sx={{
             color: "rgba(255,255,255,0.6)",

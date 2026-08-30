@@ -1,4 +1,36 @@
 {
+  "app": { "loading": "Loading…" },
+  "language": { "en": "English", "zh-TW": "Traditional Chinese" },
+  "a11y": {
+    "switchLanguage": "Switch language to {{language}}",
+    "openStock": "Open analysis for {{name}} ({{id}})",
+    "openMarket": "Open market analysis for {{name}}",
+    "openExternal": "Open {{title}} in browser",
+    "tradingView": "Open {{name}} in TradingView",
+    "removeStock": "Remove {{name}} from this list",
+    "deleteStock": "Delete {{name}}",
+    "addStock": "Add {{name}} to watchlist",
+    "stockChart": "Price chart for {{name}}",
+    "chartSummary": "{{title}}, {{period}} interval, {{count}} samples{{latest}}",
+    "close": "Close",
+    "back": "Back",
+    "scrollLeft": "Scroll categories left",
+    "scrollRight": "Scroll categories right"
+  },
+  "navigation": { "label": "Main navigation", "home": "Home", "settings": "Settings", "recommendations": "Recommendations", "categories": "Categories", "add": "Add stock" },
+  "home": {
+    "marketOverview": "Market overview", "watchlist": "My watchlist", "trackedCount": "{{count}} tracked", "macro": "Macro indicators", "emptyWatchlist": "No stocks are being tracked. Use the add control to build your watchlist.", "yahooRateLimited": "Yahoo API is temporarily rate-limited. Please wait and try again.",
+    "indices": { "twse": "TAIEX", "otc": "TPEx", "nasdaq": "NASDAQ", "wtx": "TAIEX futures" },
+    "links": { "cnn": "CNN Fear & Greed", "mm": "Taiwan Fear & Greed", "margin": "Taiwan margin maintenance ratio" }
+  },
+  "category": {
+    "title": "Watchlist categories", "summary": "{{name}} · {{count}} instruments", "prompt": "Select a category to manage your watchlist", "add": "Add category", "manage": "Manage categories", "empty": "No categories yet. Add one to get started.", "emptyStocks": "This category is empty", "emptyStocksHint": "Use the search field above to add stocks.", "selectOrAdd": "Select or add a category", "search": "Search by name or symbol to add to this category", "newTitle": "Create a watchlist category", "name": "Category name", "cancel": "Cancel", "create": "Create", "manageTitle": "Manage watchlist categories", "edit": "Rename {{name}}", "delete": "Delete {{name}}", "close": "Close", "noCategories": "There are no categories."
+  },
+  "settings": {
+    "title": "Preferences", "data": "Data management", "application": "Application", "updateStocks": "Update stock list", "updateStocksHint": "Manually refresh the Taiwan stock database", "update": "Update", "sync": "Sync", "syncStocks": "Sync Schoice watchlist", "syncStocksHint": "Add stocks from your cloud watchlist", "deleteStocks": "Batch delete watched stocks", "deleteStocksHint": "Choose stocks you no longer follow", "choose": "Choose", "factoryReset": "Restore factory settings", "factoryResetHint": "Clear cached data and reset the database", "run": "Run", "alwaysOnTop": "Always on top", "alwaysOnTopHint": "Keep the window above other windows", "cardChart": "Card chart", "cardChartHint": "Choose the chart at the bottom of stock cards", "candle": "Candlestick", "live": "Live", "marketInfo": "Show market information", "marketInfoHint": "Show indices and market overview on home", "developer": "Developer mode", "developerHint": "Show internal debug details (Ctrl + Shift + D)", "indicators": "Technical indicator settings", "resetIndicators": "Restore defaults", "indicatorHelp": "Set the lookback period used by each indicator.", "indicator": { "ma5": "Short MA (5)", "ma10": "Medium MA (10)", "ma20": "Long MA (20)", "ma60": "Quarter MA (60)", "ma240": "Year MA (240)", "emaShort": "Short EMA", "emaLong": "Long EMA", "boll": "Bollinger Bands (30)", "donchian": "Donchian (20)", "kd": "KD (9)", "rsi": "RSI (14)", "mfi": "MFI (14)", "cmf": "CMF (21)", "cmfEma": "CMF EMA (5)", "cci": "CCI (26)" }, "resetConfirm": "Reset all data and restore factory settings? This cannot be undone.", "resetDone": "Data cleared.", "syncNone": "No missing stocks need syncing.", "syncFailed": "Sync failed.", "syncSuccess": "Added {{count}} stocks.", "syncTitle": "Sync missing stocks", "selectAll": "Select all", "confirmAdd": "Add selected ({{count}})", "cancel": "Cancel", "delete": "Delete", "deleteSuccess": "Removed {{count}} stocks.", "deleteFailed": "Delete failed.", "deleteCloudConfirm": "Remove {{id}} {{name}} from the cloud watchlist?", "deleteLocalConfirm": "Remove {{count}} selected stocks from this device?", "marketLabels": { "cnn": "CNN Fear & Greed", "mm": "MacroMicro", "nasdaq": "NASDAQ", "twse": "TAIEX", "otc": "TPEx", "wtx": "TAIEX futures", "margin": "Taiwan margin maintenance ratio" }
+  },
+  "redBall": { "title": "System recommendations", "loading": "Loading recommendations…", "topDays": "Top {{count}} days", "volumeStatus": "Volume status", "estimatedVolume": "Estimated volume", "details": "View details", "reasonFallback": "Strategy selection", "volume": { "surge": "Heavy volume", "expanded": "Expanded", "moderate": "Moderate", "normal": "Normal", "low": "Below average", "contracted": "Contracted" } },
+  "stock": { "remove": "Remove", "delete": "Delete", "ma": "MA{{period}}", "volume": "Volume", "dailyLow": "Daily low", "previousVolume": "Previous volume", "estimatedVolume": "Estimated volume", "averagePrice": "Average price", "tickCount": "Today's trades", "volumeRatio": "Estimated / 10-day average volume", "volumeRatioStatus": { "extremelyLow": "Very low", "low": "Low", "normal": "Normal", "moderatelyHigh": "Moderately high", "high": "High", "extreme": "Extreme" }, "guideLanguage": "Guide language: Traditional Chinese", "guideUnavailable": "This guide is currently available only in Traditional Chinese." },
   "marketData": {
     "loading": "Loading market data…",
     "empty": "No market data is available.",
@@ -78,6 +110,16 @@
       }
     },
     "Detail": {
+      "chartAdvice": { "bollean": "Bollinger Bands suit range-bound and breakout markets; use EMA 200 to assess the primary trend.", "Donchian": "Donchian channels are useful for range-bound and breakout markets.", "ma": "MA signals are clearest on daily charts. On weekly charts, MA20 can act as support; confirm higher-timeframe support before trading hourly gaps.", "ema": "EMA offers a stable medium- to long-term trend guide on daily charts. For hourly entries, confirm price is near daily EMA60 or SMA200 support.", "atr": "ATR Supertrend follows daily trends effectively. For shorter-term use, filter direction with a higher-timeframe EMA to reduce whipsaws in ranges.", "obv": "OBV on hourly charts can show fund-flow intent. Compare it with the daily OBV trend before entering a position.", "volume_profile": "Volume Profile identifies capital concentration in the visible range. POC is a cost reference; VAH and VAL help identify consolidation or breakouts.", "cci": "CCI can identify breakouts and oversold reversals on daily and hourly charts. In short-term use, follow the primary trend.", "mr": "MR is designed for intraday momentum and daily exhaustion. Treat a short-term crossover below daily RSI 50 as a rebound trade, not a trend confirmation.", "kd": "KD is time-sensitive. Weekly and daily charts offer stronger swing references; short intervals should be filtered with a trend indicator such as MA20.", "mfi": "MFI is steadier on daily charts and reacts quickly on hourly charts. An oversold entry should still align with the daily uptrend.", "chip": "Positioning data updates after market close and uses institutional, margin, and short data to assess direction.", "ichimoku_cloud": "Ichimoku works best on daily and weekly charts. On short intervals, use it with care because indicator noise can dominate." },
+      "charts": {
+        "bollean": { "label": "Bollinger", "title": "Bollinger Bands and EMA" }, "Donchian": { "label": "Donchian", "title": "Donchian Channel" }, "ma": { "label": "MA", "title": "Moving averages and gaps" }, "ema": { "label": "EMA", "title": "EMA trend strategy" }, "atr": { "label": "ATR", "title": "ATR Trend" }, "obv": { "label": "OBV", "title": "OBV momentum" }, "volume_profile": { "label": "Volume", "title": "Volume profile" }, "cci": { "label": "CCI", "title": "CCI trend indicator" }, "mr": { "label": "MR", "title": "MR dual-indicator resonance" }, "kd": { "label": "KD", "title": "KD stochastic indicator" }, "mfi": { "label": "MFI", "title": "MFI money flow" }, "chip": { "label": "Positioning", "title": "Positioning" }, "ichimoku_cloud": { "label": "Ichimoku", "title": "Ichimoku Cloud" }
+      },
+      "summary": { "latest": ", latest O {{open}}, H {{high}}, L {{low}}, C {{close}}", "noLatest": ", no recent OHLC", "samples": "{{count}} samples", "hour": "hour", "day": "day", "week": "week" },
+      "tooltip": { "marketEnvironment": "Market environment (MESS)", "diagnosis": "Diagnosis", "noSignal": "No significant consolidation signal", "ichimoku": "Ichimoku", "forecast": "Forecast", "current": "Current status", "valuation": "Valuation", "pe": "Price-to-earnings (PE)", "pb": "Price-to-book (PB)", "yield": "Dividend yield", "bookValue": "Book value per share", "recentEps": "Recent EPS", "revenue": "Recent revenue MoM (%) / YoY (%)", "unavailable": "Unavailable", "currency": "NTD", "times": "x", "recentQuarter": "Last {{count}} qtr.", "recentYear": "Last {{count}} yr.", "recentMonth": "Last {{count}} mo.", "noFinancialData": "No financial data is available." },
+      "documentation": {
+        "loading": "Loading chart guide…",
+        "cancel": "Cancel"
+      },
       "GlassBar": {
         "navigation": "Analysis chart toolbar",
         "previous": "Previous chart",

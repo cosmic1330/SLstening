@@ -3,7 +3,7 @@ import { ExpandLess, ShowChart } from "@mui/icons-material";
 import { Button, Menu, MenuItem, Typography } from "@mui/material";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CHART_CONFIG } from "../constants/chartConfig";
+import { CHART_CONFIG, getChartLabel } from "../constants/chartConfig";
 
 interface ChartMenuProps {
   current: number;
@@ -43,7 +43,7 @@ const ChartMenu: React.FC<ChartMenuProps> = ({ current, goToSlide }) => {
         }}
       >
         <Typography variant="caption" fontWeight={750} noWrap>
-          {CHART_CONFIG[current]?.label}
+          {getChartLabel(CHART_CONFIG[current], t)}
         </Typography>
       </Button>
 
@@ -81,7 +81,7 @@ const ChartMenu: React.FC<ChartMenuProps> = ({ current, goToSlide }) => {
               },
             }}
           >
-            <Typography variant="body2">{chart.label}</Typography>
+            <Typography variant="body2">{getChartLabel(chart, t)}</Typography>
           </MenuItem>
         ))}
       </Menu>

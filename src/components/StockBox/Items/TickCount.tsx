@@ -1,15 +1,17 @@
 import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
+import { useTranslation } from "react-i18next";
 
 export default function TickCount({
   tickDeals,
 }: {
   tickDeals: TickDealsType | null;
 }) {
+  const { t } = useTranslation();
   const count = tickDeals?.closes.length || 0;
 
   return (
-    <Tooltip title={`今日總成交筆數: ${count}`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.tickCount")}: ${count}`} arrow enterTouchDelay={0}>
       <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
         <Typography
           sx={{
@@ -19,7 +21,7 @@ export default function TickCount({
             textTransform: "uppercase",
           }}
         >
-          Ticks
+          {t("stock.tickCount")}
         </Typography>
         <Typography
           sx={{

@@ -1,6 +1,7 @@
 import { semanticTokens } from "../../../theme";
 import { Box, Grid, styled, Typography } from "@mui/material";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { useTranslation } from "react-i18next";
 import StyledListSubheader from "./StyledListSubheader";
 
 const SettingGridItem = styled(Box)(({ theme }) => ({
@@ -59,24 +60,11 @@ const ResetButton = styled("button")({
 });
 
 export default function IndicatorSettingsSection() {
+  const { t } = useTranslation();
   const { settings, updateSetting, resetSettings } = useIndicatorSettings();
 
   const settingItems = [
-    { key: "ma5", label: "MA 短 (5)" },
-    { key: "ma10", label: "MA 中 (10)" },
-    { key: "ma20", label: "MA 長 (30)" },
-    { key: "ma60", label: "MA 季 (60)" },
-    { key: "ma240", label: "MA 年 (240)" },
-    { key: "emaShort", label: "EMA 短" },
-    { key: "emaLong", label: "EMA 長" },
-    { key: "boll", label: "布林帶 (30)" },
-    { key: "donchian", label: "唐奇安 (20)" },
-    { key: "kd", label: "KD (9)" },
-    { key: "rsi", label: "RSI (14)" },
-    { key: "mfi", label: "MFI (14)" },
-    { key: "cmf", label: "CMF (21)" },
-    { key: "cmfEma", label: "CMF EMA (5)" },
-    { key: "cci", label: "CCI (26)" },
+    "ma5", "ma10", "ma20", "ma60", "ma240", "emaShort", "emaLong", "boll", "donchian", "kd", "rsi", "mfi", "cmf", "cmfEma", "cci",
   ] as const;
 
   return (
@@ -89,14 +77,17 @@ export default function IndicatorSettingsSection() {
           pr: 2,
         }}
       >
-        技術指標設定
-        <ResetButton onClick={resetSettings}>回復初始值</ResetButton>
+        {t("settings.indicators")}
+        <ResetButton onClick={resetSettings} aria-describedby="indicator-settings-help">{t("settings.resetIndicators")}</ResetButton>
       </StyledListSubheader>
 
       <Box sx={{ p: 2, pt: 1 }}>
+        <Typography id="indicator-settings-help" variant="caption" sx={{ display: "block", mb: 1, color: "#8B7355" }}>
+          {t("settings.indicatorHelp")}
+        </Typography>
         <Grid container spacing={2}>
           {settingItems.map((item) => (
-            <Grid size={4} key={item.key}>
+            <Grid size={4} key={item}>
               <SettingGridItem>
                 <Typography
                   variant="caption"
@@ -107,16 +98,19 @@ export default function IndicatorSettingsSection() {
                     letterSpacing: "0.05rem",
                     textTransform: "uppercase",
                   }}
+                  id={`indicator-${item}-label`}
                 >
-                  {item.label}
+                  {t(`settings.indicator.${item}`)}
                 </Typography>
                 <StyledInput
                   type="number"
-                  value={settings[item.key]}
+                  value={settings[item]}
                   onChange={(e) =>
-                    updateSetting(item.key, parseInt(e.target.value) || 0)
+                    updateSetting(item, parseInt(e.target.value) || 0)
                   }
                   onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                  aria-labelledby={`indicator-${item}-label`}
+                  aria-describedby="indicator-settings-help"
                 />
               </SettingGridItem>
             </Grid>

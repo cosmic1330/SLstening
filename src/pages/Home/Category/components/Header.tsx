@@ -8,6 +8,7 @@ import {
 import { Box, IconButton, Stack, Typography } from "@mui/material";
 import { Reorder } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CategoryType } from "../../../../types";
 import { CategoryPill, PremiumHeader } from "../styles";
 
@@ -32,6 +33,7 @@ export default function Header({
   onManageClick,
   onReorder,
 }: HeaderProps) {
+  const { t } = useTranslation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollInterval = useRef<number | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -77,6 +79,9 @@ export default function Header({
       scrollInterval.current = null;
     }
   };
+  const scrollOnce = (direction: "left" | "right") => {
+    scrollRef.current?.scrollBy({ left: direction === "right" ? 160 : -160, behavior: "smooth" });
+  };
 
   return (
     <PremiumHeader>
@@ -92,20 +97,21 @@ export default function Header({
             fontWeight="900"
             sx={{ letterSpacing: "-1px" }}
           >
-            自選分類
+            {t("category.title")}
           </Typography>
           <Typography
             variant="body1"
             sx={{ opacity: 0.5, fontWeight: 500, mt: 0.5 }}
           >
             {activeId
-              ? `${activeName} · ${count} 檔標的`
-              : "選擇分類開始管理您的自選名單"}
+              ? t("category.summary", { name: activeName, count })
+              : t("category.prompt")}
           </Typography>
         </Box>
         <Stack direction="row" spacing={1.5}>
           <IconButton
             onClick={onAddClick}
+            aria-label={t("category.add")}
             sx={{
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.05)",
@@ -116,6 +122,7 @@ export default function Header({
           </IconButton>
           <IconButton
             onClick={onManageClick}
+            aria-label={t("category.manage")}
             sx={{
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.05)",
@@ -149,6 +156,8 @@ export default function Header({
           >
             <IconButton
               size="small"
+              aria-label={t("a11y.scrollLeft")}
+              onClick={() => scrollOnce("left")}
               sx={{
                 background: "rgba(61, 90, 69, 0.15)",
                 backdropFilter: "blur(4px)",
@@ -182,6 +191,8 @@ export default function Header({
           >
             <IconButton
               size="small"
+              aria-label={t("a11y.scrollRight")}
+              onClick={() => scrollOnce("right")}
               sx={{
                 background: "rgba(61, 90, 69, 0.15)",
                 backdropFilter: "blur(4px)",
@@ -238,6 +249,8 @@ export default function Header({
                   label={c.name}
                   active={activeId === c.id}
                   onClick={() => onSelect(c.id)}
+                  aria-label={c.name}
+                  aria-current={activeId === c.id ? "true" : undefined}
                 />
               </Reorder.Item>
             ))}
@@ -246,7 +259,7 @@ export default function Header({
                 variant="body2"
                 sx={{ opacity: 0.3, fontStyle: "italic", py: 1 }}
               >
-                尚未建立分類，請點擊右方按鈕新增
+                {t("category.empty")}
               </Typography>
             )}
           </Reorder.Group>

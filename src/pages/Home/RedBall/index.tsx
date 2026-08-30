@@ -12,6 +12,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { tauriFetcher, TauriFetcherType } from "../../../api/http_cache";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import useElementHeight from "../../../hooks/useElementHeight";
@@ -116,6 +117,7 @@ function csvToStockStore(csv: string): CsvStockType[] {
 }
 
 export default function RedBall() {
+  const { t } = useTranslation();
   const { ref: listContainerRef, height: listHeight } =
     useElementHeight<HTMLDivElement>();
   const [loading, setLoading] = useState(true);
@@ -187,7 +189,7 @@ export default function RedBall() {
               fontWeight="900"
               sx={{ letterSpacing: "-0.5px", color: "#5D4037" }}
             >
-              系統推薦股
+              {t("redBall.title")}
             </Typography>
           </Stack>
 
@@ -208,7 +210,7 @@ export default function RedBall() {
               }}
             >
               {availableLists.map((list) => (
-                <StyledTab key={list} label={`前 ${list} 日`} value={list} />
+                <StyledTab key={list} label={t("redBall.topDays", { count: Number(list) })} value={list} />
               ))}
             </Tabs>
           )}
@@ -234,7 +236,7 @@ export default function RedBall() {
                 variant="body2"
                 sx={{ color: "#8B7355", fontWeight: 700 }}
               >
-                正在獲取數據...
+                {t("redBall.loading")}
               </Typography>
             </Stack>
           </Box>

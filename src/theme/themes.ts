@@ -23,6 +23,18 @@ const sharedThemeOptions: ThemeOptions = {
       sharp: primitiveTokens.motion.easing.exit,
     },
   },
+  components: {
+    MuiButtonBase: {
+      styleOverrides: {
+        root: {
+          "&:focus-visible": {
+            outline: `3px solid ${semanticTokens.analysis.focus}`,
+            outlineOffset: 2,
+          },
+        },
+      },
+    },
+  },
 };
 
 export const appTheme = createTheme({
@@ -91,6 +103,7 @@ export const analysisTheme = createTheme({
     },
   },
   components: {
+    MuiButtonBase: sharedThemeOptions.components?.MuiButtonBase,
     MuiCard: {
       styleOverrides: {
         root: {
@@ -102,4 +115,3 @@ export const analysisTheme = createTheme({
     },
   },
 });
-

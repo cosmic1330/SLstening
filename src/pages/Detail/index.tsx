@@ -1,19 +1,20 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { Box, styled, ThemeProvider } from "@mui/material";
+import { Box, Button, CircularProgress, Dialog, DialogContent, DialogTitle, styled, ThemeProvider } from "@mui/material";
 import { listen } from "@tauri-apps/api/event";
-import { AnimatePresence, motion, Variants } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, Variants } from "framer-motion";
 import React, {
   Suspense,
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useNavigate, useParams } from "react-router";
+import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { marketApi } from "../../api/marketApi";
-import DocModal from "../../components/DocModal";
 import { DealsContext } from "../../context/DealsContext";
 import { UrlTaPerdOptions } from "../../types";
 import { IndicatorsDateTimeType } from "../../utils/analyzeIndicatorsData";
@@ -23,6 +24,37 @@ import MarketDataStatus from "../../components/MarketDataStatus";
 import { deriveMarketResourceState } from "../../utils/marketResourceState";
 import { useFreshnessNow, useMarketSession } from "../../hooks/useMarketSession";
 import GlassBar from "./GlassBar";
+const DocModal = React.lazy(() => import("../../components/DocModal"));
+
+function DocModalLoading({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      aria-labelledby="documentation-loading-title"
+      PaperProps={{
+        sx: {
+          bgcolor: "background.paper",
+          backgroundImage: "none",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(255, 255, 255, 0.1)",
+          width: "min(100% - 32px, 420px)",
+        },
+      }}
+    >
+      <DialogTitle id="documentation-loading-title">{t("Pages.Detail.documentation.loading")}</DialogTitle>
+      <DialogContent sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 3 }}>
+        <CircularProgress size={22} aria-hidden="true" />
+        <Box sx={{ minWidth: 0, flex: 1 }} role="status" aria-live="polite">
+          {t("Pages.Detail.documentation.loading")}
+        </Box>
+        <Button onClick={onClose} variant="text">{t("Pages.Detail.documentation.cancel")}</Button>
+      </DialogContent>
+    </Dialog>
+  );
+}
 const PageContainer = styled(Box)`
   width: 100vw;
   height: 100vh;
@@ -52,9 +84,12 @@ const ChartViewport = styled(Box)`
 `;
 
 import { CHART_CONFIG } from "./constants/chartConfig";
+import { getChartTitle } from "./constants/chartConfig";
+import { carouselOwnsEvent } from "./interaction";
 
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
+  const reduceMotion = useReducedMotion();
   const [scrolling, setScrolling] = useState(false);
   const [perd, setPerd] = useState<UrlTaPerdOptions>(
     (localStorage.getItem("detail:perd:type") as UrlTaPerdOptions) ||
@@ -66,6 +101,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
   // Shared zoom and pan state
   const [visibleCount, setVisibleCount] = useState(120);
   const [rightOffset, setRightOffset] = useState(0);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   // Documentation modal state
   const [isDocOpen, setIsDocOpen] = useState(false);
@@ -109,8 +145,9 @@ const FullscreenVerticalCarousel: React.FC = () => {
   }, []);
 
   const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      if (scrolling || isDocOpen) return;
+    (e: React.WheelEvent<HTMLDivElement>) => {
+      if (scrolling || isDocOpen || !carouselOwnsEvent(e)) return;
+      e.preventDefault();
       setScrolling(true);
 
       if (e.deltaY > 0) {
@@ -125,12 +162,14 @@ const FullscreenVerticalCarousel: React.FC = () => {
   );
 
   const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (scrolling || isDocOpen) return;
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (scrolling || isDocOpen || !carouselOwnsEvent(e)) return;
 
       if (e.key === "ArrowUp") {
+        e.preventDefault();
         goToSlide(current - 1);
       } else if (e.key === "ArrowDown") {
+        e.preventDefault();
         goToSlide(current + 1);
       } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
         const options = [
@@ -141,10 +180,12 @@ const FullscreenVerticalCarousel: React.FC = () => {
         const idx = options.indexOf(perd);
         if (e.key === "ArrowLeft") {
           if (idx > 0) {
+            e.preventDefault();
             handleSetPerd(options[idx - 1]);
           }
         } else if (e.key === "ArrowRight") {
           if (idx < options.length - 1) {
+            e.preventDefault();
             handleSetPerd(options[idx + 1]);
           }
         }
@@ -152,15 +193,6 @@ const FullscreenVerticalCarousel: React.FC = () => {
     },
     [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen],
   );
-
-  useEffect(() => {
-    window.addEventListener("wheel", handleWheel, { passive: true });
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [handleWheel, handleKeyDown]);
 
   const slideVariants: Variants = {
     initial: (direction: number) => ({
@@ -242,19 +274,33 @@ const FullscreenVerticalCarousel: React.FC = () => {
   const historyUpdatedAt = historySuccess?.key === historyKey ? historySuccess.updatedAt : undefined;
   const now = useFreshnessNow(historyUpdatedAt, 30_000, marketSession);
   const historyState = useMemo(() => deriveMarketResourceState({ enabled: Boolean(id && perd), hasData: deals.length > 0, resolved: historyData !== undefined, isLoading, isValidating, error, updatedAt: historyUpdatedAt, marketSession, staleAfterMs: 30_000, now }), [id, perd, deals.length, historyData, isLoading, isValidating, error, historyUpdatedAt, marketSession, now]);
+  const { t } = useTranslation();
+  const latest = deals.at(-1);
+  const periodLabel = t(`Pages.Detail.summary.${perd === UrlTaPerdOptions.Hour ? "hour" : perd === UrlTaPerdOptions.Day ? "day" : "week"}`);
+  const chartSummary = t("a11y.chartSummary", {
+    title: getChartTitle(CHART_CONFIG[current], t),
+    period: periodLabel,
+    count: deals.length,
+    latest: latest
+      ? t("Pages.Detail.summary.latest", { open: latest.o, high: latest.h, low: latest.l, close: latest.c })
+      : t("Pages.Detail.summary.noLatest"),
+  });
 
   return (
     <ThemeProvider theme={analysisTheme}>
       <PageContainer>
           <DealsContext.Provider value={deals}>
-          <ChartViewport>
+          <ChartViewport ref={viewportRef} tabIndex={0} aria-label={t("Pages.Detail.GlassBar.navigation")} aria-describedby="detail-chart-summary" onWheel={handleWheel} onKeyDown={handleKeyDown}>
+            <Box id="detail-chart-summary" aria-live="polite" aria-atomic="true" sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
+              {chartSummary}
+            </Box>
             {historyState.phase !== "ready" ? <Box sx={{ position: "absolute", inset: 0, zIndex: 2, display: "grid", placeItems: "center", px: 2 }}><MarketDataStatus state={historyState} retry={mutate} /></Box> : null}
             <AnimatePresence custom={direction(current)} mode="wait">
               <motion.div
                 key={slides[current].id}
                 custom={direction(current)}
-                variants={slideVariants}
-                initial="initial"
+                variants={reduceMotion ? undefined : slideVariants}
+                initial={reduceMotion ? false : "initial"}
                 animate="animate"
                 exit="exit"
                 style={{
@@ -265,7 +311,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
                   justifyContent: "center",
                 }}
               >
-                <Suspense fallback={<div>Loading...</div>}>
+                <Suspense fallback={<Box role="status">{t("app.loading")}</Box>}>
                   {slides[current].content}
                 </Suspense>
               </motion.div>
@@ -282,16 +328,16 @@ const FullscreenVerticalCarousel: React.FC = () => {
             currentId={slides[current].id}
           />
 
-          <DocModal
-            open={isDocOpen}
-            onClose={() => setIsDocOpen(false)}
-            title={
-              docMap[slides[current].id as keyof typeof docMap]?.title || "文件"
-            }
-            markdown={
-              docMap[slides[current].id as keyof typeof docMap]?.content || ""
-            }
-          />
+          {isDocOpen ? (
+            <Suspense fallback={<DocModalLoading onClose={() => setIsDocOpen(false)} />}>
+              <DocModal
+                open
+                onClose={() => setIsDocOpen(false)}
+                title={getChartTitle(CHART_CONFIG[current], t)}
+                markdown={docMap[slides[current].id as keyof typeof docMap]?.content || ""}
+              />
+            </Suspense>
+          ) : null}
         </DealsContext.Provider>
       </PageContainer>
     </ThemeProvider>

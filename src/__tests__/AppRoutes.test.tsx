@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, useParams } from "react-router";
+import { MemoryRouter, Outlet, useParams } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 const authState = vi.hoisted(() => ({ isLoading: false, session: null as unknown }));
@@ -23,6 +23,9 @@ vi.mock("../pages/Home/Category", () => ({
   default: () => <div>category-route</div>,
 }));
 vi.mock("../components/DebugInfo", () => ({ default: () => null }));
+vi.mock("../layout/AuthenticatedRuntime", () => ({
+  default: () => <div data-testid="authenticated-runtime"><Outlet /></div>,
+}));
 vi.mock("../hooks/useMarketWatcher", () => ({ default: vi.fn() }));
 vi.mock("../store/Stock.store", () => ({
   default: () => ({ reload: vi.fn() }),
@@ -31,28 +34,33 @@ vi.mock("../context/UserContext", () => ({
   UserProvider: ({ children }: { children: React.ReactNode }) => children,
   useUser: () => authState,
 }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
 import { AppRoutes } from "../App";
 
 describe("AppRoutes", () => {
-  it("routes /detail/:id to Detail with the stock id", () => {
+  it("redirects unauthenticated detail visits to the lazy login route without mounting the authenticated runtime", async () => {
     render(
       <MemoryRouter initialEntries={["/detail/2330"]}>
         <AppRoutes />
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("login-route")).toBeTruthy();
+    expect(await screen.findByText("login-route")).toBeTruthy();
+    expect(screen.queryByTestId("authenticated-runtime")).toBeNull();
   });
 
-  it("redirects authenticated visitors away from login and permits protected routes", () => {
+  it("redirects authenticated visitors away from login and mounts the runtime once for protected routes", async () => {
     authState.session = { user: { id: "user-1" } };
     const view = render(
       <MemoryRouter initialEntries={["/"]}>
         <AppRoutes />
       </MemoryRouter>,
     );
-    expect(screen.getByText("home-route")).toBeTruthy();
+    expect(await screen.findByText("home-route")).toBeTruthy();
+    expect(screen.getByTestId("authenticated-runtime")).toBeTruthy();
 
     view.unmount();
     render(
@@ -60,7 +68,7 @@ describe("AppRoutes", () => {
         <AppRoutes />
       </MemoryRouter>,
     );
-    expect(screen.getByText("detail-route:2330")).toBeTruthy();
+    expect(await screen.findByText("detail-route:2330")).toBeTruthy();
     authState.session = null;
   });
 

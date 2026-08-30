@@ -19,37 +19,54 @@ export default function useMarketWatcher() {
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let disposed = false;
+    let listenerRemoved = false;
 
-    const setupListener = async () => {
-      unlisten = await listen<MarketEventPayload>("market-update", (event) => {
-        const { type, payload } = event.payload;
+    const removeListener = () => {
+      if (!unlisten || listenerRemoved) return;
 
-        if (type === "Tick") {
-          // 將 Rust 端的 MarketTick 轉換為前端的 TickDealsType
-          const tick: TickDealsType = {
-            id: payload.id,
-            name: (payload.name && payload.name !== "null") ? payload.name : undefined,
-            price: payload.price,
-            changePercent: payload.change_percent,
-            ts: payload.refreshed_ts,
-            closes: payload.closes,
-            avgPrices: payload.avg_prices,
-            previousClose: payload.previous_close,
-            timestamps: payload.timestamps,
-            volume: payload.volume || undefined,
-          };
-          updateTick(tick);
-        } else if (type === "Indicators") {
-          // 下一階段實作
-          console.log("Indicators update received:", payload.id);
-        }
-      });
+      listenerRemoved = true;
+      unlisten();
     };
 
-    setupListener();
+    const setupListener = async () => {
+      try {
+        unlisten = await listen<MarketEventPayload>("market-update", (event) => {
+          const { type, payload } = event.payload;
+
+          if (type === "Tick") {
+            // 將 Rust 端的 MarketTick 轉換為前端的 TickDealsType
+            const tick: TickDealsType = {
+              id: payload.id,
+              name: (payload.name && payload.name !== "null") ? payload.name : undefined,
+              price: payload.price,
+              changePercent: payload.change_percent,
+              ts: payload.refreshed_ts,
+              closes: payload.closes,
+              avgPrices: payload.avg_prices,
+              previousClose: payload.previous_close,
+              timestamps: payload.timestamps,
+              volume: payload.volume || undefined,
+            };
+            updateTick(tick);
+          } else if (type === "Indicators") {
+            // 下一階段實作
+            console.log("Indicators update received:", payload.id);
+          }
+        });
+
+        if (disposed) removeListener();
+      } catch {
+        // Native event registration can fail while a webview is closing. The
+        // effect has no recovery action, but the rejection must not escape.
+      }
+    };
+
+    void setupListener();
 
     return () => {
-      if (unlisten) unlisten();
+      disposed = true;
+      removeListener();
     };
   }, [updateTick]);
 }

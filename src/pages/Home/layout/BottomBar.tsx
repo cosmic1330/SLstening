@@ -4,8 +4,9 @@ import BuildIcon from "@mui/icons-material/Build";
 import CategoryIcon from '@mui/icons-material/Category';
 import HomeIcon from "@mui/icons-material/Home";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import { Box, IconButton,  styled, Tooltip } from "@mui/material"; // Import Tooltip
+import { Box, IconButton,  styled, Tooltip } from "@mui/material";
 import { useLocation, useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 import useAddWebviewWindow from "../../../hooks/useAddWebviewWindow";
 import { primitiveTokens, semanticTokens } from "../../../theme";
 
@@ -32,6 +33,7 @@ const WoodenDock = styled(Box, {
   padding: "0 16px",
   zIndex: primitiveTokens.layer.navigation,
   opacity: visible ? 1 : 0,
+  visibility: visible ? "visible" : "hidden",
   pointerEvents: visible ? "auto" : "none", // Prevent accidental clicks when hidden
   boxShadow: primitiveTokens.shadow.dock,
   transition: [
@@ -93,6 +95,7 @@ const CenterFab = styled(IconButton)(() => ({
 }));
 
 export default function BottomBar() {
+  const { t } = useTranslation();
   const { openAddWindow } = useAddWebviewWindow();
   const navigate = useNavigate();
   const location = useLocation();
@@ -105,20 +108,24 @@ export default function BottomBar() {
   };
 
   return (
-    <WoodenDock visible={isBottomBarVisible}>
-      <Tooltip title="首頁" arrow>
+    <WoodenDock role="navigation" aria-label={t("navigation.label")} visible={isBottomBarVisible}>
+      <Tooltip title={t("navigation.home")} arrow>
         <NavButton 
             active={isActive("/dashboard")}
             onClick={() => navigate("/dashboard")}
+            aria-label={t("navigation.home")}
+            aria-current={isActive("/dashboard") ? "page" : undefined}
         >
             <HomeIcon />
         </NavButton>
       </Tooltip>
 
-      <Tooltip title="設定" arrow>
+      <Tooltip title={t("navigation.settings")} arrow>
         <NavButton 
             active={isActive("/dashboard/setting")}
             onClick={() => navigate("/dashboard/setting")}
+            aria-label={t("navigation.settings")}
+            aria-current={isActive("/dashboard/setting") ? "page" : undefined}
         >
             <BuildIcon />
         </NavButton>
@@ -127,23 +134,27 @@ export default function BottomBar() {
       {/* Spacer for Center FAB */}
       <Box sx={{ width: 40 }} />
 
-      <CenterFab onClick={openAddWindow}>
+      <CenterFab onClick={openAddWindow} aria-label={t("navigation.add")}>
         <AddCircleRoundedIcon />
       </CenterFab>
 
-      <Tooltip title="系統推薦股" arrow>
+      <Tooltip title={t("navigation.recommendations")} arrow>
         <NavButton 
             active={isActive("/dashboard/redball")}
             onClick={() => navigate("/dashboard/redball")}
+            aria-label={t("navigation.recommendations")}
+            aria-current={isActive("/dashboard/redball") ? "page" : undefined}
         >
             <TrendingUpIcon />
         </NavButton>
       </Tooltip>
       
-      <Tooltip title="分類" arrow>
+      <Tooltip title={t("navigation.categories")} arrow>
          <NavButton 
             active={isActive("/dashboard/category")}
             onClick={() => navigate("/dashboard/category")}
+            aria-label={t("navigation.categories")}
+            aria-current={isActive("/dashboard/category") ? "page" : undefined}
         >
             <CategoryIcon />
         </NavButton>

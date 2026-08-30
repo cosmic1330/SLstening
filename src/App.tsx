@@ -1,74 +1,60 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
+import { Box, CircularProgress, Typography } from "@mui/material";
 import { ThemeProvider } from "@mui/material/styles";
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
+import { useTranslation } from "react-i18next";
 import { currentDestination, intendedDestination } from "./auth/navigation";
-import { ToastContainer } from "react-toastify";
 import "./App.css";
-import DebugInfo from "./components/DebugInfo";
 import { UserProvider, useUser } from "./context/UserContext";
-import Add from "./pages/Add";
-import Detail from "./pages/Detail/index";
-import Home from "./pages/Home";
-import Category from "./pages/Home/Category";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import useStocksStore from "./store/Stock.store";
-import useDebugStore from "./store/debug.store";
-import useMarketWatcher from "./hooks/useMarketWatcher";
 import { appTheme } from "./theme";
 
-// 懶加載組件
+const Add = lazy(() => import("./pages/Add"));
+const AuthenticatedRuntime = lazy(() => import("./layout/AuthenticatedRuntime"));
+const Category = lazy(() => import("./pages/Home/Category"));
+const Detail = lazy(() => import("./pages/Detail"));
+const Home = lazy(() => import("./pages/Home"));
 const List = lazy(() => import("./pages/Home/List"));
+const Login = lazy(() => import("./pages/Login"));
 const RedBall = lazy(() => import("./pages/Home/RedBall"));
+const Register = lazy(() => import("./pages/Register"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
+
+function RouteFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <Box role="status" aria-live="polite" sx={{ minHeight: 120, display: "grid", placeItems: "center", gap: 1 }}>
+      <CircularProgress size={24} aria-hidden="true" />
+      <Typography variant="body2">{t("app.loading")}</Typography>
+    </Box>
+  );
+}
+
+function LazyRoute({ children }: { children: React.ReactNode }) {
+  return <Suspense fallback={<RouteFallback />}>{children}</Suspense>;
+}
 
 export function AppRoutes() {
   return (
     <Routes>
       <Route index element={<Navigate to="/auth/login" replace />} />
       <Route element={<RedirectAuthenticated />}>
-        <Route path="auth/login" element={<Login />} />
-        <Route path="auth/register" element={<Register />} />
+        <Route path="auth/login" element={<LazyRoute><Login /></LazyRoute>} />
+        <Route path="auth/register" element={<LazyRoute><Register /></LazyRoute>} />
         <Route path="login" element={<Navigate to="/auth/login" replace />} />
         <Route path="register" element={<Navigate to="/auth/register" replace />} />
       </Route>
       <Route element={<RequireAuth />}>
-        <Route path="add" element={<Add />} />
-        <Route path="detail/:id" element={<Detail />} />
-        <Route path="dashboard" element={<Home />}>
-        <Route
-          index
-          element={
-            <Suspense fallback={<div>載入中...</div>}>
-              <List />
-            </Suspense>
-          }
-        />
-        <Route
-          path="setting"
-          element={
-            <Suspense fallback={<div>載入中...</div>}>
-              <Setting />
-            </Suspense>
-          }
-        />
-        <Route
-          path="redball"
-          element={
-            <Suspense fallback={<div>載入中...</div>}>
-              <RedBall />
-            </Suspense>
-          }
-        />
-        <Route
-          path="category"
-          element={
-            <Suspense fallback={<div>載入中...</div>}>
-              <Category />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route element={<LazyRoute><AuthenticatedRuntime /></LazyRoute>}>
+          <Route path="add" element={<LazyRoute><Add /></LazyRoute>} />
+          <Route path="detail/:id" element={<LazyRoute><Detail /></LazyRoute>} />
+          <Route path="dashboard" element={<LazyRoute><Home /></LazyRoute>}>
+            <Route index element={<LazyRoute><List /></LazyRoute>} />
+            <Route path="setting" element={<LazyRoute><Setting /></LazyRoute>} />
+            <Route path="redball" element={<LazyRoute><RedBall /></LazyRoute>} />
+            <Route path="category" element={<LazyRoute><Category /></LazyRoute>} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
         </Route>
       </Route>
     </Routes>
@@ -90,43 +76,11 @@ export function RedirectAuthenticated() {
 }
 
 function App() {
-  const { reload } = useStocksStore();
-  
-  // 啟動全域市場資料監聽
-  useMarketWatcher();
-
-  useEffect(() => {
-    reload();
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "d") {
-        e.preventDefault();
-        useDebugStore.getState().toggleVisibility();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   return (
     <ThemeProvider theme={appTheme}>
       <UserProvider>
         <BrowserRouter>
           <AppRoutes />
-          <DebugInfo />
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick={false}
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-            theme="dark"
-          />
         </BrowserRouter>
       </UserProvider>
     </ThemeProvider>

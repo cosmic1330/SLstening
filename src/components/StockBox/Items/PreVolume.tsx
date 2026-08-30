@@ -1,7 +1,9 @@
 import { Box, Typography } from "@mui/material";
 import { TaType } from "../../../types";
+import { useTranslation } from "react-i18next";
 
 export default function PreVolume({ deals }: { deals: TaType }) {
+  const { t } = useTranslation();
   return (
     <Box>
       <Typography
@@ -12,7 +14,7 @@ export default function PreVolume({ deals }: { deals: TaType }) {
         textAlign="center"
         noWrap
       >
-        昨日量
+        {t("stock.previousVolume")}
       </Typography>
       <Typography variant="body2" fontWeight="bold" textAlign="center" color="#fff">
         {deals.length > 0 && deals[deals.length - 2].v}

@@ -9,6 +9,8 @@ import {
 } from "@mui/material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useTranslation } from "react-i18next";
+import { normalizeLanguage } from "../i18n";
 
 interface DocModalProps {
   open: boolean;
@@ -23,6 +25,8 @@ const DocModal: React.FC<DocModalProps> = ({
   title,
   markdown,
 }) => {
+  const { t, i18n } = useTranslation();
+  const isEnglish = normalizeLanguage(i18n.resolvedLanguage) === "en";
   return (
     <Dialog
       open={open}
@@ -51,7 +55,8 @@ const DocModal: React.FC<DocModalProps> = ({
           {title}
         </Typography>
         <IconButton
-          aria-label="close"
+          aria-label={t("a11y.close")}
+          title={t("a11y.close")}
           onClick={onClose}
           sx={{
             color: (theme) => theme.palette.grey[500],
@@ -61,6 +66,14 @@ const DocModal: React.FC<DocModalProps> = ({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers sx={{ p: 3 }}>
+        {isEnglish ? (
+          <Typography variant="caption" sx={{ display: "block", mb: 2, color: "text.secondary" }}>
+            {t("stock.guideUnavailable")}
+          </Typography>
+        ) : null}
+        <Typography variant="caption" sx={{ display: "block", mb: 2, color: "text.secondary" }}>
+          {t("stock.guideLanguage")}
+        </Typography>
         <Box
           sx={{
             "& h1": { mt: 0, mb: 2, fontSize: "1.5rem" },

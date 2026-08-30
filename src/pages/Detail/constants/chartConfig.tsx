@@ -1,4 +1,5 @@
 import React, { lazy } from "react";
+import type { TFunction } from "i18next";
 
 // lazy load components
 const MaKbar = lazy(() => import("../Ma/MaKbar"));
@@ -18,7 +19,7 @@ const Chip = lazy(() => import("../Chip/Chip"));
 import atrDoc from "../ATR/ATR.md?raw";
 import bolleanDoc from "../Bollean/Bollean.md?raw";
 import cciDoc from "../Cci/Cci.md?raw";
-import Donchian from "../Donchian/Donchian";
+const Donchian = lazy(() => import("../Donchian/Donchian"));
 import donchianDoc from "../Donchian/Donchian.md?raw";
 import emaDoc from "../Ema/Ema.md?raw";
 import ichimokuDoc from "../IchimokuCloud/ichimoku.md?raw";
@@ -38,6 +39,17 @@ export interface ChartDefinition {
   timezoneAdvice: string;
   component: (props: any) => React.ReactNode;
 }
+
+export const getChartLabel = (chart: ChartDefinition | undefined, t: TFunction) =>
+  chart ? t(`Pages.Detail.charts.${chart.id}.label`) : "";
+
+export const getChartTitle = (chart: ChartDefinition | undefined, t: TFunction) =>
+  chart ? t(`Pages.Detail.charts.${chart.id}.title`) : "";
+
+export const getChartAdvice = (chart: ChartDefinition | undefined, t: TFunction) => {
+  if (!chart) return "";
+  return t(`Pages.Detail.chartAdvice.${chart.id}`);
+};
 
 export const CHART_CONFIG: ChartDefinition[] = [
   {

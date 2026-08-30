@@ -8,6 +8,7 @@ import LazyStockBox from "../../../../components/StockBox/LazyStockBox";
 import VirtualizedStockList from "../../../../components/VirtualizedStockList";
 import useElementHeight from "../../../../hooks/useElementHeight";
 import { StockStoreType } from "../../../../types";
+import { useTranslation } from "react-i18next";
 
 interface StockWorkspaceProps {
   stocks: StockStoreType[];
@@ -22,6 +23,7 @@ export default function StockWorkspace({
   onRemoveStock,
   header,
 }: StockWorkspaceProps) {
+  const { t } = useTranslation();
   const { ref: workspaceRef, height: workspaceHeight } =
     useElementHeight<HTMLDivElement>();
   return (
@@ -52,10 +54,10 @@ export default function StockWorkspace({
             >
               <AddListIcon sx={{ fontSize: 100, mb: 3 }} />
               <Typography variant="h5" fontWeight="700">
-                分類尚無內容
+                {t("category.emptyStocks")}
               </Typography>
               <Typography variant="body1">
-                使用上方搜尋列，快速充實您的自選名單
+                {t("category.emptyStocksHint")}
               </Typography>
             </Stack>
           </Box>
@@ -79,7 +81,7 @@ export default function StockWorkspace({
               <AddIcon sx={{ fontSize: 80 }} />
             </Box>
             <Typography variant="h6" sx={{ mt: 3 }}>
-              請選擇或新增分類
+              {t("category.selectOrAdd")}
             </Typography>
           </Stack>
         </Box>

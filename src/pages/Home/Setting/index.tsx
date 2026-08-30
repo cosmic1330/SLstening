@@ -38,6 +38,7 @@ import {
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
 import useDebugStore from "../../../store/debug.store";
@@ -75,6 +76,7 @@ const GhibliNotebookPaper = styled(Paper)(({ theme }) => ({
 }));
 
 function Setting() {
+  const { t } = useTranslation();
   const {
     factory_reset,
     fetchSupabaseWatchStock,
@@ -151,10 +153,10 @@ function Setting() {
 
   const handleFactoryReset = useCallback(async () => {
     if (
-      window.confirm("確定要清除所有資料並還原回原廠設定嗎？此動作無法復原。")
+      window.confirm(t("settings.resetConfirm"))
     ) {
       await factory_reset();
-      sendNotification({ title: "原廠設定", body: "清除成功！" });
+      sendNotification({ title: t("settings.factoryReset"), body: t("settings.resetDone") });
       window.location.reload();
     }
   }, [factory_reset]);
@@ -164,7 +166,7 @@ function Setting() {
       setSyncLoading(true);
       const newStocks = await fetchSupabaseWatchStock();
       if (newStocks.length === 0) {
-        sendNotification({ title: "同步", body: "沒有缺少的股票需要同步" });
+        sendNotification({ title: t("settings.sync"), body: t("settings.syncNone") });
       } else {
         setPendingStocks(newStocks);
         setSelectedStocks(newStocks.map((s) => s.id));
@@ -172,7 +174,7 @@ function Setting() {
       }
     } catch (e) {
       console.error(e);
-      sendNotification({ title: "錯誤", body: "同步失敗" });
+      sendNotification({ title: t("marketData.error"), body: t("settings.syncFailed") });
     } finally {
       setSyncLoading(false);
     }
@@ -185,8 +187,8 @@ function Setting() {
     if (stocksToAdd.length > 0) {
       await addStocks(stocksToAdd);
       sendNotification({
-        title: "同步成功",
-        body: `已新增 ${stocksToAdd.length} 檔股票`,
+        title: t("settings.sync"),
+        body: t("settings.syncSuccess", { count: stocksToAdd.length }),
       });
     }
     setSyncDialogOpen(false);
@@ -208,15 +210,15 @@ function Setting() {
 
   const handleDeleteCloudStock = useCallback(
     async (id: string, name: string) => {
-      if (window.confirm(`確定要從雲端同步清單中刪除 ${id} ${name} 嗎？`)) {
+      if (window.confirm(t("settings.deleteCloudConfirm", { id, name }))) {
         try {
           await removeSupabaseWatchStock(id);
           setPendingStocks((prev) => prev.filter((s) => s.id !== id));
           setSelectedStocks((prev) => prev.filter((i) => i !== id));
-          sendNotification({ title: "刪除成功", body: `已從雲端移除 ${name}` });
+          sendNotification({ title: t("settings.delete"), body: t("settings.deleteSuccess", { count: 1 }) });
         } catch (e) {
           console.error(e);
-          sendNotification({ title: "錯誤", body: "刪除失敗" });
+          sendNotification({ title: t("marketData.error"), body: t("settings.deleteFailed") });
         }
       }
     },
@@ -246,13 +248,13 @@ function Setting() {
     if (deleteSelectedStocks.length > 0) {
       if (
         window.confirm(
-          `確定要從本地刪除選中的 ${deleteSelectedStocks.length} 檔股票嗎？`,
+          t("settings.deleteLocalConfirm", { count: deleteSelectedStocks.length }),
         )
       ) {
         await removeStocks(deleteSelectedStocks);
         sendNotification({
-          title: "刪除成功",
-          body: `已刪除 ${deleteSelectedStocks.length} 檔股票`,
+          title: t("settings.delete"),
+          body: t("settings.deleteSuccess", { count: deleteSelectedStocks.length }),
         });
         setDeleteDialogOpen(false);
       }
@@ -272,6 +274,7 @@ function Setting() {
         <Stack direction="row" alignItems="center" spacing={1} mb={2}>
           <IconButton
             onClick={() => navigate("/dashboard")}
+            aria-label={t("a11y.back")}
             sx={{
               color: "#5D4037",
               background: "rgba(93, 64, 55, 0.05)",
@@ -282,21 +285,21 @@ function Setting() {
             <ArrowBackIcon fontSize="small" />
           </IconButton>
           <Typography variant="h5" fontWeight="900" sx={{ color: "#5D4037" }}>
-            偏好設定
+            {t("settings.title")}
           </Typography>
         </Stack>
 
         <GhibliNotebookPaper elevation={0}>
           <List disablePadding>
-            <StyledListSubheader>資料管理</StyledListSubheader>
+            <StyledListSubheader>{t("settings.data")}</StyledListSubheader>
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
                 <DownloadIcon sx={{ color: "#8B7355" }} />
               </ListItemIcon>
               <ListItemText
-                primary="更新股票列表"
-                secondary="手動觸發台股資料庫更新"
+                primary={t("settings.updateStocks")}
+                secondary={t("settings.updateStocksHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -326,7 +329,7 @@ function Setting() {
                   {disable ? (
                     <CircularProgress size={16} color="inherit" />
                   ) : (
-                    "更新"
+                    t("settings.update")
                   )}
                 </Button>
               </ListItemSecondaryAction>
@@ -339,8 +342,8 @@ function Setting() {
                 <SyncIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
-                primary="同步Schoice自選股票"
-                secondary="加入雲端自選股票列表"
+                primary={t("settings.syncStocks")}
+                secondary={t("settings.syncStocksHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -370,7 +373,7 @@ function Setting() {
                   {syncLoading ? (
                     <CircularProgress size={16} color="inherit" />
                   ) : (
-                    "同步"
+                    t("settings.sync")
                   )}
                 </Button>
               </ListItemSecondaryAction>
@@ -383,8 +386,8 @@ function Setting() {
                 <DeleteOutlineIcon sx={{ color: "#E53935" }} />
               </ListItemIcon>
               <ListItemText
-                primary="批次刪除自選股"
-                secondary="快速挑選並刪除不再追蹤的股票"
+                primary={t("settings.deleteStocks")}
+                secondary={t("settings.deleteStocksHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#E53935" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -410,7 +413,7 @@ function Setting() {
                     },
                   }}
                 >
-                  挑選
+                  {t("settings.choose")}
                 </Button>
               </ListItemSecondaryAction>
             </ListItem>
@@ -422,8 +425,8 @@ function Setting() {
                 <ResetIcon sx={{ color: semanticTokens.app.accent }} />
               </ListItemIcon>
               <ListItemText
-                primary="回到原廠設定"
-                secondary="清除快取並重設資料庫"
+                primary={t("settings.factoryReset")}
+                secondary={t("settings.factoryResetHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: semanticTokens.app.accent }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -439,20 +442,20 @@ function Setting() {
                   onClick={handleFactoryReset}
                   sx={{ borderRadius: "10px", fontWeight: 800 }}
                 >
-                  執行
+                  {t("settings.run")}
                 </Button>
               </ListItemSecondaryAction>
             </ListItem>
 
-            <StyledListSubheader>應用程式</StyledListSubheader>
+            <StyledListSubheader>{t("settings.application")}</StyledListSubheader>
 
             <ListItem>
               <ListItemIcon sx={{ minWidth: 44 }}>
                 <TopIcon sx={{ color: "#8B7355" }} />
               </ListItemIcon>
               <ListItemText
-                primary="視窗置頂"
-                secondary="保持視窗顯示在最前方"
+                primary={t("settings.alwaysOnTop")}
+                secondary={t("settings.alwaysOnTopHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -464,6 +467,7 @@ function Setting() {
                 <Switch
                   checked={alwaysOnTop}
                   onChange={handleAlwaysOnTopChange}
+                  inputProps={{ "aria-label": t("settings.alwaysOnTop") }}
                   sx={switchStyles}
                 />
               </ListItemSecondaryAction>
@@ -476,8 +480,8 @@ function Setting() {
                 <ChartIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
-                primary="卡片圖表顯示"
-                secondary="切換首頁股票卡片底部的圖表類型"
+                primary={t("settings.cardChart")}
+                secondary={t("settings.cardChartHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -494,13 +498,14 @@ function Setting() {
                       fontWeight: 700,
                     }}
                   >
-                    {stockBoxChartType === "mak" ? "K線" : "即時"}
+                    {stockBoxChartType === "mak" ? t("settings.candle") : t("settings.live")}
                   </Typography>
                   <Switch
                     checked={stockBoxChartType === "mak"}
                     onChange={(e) =>
                       setStockBoxChartType(e.target.checked ? "mak" : "tick")
                     }
+                    inputProps={{ "aria-label": t("settings.cardChart") }}
                     sx={switchStyles}
                   />
                 </Stack>
@@ -514,8 +519,8 @@ function Setting() {
                 <SettingsIcon sx={{ color: semanticTokens.app.primary }} />
               </ListItemIcon>
               <ListItemText
-                primary="顯示大盤資訊"
-                secondary="首頁顯示指數與市場概況"
+                primary={t("settings.marketInfo")}
+                secondary={t("settings.marketInfoHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -532,8 +537,8 @@ function Setting() {
                 <BugReportIcon sx={{ color: "#D2B48C" }} />
               </ListItemIcon>
               <ListItemText
-                primary="開發者模式"
-                secondary="顯示內部除錯資訊 (可使用 Ctrl + Shift + D 切換)"
+                primary={t("settings.developer")}
+                secondary={t("settings.developerHint")}
                 primaryTypographyProps={{ fontWeight: 800, color: "#5D4037" }}
                 secondaryTypographyProps={{
                   color: "#8B7355",
@@ -545,6 +550,7 @@ function Setting() {
                 <Switch
                   checked={debugMode}
                   onChange={handleDebugModeChange}
+                  inputProps={{ "aria-label": t("settings.developer") }}
                   sx={{
                     "& .MuiSwitch-switchBase.Mui-checked": { color: "#D2B48C" },
                     "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
@@ -563,13 +569,13 @@ function Setting() {
             <Box sx={{ pl: 4, pr: 2, pb: 2 }}>
               <Grid container spacing={1}>
                 {[
-                  { key: "cnn", label: "CNN 恐懼貪婪" },
-                  { key: "mm", label: "財經 M 平方" },
-                  { key: "nasdaq", label: "NASDAQ 指數" },
-                  { key: "twse", label: "台股加權指數" },
-                  { key: "otc", label: "櫃買指數" },
-                  { key: "wtx", label: "台指期貨" },
-                  { key: "margin", label: "台股融資維持率" },
+                  { key: "cnn", label: t("settings.marketLabels.cnn") },
+                  { key: "mm", label: t("settings.marketLabels.mm") },
+                  { key: "nasdaq", label: t("settings.marketLabels.nasdaq") },
+                  { key: "twse", label: t("settings.marketLabels.twse") },
+                  { key: "otc", label: t("settings.marketLabels.otc") },
+                  { key: "wtx", label: t("settings.marketLabels.wtx") },
+                  { key: "margin", label: t("settings.marketLabels.margin") },
                 ].map((item) => (
                   <Grid size={6} key={item.key}>
                     <Box
@@ -597,6 +603,7 @@ function Setting() {
                             e.target.checked,
                           )
                         }
+                        inputProps={{ "aria-label": item.label }}
                         sx={switchStyles}
                       />
                     </Box>
@@ -655,7 +662,7 @@ function Setting() {
         }}
       >
         <DialogTitle sx={{ fontWeight: 900, color: "#5D4037" }}>
-          同步缺少的股票
+          {t("settings.syncTitle")}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ mb: 2 }}>
@@ -680,7 +687,7 @@ function Setting() {
                   variant="body2"
                   sx={{ color: "#5D4037", fontWeight: 700 }}
                 >
-                  全選
+                  {t("settings.selectAll")}
                 </Typography>
               }
             />
@@ -693,7 +700,7 @@ function Setting() {
                 secondaryAction={
                   <IconButton
                     edge="end"
-                    aria-label="delete"
+                    aria-label={t("category.delete", { name: `${stock.id} ${stock.name}` })}
                     size="small"
                     onClick={() => handleDeleteCloudStock(stock.id, stock.name)}
                     sx={{ color: semanticTokens.app.accent }}
@@ -737,7 +744,7 @@ function Setting() {
               textDecoration: "underline",
             }}
           >
-            取消
+            {t("settings.cancel")}
           </Button>
           <Button
             onClick={handleConfirmSync}
@@ -757,7 +764,7 @@ function Setting() {
               },
             }}
           >
-            確認新增 ({selectedStocks.length})
+            {t("settings.confirmAdd", { count: selectedStocks.length })}
           </Button>
         </DialogActions>
       </Dialog>
@@ -777,12 +784,12 @@ function Setting() {
         }}
       >
         <DialogTitle sx={{ fontWeight: 900, color: "#E53935" }}>
-          批次刪除自選股
+          {t("settings.deleteStocks")}
         </DialogTitle>
         <DialogContent>
           {stocks.length === 0 ? (
             <Typography variant="body2" sx={{ color: "#8B7355", mt: 2 }}>
-              目前沒有追蹤任何股票
+              {t("home.emptyWatchlist")}
             </Typography>
           ) : (
             <>
@@ -811,7 +818,7 @@ function Setting() {
                       variant="body2"
                       sx={{ color: "#5D4037", fontWeight: 700 }}
                     >
-                      全選
+                      {t("settings.selectAll")}
                     </Typography>
                   }
                 />
@@ -856,7 +863,7 @@ function Setting() {
               textDecoration: "underline",
             }}
           >
-            取消
+            {t("settings.cancel")}
           </Button>
           <Button
             onClick={handleConfirmDelete}
@@ -876,7 +883,7 @@ function Setting() {
               },
             }}
           >
-            確認刪除 ({deleteSelectedStocks.length})
+            {t("settings.delete")} ({deleteSelectedStocks.length})
           </Button>
         </DialogActions>
       </Dialog>

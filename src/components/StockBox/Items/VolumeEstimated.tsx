@@ -1,5 +1,6 @@
 import { Box, Tooltip, Typography } from "@mui/material";
 import { TaType } from "../../../types";
+import { useTranslation } from "react-i18next";
 
 export default function VolumeEstimated({
   deals,
@@ -8,6 +9,7 @@ export default function VolumeEstimated({
   deals: TaType;
   estimatedVolume: number;
 }) {
+  const { t } = useTranslation();
   return (
     <Box>
       <Typography
@@ -18,10 +20,10 @@ export default function VolumeEstimated({
         textAlign="center"
         noWrap
       >
-        估量
+        {t("stock.estimatedVolume")}
       </Typography>
       <Tooltip
-        title={`昨日量 ${deals.length > 0 && deals[deals.length - 2].v}`}
+        title={`${t("stock.previousVolume")} ${deals.length > 0 && deals[deals.length - 2].v}`}
       >
         <Typography
           variant="body2"

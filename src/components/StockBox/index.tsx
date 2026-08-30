@@ -12,8 +12,8 @@ import {
   styled,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { AnimatePresence, motion } from "framer-motion";
-import { useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { lazy, Suspense, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
@@ -27,11 +27,12 @@ import Ma10 from "./Items/Ma10";
 import Ma20 from "./Items/Ma20";
 import Ma5 from "./Items/Ma5";
 import VolumeRatio from "./Items/VolumeRatio";
-import StockTickChart from "./StockTickChart";
-import MakChart from "../CommonChart/MakChart";
 import useUIStore from "../../store/UI.store";
 import MarketDataStatus from "../MarketDataStatus";
 import { hasSamples, hasVolumeBaseline } from "../../utils/marketMetrics";
+
+const MakChart = lazy(() => import("../CommonChart/MakChart"));
+const StockTickChart = lazy(() => import("./StockTickChart"));
 
 // Constants
 export const STOCK_BOX_HEIGHT = 280;
@@ -45,6 +46,20 @@ const COLORS = {
   cardBorder: "rgba(255, 255, 255, 0.12)",
   textSecondary: "rgba(255, 255, 255, 0.8)", // Brighter for readability
 };
+
+function ChartAreaFallback({ height }: { height: number }) {
+  const { t } = useTranslation();
+
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{ width: "100%", height, display: "grid", placeItems: "center", color: "text.secondary" }}
+    >
+      <Typography variant="caption">{t("app.loading")}</Typography>
+    </Box>
+  );
+}
 
 // Styled Components
 const StyledCard = styled(motion.div)(() => ({
@@ -61,6 +76,11 @@ const StyledCard = styled(motion.div)(() => ({
   flexDirection: "column",
   boxSizing: "border-box",
   fontFamily: "'Outfit', 'Inter', sans-serif",
+  "&:hover .action-buttons, &:focus-within .action-buttons": {
+    opacity: 1,
+    transform: "scale(1)",
+    pointerEvents: "auto",
+  },
 }));
 
 const ActionButtons = styled(motion.div)(() => ({
@@ -68,6 +88,11 @@ const ActionButtons = styled(motion.div)(() => ({
   top: 12,
   right: 12,
   zIndex: 20,
+  opacity: 0,
+  transform: "scale(0.9)",
+  pointerEvents: "none",
+  transition: "opacity 160ms ease, transform 160ms ease",
+  "@media (prefers-reduced-motion: reduce)": { transition: "none" },
 }));
 
 const ActionBtn = styled(IconButton)(({ theme }) => ({
@@ -75,12 +100,17 @@ const ActionBtn = styled(IconButton)(({ theme }) => ({
   backdropFilter: "blur(12px)",
   color: "rgba(255, 255, 255, 0.9)",
   border: "1px solid rgba(255, 255, 255, 0.2)",
-  padding: 6,
+  width: 40,
+  height: 40,
   transition: "all 0.2s ease",
   "&:hover": {
     backgroundColor: theme.palette.primary.main,
     color: "#fff",
     transform: "scale(1.1)",
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    "&:hover": { transform: "none" },
   },
 }));
 
@@ -114,8 +144,8 @@ export default function StockBox({
 }: StockBoxProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isComponentVisible = isVisible ?? true;
-  const [isHovered, setIsHovered] = useState(false);
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
 
   // Data Hooks
@@ -184,12 +214,9 @@ export default function StockBox({
   return (
     <StyledCard
       ref={containerRef}
-      onClick={openDetailWindow}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      initial={{ opacity: 0 }}
+      initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      whileHover={{ y: -4 }}
+      whileHover={reduceMotion ? undefined : { y: -4 }}
     >
       <Box
         sx={{
@@ -203,18 +230,20 @@ export default function StockBox({
           zIndex: 0,
         }}
       />
+      <Box
+        component="button"
+        type="button"
+        aria-label={t("a11y.openStock", { name: name || stock.name, id: stock.id })}
+        onClick={openDetailWindow}
+        sx={{ position: "absolute", inset: 0, zIndex: 5, border: 0, p: 0, bgcolor: "transparent", cursor: "pointer", pointerEvents: activeState.phase === "ready" ? "auto" : "none", "&:focus-visible": { outline: "3px solid #90CAF9", outlineOffset: -3 } }}
+      />
 
-      <AnimatePresence>
-        {isHovered && (
-          <ActionButtons
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-          >
+          <ActionButtons className="action-buttons">
             <Stack direction="row" spacing={0.5}>
-              <Tooltip title="TradingView" arrow>
+              <Tooltip title={t("a11y.tradingView", { name: name || stock.name })} arrow>
                 <ActionBtn
                   size="small"
+                  aria-label={t("a11y.tradingView", { name: name || stock.name })}
                   onClick={async (e) => {
                     e.stopPropagation();
                     const url =
@@ -229,9 +258,10 @@ export default function StockBox({
               </Tooltip>
 
               {onRemove && (
-                <Tooltip title="移除" arrow>
+                <Tooltip title={t("a11y.removeStock", { name: name || stock.name })} arrow>
                   <ActionBtn
                     size="small"
+                    aria-label={t("a11y.removeStock", { name: name || stock.name })}
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemove();
@@ -243,9 +273,10 @@ export default function StockBox({
               )}
 
               {canDelete && (
-                <Tooltip title="刪除" arrow>
+                <Tooltip title={t("a11y.deleteStock", { name: name || stock.name })} arrow>
                   <ActionBtn
                     size="small"
+                    aria-label={t("a11y.deleteStock", { name: name || stock.name })}
                     sx={{ "&:hover": { bgcolor: "#FF5252" } }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -258,8 +289,6 @@ export default function StockBox({
               )}
             </Stack>
           </ActionButtons>
-        )}
-      </AnimatePresence>
 
       <Box sx={{ position: "relative", zIndex: 1, p: 2, flex: 1 }}>
         {/* Header: Name & ID */}
@@ -388,11 +417,15 @@ export default function StockBox({
         {stockBoxChartType === "mak" ? (
           deals && deals.length > 0 ? (
              <Box sx={{ width: "100%", height: "100%", overflow: "hidden", pb: 0.5 }}>
-               <MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip />
+               <Suspense fallback={<ChartAreaFallback height={64} />}>
+                 <MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip />
+               </Suspense>
              </Box>
           ) : <MarketDataStatus state={activeState} retry={retry} compact />
         ) : tickDeals ? (
-          <StockTickChart tickDeals={tickDeals} />
+          <Suspense fallback={<ChartAreaFallback height={64} />}>
+            <StockTickChart tickDeals={tickDeals} />
+          </Suspense>
         ) : <MarketDataStatus state={activeState} retry={retry} compact />}
         {activeState.phase === "ready" && <MarketDataStatus state={activeState} retry={retry} compact overlay />}
       </Box>

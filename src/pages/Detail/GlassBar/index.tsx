@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { useParams } from "react-router";
 import { UrlTaPerdOptions } from "../../../types";
 import Fundamental from "../Tooltip/Fundamental";
-import { CHART_CONFIG } from "../constants/chartConfig";
+import { CHART_CONFIG, getChartAdvice, getChartTitle } from "../constants/chartConfig";
 import ChartMenu from "./ChartMenu";
 import { TOOLBAR_SETTINGS_EVENT } from "./useToolbarSettings";
 
@@ -158,8 +158,8 @@ const GlassBar: React.FC<GlassBarProps> = ({
           placement="top"
           title={
             <Stack spacing={0.75} sx={{ maxWidth: 280 }}>
-              <Box sx={{ fontWeight: 750 }}>{currentChart?.title}</Box>
-              <Box sx={{ fontSize: 12 }}>{currentChart?.timezoneAdvice}</Box>
+              <Box sx={{ fontWeight: 750 }}>{getChartTitle(currentChart, t)}</Box>
+              <Box sx={{ fontSize: 12 }}>{getChartAdvice(currentChart, t)}</Box>
               {id && <Fundamental id={id} />}
             </Stack>
           }

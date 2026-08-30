@@ -81,4 +81,31 @@ describe("useMarketWatcher", () => {
     unmount();
     expect(unlistenMock).toHaveBeenCalledOnce();
   });
+
+  it("removes a listener that resolves after the component has unmounted", async () => {
+    let resolveListen: ((unlisten: () => void) => void) | undefined;
+    listenMock.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveListen = resolve;
+      }),
+    );
+
+    const { unmount } = renderHook(() => useMarketWatcher());
+    unmount();
+
+    await act(async () => {
+      resolveListen?.(unlistenMock);
+    });
+
+    expect(unlistenMock).toHaveBeenCalledOnce();
+  });
+
+  it("absorbs native listener registration failures", async () => {
+    listenMock.mockRejectedValueOnce(new Error("native listener unavailable"));
+
+    renderHook(() => useMarketWatcher());
+
+    await act(async () => undefined);
+    expect(listenMock).toHaveBeenCalledOnce();
+  });
 });

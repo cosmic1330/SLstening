@@ -225,7 +225,7 @@ const Content = () => {
             }}
           >
             <img
-              src="icon.png"
+              src="/icon.png"
               alt="logo"
               style={{
                 width: "42px",

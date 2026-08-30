@@ -15,9 +15,8 @@ import {
   Typography,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
-import { useMemo, useRef, useState, useEffect } from "react";
+import { lazy, Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import MakChart from "../../../../components/CommonChart/MakChart";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
 import useMaDeduction from "../../../../hooks/useMaDeduction";
@@ -30,11 +29,24 @@ import estimateVolume from "../../../../utils/estimateVolume";
 import MarketDataStatus from "../../../../components/MarketDataStatus";
 import { hasSamples, hasVolumeBaseline } from "../../../../utils/marketMetrics";
 
+const MakChart = lazy(() => import("../../../../components/CommonChart/MakChart"));
+
 export const RED_BALL_CARD_HEIGHT = 360;
+
+function ChartAreaFallback() {
+  const { t } = useTranslation();
+
+  return (
+    <Box role="status" aria-live="polite" sx={{ height: 100, display: "grid", placeItems: "center", color: "text.secondary" }}>
+      <Typography variant="caption">{t("app.loading")}</Typography>
+    </Box>
+  );
+}
 
 // --- Styled Components ---
 const ActionBtn = styled(IconButton)(() => ({
-  padding: 4,
+  width: 40,
+  height: 40,
   background: "rgba(0,0,0,0.3)",
   color: "rgba(255, 255, 255, 0.5)",
   "&:hover": {
@@ -52,6 +64,9 @@ const ActionButtons = styled(Stack)(() => ({
   transform: "translateX(10px)",
   transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
   pointerEvents: "none",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
 }));
 
 const CardContainer = styled(Paper)(() => ({
@@ -76,6 +91,11 @@ const CardContainer = styled(Paper)(() => ({
       pointerEvents: "auto",
     },
   },
+  "&:focus-within .action-buttons": {
+    opacity: 1,
+    transform: "translateX(0)",
+    pointerEvents: "auto",
+  },
 }));
 
 const CompactMetric = styled(Box)(() => ({
@@ -87,12 +107,12 @@ const CompactMetric = styled(Box)(() => ({
 }));
 
 const getVolumeStatus = (ratio: number) => {
-  if (ratio >= 5) return { title: "出大量", color: "#ef4444" };
-  if (ratio >= 2.5) return { title: "放量", color: "#f87171" };
-  if (ratio >= 1.5) return { title: "溫和", color: "#fb923c" };
-  if (ratio >= 0.8) return { title: "正常", color: "#94a3b8" };
-  if (ratio >= 0.5) return { title: "偏低", color: "#4ade80" };
-  return { title: "量縮", color: "#10b981" };
+  if (ratio >= 5) return { key: "surge", color: "#ef4444" };
+  if (ratio >= 2.5) return { key: "expanded", color: "#f87171" };
+  if (ratio >= 1.5) return { key: "moderate", color: "#fb923c" };
+  if (ratio >= 0.8) return { key: "normal", color: "#94a3b8" };
+  if (ratio >= 0.5) return { key: "low", color: "#4ade80" };
+  return { key: "contracted", color: "#10b981" };
 };
 
 const convertTaToMak = (deals: TaType) => {
@@ -134,7 +154,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
   // 從全域 Store 獲取推播的即時數據
   const tickDeals = useMarketDataStore((state) => state.getTick(stock.id));
 
-  const recommendationReason = stock.type || "策略選股";
+  const recommendationReason = stock.type || t("redBall.reasonFallback");
   const { deals, name, historyState, retryHistory } = useConditionalDeals(stock.id, true, isVisible);
   const { ma5, ma20 } = useMaDeduction(deals);
   const { openDetailWindow } = useDetailWebviewWindow({
@@ -221,12 +241,14 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
   }
 
   return (
-    <CardContainer ref={containerRef} onClick={openDetailWindow}>
+    <CardContainer ref={containerRef}>
+      <Box component="button" type="button" aria-label={t("a11y.openStock", { name: name || stock.name, id: stock.id })} onClick={openDetailWindow} sx={{ position: "absolute", inset: 0, zIndex: 1, border: 0, p: 0, bgcolor: "transparent", cursor: "pointer", pointerEvents: historyState.phase === "ready" ? "auto" : "none", "&:focus-visible": { outline: "3px solid #90CAF9", outlineOffset: -3 } }} />
       <ActionButtons direction="row" spacing={0.5} className="action-buttons">
         {!isTracking && (
-          <Tooltip title="加入追蹤" arrow>
+          <Tooltip title={t("a11y.addStock", { name: name || stock.name })} arrow>
             <ActionBtn
               size="small"
+              aria-label={t("a11y.addStock", { name: name || stock.name })}
               onClick={(e) => {
                 e.stopPropagation();
                 increase(stock);
@@ -236,9 +258,10 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
             </ActionBtn>
           </Tooltip>
         )}
-        <Tooltip title="詳情" arrow>
+        <Tooltip title={t("redBall.details")} arrow>
           <ActionBtn
             size="small"
+            aria-label={t("a11y.openStock", { name: name || stock.name, id: stock.id })}
             onClick={(e) => {
               e.stopPropagation();
               openDetailWindow();
@@ -247,9 +270,10 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
             <AnalyticsIcon sx={{ fontSize: 14 }} />
           </ActionBtn>
         </Tooltip>
-        <Tooltip title="TradingView" arrow>
+        <Tooltip title={t("a11y.tradingView", { name: name || stock.name })} arrow>
           <ActionBtn
             size="small"
+            aria-label={t("a11y.tradingView", { name: name || stock.name })}
             onClick={async (e) => {
               e.stopPropagation();
               await open(
@@ -339,7 +363,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
         {historyState.phase === "ready" ? <Stack spacing={0.2} sx={{ mb: 1 }}>
           <CompactMetric>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
-              量能狀態
+              {t("redBall.volumeStatus")}
             </Typography>
             <Typography
               variant="caption"
@@ -350,13 +374,13 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
               }}
             >
               {volumeStatus && volumeRatio !== null
-                ? `${volumeStatus.title} (${volumeRatio}x)`
+                ? `${t(`redBall.volume.${volumeStatus.key}`)} (${volumeRatio}x)`
                 : `— · ${t("marketData.insufficient")}`}
             </Typography>
           </CompactMetric>
           <CompactMetric>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>
-              預估量
+              {t("redBall.estimatedVolume")}
             </Typography>
             <Typography variant="caption" sx={{ color: "white", fontWeight: 700 }}>
               {estimatedVolume === null
@@ -412,7 +436,7 @@ export default function RedBallCard({ stock }: RedBallCardProps) {
         }}
       >
         {makDeals ? (
-          <MakChart deals={makDeals} height={100} />
+          <Suspense fallback={<ChartAreaFallback />}><MakChart deals={makDeals} height={100} /></Suspense>
         ) : <MarketDataStatus state={historyState} retry={retryHistory} compact />}
         {historyState.phase === "ready" && <MarketDataStatus state={historyState} retry={retryHistory} compact overlay />}
       </Box>

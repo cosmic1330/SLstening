@@ -1,5 +1,6 @@
 import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
+import { useTranslation } from "react-i18next";
 
 export default function AvgPrice({
   lastPrice,
@@ -8,11 +9,12 @@ export default function AvgPrice({
   lastPrice: number;
   tickDeals: TickDealsType | null;
 }) {
+  const { t } = useTranslation();
   const avgPrice = tickDeals?.avgPrices[tickDeals.avgPrices.length - 1] || 0;
   const isAbove = lastPrice >= avgPrice;
 
   return (
-    <Tooltip title={`當前均價: ${avgPrice}`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.averagePrice")}: ${avgPrice}`} arrow enterTouchDelay={0}>
       <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
         <Typography
           sx={{
@@ -22,7 +24,7 @@ export default function AvgPrice({
             textTransform: "uppercase",
           }}
         >
-          MA Price
+          {t("stock.averagePrice")}
         </Typography>
         <Typography
           sx={{

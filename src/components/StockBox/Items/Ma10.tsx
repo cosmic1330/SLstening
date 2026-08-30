@@ -1,5 +1,6 @@
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 function TooltipContent({
   lastPrice,
@@ -18,22 +19,23 @@ function TooltipContent({
   tomorrow_deduction_time: string;
   label: string;
 }) {
+  const { t } = useTranslation();
   const getDiffColor = (val: number) => (lastPrice > val ? "#FF5252" : "#69F0AE");
 
   return (
     <Box sx={{ p: 1.5, minWidth: 220 }}>
       <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 900, display: "block", mb: 1 }}>
-        {label} 詳情
+        {label} {t("Pages.Detail.GlassBar.details")}
       </Typography>
       <Stack spacing={1}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="body2" color="rgba(255,255,255,0.9)">當前 {label}</Typography>
+          <Typography variant="body2" color="rgba(255,255,255,0.9)">{label}</Typography>
           <Typography variant="body2" sx={{ fontWeight: 900, color: getDiffColor(ma) }}>{ma}</Typography>
         </Stack>
         <Box sx={{ height: "1px", width: "100%", bgcolor: "rgba(255,255,255,0.2)" }} />
         <Stack direction="row" justifyContent="space-between">
           <Box>
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>今日扣抵</Typography>
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>{t("Pages.Detail.summary.day")}</Typography>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>{deduction_time}</Typography>
           </Box>
           <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 900, color: getDiffColor(deduction_value) }}>
@@ -42,7 +44,7 @@ function TooltipContent({
         </Stack>
         <Stack direction="row" justifyContent="space-between">
           <Box>
-            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>明日扣抵</Typography>
+            <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>{t("Pages.Detail.GlassBar.next")}</Typography>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>{tomorrow_deduction_time}</Typography>
           </Box>
           <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 900, color: getDiffColor(tomorrow_deduction_value) }}>

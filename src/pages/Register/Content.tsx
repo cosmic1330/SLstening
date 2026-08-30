@@ -1,5 +1,6 @@
 import {
   Alert,
+  Button,
   Box,
   Collapse,
   Divider,
@@ -8,9 +9,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { motion, Variants } from "framer-motion";
+import { motion, useReducedMotion, Variants } from "framer-motion";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { useLocation, useNavigate } from "react-router";
 import { authErrorKey } from "../../auth/errors";
 import { intendedDestination } from "../../auth/navigation";
@@ -142,6 +144,7 @@ const ForestButton = styled(motion.button)(() => ({
 
 function Content() {
   const { t } = useTranslation();
+  const reduceMotion = useReducedMotion();
   const [errorMsg, setErrorMsg] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -184,10 +187,11 @@ function Content() {
 
   return (
     <GhibliPaperCard
-      initial="hidden"
+      initial={reduceMotion ? false : "hidden"}
       animate="visible"
       variants={containerVariants}
     >
+      <Box sx={{ position: "absolute", top: 8, right: 8 }}><LanguageSwitcher /></Box>
       <motion.div variants={itemVariants}>
         <Box mb={3} textAlign="center">
           <Box
@@ -205,7 +209,7 @@ function Content() {
             }}
           >
             <img
-              src="icon.png"
+              src="/icon.png"
               alt="logo"
               style={{
                 width: "36px",
@@ -224,7 +228,7 @@ function Content() {
             variant="body2"
             sx={{ color: semanticTokens.auth.textMuted, fontWeight: 700, fontStyle: "italic" }}
           >
-            {t("Pages.Register.enterCredentials") || "Create your account"}
+            {t("Pages.Register.enterCredentials")}
           </Typography>
         </Box>
       </motion.div>
@@ -254,7 +258,7 @@ function Content() {
         </Collapse>
 
         <Stack spacing={1.5}>
-          <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants}>
             <HanddrawnTextField
               fullWidth
               label={t("Pages.Register.email")}
@@ -297,11 +301,11 @@ function Content() {
             <ForestButton
               type="submit"
               disabled={loading || confirmationNeeded || !email || !password || !confirmPassword}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98, translateY: 2 }}
+              whileHover={reduceMotion ? undefined : { scale: 1.02 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.98, translateY: 2 }}
             >
               {loading
-                ? t("Pages.Register.registering") || "Processing..."
+                ? t("Pages.Register.registering")
                 : t("Pages.Register.register")}
             </ForestButton>
           </motion.div>
@@ -310,8 +314,8 @@ function Content() {
         <motion.div variants={itemVariants}>
           <Box mt={3} display="flex" flexDirection="column" alignItems="center">
             <Divider sx={{ width: "100%", borderColor: semanticTokens.auth.border, mb: 2 }} />
-            <Typography
-              variant="body2"
+            <Button
+              variant="text"
               sx={{
                 color: semanticTokens.auth.text,
                 fontWeight: 800,
@@ -320,9 +324,10 @@ function Content() {
                 "&:hover": { color: semanticTokens.auth.primary },
               }}
               onClick={() => navigate("/auth/login", { state: location.state })}
+              aria-label={t("Pages.Register.haveAccount")}
             >
               {t("Pages.Register.haveAccount")}
-            </Typography>
+            </Button>
           </Box>
         </motion.div>
       </Box>

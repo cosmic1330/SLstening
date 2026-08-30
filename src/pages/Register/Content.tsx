@@ -8,7 +8,6 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { error } from "@tauri-apps/plugin-log";
 import { motion, Variants } from "framer-motion";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -147,10 +146,12 @@ function Content() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmationNeeded, setConfirmationNeeded] = useState(false);
   let navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    void signUp();
   };
 
   const signUp = async () => {
@@ -163,19 +164,20 @@ function Content() {
     setErrorMsg("");
     setLoading(true);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (signUpError) {
         setErrorMsg(translateError(signUpError.message));
+      } else if (data.session) {
+        navigate("/dashboard");
       } else {
-        alert("Registration Successful!");
-        navigate("/");
+        setConfirmationNeeded(true);
       }
     } catch (e) {
-      error(`Error signing up: ${e}`);
+      setErrorMsg(translateError(e instanceof Error ? e.message : String(e)));
     }
     setLoading(false);
   };
@@ -228,6 +230,11 @@ function Content() {
       </motion.div>
 
       <Box width="100%" component="form" onSubmit={handleSubmit}>
+        <Collapse in={confirmationNeeded}>
+          <Alert severity="success" sx={{ mb: 2 }}>
+            {t("Pages.Register.checkEmail")}
+          </Alert>
+        </Collapse>
         <Collapse in={!!errorMsg}>
           <Alert
             severity="error"
@@ -289,8 +296,7 @@ function Content() {
           <motion.div variants={itemVariants}>
             <ForestButton
               type="submit"
-              onClick={signUp}
-              disabled={loading || !email || !password || !confirmPassword}
+              disabled={loading || confirmationNeeded || !email || !password || !confirmPassword}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98, translateY: 2 }}
             >

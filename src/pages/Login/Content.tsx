@@ -11,12 +11,13 @@ import {
   Typography,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { error } from "@tauri-apps/plugin-log";
 import { motion, Variants } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import GoogleOauthButton from "../../components/GoogleOauthButton";
+import { rememberedEmail, removeLegacyPasswordStorage, saveRememberedEmail } from "../../auth/service";
+import { useUser } from "../../context/UserContext";
 import LanguageSwitcher from "../../components/LanguageSwitcher";
 import { supabase } from "../../supabase";
 import translateError from "../../utils/translateError";
@@ -150,13 +151,20 @@ const Content = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState(
-    localStorage.getItem("slitenting-email") || "",
+    rememberedEmail(),
   );
-  const [password, setPassword] = useState(
-    localStorage.getItem("slitenting-password") || "",
-  );
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   let navigate = useNavigate();
+  const { oauthCallbackStatus } = useUser();
+
+  useEffect(() => {
+    removeLegacyPasswordStorage();
+  }, []);
+
+  useEffect(() => {
+    if (oauthCallbackStatus === "error") setErrorMsg(t("Pages.Login.oauthCallbackError"));
+  }, [oauthCallbackStatus, t]);
 
   const signIn = async () => {
     setErrorMsg("");
@@ -170,20 +178,14 @@ const Content = () => {
       if (error) {
         setErrorMsg(translateError(error.message));
       } else {
-        if (remember) {
-          localStorage.setItem("slitenting-email", email);
-          localStorage.setItem("slitenting-password", password);
-        } else {
-          localStorage.removeItem("slitenting-email");
-          localStorage.removeItem("slitenting-password");
-        }
+        saveRememberedEmail(remember, email);
         const alwaysOnTop =
           localStorage.getItem("slitenting-alwaysOnTop") === "true";
-        getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
+        if ("__TAURI_INTERNALS__" in window) await getCurrentWindow().setAlwaysOnTop(alwaysOnTop);
         navigate("/dashboard");
       }
     } catch (e) {
-      error(`Error signing in: ${e}`);
+      setErrorMsg(translateError(e instanceof Error ? e.message : String(e)));
     }
     setLoading(false);
   };
@@ -304,15 +306,11 @@ const Content = () => {
             mt={2}
             mb={3}
           >
-            <Stack
-              direction="row"
-              alignItems="center"
-              sx={{ cursor: "pointer" }}
-              onClick={() => setRemember(!remember)}
-            >
+            <Stack direction="row" alignItems="center">
               <Checkbox
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
+                inputProps={{ "aria-label": t("Pages.Login.rememberMe") }}
                 size="small"
                 sx={{
                   padding: 0,
@@ -331,6 +329,9 @@ const Content = () => {
               </Typography>
             </Stack>
           </Stack>
+          <Typography variant="caption" sx={{ color: semanticTokens.auth.textMuted, fontWeight: 600 }}>
+            {t("Pages.Login.rememberEmailHint")}
+          </Typography>
         </motion.div>
 
         <motion.div variants={itemVariants}>
@@ -359,7 +360,7 @@ const Content = () => {
 
         <motion.div variants={itemVariants}>
           <Stack spacing={2}>
-            <GoogleOauthButton onLogin={() => navigate("/dashboard")} />
+            <GoogleOauthButton onError={(message) => setErrorMsg(translateError(message))} />
 
             <Button
               onClick={register}

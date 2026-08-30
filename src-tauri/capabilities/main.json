@@ -8,6 +8,7 @@
     "core:window:allow-set-focus",
     "core:webview:allow-create-webview-window",
     "core:window:allow-set-always-on-top",
+    "deep-link:default",
     "clipboard-manager:allow-write-text",
     "shell:default",
     "updater:default",

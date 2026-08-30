@@ -1,30 +1,25 @@
 import GoogleIcon from "@mui/icons-material/Google";
 import { Button } from "@mui/material";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { startGoogleOAuth } from "../auth/service";
 import { supabase } from "../supabase";
 
 export default function GoogleOauthButton({
-  onLogin,
+  onError,
 }: {
-  onLogin?: () => void;
+  onError?: (message: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   const handleLogin = async () => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
+    const { error } = await startGoogleOAuth(supabase);
 
     if (error) {
-      console.error("登入失敗：", error.message);
+      onError?.(error.message);
       setLoading(false);
-    } else {
-      // 如果你想在登入完成後做什麼可以放在 onLogin
-      if (onLogin) onLogin();
     }
   };
 
@@ -37,7 +32,7 @@ export default function GoogleOauthButton({
       disabled={loading}
     >
       <GoogleIcon style={{ marginRight: 8 }} />
-      {loading ? "登入中..." : "使用 Google 登入"}
+      {loading ? t("Pages.Login.googleSigningIn") : t("Pages.Login.googleSignIn")}
     </Button>
   );
 }

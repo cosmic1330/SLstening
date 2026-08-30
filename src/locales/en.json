@@ -1,7 +1,8 @@
 {
   "Pages": {
     "Login": {
-      "rememberMe": "Remember me",
+      "rememberMe": "Remember my email",
+      "rememberEmailHint": "Only your email address is stored on this device.",
       "register":"Register",
       "signIn":"Sign In",
       "email":"Email",
@@ -9,14 +10,21 @@
       "welcomeBack": "Welcome Back",
       "enterCredentials": "Enter your credentials to continue",
       "signingIn": "Signing in...",
-      "or": "OR"
+      "or": "OR",
+      "googleSignIn": "Continue with Google",
+      "googleSigningIn": "Opening Google…",
+      "oauthCallbackError": "Google sign-in could not be completed. Please try again."
     },
     "Register": {
       "register": "Register",
       "email": "Email",
       "password": "Password",
       "confirmPassword": "Confirm Password",
-      "haveAccount": "Already have an account? Sign In"
+      "haveAccount": "Already have an account? Sign In",
+      "enterCredentials": "Create your account",
+      "registering": "Creating account…",
+      "passwordMismatch": "Passwords do not match.",
+      "checkEmail": "Check your email to confirm your account, then return here to sign in."
     },
     "Add":{
       "close":"Close",

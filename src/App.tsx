@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect } from "react";
 import { ThemeProvider } from "@mui/material/styles";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import { ToastContainer } from "react-toastify";
 import "./App.css";
 import DebugInfo from "./components/DebugInfo";
-import { UserProvider } from "./context/UserContext";
+import { UserProvider, useUser } from "./context/UserContext";
 import Add from "./pages/Add";
 import Detail from "./pages/Detail/index";
 import Home from "./pages/Home";
@@ -24,11 +24,14 @@ const Setting = lazy(() => import("./pages/Home/Setting"));
 export function AppRoutes() {
   return (
     <Routes>
-      <Route index element={<Login />} />
-      <Route path="register" element={<Register />} />
-      <Route path="add" element={<Add />} />
-      <Route path="detail/:id" element={<Detail />} />
-      <Route path="dashboard" element={<Home />}>
+      <Route element={<RedirectAuthenticated />}>
+        <Route index element={<Login />} />
+        <Route path="register" element={<Register />} />
+      </Route>
+      <Route element={<RequireAuth />}>
+        <Route path="add" element={<Add />} />
+        <Route path="detail/:id" element={<Detail />} />
+        <Route path="dashboard" element={<Home />}>
         <Route
           index
           element={
@@ -62,9 +65,22 @@ export function AppRoutes() {
           }
         />
         <Route path="*" element={<Navigate to="/dashboard" />} />
+        </Route>
       </Route>
     </Routes>
   );
+}
+
+export function RequireAuth() {
+  const { isLoading, session } = useUser();
+  if (isLoading) return null;
+  return session ? <Outlet /> : <Navigate to="/" replace />;
+}
+
+export function RedirectAuthenticated() {
+  const { isLoading, session } = useUser();
+  if (isLoading) return null;
+  return session ? <Navigate to="/dashboard" replace /> : <Outlet />;
 }
 
 function App() {

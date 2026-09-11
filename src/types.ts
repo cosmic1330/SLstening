@@ -291,6 +291,16 @@ export type RecentFundamentalTableType = {
   revenue_recent_m4_name: string | null;
 };
 
+export type TdccHolderTableType = {
+  data_date: string;
+  holders_400: number | null;
+  holders_1000: number | null;
+  previous_date: string | null;
+  previous_holders_400: number | null;
+  previous_holders_1000: number | null;
+  stock_id: number;
+};
+
 export type CheckStatus = "pass" | "fail" | "manual";
 
 export interface StepCheck {

@@ -34,7 +34,7 @@ const state = (overrides: Partial<MarketResourceState>): MarketResourceState => 
 });
 
 describe("MarketDataStatus", () => {
-  it("keeps concurrent stale, refreshing, closed, and timestamp feedback visible", () => {
+  it("keeps concurrent data-quality feedback visible without showing the closed-market label", () => {
     const retry = vi.fn();
     const parentClick = vi.fn();
     render(
@@ -57,13 +57,28 @@ describe("MarketDataStatus", () => {
     expect(screen.getByRole("alert")).toBeTruthy();
     expect(screen.getByText("Refreshing…")).toBeTruthy();
     expect(screen.getByText("Update failed. Showing the last available data.")).toBeTruthy();
-    expect(screen.getByText("Market closed")).toBeTruthy();
+    expect(screen.queryByText("Market closed")).toBeNull();
     expect(screen.getByText(/Updated/)).toBeTruthy();
     expect(getComputedStyle(screen.getByRole("alert")).zIndex).toBe("30");
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(retry).toHaveBeenCalledTimes(1);
     expect(parentClick).not.toHaveBeenCalled();
+  });
+
+  it("renders no UI for a ready, fresh closed-market snapshot", () => {
+    const view = render(<MarketDataStatus state={state({ marketSession: "closed" })} />);
+    expect(view.container.innerHTML).toBe("");
+  });
+
+  it("keeps last-updated information for a closed snapshot without rendering a closed-market message", () => {
+    const formatTime = vi.spyOn(Date.prototype, "toLocaleTimeString").mockReturnValue("09:02 AM");
+    render(<MarketDataStatus state={state({ marketSession: "closed", updatedAt: new Date("2024-01-01T01:02:00Z").getTime() })} />);
+
+    expect(screen.getByRole("status").textContent).toContain("Updated 09:02 AM");
+    expect(screen.queryByText("Market closed")).toBeNull();
+    expect(screen.queryByLabelText(/lock/i)).toBeNull();
+    formatTime.mockRestore();
   });
 
   it("distinguishes successful empty data from a request error", () => {

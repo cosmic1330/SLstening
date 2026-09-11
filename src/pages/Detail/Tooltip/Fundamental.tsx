@@ -1,12 +1,39 @@
 import { Box, Grid, Skeleton, Typography } from "@mui/material";
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeLanguage } from "../../../i18n";
 import { supabase } from "../../../supabase";
+import { semanticTokens } from "../../../theme";
 import {
   FinancialMetricTableType,
   RecentFundamentalTableType,
+  TdccHolderTableType,
 } from "../../../types";
+
+export type TdccHolderChange = {
+  delta: number | null;
+  direction: "increase" | "decrease" | "unchanged" | "unavailable";
+};
+
+export const isTdccStockId = (id: string | undefined): id is string =>
+  Boolean(id && /^\d+$/.test(id) && Number.isSafeInteger(Number(id)));
+
+export const getTdccHolderChange = (
+  current: number | null,
+  previous: number | null
+): TdccHolderChange => {
+  if (current === null || previous === null) {
+    return { delta: null, direction: "unavailable" };
+  }
+
+  const delta = current - previous;
+  if (delta > 0) return { delta, direction: "increase" };
+  if (delta < 0) return { delta, direction: "decrease" };
+  return { delta: 0, direction: "unchanged" };
+};
 
 export default function Fundamental({ id }: { id: string | undefined }) {
   const { t, i18n } = useTranslation();
@@ -14,15 +41,28 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     useState<FinancialMetricTableType | null>(null);
   const [recentFundamental, setRecentFundamental] =
     useState<RecentFundamentalTableType | null>(null);
+  const [tdccHolder, setTdccHolder] = useState<TdccHolderTableType | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     const fetchData = async () => {
       setLoading(true);
+      setFinancialMetrics(null);
+      setRecentFundamental(null);
+      setTdccHolder(null);
 
       try {
-        // 並行載入兩個表的資料
-        const [financialResult, recentResult] = await Promise.all([
+        // 並行載入資料；TDCC 只適用於安全的純數字台股代碼。
+        const tdccResultPromise = isTdccStockId(id)
+          ? supabase
+              .from("tdcc_holder")
+              .select("*")
+              .eq("stock_id", Number(id))
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null });
+        const [financialResult, recentResult, tdccResult] = await Promise.all([
           supabase
             .from("financial_metric")
             .select("*")
@@ -33,7 +73,10 @@ export default function Fundamental({ id }: { id: string | undefined }) {
             .select("*")
             .eq("stock_id", id)
             .single(),
+          tdccResultPromise,
         ]);
+
+        if (!isCurrentRequest) return;
 
         if (financialResult.error) {
           console.error(
@@ -52,14 +95,27 @@ export default function Fundamental({ id }: { id: string | undefined }) {
         } else {
           setRecentFundamental(recentResult.data);
         }
+
+        if (tdccResult.error) {
+          console.error("Error fetching TDCC holder data:", tdccResult.error);
+        } else {
+          setTdccHolder(tdccResult.data as TdccHolderTableType | null);
+        }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        if (isCurrentRequest) {
+          console.error("Error fetching data:", error);
+        }
       } finally {
-        setLoading(false);
+        if (isCurrentRequest) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
+    return () => {
+      isCurrentRequest = false;
+    };
   }, [id]);
 
   const formatSingleValue = (
@@ -81,6 +137,84 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     if (num > 0) return "#fff"; 
     if (num < 0) return "#52c41a"; // 空頭/負數顯綠色
     return "inherit";
+  };
+
+  const formatInteger = (value: number) =>
+    new Intl.NumberFormat(normalizeLanguage(i18n.resolvedLanguage), {
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(normalizeLanguage(i18n.resolvedLanguage), {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(value));
+
+  const HolderChangeItem = ({
+    label,
+    current,
+    previous,
+  }: {
+    label: string;
+    current: number | null;
+    previous: number | null;
+  }) => {
+    const { delta, direction } = getTdccHolderChange(current, previous);
+    const color =
+      direction === "increase"
+        ? semanticTokens.market.gain
+        : direction === "decrease"
+          ? semanticTokens.market.loss
+          : semanticTokens.market.neutral;
+    const DirectionIcon =
+      direction === "increase"
+        ? ArrowUpwardRounded
+        : direction === "decrease"
+          ? ArrowDownwardRounded
+          : RemoveRounded;
+    const changeText =
+      direction === "unavailable" || delta === null
+        ? t("Pages.Detail.tooltip.tdcc.comparisonUnavailable")
+        : direction === "unchanged"
+          ? t("Pages.Detail.tooltip.tdcc.unchanged")
+          : t(`Pages.Detail.tooltip.tdcc.${direction}`, {
+              value: formatInteger(Math.abs(delta)),
+            });
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 1,
+          mb: 0.45,
+        }}
+      >
+        <Typography variant="caption" sx={{ fontSize: "0.7rem", color: "text.secondary" }}>
+          {label}
+        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5, minWidth: 0 }}>
+          <Typography
+            variant="caption"
+            sx={{ fontSize: "0.7rem", fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}
+          >
+            {current === null
+              ? t("Pages.Detail.tooltip.unavailable")
+              : t("Pages.Detail.tooltip.tdcc.currentHolders", {
+                  value: formatInteger(current),
+                })}
+          </Typography>
+          <Box sx={{ display: "inline-flex", alignItems: "center", color, whiteSpace: "nowrap" }}>
+            <DirectionIcon aria-hidden="true" sx={{ fontSize: "0.9rem", mr: 0.2 }} />
+            <Typography component="span" variant="caption" sx={{ fontSize: "0.7rem", color: "inherit", fontVariantNumeric: "tabular-nums" }}>
+              {changeText}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    );
   };
 
   const MetricItem = ({
@@ -298,10 +432,48 @@ export default function Fundamental({ id }: { id: string | undefined }) {
             </Box>
           </Grid>
         )}
+
+        {tdccHolder && (
+          <Grid size={12}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                mb: 0.75,
+                fontWeight: "bold",
+                color: "secondary.main",
+                borderBottom: 1,
+                borderColor: "secondary.light",
+                pb: 0.5,
+              }}
+            >
+              {t("Pages.Detail.tooltip.tdcc.title")}
+            </Typography>
+            <Typography variant="caption" sx={{ display: "block", mb: 0.75, fontSize: "0.68rem", color: "text.secondary" }}>
+              {tdccHolder.previous_date
+                ? t("Pages.Detail.tooltip.tdcc.dataPeriod", {
+                    current: formatDate(tdccHolder.data_date),
+                    previous: formatDate(tdccHolder.previous_date),
+                  })
+                : t("Pages.Detail.tooltip.tdcc.dataDate", {
+                    date: formatDate(tdccHolder.data_date),
+                  })}
+            </Typography>
+            <HolderChangeItem
+              label={t("Pages.Detail.tooltip.tdcc.holders400")}
+              current={tdccHolder.holders_400}
+              previous={tdccHolder.previous_holders_400}
+            />
+            <HolderChangeItem
+              label={t("Pages.Detail.tooltip.tdcc.holders1000")}
+              current={tdccHolder.holders_1000}
+              previous={tdccHolder.previous_holders_1000}
+            />
+          </Grid>
+        )}
       </Grid>
 
       {/* 如果沒有資料的提示 */}
-      {!financialMetrics && !recentFundamental && (
+      {!financialMetrics && !recentFundamental && !tdccHolder && (
         <Box sx={{ textAlign: "center", py: 3 }}>
           <Typography variant="body2" color="text.secondary">
             {t("Pages.Detail.tooltip.noFinancialData")}

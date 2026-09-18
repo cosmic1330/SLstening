@@ -8,7 +8,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { ChipData } from "../../../api/marketApi";
 import { primitiveTokens, semanticTokens } from "../../../theme";
-import { SectionCard } from "./chipUi";
+import { compactChipMedia, SectionCard } from "./chipUi";
 
 const positiveSignals = new Set<ChipData["signals"][number]>([
   "price_down_institution_buy",
@@ -44,6 +44,7 @@ export default function AnalysisPanel({ data }: { data: ChipData }) {
                     py: 0.7,
                     borderBottom: "1px solid " + semanticTokens.analysis.dividerSubtle,
                     "&:last-child": { borderBottom: 0 },
+                    [compactChipMedia]: { py: 0.35 },
                   }}
                 >
                   {positive ? (
@@ -60,7 +61,7 @@ export default function AnalysisPanel({ data }: { data: ChipData }) {
                   <Typography
                     variant="body2"
                     color={semanticTokens.analysis.text}
-                    sx={{ fontSize: 12.5, lineHeight: 1.4 }}
+                    sx={{ fontSize: 12.5, lineHeight: 1.4, [compactChipMedia]: { fontSize: 11, lineHeight: 1.25 } }}
                   >
                     {t("Pages.Detail.Chip.signal." + signal)}
                   </Typography>
@@ -133,6 +134,7 @@ function ScoreCell({
         borderBottom: "1px solid " + semanticTokens.analysis.dividerSubtle,
         "&:nth-of-type(3n)": { borderRight: 0 },
         "&:nth-last-of-type(-n + 3)": { borderBottom: 0 },
+        [compactChipMedia]: { minHeight: 40, py: 0.25 },
       }}
     >
       <Typography
@@ -146,6 +148,7 @@ function ScoreCell({
           WebkitLineClamp: 2,
           fontSize: 10.5,
           lineHeight: 1.2,
+          [compactChipMedia]: { minHeight: 20, fontSize: 10 },
         }}
       >
         {label}

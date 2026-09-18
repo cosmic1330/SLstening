@@ -293,9 +293,11 @@ export type RecentFundamentalTableType = {
 
 export type TdccHolderTableType = {
   data_date: string;
+  holders_100: number | null;
   holders_400: number | null;
   holders_1000: number | null;
   previous_date: string | null;
+  previous_holders_100: number | null;
   previous_holders_400: number | null;
   previous_holders_1000: number | null;
   stock_id: number;

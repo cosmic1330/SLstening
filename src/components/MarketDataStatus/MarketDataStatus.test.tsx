@@ -58,7 +58,7 @@ describe("MarketDataStatus", () => {
     expect(screen.getByText("Refreshing…")).toBeTruthy();
     expect(screen.getByText("Update failed. Showing the last available data.")).toBeTruthy();
     expect(screen.queryByText("Market closed")).toBeNull();
-    expect(screen.getByText(/Updated/)).toBeTruthy();
+    expect(screen.queryByText(/Updated/)).toBeNull();
     expect(getComputedStyle(screen.getByRole("alert")).zIndex).toBe("30");
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -71,14 +71,15 @@ describe("MarketDataStatus", () => {
     expect(view.container.innerHTML).toBe("");
   });
 
-  it("keeps last-updated information for a closed snapshot without rendering a closed-market message", () => {
-    const formatTime = vi.spyOn(Date.prototype, "toLocaleTimeString").mockReturnValue("09:02 AM");
-    render(<MarketDataStatus state={state({ marketSession: "closed", updatedAt: new Date("2024-01-01T01:02:00Z").getTime() })} />);
+  it("renders no DOM for ready fresh data with an updatedAt value, including overlay mode", () => {
+    const view = render(
+      <MarketDataStatus
+        state={state({ updatedAt: new Date("2024-01-01T01:02:00Z").getTime() })}
+        overlay
+      />,
+    );
 
-    expect(screen.getByRole("status").textContent).toContain("Updated 09:02 AM");
-    expect(screen.queryByText("Market closed")).toBeNull();
-    expect(screen.queryByLabelText(/lock/i)).toBeNull();
-    formatTime.mockRestore();
+    expect(view.container.innerHTML).toBe("");
   });
 
   it("distinguishes successful empty data from a request error", () => {
@@ -89,14 +90,21 @@ describe("MarketDataStatus", () => {
     expect(screen.getByRole("alert").textContent).toContain("Market data could not be updated.");
   });
 
-  it("formats the last-updated time with the active locale", () => {
-    const formatTime = vi.spyOn(Date.prototype, "toLocaleTimeString").mockReturnValue("09:02 AM");
+  it("renders no DOM for a standalone stale overlay", () => {
+    const view = render(
+      <MarketDataStatus
+        state={state({ freshness: "stale", updatedAt: new Date("2024-01-01T01:02:00Z").getTime() })}
+        overlay
+      />,
+    );
 
-    render(<MarketDataStatus state={state({ freshness: "stale", updatedAt: new Date("2024-01-01T01:02:00Z").getTime() })} />);
+    expect(view.container.innerHTML).toBe("");
+  });
 
-    expect(formatTime).toHaveBeenCalledWith("en", { hour: "2-digit", minute: "2-digit" });
-    expect(screen.getByText("Updated 09:02 AM")).toBeTruthy();
-    formatTime.mockRestore();
+  it("keeps refreshing visible when its ready data is stale", () => {
+    render(<MarketDataStatus state={state({ freshness: "stale", isRefreshing: true })} />);
+
+    expect(screen.getByText("Refreshing…")).toBeTruthy();
   });
 
   it("uses a static loading icon when reduced motion is requested", () => {

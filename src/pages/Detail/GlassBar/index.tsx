@@ -1,10 +1,8 @@
 import { semanticTokens } from "../../../theme";
-import {
-  ArrowBackIosNew,
-  ArrowForwardIos,
-  InfoOutlined,
-  Settings,
-} from "@mui/icons-material";
+import ArrowBackIosNew from "@mui/icons-material/ArrowBackIosNew";
+import ArrowForwardIos from "@mui/icons-material/ArrowForwardIos";
+import InfoOutlined from "@mui/icons-material/InfoOutlined";
+import Settings from "@mui/icons-material/Settings";
 import {
   Box,
   Divider,
@@ -22,6 +20,15 @@ import Fundamental from "../Tooltip/Fundamental";
 import { CHART_CONFIG, getChartAdvice, getChartTitle } from "../constants/chartConfig";
 import ChartMenu from "./ChartMenu";
 import { TOOLBAR_SETTINGS_EVENT } from "./useToolbarSettings";
+
+export const chartDetailsTooltipSx = {
+  width: "min(520px, calc(100vw - 16px))",
+  maxWidth: "min(520px, calc(100vw - 16px))",
+  overflow: "visible",
+  p: 0,
+  bgcolor: semanticTokens.analysis.surface,
+  border: `1px solid ${semanticTokens.analysis.border}`,
+} as const;
 
 interface GlassBarProps {
   perd: UrlTaPerdOptions;
@@ -156,12 +163,32 @@ const GlassBar: React.FC<GlassBarProps> = ({
         <Tooltip
           arrow
           placement="top"
+          slotProps={{
+            popper: {
+              modifiers: [
+                { name: "preventOverflow", options: { padding: 8 } },
+                { name: "flip", options: { padding: 8 } },
+              ],
+            },
+            tooltip: {
+              sx: chartDetailsTooltipSx,
+            },
+          }}
           title={
-            <Stack spacing={0.75} sx={{ maxWidth: 280 }}>
-              <Box sx={{ fontWeight: 750 }}>{getChartTitle(currentChart, t)}</Box>
-              <Box sx={{ fontSize: 12 }}>{getChartAdvice(currentChart, t)}</Box>
-              {id && <Fundamental id={id} />}
-            </Stack>
+            <Box sx={{ minWidth: 0 }}>
+              <Box sx={{ px: 1.25, pt: 1, pb: 0.75 }}>
+                <Box sx={{ fontWeight: 750, fontSize: 13, lineHeight: 1.35 }}>
+                  {getChartTitle(currentChart, t)}
+                </Box>
+                <Box sx={{ mt: 0.35, fontSize: 12, lineHeight: 1.45, color: semanticTokens.analysis.textMuted }}>
+                  {getChartAdvice(currentChart, t)}
+                </Box>
+              </Box>
+              {id && <>
+                <Divider sx={{ borderColor: semanticTokens.analysis.divider }} />
+                <Fundamental id={id} />
+              </>}
+            </Box>
           }
         >
           <IconButton

@@ -86,6 +86,7 @@ const ChartViewport = styled(Box)`
 import { CHART_CONFIG } from "./constants/chartConfig";
 import { getChartTitle } from "./constants/chartConfig";
 import { carouselOwnsEvent } from "./interaction";
+import { shouldShowDetailFreshness } from "./detailFreshness";
 
 const FullscreenVerticalCarousel: React.FC = () => {
   const [current, setCurrent] = useState(0);
@@ -316,7 +317,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
                 </Suspense>
               </motion.div>
             </AnimatePresence>
-            {historyState.phase === "ready" ? <Box sx={{ position: "absolute", top: 4, right: 8, zIndex: 3 }}><MarketDataStatus state={historyState} retry={mutate} compact /></Box> : null}
+            {shouldShowDetailFreshness(slides[current].id, historyState.phase) ? <Box sx={{ position: "absolute", top: 4, right: 8, zIndex: 3 }}><MarketDataStatus state={historyState} retry={mutate} compact /></Box> : null}
           </ChartViewport>
 
           <GlassBar

@@ -177,6 +177,23 @@
             "mixed": "各項籌碼方向不同，暫時沒有一致訊號。"
           }
         },
+        "holders": {
+          "title": "集保戶數結構",
+          "scoreNote": "不納入分數",
+          "under100": "≤100 張",
+          "over400": "400 張以上",
+          "over1000": "1,000 張以上",
+          "current": "{{value}} 人",
+          "increase": "+{{value}} 人增加",
+          "decrease": "-{{value}} 人減少",
+          "unchanged": "持平",
+          "unavailable": "無法取得",
+          "comparisonUnavailable": "無法比較",
+          "dataDate": "資料日期：{{date}}",
+          "period": "資料期間：{{current}}（前期：{{previous}}）",
+          "empty": "暫無集保戶數資料。",
+          "error": "暫時無法取得集保戶數資料。"
+        },
         "verdict": {
           "stable_buying": "穩定承接",
           "distribution": "籌碼鬆動",

@@ -1,10 +1,8 @@
-import {
-  ArrowDownwardRounded,
-  ArrowUpwardRounded,
-  CheckRounded,
-  RemoveRounded,
-  WarningAmberRounded,
-} from "@mui/icons-material";
+import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
+import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
+import CheckRounded from "@mui/icons-material/CheckRounded";
+import RemoveRounded from "@mui/icons-material/RemoveRounded";
+import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import { Box, Stack, Typography } from "@mui/material";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +15,12 @@ export type LightStatus =
   | ChipData["lights"]["lendingPressure"];
 
 type Tone = "positive" | "negative" | "warning" | "neutral";
+
+// The detail webview opens at a short desktop height. Apply density reductions
+// at every width, while reserving the two-by-two overview grid for wider panes.
+export const compactChipMedia = "@media (max-height: 620px)";
+export const compactWideChipMedia =
+  "@media (min-width: 600px) and (max-height: 620px)";
 
 const toneColor: Record<Tone, string> = {
   positive: semanticTokens.market.gain,
@@ -57,6 +61,7 @@ export function SectionCard({
   icon,
   children,
   fill = false,
+  hideMetaAtXs = false,
 }: {
   id: string;
   title: string;
@@ -64,6 +69,7 @@ export function SectionCard({
   icon?: ReactNode;
   children: ReactNode;
   fill?: boolean;
+  hideMetaAtXs?: boolean;
 }) {
   return (
     <Box
@@ -90,6 +96,11 @@ export function SectionCard({
           flexShrink: 0,
           px: { xs: 1, sm: 1.25 },
           borderBottom: "1px solid " + semanticTokens.analysis.divider,
+          [compactChipMedia]: {
+            minHeight: 30,
+            px: 0.75,
+            "& .MuiSvgIcon-root": { fontSize: 15 },
+          },
         }}
       >
         <Stack direction="row" alignItems="center" spacing={0.75} minWidth={0}>
@@ -112,7 +123,7 @@ export function SectionCard({
             variant="subtitle2"
             color={semanticTokens.analysis.text}
             fontWeight={750}
-            sx={{ letterSpacing: "0.01em" }}
+            sx={{ letterSpacing: "0.01em", [compactChipMedia]: { fontSize: 12 } }}
           >
             {title}
           </Typography>
@@ -122,7 +133,7 @@ export function SectionCard({
             variant="caption"
             color={semanticTokens.analysis.textMuted}
             textAlign="right"
-            sx={{ fontSize: 11 }}
+            sx={{ display: hideMetaAtXs ? { xs: "none", sm: "block" } : "block", fontSize: 11, [compactChipMedia]: { display: "none" } }}
           >
             {meta}
           </Typography>
@@ -136,6 +147,7 @@ export function SectionCard({
           minHeight: 0,
           display: fill ? "flex" : "block",
           flexDirection: fill ? "column" : undefined,
+          [compactChipMedia]: { px: 0.75, py: 0.5 },
         }}
       >
         {children}
@@ -161,8 +173,8 @@ export function StatusCard({
     <Box
       sx={{
         minWidth: 0,
-        minHeight: 72,
-        px: 0.75,
+        minHeight: 58,
+        px: 0.5,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -170,13 +182,13 @@ export function StatusCard({
         gap: 0.25,
         borderRight: "1px solid " + semanticTokens.analysis.dividerSubtle,
         "&:last-child": { borderRight: 0 },
+        [compactChipMedia]: { minHeight: 46, px: 0.35, gap: 0.1 },
       }}
     >
       <Typography
         variant="body2"
         color={semanticTokens.analysis.textMuted}
-        noWrap
-        sx={{ fontSize: 11 }}
+        sx={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", [compactChipMedia]: { fontSize: 10 } }}
       >
         {label}
       </Typography>
@@ -229,15 +241,16 @@ export function MetricCard({
 
   return (
     <Stack
-      direction={{ xs: "column", sm: "row" }}
-      alignItems={{ xs: "stretch", sm: "center" }}
+      direction="row"
+      alignItems="center"
       justifyContent="space-between"
-      spacing={{ xs: 0.1, sm: 1 }}
+      spacing={0.5}
       sx={{
-        minHeight: { xs: 35, sm: 32 },
-        py: { xs: 0.1, sm: 0.3 },
+        minHeight: 29,
+        py: 0.15,
         borderBottom: "1px solid " + semanticTokens.analysis.dividerSubtle,
         "&:last-child": { borderBottom: 0 },
+        [compactChipMedia]: { minHeight: 23, py: 0 },
       }}
     >
       <Typography
@@ -249,9 +262,11 @@ export function MetricCard({
         }
         fontWeight={emphasized ? 700 : 500}
         sx={{
-          fontSize: { xs: 10.5, sm: 11.5 },
+          minWidth: 0,
+          fontSize: { xs: 10, sm: 11.5 },
           lineHeight: 1.2,
-          whiteSpace: { xs: "normal", sm: "nowrap" },
+          overflowWrap: "anywhere",
+          [compactChipMedia]: { fontSize: 10 },
         }}
       >
         {label}
@@ -260,7 +275,7 @@ export function MetricCard({
         direction="row"
         alignItems="center"
         spacing={0.35}
-        sx={{ alignSelf: { xs: "flex-end", sm: "auto" } }}
+        sx={{ flexShrink: 0 }}
       >
         {directional &&
           (direction > 0 ? (
@@ -281,8 +296,9 @@ export function MetricCard({
           sx={{
             fontFamily: primitiveTokens.font.numeric,
             fontVariantNumeric: "tabular-nums",
-            whiteSpace: { xs: "normal", sm: "nowrap" },
+            whiteSpace: "nowrap",
             textAlign: "right",
+            [compactChipMedia]: { fontSize: 11 },
           }}
         >
           {value}

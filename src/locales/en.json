@@ -177,6 +177,23 @@
             "mixed": "Positioning measures disagree, with no clear combined signal yet."
           }
         },
+        "holders": {
+          "title": "TDCC holder structure",
+          "scoreNote": "Not scored",
+          "under100": "≤100 lots",
+          "over400": "400 lots or more",
+          "over1000": "1,000 lots or more",
+          "current": "{{value}} people",
+          "increase": "+{{value}} people increase",
+          "decrease": "-{{value}} people decrease",
+          "unchanged": "Unchanged",
+          "unavailable": "Unavailable",
+          "comparisonUnavailable": "Comparison unavailable",
+          "dataDate": "Data: {{date}}",
+          "period": "Data: {{current}} (previous: {{previous}})",
+          "empty": "No TDCC holder data is available.",
+          "error": "TDCC holder data is temporarily unavailable."
+        },
         "verdict": {
           "stable_buying": "Stable accumulation",
           "distribution": "Distribution",

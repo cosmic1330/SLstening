@@ -154,4 +154,33 @@ describe("TDCC holder changes", () => {
     renderFundamental();
     expect(await screen.findByText("No financial data is available.")).toBeTruthy();
   });
+
+  it("uses compact sections and TDCC cards that can shrink without a loading minimum width", async () => {
+    const loadingView = renderFundamental();
+    const loading = screen.getByTestId("fundamental-loading");
+    expect(getComputedStyle(loading).minWidth).not.toBe("300px");
+    expect(getComputedStyle(loading).width).toBe("100%");
+    await screen.findByText("No financial data is available.");
+    loadingView.unmount();
+
+    configureSupabase({
+      financial_metric: { data: financialData, error: null },
+      recent_fundamental: {
+        data: { eps_recent_q1: 1, revenue_recent_m1_mom: 1, revenue_recent_m1_yoy: 2 },
+        error: null,
+      },
+      tdcc_holder: { data: tdccData, error: null },
+    });
+    renderFundamental();
+
+    await screen.findByTestId("fundamental-section-valuation");
+    expect(screen.getByTestId("fundamental-section-eps")).toBeTruthy();
+    expect(screen.getByTestId("fundamental-section-revenue")).toBeTruthy();
+    expect(screen.getByTestId("fundamental-section-tdcc")).toBeTruthy();
+    expect(getComputedStyle(screen.getByTestId("tdcc-holder-cards")).minWidth).toBe("0px");
+    expect(screen.getAllByTestId("tdcc-holder-card")).toHaveLength(2);
+    screen.getAllByTestId("tdcc-holder-card").forEach((card) => {
+      expect(getComputedStyle(card).minWidth).toBe("0px");
+    });
+  });
 });

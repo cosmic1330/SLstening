@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import type { ChipData } from "../../../api/marketApi";
 import { primitiveTokens, semanticTokens } from "../../../theme";
-import { createNumberFormatter, SectionCard, signedLots } from "./chipUi";
+import { compactChipMedia, createNumberFormatter, SectionCard, signedLots } from "./chipUi";
 
 type TrendDay = ChipData["history"][number] & {
   label: string;
@@ -199,6 +199,7 @@ export default function TrendPanel({ data }: { data: ChipData }) {
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           mb: 1.1,
+          [compactChipMedia]: { mb: 0.45 },
         }}
       >
         <TrendMetric
@@ -223,7 +224,7 @@ export default function TrendPanel({ data }: { data: ChipData }) {
         alignItems="center"
         flexWrap="wrap"
         gap={1.15}
-        sx={{ mb: 0.55 }}
+        sx={{ mb: 0.55, [compactChipMedia]: { mb: 0.25, gap: 0.5 } }}
       >
         <LegendItem
           color={semanticTokens.market.gain}

@@ -1,4 +1,4 @@
-import { RefreshRounded } from "@mui/icons-material";
+import RefreshRounded from "@mui/icons-material/RefreshRounded";
 import {
   Alert,
   Box,
@@ -16,12 +16,21 @@ import { useParams } from "react-router";
 import useSWR from "swr";
 import type { ChipData } from "../../../api/marketApi";
 import { marketApi } from "../../../api/marketApi";
+import { getTdccHolder } from "../../../api/tdccApi";
 import { primitiveTokens, semanticTokens } from "../../../theme";
 import AnalysisPanel from "./AnalysisPanel";
 import OverviewPanel from "./OverviewPanel";
 import TrendPanel from "./TrendPanel";
+import { compactChipMedia } from "./chipUi";
 
 type ChipView = "overview" | "trend" | "analysis";
+
+const chipContentSx = {
+  flex: 1,
+  minHeight: 0,
+  overflow: "hidden",
+  pb: 0.25,
+} as const;
 
 function SummaryCard({ data }: { data: ChipData }) {
   const { t } = useTranslation();
@@ -38,28 +47,30 @@ function SummaryCard({ data }: { data: ChipData }) {
   return (
     <Box
       component="section"
+      data-testid="chip-summary"
       aria-label={t("Pages.Detail.Chip.summary")}
       sx={{
-        px: { xs: 1.15, sm: 1.5 },
-        py: { xs: 0.85, sm: 1 },
+        px: { xs: 1, sm: 1.25 },
+        py: { xs: 0.65, sm: 0.8 },
         borderRadius: primitiveTokens.radius.md + "px",
         bgcolor: semanticTokens.analysis.panel,
         border: "1px solid " + semanticTokens.analysis.divider,
+        [compactChipMedia]: { px: 0.8, py: 0.4 },
       }}
     >
       <Stack
         direction="row"
         alignItems="center"
         justifyContent="space-between"
-        spacing={1}
-        sx={{ mb: 0.45 }}
+        spacing={0.65}
+        sx={{ mb: 0.3, [compactChipMedia]: { mb: 0.1 } }}
       >
         <Typography
           component="h1"
           variant="caption"
           color={semanticTokens.analysis.textMuted}
           noWrap
-          sx={{ fontSize: 10.5 }}
+          sx={{ minWidth: 0, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", [compactChipMedia]: { fontSize: 10 } }}
         >
           <Box
             component="span"
@@ -77,13 +88,13 @@ function SummaryCard({ data }: { data: ChipData }) {
           variant="caption"
           color={semanticTokens.analysis.textMuted}
           noWrap
-          sx={{ minWidth: 0, textAlign: "right", fontSize: 10.5 }}
+          sx={{ minWidth: 0, textAlign: "right", fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", [compactChipMedia]: { fontSize: 10 } }}
         >
           {data.asOf + " / " + data.source}
         </Typography>
       </Stack>
 
-      <Stack direction="row" alignItems="center" spacing={1.25}>
+      <Stack direction="row" alignItems="center" spacing={0.8}>
         <Typography
           component="h2"
           variant="h6"
@@ -98,7 +109,8 @@ function SummaryCard({ data }: { data: ChipData }) {
             color={accent}
             fontWeight={800}
             sx={{
-              fontSize: { xs: 25, sm: 28 },
+              fontSize: { xs: 23, sm: 26 },
+              [compactChipMedia]: { fontSize: 21 },
               lineHeight: 1,
               fontFamily: primitiveTokens.font.numeric,
               fontVariantNumeric: "tabular-nums",
@@ -119,12 +131,12 @@ function SummaryCard({ data }: { data: ChipData }) {
       <Typography
         variant="body2"
         color={semanticTokens.analysis.textMuted}
-        sx={{ mt: 0.35, fontSize: { xs: 12.5, sm: 13 }, lineHeight: 1.4 }}
+        sx={{ mt: 0.2, fontSize: { xs: 11.5, sm: 12.5 }, lineHeight: 1.3, [compactChipMedia]: { display: "none" } }}
       >
         {explanation}
       </Typography>
 
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: 0.7 }}>
+      <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mt: 0.45, [compactChipMedia]: { mt: 0.2 } }}>
         <Box
           role="meter"
           aria-label={t("Pages.Detail.Chip.score")}
@@ -213,6 +225,15 @@ export default function ChipPage() {
     () => marketApi.getChipData(id as string),
     { revalidateOnFocus: false, dedupingInterval: 30 * 60 * 1000 },
   );
+  const {
+    data: tdccHolder,
+    error: tdccError,
+    isLoading: tdccLoading,
+  } = useSWR(
+    id ? ["tdcc-holder", id] : null,
+    () => getTdccHolder(id),
+    { revalidateOnFocus: false, dedupingInterval: 30 * 60 * 1000 },
+  );
 
   if (isLoading) return <LoadingState />;
 
@@ -240,10 +261,27 @@ export default function ChipPage() {
     );
   }
 
-  return <ChipDashboard data={data} />;
+  return (
+    <ChipDashboard
+      data={data}
+      tdccHolder={tdccHolder}
+      tdccError={tdccError}
+      tdccLoading={tdccLoading}
+    />
+  );
 }
 
-export function ChipDashboard({ data }: { data: ChipData }) {
+export function ChipDashboard({
+  data,
+  tdccHolder,
+  tdccError,
+  tdccLoading = false,
+}: {
+  data: ChipData;
+  tdccHolder?: import("../../../types").TdccHolderTableType | null;
+  tdccError?: unknown;
+  tdccLoading?: boolean;
+}) {
   const { t } = useTranslation();
   const [view, setView] = useState<ChipView>("overview");
 
@@ -264,7 +302,7 @@ export function ChipDashboard({ data }: { data: ChipData }) {
         pb: 0.75,
       }}
     >
-      <Stack spacing={0.7} sx={{ height: "100%", minHeight: 0 }}>
+      <Stack spacing={0.5} sx={{ height: "100%", minHeight: 0 }}>
         <SummaryCard data={data} />
 
         <Tabs
@@ -299,6 +337,10 @@ export function ChipDashboard({ data }: { data: ChipData }) {
                 transition: "none",
               },
             },
+            [compactChipMedia]: {
+              minHeight: 32,
+              "& .MuiTab-root": { minHeight: 32, fontSize: 11 },
+            },
           }}
         >
           <Tab value="overview" label={t("Pages.Detail.Chip.tabs.overview")} />
@@ -308,14 +350,16 @@ export function ChipDashboard({ data }: { data: ChipData }) {
 
         <Box
           aria-label={t("Pages.Detail.Chip.tabs." + view)}
-          sx={{
-            flex: 1,
-            minHeight: 0,
-            overflow: "hidden",
-            pb: 0.25,
-          }}
+          sx={chipContentSx}
         >
-          {view === "overview" && <OverviewPanel data={data} />}
+          {view === "overview" && (
+            <OverviewPanel
+              data={data}
+              holder={tdccHolder}
+              holderError={tdccError}
+              holderLoading={tdccLoading}
+            />
+          )}
           {view === "trend" && <TrendPanel data={data} />}
           {view === "analysis" && <AnalysisPanel data={data} />}
         </Box>

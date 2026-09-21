@@ -17,11 +17,7 @@ vi.mock("../pages/Login", () => ({ default: () => <div>login-route</div> }));
 vi.mock("../pages/Register", () => ({
   default: () => <div>register-route</div>,
 }));
-vi.mock("../pages/Add", () => ({ default: () => <div>add-route</div> }));
 vi.mock("../pages/Home", () => ({ default: () => <div>home-route</div> }));
-vi.mock("../pages/Home/Category", () => ({
-  default: () => <div>category-route</div>,
-}));
 vi.mock("../components/DebugInfo", () => ({ default: () => null }));
 vi.mock("../layout/AuthenticatedRuntime", () => ({
   default: () => <div data-testid="authenticated-runtime"><Outlet /></div>,

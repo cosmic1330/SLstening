@@ -5,19 +5,20 @@ import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import StockBox from "./index";
 
-const StyledBox = styled(Box)`
-  background-color: rgba(30, 30, 35, 0.4);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 1.5rem;
-  border-radius: 24px;
-  color: #fff;
-  height: 100%;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-`;
+const StyledBox = styled(Box)({
+  backgroundColor: "rgba(30, 36, 48, 0.72)",
+  border: "1px solid rgba(148, 163, 184, 0.16)",
+  padding: "16px",
+  borderRadius: 14,
+  color: "#fff",
+  minWidth: 0,
+  height: "100%",
+  boxSizing: "border-box",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "space-between",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
+});
 
 interface LazyStockBoxProps {
   stock: StockStoreType;
@@ -68,7 +69,7 @@ export default function LazyStockBox({
       {!hasBeenVisible ? (
         <StyledBox>
           <Box>
-            <Grid container alignItems="center" spacing={2} mb={3}>
+            <Grid container alignItems="center" spacing={1} mb={2}>
               <Grid size={5}>
                 <Skeleton
                   variant="rectangular"
@@ -90,7 +91,7 @@ export default function LazyStockBox({
               </Grid>
             </Grid>
 
-            <Grid container spacing={2} mb={2}>
+            <Grid container spacing={1} mb={2}>
               {Array.from({ length: 4 }).map((_, index) => (
                 <Grid size={6} key={index}>
                   <Skeleton

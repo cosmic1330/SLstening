@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 const StyledLinkChip = styled("a")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  minHeight: 44,
   padding: "4px 12px",
   background: "rgba(50, 50, 50, 0.6)",
   backdropFilter: "blur(12px)",
@@ -18,6 +19,14 @@ const StyledLinkChip = styled("a")(({ theme }) => ({
     background: "rgba(255, 255, 255, 0.12)",
     borderColor: theme.palette.primary.main,
     transform: "translateY(-1px)",
+  },
+  "&:focus-visible": {
+    outline: "3px solid #90CAF9",
+    outlineOffset: 2,
+  },
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+    "&:hover": { transform: "none" },
   },
 }));
 

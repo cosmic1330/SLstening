@@ -156,7 +156,7 @@ export default function VirtualizedStockList({
   stocks = [],
   height,
   width = "100%",
-  itemHeight = 280,
+  itemHeight = 292,
   header,
   renderItem,
 }: VirtualizedStockListProps) {

@@ -8,14 +8,12 @@ import "./App.css";
 import { UserProvider, useUser } from "./context/UserContext";
 import { appTheme } from "./theme";
 
-const Add = lazy(() => import("./pages/Add"));
 const AuthenticatedRuntime = lazy(() => import("./layout/AuthenticatedRuntime"));
-const Category = lazy(() => import("./pages/Home/Category"));
 const Detail = lazy(() => import("./pages/Detail"));
 const Home = lazy(() => import("./pages/Home"));
-const List = lazy(() => import("./pages/Home/List"));
+const Watchlist = lazy(() => import("./pages/Home/Watchlist"));
+const Market = lazy(() => import("./pages/Home/Market"));
 const Login = lazy(() => import("./pages/Login"));
-const RedBall = lazy(() => import("./pages/Home/RedBall"));
 const Register = lazy(() => import("./pages/Register"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
 
@@ -46,13 +44,12 @@ export function AppRoutes() {
       </Route>
       <Route element={<RequireAuth />}>
         <Route element={<LazyRoute><AuthenticatedRuntime /></LazyRoute>}>
-          <Route path="add" element={<LazyRoute><Add /></LazyRoute>} />
+          <Route path="add" element={<Navigate to="/dashboard" replace />} />
           <Route path="detail/:id" element={<LazyRoute><Detail /></LazyRoute>} />
           <Route path="dashboard" element={<LazyRoute><Home /></LazyRoute>}>
-            <Route index element={<LazyRoute><List /></LazyRoute>} />
+            <Route index element={<LazyRoute><Watchlist /></LazyRoute>} />
             <Route path="setting" element={<LazyRoute><Setting /></LazyRoute>} />
-            <Route path="redball" element={<LazyRoute><RedBall /></LazyRoute>} />
-            <Route path="category" element={<LazyRoute><Category /></LazyRoute>} />
+            <Route path="market" element={<LazyRoute><Market /></LazyRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>

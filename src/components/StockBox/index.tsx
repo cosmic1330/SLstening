@@ -35,16 +35,18 @@ const MakChart = lazy(() => import("../CommonChart/MakChart"));
 const StockTickChart = lazy(() => import("./StockTickChart"));
 
 // Constants
-export const STOCK_BOX_HEIGHT = 280;
+// Keep the card and virtualized row in sync. The extra breathing room keeps
+// the indicator strip and chart visible at the two-column mobile breakpoint.
+export const STOCK_BOX_HEIGHT = 292;
 
 // Premium Colors (Traditional Japanese & Financial tones - High Contrast)
 const COLORS = {
   up: "#FF5252",
   down: "#69F0AE",
   neutral: "#94A3B8",
-  cardBg: "rgba(10, 10, 15, 0.85)", // Darker, less transparent
-  cardBorder: "rgba(255, 255, 255, 0.12)",
-  textSecondary: "rgba(255, 255, 255, 0.8)", // Brighter for readability
+  cardBg: "rgba(30, 36, 48, 0.96)",
+  cardBorder: "rgba(148, 163, 184, 0.22)",
+  textSecondary: "rgba(226, 232, 240, 0.78)",
 };
 
 function ChartAreaFallback({ height }: { height: number }) {
@@ -65,17 +67,26 @@ function ChartAreaFallback({ height }: { height: number }) {
 const StyledCard = styled(motion.div)(() => ({
   position: "relative",
   background: COLORS.cardBg,
-  backdropFilter: "blur(20px)", // Reduced blur for clarity
-  borderRadius: "16px", // Reduced radius
+  borderRadius: "14px",
   border: `1px solid ${COLORS.cardBorder}`,
-  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.4)",
+  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.24)",
   overflow: "hidden",
   cursor: "pointer",
   height: "100%",
+  minWidth: 0,
+  minHeight: 0,
   display: "flex",
   flexDirection: "column",
   boxSizing: "border-box",
   fontFamily: "'Outfit', 'Inter', sans-serif",
+  transition: "border-color 160ms ease, box-shadow 160ms ease",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
+  "&:hover": {
+    borderColor: "rgba(148, 163, 184, 0.42)",
+    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.32)",
+  },
   "&:hover .action-buttons, &:focus-within .action-buttons": {
     opacity: 1,
     transform: "scale(1)",
@@ -96,17 +107,22 @@ const ActionButtons = styled(motion.div)(() => ({
 }));
 
 const ActionBtn = styled(IconButton)(({ theme }) => ({
-  backgroundColor: "rgba(255, 255, 255, 0.1)",
-  backdropFilter: "blur(12px)",
-  color: "rgba(255, 255, 255, 0.9)",
-  border: "1px solid rgba(255, 255, 255, 0.2)",
-  width: 40,
-  height: 40,
-  transition: "all 0.2s ease",
+  backgroundColor: "rgba(15, 23, 42, 0.86)",
+  color: "rgba(241, 245, 249, 0.92)",
+  border: "1px solid rgba(148, 163, 184, 0.3)",
+  width: 44,
+  height: 44,
+  flexShrink: 0,
+  transition: "background-color 160ms ease, border-color 160ms ease, transform 160ms ease",
   "&:hover": {
     backgroundColor: theme.palette.primary.main,
+    borderColor: theme.palette.primary.main,
     color: "#fff",
     transform: "scale(1.1)",
+  },
+  "&:focus-visible": {
+    outline: "2px solid #90CAF9",
+    outlineOffset: 2,
   },
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
@@ -115,14 +131,23 @@ const ActionBtn = styled(IconButton)(({ theme }) => ({
 }));
 
 const MetricTag = styled(Box)(() => ({
-  padding: "4px 8px",
+  minWidth: 0,
+  minHeight: 30,
+  padding: "4px 6px",
   borderRadius: "8px",
-  background: "rgba(255, 255, 255, 0.05)",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
-  transition: "all 0.2s ease",
+  background: "rgba(15, 23, 42, 0.42)",
+  border: "1px solid rgba(148, 163, 184, 0.16)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+  transition: "background-color 160ms ease, border-color 160ms ease",
+  "@media (prefers-reduced-motion: reduce)": {
+    transition: "none",
+  },
   "&:hover": {
-    background: "rgba(255, 255, 255, 0.1)",
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    background: "rgba(15, 23, 42, 0.65)",
+    borderColor: "rgba(148, 163, 184, 0.3)",
   },
 }));
 
@@ -238,7 +263,7 @@ export default function StockBox({
         sx={{ position: "absolute", inset: 0, zIndex: 5, border: 0, p: 0, bgcolor: "transparent", cursor: "pointer", pointerEvents: activeState.phase === "ready" ? "auto" : "none", "&:focus-visible": { outline: "3px solid #90CAF9", outlineOffset: -3 } }}
       />
 
-          <ActionButtons className="action-buttons">
+          <ActionButtons className="action-buttons" style={onRemove && !canDelete ? { right: 64 } : undefined}>
             <Stack direction="row" spacing={0.5}>
               <Tooltip title={t("a11y.tradingView", { name: name || stock.name })} arrow>
                 <ActionBtn
@@ -257,7 +282,7 @@ export default function StockBox({
                 </ActionBtn>
               </Tooltip>
 
-              {onRemove && (
+              {onRemove && canDelete && (
                 <Tooltip title={t("a11y.removeStock", { name: name || stock.name })} arrow>
                   <ActionBtn
                     size="small"
@@ -290,6 +315,16 @@ export default function StockBox({
             </Stack>
           </ActionButtons>
 
+      {onRemove && !canDelete ? (
+        <ActionBtn
+          aria-label={t("a11y.removeStock", { name: name || stock.name })}
+          onClick={(event) => { event.stopPropagation(); onRemove(); }}
+          sx={{ position: "absolute", top: 12, right: 12, zIndex: 20 }}
+        >
+          <CloseIcon fontSize="inherit" sx={{ fontSize: 14 }} />
+        </ActionBtn>
+      ) : null}
+
       <Box sx={{ position: "relative", zIndex: 1, p: 2, flex: 1 }}>
         {/* Header: Name & ID */}
         <Stack
@@ -297,13 +332,14 @@ export default function StockBox({
           justifyContent="space-between"
           alignItems="center"
           mb={1}
+          pr={onRemove && !canDelete ? 7 : 0}
         >
           <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
             <Typography
               noWrap
               sx={{
                 color: COLORS.textSecondary,
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 900,
                 letterSpacing: "0.02em",
                 lineHeight: 1,
@@ -316,7 +352,7 @@ export default function StockBox({
               noWrap
               sx={{
                 fontWeight: 900,
-                fontSize: "18px",
+                fontSize: { xs: "15px", sm: "18px" },
                 color: "#fff",
                 lineHeight: 1,
               }}
@@ -328,7 +364,8 @@ export default function StockBox({
             <Typography
               sx={{
                 fontWeight: 900,
-                fontSize: "24px",
+                fontSize: { xs: "20px", sm: "24px" },
+                fontVariantNumeric: "tabular-nums",
                 color: priceInfo.mainColor,
                 lineHeight: 1,
               }}
@@ -344,7 +381,8 @@ export default function StockBox({
               <Typography
                 sx={{
                   fontWeight: 900,
-                  fontSize: "13px",
+                  fontSize: { xs: "12px", sm: "13px" },
+                  fontVariantNumeric: "tabular-nums",
                   color: priceInfo.mainColor,
                 }}
               >
@@ -356,7 +394,7 @@ export default function StockBox({
 
         {/* Indicators Grid - More Compact */}
         <Box sx={{ mt: 1.5 }}>
-          <Grid container spacing={1}>
+          <Grid container spacing={1} sx={{ minWidth: 0 }}>
             {stockBoxChartType === "mak" && activeState.phase === "ready" && (
               <>
                 {(!hasSamples(deals, 20) || !hasVolumeBaseline(deals)) && (
@@ -366,22 +404,22 @@ export default function StockBox({
                     </Typography>
                   </Grid>
                 )}
-                <Grid size={{ xs: 4 }}>
+                <Grid size={{ xs: 4 }} sx={{ minWidth: 0 }}>
                   <MetricTag>
                     {hasSamples(deals, 5) ? <Ma5 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA5 · —</Typography>}
                   </MetricTag>
                 </Grid>
-                <Grid size={{ xs: 4 }}>
+                <Grid size={{ xs: 4 }} sx={{ minWidth: 0 }}>
                   <MetricTag>
                     {hasSamples(deals, 10) ? <Ma10 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA10 · —</Typography>}
                   </MetricTag>
                 </Grid>
-                <Grid size={{ xs: 4 }}>
+                <Grid size={{ xs: 4 }} sx={{ minWidth: 0 }}>
                   <MetricTag>
                     {hasSamples(deals, 20) ? <Ma20 lastPrice={priceInfo.lastPrice ?? 0} {...maData} /> : <Typography variant="caption">MA20 · —</Typography>}
                   </MetricTag>
                 </Grid>
-                <Grid size={{ xs: 12 }}>
+                <Grid size={{ xs: 12 }} sx={{ minWidth: 0 }}>
                   <MetricTag>
                     {hasVolumeBaseline(deals) ? <VolumeRatio {...volumeInfo} /> : <Typography variant="caption">Vol · —</Typography>}
                   </MetricTag>
@@ -389,7 +427,7 @@ export default function StockBox({
               </>
             )}
             {stockBoxChartType === "tick" && activeState.phase === "ready" && (
-              <Grid size={{ xs: 12 }}>
+              <Grid size={{ xs: 12 }} sx={{ minWidth: 0 }}>
                 <MetricTag>
                   <AvgPrice
                     lastPrice={priceInfo.lastPrice ?? 0}
@@ -407,11 +445,11 @@ export default function StockBox({
         sx={{
           height: 64,
           mt: "auto",
-          background: "rgba(255,255,255,0.03)",
+          background: "rgba(15, 23, 42, 0.34)",
           position: "relative",
           display: "flex",
           alignItems: "flex-end",
-          borderTop: "1px solid rgba(255,255,255,0.05)",
+          borderTop: "1px solid rgba(148, 163, 184, 0.14)",
         }}
       >
         {stockBoxChartType === "mak" ? (

@@ -700,7 +700,7 @@ function Setting() {
                 secondaryAction={
                   <IconButton
                     edge="end"
-                    aria-label={t("category.delete", { name: `${stock.id} ${stock.name}` })}
+                    aria-label={t("a11y.deleteStock", { name: `${stock.id} ${stock.name}` })}
                     size="small"
                     onClick={() => handleDeleteCloudStock(stock.id, stock.name)}
                     sx={{ color: semanticTokens.app.accent }}

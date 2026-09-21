@@ -17,20 +17,188 @@
     "scrollLeft": "向左捲動分類",
     "scrollRight": "向右捲動分類"
   },
-  "navigation": { "label": "主要導覽", "home": "首頁", "settings": "設定", "recommendations": "系統推薦股", "categories": "分類", "add": "加入股票" },
-  "home": {
-    "marketOverview": "市場脈動", "watchlist": "我的選股清單", "trackedCount": "已追蹤 {{count}} 檔", "macro": "宏觀指標", "emptyWatchlist": "尚未追蹤任何股票，請使用加入按鈕建立自選清單。", "yahooRateLimited": "Yahoo API 暫時限制連線（冷卻中），請稍候再試。",
-    "indices": { "twse": "加權指數", "otc": "櫃買指數", "nasdaq": "那斯達克", "wtx": "台指期" },
-    "links": { "cnn": "CNN 恐懼貪婪", "mm": "台灣恐懼貪婪", "margin": "台股融資維持率" }
+  "navigation": {
+    "label": "主要導覽",
+    "tracking": "自選",
+    "market": "市場",
+    "settings": "設定"
   },
-  "category": {
-    "title": "自選分類", "summary": "{{name}} · {{count}} 檔標的", "prompt": "選擇分類開始管理您的自選名單", "add": "新增分類", "manage": "管理分類", "empty": "尚未建立分類，請新增一個開始使用。", "emptyStocks": "分類尚無內容", "emptyStocksHint": "使用上方搜尋列，快速充實您的自選名單。", "selectOrAdd": "請選擇或新增分類", "search": "輸入簡稱或代號加入此自選…", "newTitle": "建立全新自選分類", "name": "分類名稱", "cancel": "取消", "create": "建立", "manageTitle": "自選分類管理", "edit": "重新命名 {{name}}", "delete": "刪除 {{name}}", "close": "關閉", "noCategories": "目前沒有任何分類。"
+  "home": {
+    "marketOverview": "市場脈動",
+    "watchlist": "我的選股清單",
+    "trackedCount": "已追蹤 {{count}} 檔",
+    "macro": "宏觀指標",
+    "emptyWatchlist": "尚未追蹤任何股票，請使用加入按鈕建立自選清單。",
+    "yahooRateLimited": "Yahoo API 暫時限制連線（冷卻中），請稍候再試。",
+    "indices": {
+      "twse": "加權指數",
+      "otc": "櫃買指數",
+      "nasdaq": "那斯達克",
+      "wtx": "台指期"
+    },
+    "groups": {
+      "tw": "台灣市場",
+      "us": "美股",
+      "futures": "期權"
+    },
+    "links": {
+      "cnn": "CNN 恐懼貪婪",
+      "mm": "台灣恐懼貪婪",
+      "margin": "台股融資維持率"
+    }
+  },
+  "watchlist": {
+    "defaultName": "自選",
+    "summary": "{{count}} 檔",
+    "stockCount": "{{count}} 檔",
+    "addStock": "加入股票",
+    "manage": "管理分類",
+    "more": "更多操作",
+    "sortStocks": "排序股票",
+    "sortHint": "可拖曳列項或使用箭頭按鈕排序此分類。",
+    "saveOrder": "儲存排序",
+    "applyOrder": "套用排序",
+    "moveUp": "將 {{name}} 上移",
+    "moveDown": "將 {{name}} 下移",
+    "empty": "此分類尚無股票，請加入股票開始追蹤。",
+    "noStockMatches": "沒有符合篩選條件的股票。",
+    "filterStocks": "篩選股票",
+    "clearStockFilter": "清除股票篩選",
+    "newCategory": "新增分類",
+    "noCustomCategories": "尚未建立其他分類。",
+    "categoryName": "分類名稱",
+    "rename": "重新命名",
+    "delete": "刪除",
+    "save": "儲存",
+    "cancel": "取消",
+    "close": "關閉",
+    "defaultLocked": "預設自選不可重新命名或刪除。",
+    "errors": {
+      "CATEGORY_NAME_REQUIRED": "請輸入分類名稱。",
+      "CATEGORY_NAME_DUPLICATE": "已有相同名稱的分類。",
+      "PIN_LIMIT_REACHED": "最多只能釘選五個分類。"
+    },
+    "stockSearch": "搜尋股票",
+    "categories": "分類",
+    "categoryRequired": "至少選擇一個分類。",
+    "saveFailed": "無法儲存變更，請重試。",
+    "saving": "儲存中…",
+    "chooseCategory": "選擇分類",
+    "openCategoryPicker": "目前分類：{{name}}，選擇其他分類",
+    "categorySearch": "搜尋分類",
+    "clear": "清除",
+    "defaultSection": "預設",
+    "pinned": "已釘選",
+    "recent": "最近使用",
+    "allCategories": "所有分類",
+    "noCategories": "沒有符合的分類",
+    "currentCategory": "目前分類",
+    "currentCategoryName": "目前顯示：{{name}}",
+    "toggleCategory": "切換 {{name}}",
+    "pin": "釘選",
+    "unpin": "取消釘選",
+    "pinCategory": "釘選 {{name}}",
+    "unpinCategory": "取消釘選 {{name}}",
+    "renameCategory": "重新命名 {{name}}",
+    "deleteCategory": "刪除 {{name}}",
+    "pinnedOrder": "已釘選分類排序",
+    "pinnedOrderHint": "可拖曳或使用箭頭；按下套用後才會儲存排序。",
+    "deleteTitle": "刪除「{{name}}」？",
+    "deleteMessage": "分類將被移除；僅存在此分類的 {{count}} 檔股票也會一併刪除。",
+    "confirmDelete": "刪除分類"
   },
   "settings": {
-    "title": "偏好設定", "data": "資料管理", "application": "應用程式", "updateStocks": "更新股票列表", "updateStocksHint": "手動觸發台股資料庫更新", "update": "更新", "sync": "同步", "syncStocks": "同步 Schoice 自選股票", "syncStocksHint": "加入雲端自選股票列表", "deleteStocks": "批次刪除自選股", "deleteStocksHint": "快速挑選並刪除不再追蹤的股票", "choose": "挑選", "factoryReset": "回到原廠設定", "factoryResetHint": "清除快取並重設資料庫", "run": "執行", "alwaysOnTop": "視窗置頂", "alwaysOnTopHint": "保持視窗顯示在最前方", "cardChart": "卡片圖表顯示", "cardChartHint": "切換首頁股票卡片底部的圖表類型", "candle": "K 線", "live": "即時", "marketInfo": "顯示大盤資訊", "marketInfoHint": "首頁顯示指數與市場概況", "developer": "開發者模式", "developerHint": "顯示內部除錯資訊（可使用 Ctrl + Shift + D 切換）", "indicators": "技術指標設定", "resetIndicators": "回復初始值", "indicatorHelp": "設定各技術指標使用的回看期數。", "indicator": { "ma5": "MA 短（5）", "ma10": "MA 中（10）", "ma20": "MA 長（20）", "ma60": "MA 季（60）", "ma240": "MA 年（240）", "emaShort": "EMA 短", "emaLong": "EMA 長", "boll": "布林帶（30）", "donchian": "唐奇安（20）", "kd": "KD（9）", "rsi": "RSI（14）", "mfi": "MFI（14）", "cmf": "CMF（21）", "cmfEma": "CMF EMA（5）", "cci": "CCI（26）" }, "resetConfirm": "確定要清除所有資料並還原回原廠設定嗎？此動作無法復原。", "resetDone": "清除成功！", "syncNone": "沒有缺少的股票需要同步", "syncFailed": "同步失敗", "syncSuccess": "已新增 {{count}} 檔股票", "syncTitle": "同步缺少的股票", "selectAll": "全選", "confirmAdd": "確認新增（{{count}}）", "cancel": "取消", "delete": "刪除", "deleteSuccess": "已刪除 {{count}} 檔股票", "deleteFailed": "刪除失敗", "deleteCloudConfirm": "確定要從雲端同步清單中刪除 {{id}} {{name}} 嗎？", "deleteLocalConfirm": "確定要從本地刪除選中的 {{count}} 檔股票嗎？", "marketLabels": { "cnn": "CNN 恐懼貪婪", "mm": "財經 M 平方", "nasdaq": "NASDAQ 指數", "twse": "台股加權指數", "otc": "櫃買指數", "wtx": "台指期貨", "margin": "台股融資維持率" }
+    "title": "偏好設定",
+    "data": "資料管理",
+    "application": "應用程式",
+    "updateStocks": "更新股票列表",
+    "updateStocksHint": "手動觸發台股資料庫更新",
+    "update": "更新",
+    "sync": "同步",
+    "syncStocks": "同步 Schoice 自選股票",
+    "syncStocksHint": "加入雲端自選股票列表",
+    "deleteStocks": "批次刪除自選股",
+    "deleteStocksHint": "快速挑選並刪除不再追蹤的股票",
+    "choose": "挑選",
+    "factoryReset": "回到原廠設定",
+    "factoryResetHint": "清除快取並重設資料庫",
+    "run": "執行",
+    "alwaysOnTop": "視窗置頂",
+    "alwaysOnTopHint": "保持視窗顯示在最前方",
+    "cardChart": "卡片圖表顯示",
+    "cardChartHint": "切換首頁股票卡片底部的圖表類型",
+    "candle": "K 線",
+    "live": "即時",
+    "marketInfo": "顯示大盤資訊",
+    "marketInfoHint": "在市場頁顯示指數與宏觀連結",
+    "developer": "開發者模式",
+    "developerHint": "顯示內部除錯資訊（可使用 Ctrl + Shift + D 切換）",
+    "indicators": "技術指標設定",
+    "resetIndicators": "回復初始值",
+    "indicatorHelp": "設定各技術指標使用的回看期數。",
+    "indicator": {
+      "ma5": "MA 短（5）",
+      "ma10": "MA 中（10）",
+      "ma20": "MA 長（20）",
+      "ma60": "MA 季（60）",
+      "ma240": "MA 年（240）",
+      "emaShort": "EMA 短",
+      "emaLong": "EMA 長",
+      "boll": "布林帶（30）",
+      "donchian": "唐奇安（20）",
+      "kd": "KD（9）",
+      "rsi": "RSI（14）",
+      "mfi": "MFI（14）",
+      "cmf": "CMF（21）",
+      "cmfEma": "CMF EMA（5）",
+      "cci": "CCI（26）"
+    },
+    "resetConfirm": "確定要清除所有資料並還原回原廠設定嗎？此動作無法復原。",
+    "resetDone": "清除成功！",
+    "syncNone": "沒有缺少的股票需要同步",
+    "syncFailed": "同步失敗",
+    "syncSuccess": "已新增 {{count}} 檔股票",
+    "syncTitle": "同步缺少的股票",
+    "selectAll": "全選",
+    "confirmAdd": "確認新增（{{count}}）",
+    "cancel": "取消",
+    "delete": "刪除",
+    "deleteSuccess": "已刪除 {{count}} 檔股票",
+    "deleteFailed": "刪除失敗",
+    "deleteCloudConfirm": "確定要從雲端同步清單中刪除 {{id}} {{name}} 嗎？",
+    "deleteLocalConfirm": "確定要從本地刪除選中的 {{count}} 檔股票嗎？",
+    "marketLabels": {
+      "cnn": "CNN 恐懼貪婪",
+      "mm": "財經 M 平方",
+      "nasdaq": "NASDAQ 指數",
+      "twse": "台股加權指數",
+      "otc": "櫃買指數",
+      "wtx": "台指期貨",
+      "margin": "台股融資維持率"
+    }
   },
-  "redBall": { "title": "系統推薦股", "loading": "正在取得推薦資料…", "topDays": "前 {{count}} 日", "volumeStatus": "量能狀態", "estimatedVolume": "預估量", "details": "詳情", "reasonFallback": "策略選股", "volume": { "surge": "出大量", "expanded": "放量", "moderate": "溫和", "normal": "正常", "low": "偏低", "contracted": "量縮" } },
-  "stock": { "remove": "移除", "delete": "刪除", "ma": "MA{{period}}", "volume": "成交量", "dailyLow": "日均低", "previousVolume": "昨日量", "estimatedVolume": "估量", "averagePrice": "當前均價", "tickCount": "今日總成交筆數", "volumeRatio": "預估量／十日均量", "volumeRatioStatus": { "extremelyLow": "極限縮量", "low": "量縮", "normal": "常態", "moderatelyHigh": "溫和放量", "high": "放量", "extreme": "巨量" }, "guideLanguage": "說明文件語言：繁體中文", "guideUnavailable": "此說明文件目前僅提供繁體中文。" },
+  "stock": {
+    "remove": "移除",
+    "delete": "刪除",
+    "ma": "MA{{period}}",
+    "volume": "成交量",
+    "dailyLow": "日均低",
+    "previousVolume": "昨日量",
+    "estimatedVolume": "估量",
+    "averagePrice": "當前均價",
+    "tickCount": "今日總成交筆數",
+    "volumeRatio": "預估量／十日均量",
+    "volumeRatioStatus": {
+      "extremelyLow": "極限縮量",
+      "low": "量縮",
+      "normal": "常態",
+      "moderatelyHigh": "溫和放量",
+      "high": "放量",
+      "extreme": "巨量"
+    },
+    "guideLanguage": "說明文件語言：繁體中文",
+    "guideUnavailable": "此說明文件目前僅提供繁體中文。"
+  },
   "marketData": {
     "loading": "載入市場資料中…",
     "empty": "目前沒有可用的市場資料。",
@@ -39,10 +207,10 @@
     "refreshing": "更新中…",
     "stale": "顯示最後可用資料。",
     "staleError": "更新失敗，顯示最後可用資料。",
-    "closed": "市場已收盤"
-    ,"updated": "更新於 {{time}}"
-    ,"insufficient": "資料不足"
-    ,"unavailable": "無法取得"
+    "closed": "市場已收盤",
+    "updated": "更新於 {{time}}",
+    "insufficient": "資料不足",
+    "unavailable": "無法取得"
   },
   "Pages": {
     "Auth": {
@@ -84,16 +252,6 @@
       "passwordMismatch": "兩次輸入的密碼不一致。",
       "checkEmail": "請至電子郵件收件匣確認帳號，然後回到這裡登入。"
     },
-    "Add": {
-      "close": "關閉",
-      "add": "加入",
-      "download": "下載中...",
-      "notFoundOptions": "沒有選項? 下載",
-      "selectStock": "股票代碼",
-      "required": "股票代號是必填項目",
-      "pattern": "股票代號格式不正確",
-      "noStock": "請輸入股票代碼"
-    },
     "Schoice": {
       "Trash": {
         "name": "策略名稱",
@@ -110,12 +268,78 @@
       }
     },
     "Detail": {
-      "chartAdvice": { "bollean": "布林通道策略適合震盪與突破市場，配合 EMA 200 判斷大趨勢。", "Donchian": "唐奇通道策略適合震盪與突破市場。", "ma": "MA 在日線最能體現趨勢；週線 MA20 可作防禦參考，交易小時級缺口前應確認高週期支撐。", "ema": "EMA 在日線提供中長線趨勢指南；小時級進場前請確認日線 EMA60 或 SMA200 支撐。", "atr": "ATR Supertrend 適合日線趨勢追蹤；短線使用請以高週期 EMA 過濾方向，降低盤整假訊號。", "obv": "OBV 小時線可觀察資金進出，進場前應同步確認日線 OBV 趨勢。", "volume_profile": "成交量輪廓可辨識可見區間資金密集區；POC 提供成本參考，VAH／VAL 協助辨識盤整或突破。", "cci": "CCI 可在日線與小時線捕捉突破與超賣反轉；短線使用時請順勢而為。", "mr": "MR 適合日內動能與日線動能衰竭判讀；短線金叉但日線 RSI 低於 50 時，宜視為反彈而非趨勢確認。", "kd": "KD 對週期敏感；週線與日線的波段參考較強，短週期應搭配 MA20 等趨勢指標過濾。", "mfi": "MFI 日線較穩健、小時線反應較快；超賣進場仍需確認日線趨勢向上。", "chip": "籌碼資料盤後更新，以法人、融資與融券資料判斷方向。", "ichimoku_cloud": "一目均衡表在日線與週線較有效；短週期使用時需留意指標雜訊。" },
-      "charts": {
-        "bollean": { "label": "布林", "title": "布林通道與 EMA" }, "Donchian": { "label": "唐奇", "title": "唐奇通道" }, "ma": { "label": "MA", "title": "均線與缺口策略" }, "ema": { "label": "EMA", "title": "EMA 趨勢策略" }, "atr": { "label": "ATR", "title": "ATR Trend 策略說明" }, "obv": { "label": "OBV", "title": "OBV 動能策略" }, "volume_profile": { "label": "量價", "title": "成交量輪廓" }, "cci": { "label": "CCI", "title": "CCI 順勢指標" }, "mr": { "label": "MR", "title": "MR 雙指標共振" }, "kd": { "label": "KD", "title": "KD 隨機指標策略" }, "mfi": { "label": "MFI", "title": "MFI 資金流便覽" }, "chip": { "label": "籌碼", "title": "籌碼面" }, "ichimoku_cloud": { "label": "一目", "title": "一目均衡表說明" }
+      "chartAdvice": {
+        "bollean": "布林通道策略適合震盪與突破市場，配合 EMA 200 判斷大趨勢。",
+        "Donchian": "唐奇通道策略適合震盪與突破市場。",
+        "ma": "MA 在日線最能體現趨勢；週線 MA20 可作防禦參考，交易小時級缺口前應確認高週期支撐。",
+        "ema": "EMA 在日線提供中長線趨勢指南；小時級進場前請確認日線 EMA60 或 SMA200 支撐。",
+        "atr": "ATR Supertrend 適合日線趨勢追蹤；短線使用請以高週期 EMA 過濾方向，降低盤整假訊號。",
+        "obv": "OBV 小時線可觀察資金進出，進場前應同步確認日線 OBV 趨勢。",
+        "volume_profile": "成交量輪廓可辨識可見區間資金密集區；POC 提供成本參考，VAH／VAL 協助辨識盤整或突破。",
+        "cci": "CCI 可在日線與小時線捕捉突破與超賣反轉；短線使用時請順勢而為。",
+        "mr": "MR 適合日內動能與日線動能衰竭判讀；短線金叉但日線 RSI 低於 50 時，宜視為反彈而非趨勢確認。",
+        "kd": "KD 對週期敏感；週線與日線的波段參考較強，短週期應搭配 MA20 等趨勢指標過濾。",
+        "mfi": "MFI 日線較穩健、小時線反應較快；超賣進場仍需確認日線趨勢向上。",
+        "chip": "籌碼資料盤後更新，以法人、融資與融券資料判斷方向。",
+        "ichimoku_cloud": "一目均衡表在日線與週線較有效；短週期使用時需留意指標雜訊。"
       },
-      "summary": { "latest": "，最新 O {{open}}、H {{high}}、L {{low}}、C {{close}}", "noLatest": "，尚無最近 OHLC", "samples": "{{count}} 筆資料", "hour": "時", "day": "日", "week": "週" },
-      "tooltip": { "marketEnvironment": "市場環境（MESS）", "diagnosis": "診斷", "noSignal": "盤整無顯著訊號", "ichimoku": "一目均衡表", "forecast": "未來預測", "current": "當前狀態", "valuation": "估值指標", "pe": "本益比（PE）", "pb": "股價淨值比（PB）", "yield": "殖利率", "bookValue": "每股淨值", "recentEps": "近期 EPS", "revenue": "近期營收 MoM(%)／YoY(%)", "unavailable": "無法取得", "currency": "元", "times": "倍", "recentQuarter": "近 {{count}} 季", "recentYear": "近 {{count}} 年", "recentMonth": "近 {{count}} 月", "noFinancialData": "暫無財務數據。", "tdcc": { "title": "大戶人數變動", "dataPeriod": "資料期間：{{current}}（前期：{{previous}}）", "dataDate": "資料日期：{{date}}", "holders400": "400 張以上", "holders1000": "1,000 張以上", "currentHolders": "目前 {{value}} 人", "increase": "+{{value}} 人增加", "decrease": "-{{value}} 人減少", "unchanged": "持平", "comparisonUnavailable": "無法比較" } },
+      "charts": {
+        "bollean": { "label": "布林", "title": "布林通道與 EMA" },
+        "Donchian": { "label": "唐奇", "title": "唐奇通道" },
+        "ma": { "label": "MA", "title": "均線與缺口策略" },
+        "ema": { "label": "EMA", "title": "EMA 趨勢策略" },
+        "atr": { "label": "ATR", "title": "ATR Trend 策略說明" },
+        "obv": { "label": "OBV", "title": "OBV 動能策略" },
+        "volume_profile": { "label": "量價", "title": "成交量輪廓" },
+        "cci": { "label": "CCI", "title": "CCI 順勢指標" },
+        "mr": { "label": "MR", "title": "MR 雙指標共振" },
+        "kd": { "label": "KD", "title": "KD 隨機指標策略" },
+        "mfi": { "label": "MFI", "title": "MFI 資金流便覽" },
+        "chip": { "label": "籌碼", "title": "籌碼面" },
+        "ichimoku_cloud": { "label": "一目", "title": "一目均衡表說明" }
+      },
+      "summary": {
+        "latest": "，最新 O {{open}}、H {{high}}、L {{low}}、C {{close}}",
+        "noLatest": "，尚無最近 OHLC",
+        "samples": "{{count}} 筆資料",
+        "hour": "時",
+        "day": "日",
+        "week": "週"
+      },
+      "tooltip": {
+        "marketEnvironment": "市場環境（MESS）",
+        "diagnosis": "診斷",
+        "noSignal": "盤整無顯著訊號",
+        "ichimoku": "一目均衡表",
+        "forecast": "未來預測",
+        "current": "當前狀態",
+        "valuation": "估值指標",
+        "pe": "本益比（PE）",
+        "pb": "股價淨值比（PB）",
+        "yield": "殖利率",
+        "bookValue": "每股淨值",
+        "recentEps": "近期 EPS",
+        "revenue": "近期營收 MoM(%)／YoY(%)",
+        "unavailable": "無法取得",
+        "currency": "元",
+        "times": "倍",
+        "recentQuarter": "近 {{count}} 季",
+        "recentYear": "近 {{count}} 年",
+        "recentMonth": "近 {{count}} 月",
+        "noFinancialData": "暫無財務數據。",
+        "tdcc": {
+          "title": "大戶人數變動",
+          "dataPeriod": "資料期間：{{current}}（前期：{{previous}}）",
+          "dataDate": "資料日期：{{date}}",
+          "holders400": "400 張以上",
+          "holders1000": "1,000 張以上",
+          "currentHolders": "目前 {{value}} 人",
+          "increase": "+{{value}} 人增加",
+          "decrease": "-{{value}} 人減少",
+          "unchanged": "持平",
+          "comparisonUnavailable": "無法比較"
+        }
+      },
       "documentation": {
         "loading": "正在載入圖表說明…",
         "cancel": "取消"

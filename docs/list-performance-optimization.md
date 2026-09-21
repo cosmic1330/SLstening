@@ -39,7 +39,7 @@ sequenceDiagram
     autonumber
     actor User as 使用者滾動
     participant VirtualList as 虛擬列表 (overscanCount=2)
-    participant LazyCard as LazyStockBox / RedBallCard
+    participant LazyCard as LazyStockBox
     participant SWR as SWR 快取監聽 (useConditionalDeals)
     participant Sub as 訂閱管理器 (useMarketSubscriber)
     participant IPC as Tauri IPC / Rust 後端
@@ -93,7 +93,7 @@ sequenceDiagram
 ## 3. 核心優化模組與邏輯配置
 
 ### 🛠️ 模組一：`hasBeenVisible` 狀態持久化 (前端 DOM 降噪)
-* **實現檔案**：`LazyStockBox.tsx`、`RedBallCard.tsx`
+* **實現檔案**：`LazyStockBox.tsx`
 * **邏輯**：
   ```typescript
   const [hasBeenVisible, setHasBeenVisible] = useState(false);

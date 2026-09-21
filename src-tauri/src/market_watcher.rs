@@ -2,9 +2,11 @@ use crate::error::AppError;
 use dashmap::DashMap;
 use dashmap::DashSet;
 use serde::{Deserialize, Serialize};
+use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
+use tokio::sync::Semaphore;
 use ts_rs::TS;
 use urlencoding::{decode, encode};
 
@@ -73,6 +75,47 @@ pub struct MarketHistoryCacheItem {
     pub timestamp: std::time::Instant,
 }
 
+struct InFlightGuard<K>
+where
+    K: Eq + Hash + Clone,
+{
+    set: Arc<DashSet<K>>,
+    keys: Vec<K>,
+    released: bool,
+}
+
+impl<K> InFlightGuard<K>
+where
+    K: Eq + Hash + Clone,
+{
+    fn new(set: Arc<DashSet<K>>, keys: Vec<K>) -> Self {
+        Self {
+            set,
+            keys,
+            released: false,
+        }
+    }
+
+    fn release(&mut self) {
+        if self.released {
+            return;
+        }
+        for key in &self.keys {
+            self.set.remove(key);
+        }
+        self.released = true;
+    }
+}
+
+impl<K> Drop for InFlightGuard<K>
+where
+    K: Eq + Hash + Clone,
+{
+    fn drop(&mut self) {
+        self.release();
+    }
+}
+
 pub struct MarketManager {
     // 使用 DashSet 提供線程安全的訂閱管理
     pub active_symbols: Arc<DashSet<String>>,
@@ -81,11 +124,13 @@ pub struct MarketManager {
     // 簡單的資料快取 (Symbol -> (Tick, Timestamp))
     pub cache: DashMap<String, MarketCacheItem>,
     // 正在進行中的請求，避免重複發送
-    pub in_flight: DashSet<String>,
+    pub in_flight: Arc<DashSet<String>>,
     // 歷史資料快取 ((Symbol, Period) -> (History, Timestamp))
     pub history_cache: DashMap<(String, String), MarketHistoryCacheItem>,
     // 正在進行中的歷史資料請求，避免重複發送
-    pub in_flight_history: DashSet<(String, String)>,
+    pub in_flight_history: Arc<DashSet<(String, String)>>,
+    /// A single permit serializes every Yahoo request issued by this manager.
+    pub request_gate: Arc<Semaphore>,
 }
 
 impl MarketManager {
@@ -94,9 +139,10 @@ impl MarketManager {
             active_symbols: Arc::new(DashSet::new()),
             last_blocked_at: std::sync::Mutex::new(None),
             cache: DashMap::new(),
-            in_flight: DashSet::new(),
+            in_flight: Arc::new(DashSet::new()),
             history_cache: DashMap::new(),
-            in_flight_history: DashSet::new(),
+            in_flight_history: Arc::new(DashSet::new()),
+            request_gate: Arc::new(Semaphore::new(1)),
         }
     }
 
@@ -150,13 +196,13 @@ impl MarketManager {
         );
     }
 
-    /// 從快取中獲取歷史資料 (盤中 20 秒有效，盤後 300 秒有效)
+    /// 從快取中獲取歷史資料 (盤中 60 秒有效，盤後 300 秒有效)
     pub fn get_history_from_cache(&self, symbol: &str, period: &str) -> Option<MarketHistory> {
         let key = (symbol.to_string(), period.to_string());
         if let Some(item) = self.history_cache.get(&key) {
             let is_open = is_any_market_open_for_symbol(symbol);
             let lifetime = if is_open {
-                Duration::from_secs(20)
+                Duration::from_secs(60)
             } else {
                 Duration::from_secs(300)
             };
@@ -177,6 +223,173 @@ impl MarketManager {
                 timestamp: std::time::Instant::now(),
             },
         );
+    }
+
+    fn claim_tick_symbols(
+        &self,
+        symbols: &[String],
+    ) -> (Vec<String>, Vec<String>, Vec<MarketTick>) {
+        let mut owned = Vec::new();
+        let mut pending = Vec::new();
+        let mut cached = Vec::new();
+        for symbol in symbols {
+            if let Some(tick) = self.get_from_cache(symbol) {
+                cached.push(tick);
+            } else if self.in_flight.insert(symbol.clone()) {
+                owned.push(symbol.clone());
+            } else {
+                pending.push(symbol.clone());
+            }
+        }
+        (owned, pending, cached)
+    }
+
+    /// Fetch ticks through the global Yahoo gate. Cache and cooldown are checked
+    /// again after the permit is acquired so queued work cannot create a burst.
+    pub async fn fetch_ticks_gated(&self, symbols: &[String]) -> Result<Vec<MarketTick>, AppError> {
+        if symbols.is_empty() {
+            return Ok(Vec::new());
+        }
+        if self.is_in_cooldown() {
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+
+        let (owned, pending, mut cached) = self.claim_tick_symbols(symbols);
+
+        if owned.is_empty() {
+            return self.wait_for_pending_ticks(pending, cached).await;
+        }
+
+        let mut ownership = InFlightGuard::new(self.in_flight.clone(), owned.clone());
+
+        let permit = match self.request_gate.clone().acquire_owned().await {
+            Ok(permit) => permit,
+            Err(_) => {
+                return Err(AppError::Unknown("Market request gate closed".to_string()));
+            }
+        };
+        if self.is_in_cooldown() {
+            drop(permit);
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+
+        let mut to_fetch = Vec::new();
+        for symbol in owned {
+            if let Some(tick) = self.get_from_cache(&symbol) {
+                cached.push(tick);
+            } else {
+                to_fetch.push(symbol);
+            }
+        }
+        if to_fetch.is_empty() {
+            ownership.release();
+            drop(permit);
+            return self.wait_for_pending_ticks(pending, cached).await;
+        }
+
+        let result = fetch_ticks_batched(&to_fetch).await;
+
+        match result {
+            Ok(ticks) => {
+                for tick in &ticks {
+                    self.update_cache(tick.clone());
+                }
+                cached.extend(ticks);
+                ownership.release();
+                drop(permit);
+                self.wait_for_pending_ticks(pending, cached).await
+            }
+            Err(error) => {
+                if error.to_string().contains("API_BLOCKED") {
+                    self.enter_cooldown();
+                }
+                ownership.release();
+                drop(permit);
+                Err(error)
+            }
+        }
+    }
+
+    async fn wait_for_pending_ticks(
+        &self,
+        pending: Vec<String>,
+        mut cached: Vec<MarketTick>,
+    ) -> Result<Vec<MarketTick>, AppError> {
+        for symbol in pending {
+            let mut resolved = false;
+            for _ in 0..200 {
+                if let Some(tick) = self.get_from_cache(&symbol) {
+                    cached.push(tick);
+                    resolved = true;
+                    break;
+                }
+                if self.is_in_cooldown() {
+                    return Err(AppError::Unknown("API_BLOCKED".to_string()));
+                }
+                if !self.in_flight.contains(&symbol) {
+                    return Err(AppError::Unknown("No data".to_string()));
+                }
+                tokio::time::sleep(Duration::from_millis(50)).await;
+            }
+            if !resolved {
+                return Err(AppError::Unknown("REQUEST_IN_FLIGHT".to_string()));
+            }
+        }
+        Ok(cached)
+    }
+
+    /// Fetch one history series through the same global Yahoo gate.
+    pub async fn fetch_history_gated(
+        &self,
+        symbol: &str,
+        period: &str,
+    ) -> Result<MarketHistory, AppError> {
+        if self.is_in_cooldown() {
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+        if let Some(history) = self.get_history_from_cache(symbol, period) {
+            return Ok(history);
+        }
+
+        let key = (symbol.to_string(), period.to_string());
+        if !self.in_flight_history.insert(key.clone()) {
+            return Err(AppError::Unknown("REQUEST_IN_FLIGHT".to_string()));
+        }
+        let mut ownership = InFlightGuard::new(self.in_flight_history.clone(), vec![key.clone()]);
+
+        let permit = match self.request_gate.clone().acquire_owned().await {
+            Ok(permit) => permit,
+            Err(_) => {
+                return Err(AppError::Unknown("Market request gate closed".to_string()));
+            }
+        };
+        if self.is_in_cooldown() {
+            drop(permit);
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+        if let Some(history) = self.get_history_from_cache(symbol, period) {
+            ownership.release();
+            drop(permit);
+            return Ok(history);
+        }
+
+        let result = fetch_history_data(symbol, period).await;
+        match result {
+            Ok(history) => {
+                self.update_history_cache(symbol, period, history.clone());
+                ownership.release();
+                drop(permit);
+                Ok(history)
+            }
+            Err(error) => {
+                if error.to_string().contains("API_BLOCKED") {
+                    self.enter_cooldown();
+                }
+                ownership.release();
+                drop(permit);
+                Err(error)
+            }
+        }
     }
 }
 
@@ -267,17 +480,15 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
 
             // 1. 處理全球指數
             for symbol in other_indices {
-                manager_clone.in_flight.insert(symbol.clone());
                 let app_handle = app_clone.clone();
                 let m = Arc::clone(&manager_clone);
                 let sym = symbol.clone();
 
                 tauri::async_runtime::spawn(async move {
                     log::info!("Updating market index: {}", sym);
-                    match fetch_ticks_batched(&[sym.clone()]).await {
+                    match m.fetch_ticks_gated(&[sym.clone()]).await {
                         Ok(ticks) => {
                             for tick in ticks {
-                                m.update_cache(tick.clone());
                                 let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
                             }
                         }
@@ -288,7 +499,6 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                             }
                         }
                     }
-                    m.in_flight.remove(&sym);
                 });
                 tokio::time::sleep(Duration::from_millis(300)).await;
             }
@@ -296,10 +506,6 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
             // 2. 處理台灣股票/指數 (批量請求)
             for chunk in tw_batch.chunks(10) {
                 let symbols_to_fetch: Vec<String> = chunk.to_vec();
-                for s in &symbols_to_fetch {
-                    manager_clone.in_flight.insert(s.clone());
-                }
-
                 let app_handle = app_clone.clone();
                 let m = Arc::clone(&manager_clone);
 
@@ -309,10 +515,9 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                         symbols_to_fetch.len(),
                         symbols_to_fetch
                     );
-                    match fetch_ticks_batched(&symbols_to_fetch).await {
+                    match m.fetch_ticks_gated(&symbols_to_fetch).await {
                         Ok(ticks) => {
                             for tick in ticks {
-                                m.update_cache(tick.clone());
                                 let _ = app_handle.emit("market-update", MarketEvent::Tick(tick));
                             }
                         }
@@ -322,9 +527,6 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                                 let _ = app_handle.emit("api-blocked", true);
                             }
                         }
-                    }
-                    for s in &symbols_to_fetch {
-                        m.in_flight.remove(s);
                     }
                 });
                 tokio::time::sleep(Duration::from_millis(800)).await;
@@ -681,4 +883,159 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
     }
 
     Ok(results)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{InFlightGuard, MarketManager, MarketTick};
+
+    fn tick(id: &str) -> MarketTick {
+        MarketTick {
+            id: id.to_string(),
+            name: None,
+            price: 1.0,
+            change_percent: 0.0,
+            refreshed_ts: 0,
+            closes: Vec::new(),
+            avg_prices: Vec::new(),
+            previous_close: 1.0,
+            timestamps: Vec::new(),
+            volume: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn request_gate_serializes_external_requests() {
+        let manager = MarketManager::new();
+        let first = manager.request_gate.clone().acquire_owned().await.unwrap();
+        let gate = manager.request_gate.clone();
+        let second = tokio::spawn(async move {
+            let _permit = gate.acquire_owned().await.unwrap();
+            true
+        });
+
+        tokio::task::yield_now().await;
+        assert!(!second.is_finished());
+
+        drop(first);
+        assert!(second.await.unwrap());
+    }
+
+    #[test]
+    fn duplicate_claim_has_one_owner_and_one_pending_request() {
+        let manager = MarketManager::new();
+        let symbols = vec!["2330".to_string()];
+        let (owned, pending, cached) = manager.claim_tick_symbols(&symbols);
+        assert_eq!(owned, symbols);
+        assert!(pending.is_empty());
+        assert!(cached.is_empty());
+
+        let (second_owned, second_pending, second_cached) = manager.claim_tick_symbols(&symbols);
+        assert!(second_owned.is_empty());
+        assert_eq!(second_pending, symbols);
+        assert!(second_cached.is_empty());
+
+        manager.in_flight.remove("2330");
+    }
+
+    #[test]
+    fn mixed_claim_partitions_cached_owned_and_pending_symbols() {
+        let manager = MarketManager::new();
+        manager.update_cache(tick("cached"));
+        manager.in_flight.insert("pending".to_string());
+        let symbols = vec![
+            "cached".to_string(),
+            "owned".to_string(),
+            "pending".to_string(),
+        ];
+
+        let (owned, pending, cached) = manager.claim_tick_symbols(&symbols);
+        assert_eq!(owned, vec!["owned".to_string()]);
+        assert_eq!(pending, vec!["pending".to_string()]);
+        assert_eq!(cached.len(), 1);
+
+        manager.in_flight.remove("owned");
+        manager.in_flight.remove("pending");
+    }
+
+    #[tokio::test]
+    async fn queued_request_rechecks_cooldown_and_cleans_ownership() {
+        let manager = MarketManager::new();
+        let permit = manager.request_gate.clone().acquire_owned().await.unwrap();
+        let task_manager = std::sync::Arc::new(manager);
+        let task_manager_clone = task_manager.clone();
+        let task = tokio::spawn(async move {
+            task_manager_clone
+                .fetch_ticks_gated(&["queued".to_string()])
+                .await
+        });
+        for _ in 0..3 {
+            tokio::task::yield_now().await;
+        }
+        assert!(task_manager.in_flight.contains("queued"));
+        task_manager.enter_cooldown();
+        drop(permit);
+
+        let result = task.await.unwrap();
+        assert!(result.unwrap_err().to_string().contains("API_BLOCKED"));
+        assert!(!task_manager.in_flight.contains("queued"));
+    }
+
+    #[tokio::test]
+    async fn cancelling_gate_wait_cleans_tick_and_history_ownership() {
+        let manager = std::sync::Arc::new(MarketManager::new());
+        let permit = manager.request_gate.clone().acquire_owned().await.unwrap();
+        let tick_manager = manager.clone();
+        let tick_task = tokio::spawn(async move {
+            let _ = tick_manager.fetch_ticks_gated(&["tick".to_string()]).await;
+        });
+        let history_manager = manager.clone();
+        let history_task = tokio::spawn(async move {
+            let _ = history_manager.fetch_history_gated("history", "d").await;
+        });
+        for _ in 0..3 {
+            tokio::task::yield_now().await;
+        }
+        assert!(manager.in_flight.contains("tick"));
+        assert!(manager
+            .in_flight_history
+            .contains(&("history".to_string(), "d".to_string())));
+        tick_task.abort();
+        history_task.abort();
+        let _ = tick_task.await;
+        let _ = history_task.await;
+        drop(permit);
+
+        assert!(!manager.in_flight.contains("tick"));
+        assert!(!manager
+            .in_flight_history
+            .contains(&("history".to_string(), "d".to_string())));
+    }
+
+    #[tokio::test]
+    async fn closed_gate_cleans_tick_and_history_ownership() {
+        let manager = MarketManager::new();
+        manager.request_gate.close();
+        assert!(manager
+            .fetch_ticks_gated(&["tick".to_string()])
+            .await
+            .is_err());
+        assert!(manager.fetch_history_gated("history", "d").await.is_err());
+        assert!(!manager.in_flight.contains("tick"));
+        assert!(!manager
+            .in_flight_history
+            .contains(&("history".to_string(), "d".to_string())));
+    }
+
+    #[test]
+    fn cache_can_be_observed_before_guard_release() {
+        let manager = MarketManager::new();
+        manager.in_flight.insert("2330".to_string());
+        let mut ownership = InFlightGuard::new(manager.in_flight.clone(), vec!["2330".to_string()]);
+        manager.update_cache(tick("2330"));
+        assert!(manager.get_from_cache("2330").is_some());
+        assert!(manager.in_flight.contains("2330"));
+        ownership.release();
+        assert!(!manager.in_flight.contains("2330"));
+    }
 }

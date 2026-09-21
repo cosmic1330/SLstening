@@ -12,6 +12,15 @@ import { deriveMarketResourceState } from "../utils/marketResourceState";
 import { useDocumentVisibility, useFreshnessNow, useMarketSession } from "./useMarketSession";
 
 const TICK_STALE_AFTER_MS = 30_000;
+export const HISTORY_REFRESH_INTERVAL_MS = 60_000;
+export const HISTORY_DEDUPE_INTERVAL_OPEN_MS = 60_000;
+export const HISTORY_DEDUPE_INTERVAL_CLOSED_MS = 300_000;
+export const CONDITIONAL_SWR_POLICY = {
+  revalidateOnFocus: false,
+  refreshWhenHidden: false,
+  refreshWhenOffline: false,
+  shouldRetryOnError: false,
+} as const;
 
 /**
  * useConditionalDeals Hook
@@ -95,7 +104,7 @@ export default function useConditionalDeals(
       return tick;
     },
     {
-      revalidateOnFocus: false,
+      ...CONDITIONAL_SWR_POLICY,
       revalidateIfStale: true,
       dedupingInterval: 15000, // 15秒內避免重複請求
       refreshInterval: isMarketOpen ? TICK_STALE_AFTER_MS : 0,
@@ -112,10 +121,10 @@ export default function useConditionalDeals(
       return await marketApi.getHistoryData(id, "d");
     },
     {
-      revalidateOnFocus: false,
+      ...CONDITIONAL_SWR_POLICY,
       revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
-      dedupingInterval: isMarketOpen ? 15000 : 300000, // 盤中快取15秒以利20秒更新；盤後快取5分鐘
-      refreshInterval: isMarketOpen ? 20000 : 0, // 盤中每 20 秒輪詢一次最新資料，盤後不輪詢
+      dedupingInterval: isMarketOpen ? HISTORY_DEDUPE_INTERVAL_OPEN_MS : HISTORY_DEDUPE_INTERVAL_CLOSED_MS,
+      refreshInterval: isMarketOpen ? HISTORY_REFRESH_INTERVAL_MS : 0,
       onSuccess: () => setHistoryUpdatedAt(Date.now()),
     },
   );
@@ -164,7 +173,7 @@ export default function useConditionalDeals(
   }, [historyData, tickDeals]);
 
   const tickNow = useFreshnessNow(lastTickUpdatedAt, TICK_STALE_AFTER_MS, marketSession);
-  const historyNow = useFreshnessNow(historyUpdatedAt, 30_000, marketSession);
+  const historyNow = useFreshnessNow(historyUpdatedAt, HISTORY_REFRESH_INTERVAL_MS, marketSession);
   const effectiveTickError = tickSWR.error && (!lastTickUpdatedAt || isTickStale) ? tickSWR.error : undefined;
   const tickState = useMemo(() => deriveMarketResourceState({
     enabled: shouldFetch && fetchTick,
@@ -187,7 +196,7 @@ export default function useConditionalDeals(
     error: historySWR.error,
     updatedAt: historyUpdatedAt,
     marketSession,
-    staleAfterMs: 30_000,
+    staleAfterMs: HISTORY_REFRESH_INTERVAL_MS,
     now: historyNow,
   }), [shouldFetch, fetchHistory, deals.length, historyData, historySWR.isLoading, historySWR.isValidating, historySWR.error, historyUpdatedAt, marketSession, historyNow]);
 

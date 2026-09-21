@@ -1,4 +1,4 @@
-use crate::market_watcher::{fetch_ticks_batched, MarketEvent, MarketManager};
+use crate::market_watcher::{MarketEvent, MarketManager};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
@@ -32,11 +32,9 @@ pub async fn subscribe_stock(
     let manager_clone = manager.inner().clone();
 
     tauri::async_runtime::spawn(async move {
-        manager_clone.in_flight.insert(sym.clone());
-        match fetch_ticks_batched(&[sym.clone()]).await {
+        match manager_clone.fetch_ticks_gated(&[sym.clone()]).await {
             Ok(ticks) => {
                 if let Some(tick) = ticks.into_iter().next() {
-                    manager_clone.update_cache(tick.clone());
                     let _ = app.emit("market-update", MarketEvent::Tick(tick));
                 }
             }
@@ -47,7 +45,6 @@ pub async fn subscribe_stock(
                 }
             }
         }
-        manager_clone.in_flight.remove(&sym);
     });
 
     Ok(())
@@ -80,35 +77,25 @@ pub async fn get_market_data(
             return Ok(MarketEvent::Tick(tick));
         }
 
-        // 避免重複抓取
-        if manager.in_flight.contains(&symbol) {
-            // 如果正在抓取中，等一下再查快取 (簡單做法)
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            if let Some(tick) = manager.get_from_cache(&symbol) {
-                return Ok(MarketEvent::Tick(tick));
-            }
-        }
-
-        // 抓取新資料
-        manager.in_flight.insert(symbol.clone());
-        let res = crate::market_watcher::fetch_ticks_batched(&[symbol.clone()]).await;
-        manager.in_flight.remove(&symbol);
-
-        match res {
-            Ok(ticks) => {
-                if let Some(tick) = ticks.into_iter().next() {
-                    manager.update_cache(tick.clone());
-                    Ok(MarketEvent::Tick(tick))
-                } else {
-                    Err("No data".to_string())
+        match manager.fetch_ticks_gated(&[symbol.clone()]).await {
+            Ok(ticks) => ticks
+                .into_iter()
+                .next()
+                .map(MarketEvent::Tick)
+                .ok_or_else(|| "No data".to_string()),
+            Err(e) if e.to_string().contains("REQUEST_IN_FLIGHT") => {
+                for _ in 0..200 {
+                    if let Some(tick) = manager.get_from_cache(&symbol) {
+                        return Ok(MarketEvent::Tick(tick));
+                    }
+                    if !manager.in_flight.contains(&symbol) {
+                        return Err("No data".to_string());
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                 }
+                Err("REQUEST_IN_FLIGHT".to_string())
             }
-            Err(e) => {
-                if e.to_string().contains("API_BLOCKED") {
-                    manager.enter_cooldown();
-                }
-                Err(e.to_string())
-            }
+            Err(e) => Err(e.to_string()),
         }
     } else {
         // 歷史資料 (K線)
@@ -119,31 +106,22 @@ pub async fn get_market_data(
             return Ok(MarketEvent::History(history));
         }
 
-        // 2. 避免重複抓取
-        let cache_key = (symbol.clone(), p.clone());
-        if manager.in_flight_history.contains(&cache_key) {
-            tokio::time::sleep(Duration::from_millis(500)).await;
-            if let Some(history) = manager.get_history_from_cache(&symbol, &p) {
-                return Ok(MarketEvent::History(history));
-            }
-        }
-
-        // 3. 抓取新資料
-        manager.in_flight_history.insert(cache_key.clone());
-        let res = crate::market_watcher::fetch_history_data(&symbol, &p).await;
-        manager.in_flight_history.remove(&cache_key);
-
-        match res {
-            Ok(history) => {
-                manager.update_history_cache(&symbol, &p, history.clone());
-                Ok(MarketEvent::History(history))
-            }
-            Err(e) => {
-                if e.to_string().contains("API_BLOCKED") {
-                    manager.enter_cooldown();
+        match manager.fetch_history_gated(&symbol, &p).await {
+            Ok(history) => Ok(MarketEvent::History(history)),
+            Err(e) if e.to_string().contains("REQUEST_IN_FLIGHT") => {
+                let cache_key = (symbol.clone(), p.clone());
+                for _ in 0..200 {
+                    if let Some(history) = manager.get_history_from_cache(&symbol, &p) {
+                        return Ok(MarketEvent::History(history));
+                    }
+                    if !manager.in_flight_history.contains(&cache_key) {
+                        return Err("No data".to_string());
+                    }
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                 }
-                Err(e.to_string())
+                Err("REQUEST_IN_FLIGHT".to_string())
             }
+            Err(e) => Err(e.to_string()),
         }
     }
 }

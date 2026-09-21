@@ -1,6 +1,7 @@
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import MetricTooltipTrigger from "./MetricTooltipTrigger";
 
 function TooltipContent({
   lastPrice,
@@ -20,17 +21,17 @@ function TooltipContent({
   label: string;
 }) {
   const { t } = useTranslation();
-  const getDiffColor = (val: number) => (lastPrice > val ? "#FF5252" : "#69F0AE");
+  const getDiffColor = (val: number) => (lastPrice > val ? "#FF5252" : "#94A3B8");
 
   return (
     <Box sx={{ p: 1.5, minWidth: 220 }}>
-      <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 900, display: "block", mb: 1 }}>
+      <Typography variant="overline" sx={{ color: "rgba(255,255,255,0.7)", fontWeight: 700, display: "block", mb: 1 }}>
         {label} {t("Pages.Detail.GlassBar.details")}
       </Typography>
       <Stack spacing={1}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Typography variant="body2" color="rgba(255,255,255,0.9)">{label}</Typography>
-          <Typography variant="body2" sx={{ fontWeight: 900, color: getDiffColor(ma) }}>{ma}</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 800, color: getDiffColor(ma) }}>{ma}</Typography>
         </Stack>
         <Box sx={{ height: "1px", width: "100%", bgcolor: "rgba(255,255,255,0.2)" }} />
         <Stack direction="row" justifyContent="space-between">
@@ -38,7 +39,7 @@ function TooltipContent({
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>{t("Pages.Detail.summary.day")}</Typography>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>{deduction_time}</Typography>
           </Box>
-          <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 900, color: getDiffColor(deduction_value) }}>
+          <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 800, color: getDiffColor(deduction_value) }}>
             {deduction_value}
           </Typography>
         </Stack>
@@ -47,7 +48,7 @@ function TooltipContent({
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.6)", display: "block", fontWeight: 700 }}>{t("Pages.Detail.GlassBar.next")}</Typography>
             <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.4)" }}>{tomorrow_deduction_time}</Typography>
           </Box>
-          <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 900, color: getDiffColor(tomorrow_deduction_value) }}>
+          <Typography variant="body2" sx={{ alignSelf: "center", fontWeight: 800, color: getDiffColor(tomorrow_deduction_value) }}>
             {tomorrow_deduction_value}
           </Typography>
         </Stack>
@@ -71,6 +72,7 @@ export default function Ma10({
   ma10_deduction_time: string;
   ma10_tomorrow_deduction_time: string;
 }) {
+  const { t } = useTranslation();
   const isUpward = useMemo(() => {
     return lastPrice > ma10_deduction_value && lastPrice > ma10_tomorrow_deduction_value && lastPrice > ma10;
   }, [ma10_deduction_value, ma10_tomorrow_deduction_value, lastPrice, ma10]);
@@ -92,28 +94,33 @@ export default function Ma10({
       enterTouchDelay={0}
       leaveTouchDelay={5000}
     >
+      <MetricTooltipTrigger
+        ariaLabel={`${t("stock.ma", { period: 10 })}: ${ma10}, ${t(isUpward ? "stock.signalPositive" : "stock.signalNeutral")}`}
+      >
       <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
         <Typography
           sx={{
-            fontSize: "9px",
-            fontWeight: 900,
+            fontSize: "11px",
+            fontWeight: 700,
             color: "rgba(255,255,255,0.7)", 
             textTransform: "uppercase",
           }}
         >
+          <Box component="span" aria-hidden="true" sx={{ mr: 0.35 }}>{isUpward ? "▲" : "•"}</Box>
           MA10
         </Typography>
         <Typography
           sx={{
-            fontSize: "12px",
-            fontWeight: 900,
-            color: isUpward ? "#FF5252" : "#69F0AE",
+            fontSize: "14px",
+            fontWeight: 800,
+            color: isUpward ? "#FF5252" : "#94A3B8",
             lineHeight: 1.2,
           }}
         >
           {ma10}
         </Typography>
       </Stack>
+      </MetricTooltipTrigger>
     </Tooltip>
   );
 }

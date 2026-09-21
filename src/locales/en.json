@@ -186,6 +186,10 @@
     "previousVolume": "Previous volume",
     "estimatedVolume": "Estimated volume",
     "averagePrice": "Average price",
+    "signalPositive": "Positive signal",
+    "signalNeutral": "Neutral signal",
+    "aboveAverage": "Above average",
+    "belowAverage": "Below average",
     "tickCount": "Today's trades",
     "volumeRatio": "Estimated / 10-day average volume",
     "volumeRatioStatus": {

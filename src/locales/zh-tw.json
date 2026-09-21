@@ -186,6 +186,10 @@
     "previousVolume": "昨日量",
     "estimatedVolume": "估量",
     "averagePrice": "當前均價",
+    "signalPositive": "偏多訊號",
+    "signalNeutral": "中性訊號",
+    "aboveAverage": "高於均價",
+    "belowAverage": "低於均價",
     "tickCount": "今日總成交筆數",
     "volumeRatio": "預估量／十日均量",
     "volumeRatioStatus": {

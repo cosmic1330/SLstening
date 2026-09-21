@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { VariableSizeList as List } from "react-window";
 import { StockStoreType } from "../../types";
+import { STOCK_BOX_HEIGHT } from "../StockBox";
 import LazyStockBox from "../StockBox/LazyStockBox";
 
 interface VirtualizedStockListProps {
@@ -156,7 +157,7 @@ export default function VirtualizedStockList({
   stocks = [],
   height,
   width = "100%",
-  itemHeight = 292,
+  itemHeight = STOCK_BOX_HEIGHT,
   header,
   renderItem,
 }: VirtualizedStockListProps) {
@@ -229,10 +230,11 @@ export default function VirtualizedStockList({
 
   const safeHeight = Math.max(height || 0, 100);
 
-  // 當股票變動時重置快取
+  // 高度首次從 0 變成有效值時也要清掉 react-window 的測量快取，
+  // 避免清單沿用初始安全高度而落在視窗外。
   useEffect(() => {
     listRef.current?.resetAfterIndex(0);
-  }, [stocks.length, columns]);
+  }, [stocks.length, columns, height]);
 
   return (
     <VirtualScrollContext.Provider value={contextValue}>

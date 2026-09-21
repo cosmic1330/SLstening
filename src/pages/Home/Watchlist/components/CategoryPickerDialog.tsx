@@ -75,33 +75,49 @@ export default function CategoryPickerDialog({ open, onClose, onManage }: Catego
       sx={{
         width: "100%",
         minWidth: 0,
-        minHeight: compact ? 64 : 72,
-        p: 1.25,
-        borderRadius: 2,
+        minHeight: compact ? 72 : 78,
+        px: { xs: 1.25, sm: 1.5 },
+        py: { xs: 1.25, sm: 1.5 },
+        borderRadius: 0.75,
         justifyContent: "stretch",
         textAlign: "left",
         color: "inherit",
-        bgcolor: selected ? semanticTokens.analysis.focusTintStrong : semanticTokens.analysis.surfaceSubtle,
-        border: `1px solid ${selected ? semanticTokens.analysis.focusBorder : semanticTokens.analysis.borderSubtle}`,
+        position: "relative",
+        bgcolor: selected ? semanticTokens.analysis.focusTint : "transparent",
+        border: 0,
+        borderBottom: `1px solid ${semanticTokens.analysis.borderSubtle}`,
+        borderLeft: selected ? `2px solid ${semanticTokens.analysis.focus}` : "2px solid transparent",
+        boxSizing: "border-box",
         transition: "background-color 180ms ease, border-color 180ms ease",
-        "&:hover": { bgcolor: selected ? semanticTokens.analysis.focusTintStrong : semanticTokens.analysis.focusTint },
+        "&:hover": {
+          bgcolor: selected ? semanticTokens.analysis.focusTintStrong : semanticTokens.analysis.focusTint,
+          borderBottomColor: selected ? semanticTokens.analysis.focusBorder : semanticTokens.analysis.border,
+        },
+        "&:focus-visible": {
+          outline: `2px solid ${semanticTokens.analysis.focus}`,
+          outlineOffset: 2,
+        },
         "@media (prefers-reduced-motion: reduce)": { transition: "none" },
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1} width="100%" minWidth={0}>
-        <Box sx={{ width: 36, height: 36, flexShrink: 0, borderRadius: 1.5, display: "grid", placeItems: "center", bgcolor: selected ? semanticTokens.analysis.focusTintStrong : semanticTokens.analysis.inset, color: selected ? "primary.main" : "text.secondary" }}>{icon}</Box>
+      <Stack direction="row" alignItems="center" spacing={1.25} width="100%" minWidth={0}>
+        <Box sx={{ width: 26, height: 26, flexShrink: 0, display: "grid", placeItems: "center", color: selected ? semanticTokens.analysis.focus : semanticTokens.analysis.textMuted }}>{icon}</Box>
         <Box flex={1} minWidth={0}>
-          <Typography noWrap fontWeight={800}>{categoryDisplayName(category, defaultName)}</Typography>
-          <Typography variant="caption" color="text.secondary">{t("watchlist.stockCount", { count: category.stockIds.length })}</Typography>
+          <Typography noWrap fontWeight={800} sx={{ fontSize: { xs: "0.9rem", sm: "0.95rem" }, lineHeight: 1.3 }}>{categoryDisplayName(category, defaultName)}</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.35, fontVariantNumeric: "tabular-nums", lineHeight: 1.2 }}>{t("watchlist.stockCount", { count: category.stockIds.length })}</Typography>
         </Box>
-        {selected ? <CheckCircleIcon color="primary" fontSize="small" aria-label={t("watchlist.currentCategory")} /> : null}
+        {selected ? <CheckCircleIcon color="primary" fontSize="small" aria-label={t("watchlist.currentCategory")} sx={{ flexShrink: 0 }} /> : null}
       </Stack>
     </ButtonBase>;
   };
 
-  const section = (label: string, items: CategoryType[], icon: React.ReactNode, columns: { xs: number; sm: number }) => items.length ? <Box component="section" mt={2.25}>
-    <Stack direction="row" alignItems="center" spacing={0.75} mb={1} color="text.secondary">{icon}<Typography variant="overline" fontWeight={900} letterSpacing="0.08em">{label}</Typography></Stack>
-    <Box sx={{ display: "grid", gridTemplateColumns: { xs: `repeat(${columns.xs}, minmax(0, 1fr))`, sm: `repeat(${columns.sm}, minmax(0, 1fr))` }, gap: 1 }}>
+  const section = (label: string, items: CategoryType[], icon: React.ReactNode, columns: { xs: number; sm: number }) => items.length ? <Box component="section" mt={3}>
+    <Stack direction="row" alignItems="center" spacing={0.75} mb={1.5} px={0.25} color="text.secondary">
+      {icon}
+      <Typography variant="subtitle2" fontWeight={900} letterSpacing="0.02em" lineHeight={1.2} sx={{ flex: 1 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ color: semanticTokens.analysis.textMuted, fontVariantNumeric: "tabular-nums" }}>{items.length}</Typography>
+    </Stack>
+    <Box sx={{ display: "grid", gridTemplateColumns: { xs: `repeat(${columns.xs}, minmax(0, 1fr))`, sm: `repeat(${columns.sm}, minmax(0, 1fr))` }, columnGap: { xs: 1.5, sm: 2.5 }, rowGap: 1, minWidth: 0 }}>
       {items.map((category) => categoryCard(category, icon, true))}
     </Box>
   </Box> : null;
@@ -112,25 +128,29 @@ export default function CategoryPickerDialog({ open, onClose, onManage }: Catego
     fullScreen={fullScreen}
     fullWidth
     maxWidth="sm"
-    PaperProps={{ sx: { bgcolor: semanticTokens.analysis.surface, color: semanticTokens.analysis.text, backgroundImage: "none", border: `1px solid ${semanticTokens.analysis.border}` } }}
+    PaperProps={{ sx: { bgcolor: semanticTokens.analysis.surface, color: semanticTokens.analysis.text, backgroundImage: "none", border: `1px solid ${semanticTokens.analysis.border}`, borderRadius: { xs: 0, sm: 1.5 }, boxShadow: "none", display: "flex", flexDirection: "column", overflow: "hidden", width: "100%", maxWidth: "100%" } }}
   >
-    <DialogTitle component="div" sx={{ pb: 1 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Box minWidth={0}>
+    <DialogTitle component="div" sx={{ px: { xs: 2.5, sm: 3 }, pt: { xs: 2.5, sm: 3 }, pb: { xs: 2, sm: 2.5 }, flexShrink: 0 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        <Box minWidth={0} flex={1}>
           <Typography component="h2" variant="h6" fontWeight={900}>{t("watchlist.chooseCategory")}</Typography>
-          <Typography variant="body2" color="text.secondary" noWrap>{t("watchlist.currentCategoryName", { name: activeCategory ? categoryDisplayName(activeCategory, defaultName) : defaultName })}</Typography>
+          <Box sx={{ mt: 1.5, px: 1.5, py: 1.1, borderRadius: 1, bgcolor: semanticTokens.analysis.inset, border: `1px solid ${semanticTokens.analysis.borderSubtle}`, maxWidth: "100%" }}>
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, whiteSpace: { xs: "normal", sm: "nowrap" }, overflowWrap: "anywhere", lineHeight: 1.4 }}>
+              {t("watchlist.currentCategoryName", { name: activeCategory ? categoryDisplayName(activeCategory, defaultName) : defaultName })}
+            </Typography>
+          </Box>
         </Box>
         <IconButton disabled={pending} aria-label={t("watchlist.close")} onClick={onClose} sx={{ minWidth: 44, minHeight: 44 }}><CloseIcon /></IconButton>
       </Stack>
     </DialogTitle>
-    <DialogContent sx={{ pt: "8px !important", pb: 2 }}>
-      {error ? <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert> : null}
+    <DialogContent sx={{ px: { xs: 2.5, sm: 3 }, pt: "8px !important", pb: { xs: 3, sm: 3.5 }, minHeight: 0, overflowY: "auto", overflowX: "hidden", flex: "1 1 auto" }}>
+      {error ? <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert> : null}
       {groups.defaultCategory ? section(t("watchlist.defaultSection"), [groups.defaultCategory], <LockOutlinedIcon fontSize="small" />, { xs: 1, sm: 1 }) : null}
-      {section(t("watchlist.pinned"), groups.pinned, <PushPinIcon fontSize="small" />, { xs: 2, sm: 2 })}
+      {section(t("watchlist.pinned"), groups.pinned, <PushPinIcon fontSize="small" />, { xs: 1, sm: 2 })}
       {section(t("watchlist.recent"), groups.recent, <HistoryIcon fontSize="small" />, { xs: 1, sm: 2 })}
       {section(t("watchlist.allCategories"), groups.others, <FolderOutlinedIcon fontSize="small" />, { xs: 1, sm: 2 })}
     </DialogContent>
-    <DialogActions sx={{ position: "sticky", bottom: 0, p: 2, borderTop: `1px solid ${semanticTokens.analysis.borderSubtle}`, bgcolor: semanticTokens.analysis.surface }}>
+    <DialogActions sx={{ position: "sticky", bottom: 0, px: { xs: 2.5, sm: 3 }, py: { xs: 2, sm: 2.5 }, borderTop: `1px solid ${semanticTokens.analysis.borderSubtle}`, bgcolor: semanticTokens.analysis.surface, flexShrink: 0, zIndex: 1 }}>
       <Button fullWidth variant="outlined" disabled={pending} sx={{ minHeight: 44 }} onClick={() => { onClose(); onManage(); }}>{t("watchlist.manage")}</Button>
     </DialogActions>
   </Dialog>;

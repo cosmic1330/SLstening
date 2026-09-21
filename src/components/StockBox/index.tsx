@@ -1,19 +1,22 @@
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import {
   Box,
   Grid,
   IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
   Stack,
-  Tooltip,
   Typography,
   alpha,
   styled,
 } from "@mui/material";
 import { open } from "@tauri-apps/plugin-shell";
 import { motion, useReducedMotion } from "framer-motion";
-import { lazy, Suspense, useMemo, useRef } from "react";
+import { lazy, Suspense, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useConditionalDeals from "../../hooks/useConditionalDeals";
 import useDetailWebviewWindow from "../../hooks/useDetailWebviewWindow";
@@ -35,9 +38,9 @@ const MakChart = lazy(() => import("../CommonChart/MakChart"));
 const StockTickChart = lazy(() => import("./StockTickChart"));
 
 // Constants
-// Keep the card and virtualized row in sync. The extra breathing room keeps
-// the indicator strip and chart visible at the two-column mobile breakpoint.
-export const STOCK_BOX_HEIGHT = 292;
+// Includes the virtualized row gutter and enough room for the accessible
+// 44px metric controls plus the insufficient-data message.
+export const STOCK_BOX_HEIGHT = 308;
 
 // Premium Colors (Traditional Japanese & Financial tones - High Contrast)
 const COLORS = {
@@ -71,7 +74,7 @@ const StyledCard = styled(motion.div)(() => ({
   border: `1px solid ${COLORS.cardBorder}`,
   boxShadow: "0 8px 24px rgba(0, 0, 0, 0.24)",
   overflow: "hidden",
-  cursor: "pointer",
+  cursor: "default",
   height: "100%",
   minWidth: 0,
   minHeight: 0,
@@ -87,23 +90,6 @@ const StyledCard = styled(motion.div)(() => ({
     borderColor: "rgba(148, 163, 184, 0.42)",
     boxShadow: "0 10px 28px rgba(0, 0, 0, 0.32)",
   },
-  "&:hover .action-buttons, &:focus-within .action-buttons": {
-    opacity: 1,
-    transform: "scale(1)",
-    pointerEvents: "auto",
-  },
-}));
-
-const ActionButtons = styled(motion.div)(() => ({
-  position: "absolute",
-  top: 12,
-  right: 12,
-  zIndex: 20,
-  opacity: 0,
-  transform: "scale(0.9)",
-  pointerEvents: "none",
-  transition: "opacity 160ms ease, transform 160ms ease",
-  "@media (prefers-reduced-motion: reduce)": { transition: "none" },
 }));
 
 const ActionBtn = styled(IconButton)(({ theme }) => ({
@@ -132,8 +118,8 @@ const ActionBtn = styled(IconButton)(({ theme }) => ({
 
 const MetricTag = styled(Box)(() => ({
   minWidth: 0,
-  minHeight: 30,
-  padding: "4px 6px",
+  minHeight: 44,
+  padding: 0,
   borderRadius: "8px",
   background: "rgba(15, 23, 42, 0.42)",
   border: "1px solid rgba(148, 163, 184, 0.16)",
@@ -197,6 +183,7 @@ export default function StockBox({
   });
 
   const removeStock = useStocksStore((state) => state.remove);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
 
   const priceInfo = useMemo(() => {
     const lastPrice =
@@ -236,6 +223,23 @@ export default function StockBox({
     return `radial-gradient(circle at 100% 0%, ${alpha(priceInfo.mainColor, 0.1)} 0%, transparent 50%)`;
   }, [priceInfo.mainColor]);
 
+  const isReady = activeState.phase === "ready";
+  const tradingViewUrl = stock.type === "上市"
+    ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
+    : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
+  const handleTradingView = async () => {
+    setMenuAnchor(null);
+    await open(tradingViewUrl);
+  };
+  const handleRemove = () => {
+    setMenuAnchor(null);
+    onRemove?.();
+  };
+  const handleDelete = () => {
+    setMenuAnchor(null);
+    removeStock(stock.id);
+  };
+
   return (
     <StyledCard
       ref={containerRef}
@@ -255,92 +259,44 @@ export default function StockBox({
           zIndex: 0,
         }}
       />
+
       <Box
         component="button"
         type="button"
+        disabled={!isReady}
         aria-label={t("a11y.openStock", { name: name || stock.name, id: stock.id })}
         onClick={openDetailWindow}
-        sx={{ position: "absolute", inset: 0, zIndex: 5, border: 0, p: 0, bgcolor: "transparent", cursor: "pointer", pointerEvents: activeState.phase === "ready" ? "auto" : "none", "&:focus-visible": { outline: "3px solid #90CAF9", outlineOffset: -3 } }}
+        sx={{
+          position: "absolute",
+          inset: 0,
+          zIndex: 1,
+          width: "100%",
+          height: "100%",
+          border: 0,
+          p: 0,
+          bgcolor: "transparent",
+          cursor: isReady ? "pointer" : "default",
+          pointerEvents: isReady ? "auto" : "none",
+          "&:focus-visible": { outline: "3px solid #90CAF9", outlineOffset: -3 },
+        }}
       />
 
-          <ActionButtons className="action-buttons" style={onRemove && !canDelete ? { right: 64 } : undefined}>
-            <Stack direction="row" spacing={0.5}>
-              <Tooltip title={t("a11y.tradingView", { name: name || stock.name })} arrow>
-                <ActionBtn
-                  size="small"
-                  aria-label={t("a11y.tradingView", { name: name || stock.name })}
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const url =
-                      stock.type === "上市"
-                        ? `https://tw.tradingview.com/chart?symbol=TWSE%3A${stock.id}`
-                        : `https://tw.tradingview.com/chart?symbol=TPEX%3A${stock.id}`;
-                    await open(url);
-                  }}
-                >
-                  <OpenInNewIcon fontSize="inherit" sx={{ fontSize: 14 }} />
-                </ActionBtn>
-              </Tooltip>
-
-              {onRemove && canDelete && (
-                <Tooltip title={t("a11y.removeStock", { name: name || stock.name })} arrow>
-                  <ActionBtn
-                    size="small"
-                    aria-label={t("a11y.removeStock", { name: name || stock.name })}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove();
-                    }}
-                  >
-                    <CloseIcon fontSize="inherit" sx={{ fontSize: 14 }} />
-                  </ActionBtn>
-                </Tooltip>
-              )}
-
-              {canDelete && (
-                <Tooltip title={t("a11y.deleteStock", { name: name || stock.name })} arrow>
-                  <ActionBtn
-                    size="small"
-                    aria-label={t("a11y.deleteStock", { name: name || stock.name })}
-                    sx={{ "&:hover": { bgcolor: "#FF5252" } }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeStock(stock.id);
-                    }}
-                  >
-                    <DeleteIcon fontSize="inherit" sx={{ fontSize: 14 }} />
-                  </ActionBtn>
-                </Tooltip>
-              )}
-            </Stack>
-          </ActionButtons>
-
-      {onRemove && !canDelete ? (
-        <ActionBtn
-          aria-label={t("a11y.removeStock", { name: name || stock.name })}
-          onClick={(event) => { event.stopPropagation(); onRemove(); }}
-          sx={{ position: "absolute", top: 12, right: 12, zIndex: 20 }}
-        >
-          <CloseIcon fontSize="inherit" sx={{ fontSize: 14 }} />
-        </ActionBtn>
-      ) : null}
-
-      <Box sx={{ position: "relative", zIndex: 1, p: 2, flex: 1 }}>
+      <Box sx={{ position: "relative", zIndex: 2, p: 2, flex: 1, pointerEvents: "none", "& button, & [role='button'], & a": { pointerEvents: "auto", position: "relative", zIndex: 3 } }}>
         {/* Header: Name & ID */}
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="center"
           mb={1}
-          pr={onRemove && !canDelete ? 7 : 0}
+          spacing={0.75}
         >
           <Box sx={{ minWidth: 0, flex: 1, pr: 1 }}>
             <Typography
               noWrap
               sx={{
                 color: COLORS.textSecondary,
-                fontSize: "10px",
-                fontWeight: 900,
+                fontSize: "11px",
+                fontWeight: 700,
                 letterSpacing: "0.02em",
                 lineHeight: 1,
                 mb: 0.5,
@@ -351,7 +307,7 @@ export default function StockBox({
             <Typography
               noWrap
               sx={{
-                fontWeight: 900,
+                fontWeight: 800,
                 fontSize: { xs: "15px", sm: "18px" },
                 color: "#fff",
                 lineHeight: 1,
@@ -363,7 +319,7 @@ export default function StockBox({
           <Box sx={{ textAlign: "right", flexShrink: 0 }}>
             <Typography
               sx={{
-                fontWeight: 900,
+                fontWeight: 800,
                 fontSize: { xs: "20px", sm: "24px" },
                 fontVariantNumeric: "tabular-nums",
                 color: priceInfo.mainColor,
@@ -380,7 +336,7 @@ export default function StockBox({
             >
               <Typography
                 sx={{
-                  fontWeight: 900,
+                  fontWeight: 700,
                   fontSize: { xs: "12px", sm: "13px" },
                   fontVariantNumeric: "tabular-nums",
                   color: priceInfo.mainColor,
@@ -389,6 +345,42 @@ export default function StockBox({
                 {priceInfo.percent === null ? "—" : `${priceInfo.percent > 0 ? "+" : ""}${priceInfo.percent}%`}
               </Typography>
             </Stack>
+          </Box>
+          <Box sx={{ minWidth: 44, flexShrink: 0, zIndex: 2 }}>
+            <ActionBtn
+              aria-label={t("watchlist.more")}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(menuAnchor) ? "true" : undefined}
+              onClick={(event) => {
+                event.stopPropagation();
+                setMenuAnchor(event.currentTarget);
+              }}
+            >
+              <MoreVertIcon />
+            </ActionBtn>
+            <Menu
+              anchorEl={menuAnchor}
+              open={Boolean(menuAnchor)}
+              onClose={() => setMenuAnchor(null)}
+              MenuListProps={{ "aria-label": t("watchlist.more") }}
+            >
+              <MenuItem onClick={(event) => { event.stopPropagation(); void handleTradingView(); }} sx={{ minHeight: 44 }}>
+                <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
+                {t("a11y.tradingView", { name: name || stock.name })}
+              </MenuItem>
+              {onRemove ? (
+                <MenuItem onClick={(event) => { event.stopPropagation(); handleRemove(); }} sx={{ minHeight: 44 }}>
+                  <ListItemIcon><CloseIcon fontSize="small" /></ListItemIcon>
+                  {t("a11y.removeStock", { name: name || stock.name })}
+                </MenuItem>
+              ) : null}
+              {canDelete ? (
+                <MenuItem onClick={(event) => { event.stopPropagation(); handleDelete(); }} sx={{ minHeight: 44 }}>
+                  <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
+                  {t("a11y.deleteStock", { name: name || stock.name })}
+                </MenuItem>
+              ) : null}
+            </Menu>
           </Box>
         </Stack>
 
@@ -447,6 +439,8 @@ export default function StockBox({
           mt: "auto",
           background: "rgba(15, 23, 42, 0.34)",
           position: "relative",
+          zIndex: 2,
+          pointerEvents: activeState.phase === "ready" ? "none" : "auto",
           display: "flex",
           alignItems: "flex-end",
           borderTop: "1px solid rgba(148, 163, 184, 0.14)",

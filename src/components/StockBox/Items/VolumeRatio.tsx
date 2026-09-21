@@ -1,6 +1,7 @@
 import { Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import MetricTooltipTrigger from "./MetricTooltipTrigger";
 
 const sections = [
   { min: 0, max: 0.5, labelKey: "extremelyLow", color: "#69F0AE" },
@@ -30,6 +31,7 @@ export default function VolumeRatio({
 
   return (
     <Tooltip title={`${t("stock.volumeRatio")}: ${ratio}`} arrow enterTouchDelay={0}>
+      <MetricTooltipTrigger ariaLabel={`${t("stock.volumeRatio")}: ${ratio}`}>
       <Stack
         direction="column"
         spacing={0}
@@ -38,8 +40,8 @@ export default function VolumeRatio({
       >
         <Typography
           sx={{
-            fontSize: "9px",
-            fontWeight: 900,
+            fontSize: "11px",
+            fontWeight: 700,
             color: "rgba(255,255,255,0.7)",
             textTransform: "uppercase",
           }}
@@ -48,8 +50,8 @@ export default function VolumeRatio({
         </Typography>
         <Typography
           sx={{
-            fontSize: "12px",
-            fontWeight: 900,
+            fontSize: "14px",
+            fontWeight: 800,
             color: section.color,
             lineHeight: 1.2,
           }}
@@ -57,6 +59,7 @@ export default function VolumeRatio({
           {t(`stock.volumeRatioStatus.${section.labelKey}`)} {ratio}
         </Typography>
       </Stack>
+      </MetricTooltipTrigger>
     </Tooltip>
   );
 }

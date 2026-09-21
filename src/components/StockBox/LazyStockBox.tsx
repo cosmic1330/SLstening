@@ -44,7 +44,7 @@ export default function LazyStockBox({
   }, [isVisible]);
 
   // 取得監測中的股票列表
-  const { stocks: monitoredStocks } = useStocksStore();
+  const monitoredStocks = useStocksStore((state) => state.stocks);
 
   // 只有在曾經可見時才計算監測狀態
   const { canDelete: calculatedCanDelete, canAdd } = useMemo(() => {

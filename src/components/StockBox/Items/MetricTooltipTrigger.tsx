@@ -1,5 +1,6 @@
-import { Box } from "@mui/material";
+import { ButtonBase } from "@mui/material";
 import { ReactNode } from "react";
+import { semanticTokens } from "../../../theme";
 
 interface MetricTooltipTriggerProps {
   ariaLabel: string;
@@ -11,8 +12,7 @@ export default function MetricTooltipTrigger({
   children,
 }: MetricTooltipTriggerProps) {
   return (
-    <Box
-      component="button"
+    <ButtonBase
       type="button"
       aria-label={ariaLabel}
       onClick={(event) => event.stopPropagation()}
@@ -32,12 +32,12 @@ export default function MetricTooltipTrigger({
         p: 0,
         borderRadius: 1,
         "&:focus-visible": {
-          outline: "2px solid #90CAF9",
+          outline: `2px solid ${semanticTokens.analysis.focus}`,
           outlineOffset: 1,
         },
       }}
     >
       {children}
-    </Box>
+    </ButtonBase>
   );
 }

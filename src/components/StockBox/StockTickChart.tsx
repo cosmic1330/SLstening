@@ -8,6 +8,7 @@ import {
   YAxis,
 } from "recharts";
 import { TickDealsType } from "../../types";
+import { semanticTokens } from "../../theme";
 
 const StockTickChart = React.memo(function StockTickChart({
   tickDeals,
@@ -59,7 +60,7 @@ const StockTickChart = React.memo(function StockTickChart({
     return tickDeals.price >= tickDeals.previousClose;
   }, [tickDeals.price, tickDeals.previousClose]);
 
-  const mainColor = isUp ? "#ff5252" : "#69f0ae";
+  const mainColor = isUp ? semanticTokens.market.gain : semanticTokens.market.loss;
   const gradientId = `gradient-${tickDeals.id}`;
 
   return (
@@ -86,7 +87,7 @@ const StockTickChart = React.memo(function StockTickChart({
           {Number.isFinite(tickDeals.previousClose) && (
             <ReferenceLine
               y={tickDeals.previousClose}
-              stroke="rgba(255,255,255,0.3)"
+              stroke={semanticTokens.analysis.dividerSubtle}
               strokeDasharray="3 3"
               strokeWidth={1}
             />
@@ -105,7 +106,7 @@ const StockTickChart = React.memo(function StockTickChart({
           <Area
             type="monotone"
             dataKey="avgPrice"
-            stroke="rgba(255,255,255,0.6)"
+            stroke={semanticTokens.analysis.textMuted}
             strokeWidth={1}
             fill="transparent"
             dot={false}

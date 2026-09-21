@@ -1,6 +1,9 @@
-import { Box, Stack, Typography, Tooltip } from "@mui/material";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
 import { useTranslation } from "react-i18next";
+import { semanticTokens } from "../../../theme";
 import MetricTooltipTrigger from "./MetricTooltipTrigger";
 
 export default function AvgPrice({
@@ -24,18 +27,20 @@ export default function AvgPrice({
           sx={{
             fontSize: "11px",
             fontWeight: 700,
-            color: "rgba(255,255,255,0.7)",
+            color: semanticTokens.analysis.textMuted,
             textTransform: "uppercase",
+            display: "flex",
+            alignItems: "center",
           }}
         >
-          <Box component="span" aria-hidden="true" sx={{ mr: 0.35 }}>{isAbove ? "▲" : "▼"}</Box>
+          {isAbove ? <TrendingUpIcon aria-hidden="true" sx={{ fontSize: 14, mr: 0.25 }} /> : <TrendingDownIcon aria-hidden="true" sx={{ fontSize: 14, mr: 0.25 }} />}
           {t("stock.averagePrice")}
         </Typography>
         <Typography
           sx={{
             fontSize: "14px",
             fontWeight: 800,
-            color: isAbove ? "#FF5252" : "#69F0AE",
+            color: isAbove ? semanticTokens.market.gain : semanticTokens.market.loss,
             lineHeight: 1.2,
           }}
         >

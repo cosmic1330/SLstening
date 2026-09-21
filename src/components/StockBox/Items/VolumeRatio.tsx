@@ -2,14 +2,15 @@ import { Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import MetricTooltipTrigger from "./MetricTooltipTrigger";
+import { semanticTokens } from "../../../theme";
 
 const sections = [
-  { min: 0, max: 0.5, labelKey: "extremelyLow", color: "#69F0AE" },
-  { min: 0.5, max: 0.8, labelKey: "low", color: "#69F0AE" },
-  { min: 0.8, max: 1.5, labelKey: "normal", color: "rgba(255,255,255,0.8)" },
-  { min: 1.5, max: 2.5, labelKey: "moderatelyHigh", color: "#FF5252" },
-  { min: 2.5, max: 5, labelKey: "high", color: "#FF5252" },
-  { min: 5, max: Infinity, labelKey: "extreme", color: "#FF5252" },
+  { min: 0, max: 0.5, labelKey: "extremelyLow", color: semanticTokens.market.loss },
+  { min: 0.5, max: 0.8, labelKey: "low", color: semanticTokens.market.loss },
+  { min: 0.8, max: 1.5, labelKey: "normal", color: semanticTokens.analysis.textMuted },
+  { min: 1.5, max: 2.5, labelKey: "moderatelyHigh", color: semanticTokens.market.gain },
+  { min: 2.5, max: 5, labelKey: "high", color: semanticTokens.market.gain },
+  { min: 5, max: Infinity, labelKey: "extreme", color: semanticTokens.market.gain },
 ];
 
 export default function VolumeRatio({
@@ -42,7 +43,7 @@ export default function VolumeRatio({
           sx={{
             fontSize: "11px",
             fontWeight: 700,
-            color: "rgba(255,255,255,0.7)",
+            color: semanticTokens.analysis.textMuted,
             textTransform: "uppercase",
           }}
         >

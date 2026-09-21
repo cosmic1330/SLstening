@@ -1,24 +1,10 @@
-import { Box, Grid, Skeleton, Typography, styled } from "@mui/material";
+import { Box } from "@mui/material";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useIsVisible } from "../../hooks/useIsVisible";
 import useStocksStore from "../../store/Stock.store";
 import { StockStoreType } from "../../types";
 import StockBox from "./index";
-
-const StyledBox = styled(Box)({
-  backgroundColor: "rgba(30, 36, 48, 0.72)",
-  border: "1px solid rgba(148, 163, 184, 0.16)",
-  padding: "16px",
-  borderRadius: 14,
-  color: "#fff",
-  minWidth: 0,
-  height: "100%",
-  boxSizing: "border-box",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  boxShadow: "0 8px 24px rgba(0, 0, 0, 0.18)",
-});
+import StockCardSkeleton from "./StockCardSkeleton";
 
 interface LazyStockBoxProps {
   stock: StockStoreType;
@@ -67,73 +53,7 @@ export default function LazyStockBox({
   return (
     <Box ref={containerRef} sx={{ height: "100%" }}>
       {!hasBeenVisible ? (
-        <StyledBox>
-          <Box>
-            <Grid container alignItems="center" spacing={1} mb={2}>
-              <Grid size={5}>
-                <Skeleton
-                  variant="rectangular"
-                  width="100%"
-                  height={40}
-                  sx={{
-                    bgcolor: "rgba(255, 255, 255, 0.05)",
-                    borderRadius: "12px",
-                  }}
-                />
-              </Grid>
-              <Grid size={7}>
-                <Skeleton
-                  variant="text"
-                  width="60%"
-                  height={24}
-                  sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
-                />
-              </Grid>
-            </Grid>
-
-            <Grid container spacing={1} mb={2}>
-              {Array.from({ length: 4 }).map((_, index) => (
-                <Grid size={6} key={index}>
-                  <Skeleton
-                    variant="text"
-                    width="40%"
-                    sx={{ bgcolor: "rgba(255, 255, 255, 0.03)" }}
-                  />
-                  <Skeleton
-                    variant="text"
-                    width="80%"
-                    height={32}
-                    sx={{ bgcolor: "rgba(255, 255, 255, 0.05)" }}
-                  />
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-
-          <Box>
-            <Skeleton
-              variant="rectangular"
-              width="100%"
-              height={60}
-              sx={{
-                bgcolor: "rgba(255, 255, 255, 0.03)",
-                borderRadius: "16px",
-              }}
-            />
-            <Typography
-              variant="caption"
-              sx={{
-                color: "rgba(255, 255, 255, 0.3)",
-                display: "block",
-                textAlign: "center",
-                mt: 1,
-                fontWeight: 600,
-              }}
-            >
-              {stock.id} {stock.name}
-            </Typography>
-          </Box>
-        </StyledBox>
+        <StockCardSkeleton stock={stock} />
       ) : (
         <StockBox
           stock={stock}

@@ -1,27 +1,36 @@
-import { Box, styled, Tooltip, Typography } from "@mui/material";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import { Box, Stack, styled, Tooltip, Typography } from "@mui/material";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useTranslation } from "react-i18next";
+import { primitiveTokens, semanticTokens } from "../../../../theme";
 
-const StyledLinkChip = styled("a")(({ theme }) => ({
+const StyledLinkTile = styled("a")(() => ({
   display: "flex",
   alignItems: "center",
-  minHeight: 44,
-  padding: "4px 12px",
-  background: "rgba(50, 50, 50, 0.6)",
+  width: "100%",
+  minWidth: 0,
+  minHeight: 68,
+  boxSizing: "border-box",
+  padding: `${primitiveTokens.spacing.sm}px ${primitiveTokens.spacing.md}px`,
+  background: semanticTokens.analysis.surfaceGlass,
   backdropFilter: "blur(12px)",
-  borderRadius: "20px",
-  border: "1px solid rgba(255, 255, 255, 0.08)",
+  borderRadius: primitiveTokens.radius.md,
+  border: `1px solid ${semanticTokens.analysis.borderSubtle}`,
   cursor: "pointer",
-  color: "inherit",
+  color: semanticTokens.analysis.text,
   textDecoration: "none",
-  transition: "all 0.2s ease",
+  transition: [
+    `background-color ${primitiveTokens.motion.duration.standard}ms ${primitiveTokens.motion.easing.standard}`,
+    `border-color ${primitiveTokens.motion.duration.standard}ms ${primitiveTokens.motion.easing.standard}`,
+    `transform ${primitiveTokens.motion.duration.standard}ms ${primitiveTokens.motion.easing.standard}`,
+  ].join(", "),
   "&:hover": {
-    background: "rgba(255, 255, 255, 0.12)",
-    borderColor: theme.palette.primary.main,
+    background: semanticTokens.analysis.surface,
+    borderColor: semanticTokens.analysis.focusBorder,
     transform: "translateY(-1px)",
   },
   "&:focus-visible": {
-    outline: "3px solid #90CAF9",
+    outline: `3px solid ${semanticTokens.analysis.focus}`,
     outlineOffset: 2,
   },
   "@media (prefers-reduced-motion: reduce)": {
@@ -50,28 +59,52 @@ export default function MarketLinkBox({
 
   return (
     <Tooltip title={t("a11y.openExternal", { title })} arrow>
-      <StyledLinkChip href={url} onClick={handleClick} aria-label={t("a11y.openExternal", { title })}>
+      <StyledLinkTile
+        href={url}
+        onClick={handleClick}
+        aria-label={t("a11y.openExternal", { title })}
+      >
         <Box
+          aria-hidden="true"
           sx={{
-            color: "rgba(255,255,255,0.6)",
-            mr: 1,
-            display: "flex",
-            fontSize: "16px",
+            display: "grid",
+            placeItems: "center",
+            flexShrink: 0,
+            width: 36,
+            height: 36,
+            mr: 1.25,
+            borderRadius: primitiveTokens.radius.sm,
+            color: semanticTokens.analysis.focus,
+            backgroundColor: semanticTokens.analysis.focusTint,
+            fontSize: "17px",
           }}
         >
           {icon}
         </Box>
-        <Typography
+        <Stack sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            sx={{
+              minWidth: 0,
+              fontSize: "13px",
+              fontWeight: 800,
+              lineHeight: 1.3,
+              color: semanticTokens.analysis.text,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {title}
+          </Typography>
+        </Stack>
+        <OpenInNewIcon
+          aria-hidden="true"
           sx={{
-            fontSize: "12px",
-            fontWeight: 800,
-            color: "rgba(255,255,255,0.85)",
-            whiteSpace: "nowrap",
+            flexShrink: 0,
+            ml: 1,
+            color: semanticTokens.analysis.textMuted,
+            fontSize: 18,
           }}
-        >
-          {title}
-        </Typography>
-      </StyledLinkChip>
+        />
+      </StyledLinkTile>
     </Tooltip>
   );
 }

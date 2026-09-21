@@ -16,6 +16,8 @@ export type LightStatus =
 
 type Tone = "positive" | "negative" | "warning" | "neutral";
 
+export type ChipTypographyMode = "default" | "overview";
+
 // The detail webview opens at a short desktop height. Apply density reductions
 // at every width, while reserving the two-by-two overview grid for wider panes.
 export const compactChipMedia = "@media (max-height: 620px)";
@@ -62,6 +64,7 @@ export function SectionCard({
   children,
   fill = false,
   hideMetaAtXs = false,
+  typography = "default",
 }: {
   id: string;
   title: string;
@@ -70,7 +73,10 @@ export function SectionCard({
   children: ReactNode;
   fill?: boolean;
   hideMetaAtXs?: boolean;
+  typography?: ChipTypographyMode;
 }) {
+  const isOverview = typography === "overview";
+
   return (
     <Box
       component="section"
@@ -123,7 +129,16 @@ export function SectionCard({
             variant="subtitle2"
             color={semanticTokens.analysis.text}
             fontWeight={750}
-            sx={{ letterSpacing: "0.01em", [compactChipMedia]: { fontSize: 12 } }}
+            sx={{
+              letterSpacing: "0.01em",
+              ...(isOverview
+                ? { fontSize: 13, lineHeight: 1.25 }
+                : {}),
+              [compactChipMedia]: {
+                fontSize: isOverview ? 13 : 12,
+                ...(isOverview ? { lineHeight: 1.25 } : {}),
+              },
+            }}
           >
             {title}
           </Typography>
@@ -133,7 +148,12 @@ export function SectionCard({
             variant="caption"
             color={semanticTokens.analysis.textMuted}
             textAlign="right"
-            sx={{ display: hideMetaAtXs ? { xs: "none", sm: "block" } : "block", fontSize: 11, [compactChipMedia]: { display: "none" } }}
+            sx={{
+              display: hideMetaAtXs ? { xs: "none", sm: "block" } : "block",
+              fontSize: isOverview ? 12 : 11,
+              ...(isOverview ? { lineHeight: 1.25 } : {}),
+              [compactChipMedia]: { display: "none" },
+            }}
           >
             {meta}
           </Typography>
@@ -160,14 +180,17 @@ export function StatusCard({
   label,
   status,
   detail,
+  typography = "default",
 }: {
   label: string;
   status: LightStatus;
   detail: string;
+  typography?: ChipTypographyMode;
 }) {
   const { t } = useTranslation();
   const tone = toneForStatus(status);
   const color = toneColor[tone];
+  const isOverview = typography === "overview";
 
   return (
     <Box
@@ -182,13 +205,25 @@ export function StatusCard({
         gap: 0.25,
         borderRight: "1px solid " + semanticTokens.analysis.dividerSubtle,
         "&:last-child": { borderRight: 0 },
-        [compactChipMedia]: { minHeight: 46, px: 0.35, gap: 0.1 },
+        [compactChipMedia]: {
+          minHeight: isOverview ? 58 : 46,
+          px: 0.35,
+          gap: isOverview ? 0.2 : 0.1,
+        },
       }}
     >
       <Typography
         variant="body2"
         color={semanticTokens.analysis.textMuted}
-        sx={{ fontSize: 10, lineHeight: 1.15, textAlign: "center", [compactChipMedia]: { fontSize: 10 } }}
+        sx={{
+          fontSize: isOverview ? 12 : 10,
+          lineHeight: isOverview ? 1.25 : 1.15,
+          textAlign: "center",
+          [compactChipMedia]: {
+            fontSize: isOverview ? 12 : 10,
+            lineHeight: isOverview ? 1.25 : 1.15,
+          },
+        }}
       >
         {label}
       </Typography>
@@ -199,7 +234,21 @@ export function StatusCard({
         sx={{ color }}
       >
         <StatusIcon tone={tone} />
-        <Typography variant="caption" color="inherit" fontWeight={700} noWrap>
+        <Typography
+          variant="caption"
+          color="inherit"
+          fontWeight={700}
+          noWrap
+          sx={
+            isOverview
+              ? {
+                  fontSize: 13,
+                  lineHeight: 1.2,
+                  [compactChipMedia]: { fontSize: 13 },
+                }
+              : undefined
+          }
+        >
           {t("Pages.Detail.Chip.light.status." + status)}
         </Typography>
       </Stack>
@@ -212,6 +261,13 @@ export function StatusCard({
         sx={{
           fontFamily: primitiveTokens.font.numeric,
           fontVariantNumeric: "tabular-nums",
+          ...(isOverview
+            ? {
+                fontSize: 13,
+                lineHeight: 1.25,
+                [compactChipMedia]: { fontSize: 13 },
+              }
+            : {}),
         }}
       >
         {detail}
@@ -225,13 +281,16 @@ export function MetricCard({
   value,
   direction,
   emphasized = false,
+  typography = "default",
 }: {
   label: string;
   value: string;
   direction?: number;
   emphasized?: boolean;
+  typography?: ChipTypographyMode;
 }) {
   const directional = direction !== undefined && direction !== 0;
+  const isOverview = typography === "overview";
   const color =
     direction === undefined || direction === 0
       ? semanticTokens.analysis.text
@@ -246,11 +305,14 @@ export function MetricCard({
       justifyContent="space-between"
       spacing={0.5}
       sx={{
-        minHeight: 29,
+        minHeight: isOverview ? 32 : 29,
         py: 0.15,
         borderBottom: "1px solid " + semanticTokens.analysis.dividerSubtle,
         "&:last-child": { borderBottom: 0 },
-        [compactChipMedia]: { minHeight: 23, py: 0 },
+        [compactChipMedia]: {
+          minHeight: isOverview ? 32 : 23,
+          py: isOverview ? 0.15 : 0,
+        },
       }}
     >
       <Typography
@@ -263,10 +325,10 @@ export function MetricCard({
         fontWeight={emphasized ? 700 : 500}
         sx={{
           minWidth: 0,
-          fontSize: { xs: 10, sm: 11.5 },
+          fontSize: isOverview ? 12 : { xs: 10, sm: 11.5 },
           lineHeight: 1.2,
           overflowWrap: "anywhere",
-          [compactChipMedia]: { fontSize: 10 },
+          [compactChipMedia]: { fontSize: isOverview ? 12 : 10 },
         }}
       >
         {label}
@@ -298,7 +360,13 @@ export function MetricCard({
             fontVariantNumeric: "tabular-nums",
             whiteSpace: "nowrap",
             textAlign: "right",
-            [compactChipMedia]: { fontSize: 11 },
+            ...(isOverview
+              ? {
+                  fontSize: 13,
+                  lineHeight: 1.2,
+                  [compactChipMedia]: { fontSize: 13 },
+                }
+              : { [compactChipMedia]: { fontSize: 11 } }),
           }}
         >
           {value}

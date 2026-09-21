@@ -30,7 +30,46 @@ export default function Market() {
     <Container maxWidth="xl" sx={{ py: 2, pb: 12 }}>
       <Stack direction="row" spacing={1} alignItems="center" mb={2}><DashboardIcon color="primary" /><Typography fontWeight={900}>{t("home.marketOverview")}</Typography></Stack>
       <Grid container spacing={1.5}>{indices.map((index) => <Grid key={index.id} size={{ xs: 12, sm: 6, md: 3 }}><MarketIndexBox {...index} /></Grid>)}</Grid>
-      {links.length > 0 && <Box sx={{ mt: 3, p: 1.5, border: `1px solid ${semanticTokens.analysis.borderSubtle}`, borderRadius: 2, bgcolor: semanticTokens.analysis.surfaceSubtle }}><Typography variant="caption" fontWeight={800}>{t("home.macro")}</Typography><Stack direction="row" useFlexGap flexWrap="wrap" spacing={1} mt={1}>{links.map((link) => <MarketLinkBox key={link.title} {...link} />)}</Stack></Box>}
+      {links.length > 0 && (
+        <Box
+          component="section"
+          aria-labelledby="market-macro-title"
+          sx={{
+            mt: 3,
+            p: 2,
+            border: `1px solid ${semanticTokens.analysis.borderSubtle}`,
+            borderRadius: 2,
+            bgcolor: semanticTokens.analysis.surfaceSubtle,
+          }}
+        >
+          <Stack direction="row" spacing={1} alignItems="center">
+            <AnalyticsIcon
+              aria-hidden="true"
+              sx={{ color: semanticTokens.analysis.focus, fontSize: 20 }}
+            />
+            <Typography
+              id="market-macro-title"
+              component="h2"
+              variant="caption"
+              fontWeight={800}
+              sx={{ color: semanticTokens.analysis.text }}
+            >
+              {t("home.macro")}
+            </Typography>
+          </Stack>
+          <Grid container spacing={1.5} sx={{ mt: 1 }}>
+            {links.map((link) => (
+              <Grid
+                key={link.title}
+                size={{ xs: 12, sm: 4, md: 4 }}
+                sx={{ minWidth: 0, display: "flex" }}
+              >
+                <MarketLinkBox {...link} />
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
     </Container>
   </Box></ThemeProvider>;
 }

@@ -12,7 +12,6 @@ import { StockStoreType } from "../../../types";
 import AddStockDialog from "./components/AddStockDialog";
 import CategoryManageDialog from "./components/CategoryManageDialog";
 import CategoryPickerDialog from "./components/CategoryPickerDialog";
-import StockSortDialog from "./components/StockSortDialog";
 import WatchlistEmptyState from "./components/WatchlistEmptyState";
 import WatchlistLoadingState from "./components/WatchlistLoadingState";
 import WatchlistOverflowMenu from "./components/WatchlistOverflowMenu";
@@ -31,7 +30,6 @@ export default function Watchlist() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [blocked, setBlocked] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -69,8 +67,7 @@ export default function Watchlist() {
         <AddStockDialog open={addOpen} activeCategoryId={active?.id ?? "default-watchlist"} onClose={() => setAddOpen(false)} />
         <CategoryPickerDialog open={pickerOpen} onClose={() => setPickerOpen(false)} onManage={() => setManageOpen(true)} />
         <CategoryManageDialog open={manageOpen} onClose={() => setManageOpen(false)} />
-        <StockSortDialog open={sortOpen} categoryId={active?.id ?? "default-watchlist"} stocks={currentStocks} onClose={() => setSortOpen(false)} />
-        <WatchlistOverflowMenu anchorEl={menuAnchor} hasMultipleStocks={currentStocks.length >= 2} onClose={() => setMenuAnchor(null)} onManage={() => setManageOpen(true)} onSort={() => setSortOpen(true)} />
+        <WatchlistOverflowMenu anchorEl={menuAnchor} onClose={() => setMenuAnchor(null)} onManage={() => setManageOpen(true)} />
         <Snackbar open={blocked} autoHideDuration={6000} onClose={() => setBlocked(false)}><Alert severity="error">{t("home.yahooRateLimited")}</Alert></Snackbar>
       </Box>
     </ThemeProvider>

@@ -33,6 +33,12 @@ const holder = {
   previous_holders_1000: 50,
 } satisfies TdccHolderTableType;
 
+const fontSizeInPixels = (element: Element) => {
+  const value = getComputedStyle(element).fontSize;
+  const parsed = Number.parseFloat(value);
+  return value.endsWith("rem") ? parsed * 16 : parsed;
+};
+
 describe("TDCC holder structure", () => {
   beforeEach(async () => {
     await i18n.changeLanguage("en");
@@ -91,6 +97,66 @@ describe("TDCC holder structure", () => {
     );
     expect(screen.getByTestId("overview-lights")).toBeTruthy();
     expect(screen.getByTestId("overview-holders")).toBeTruthy();
+  });
+
+  it("keeps overview titles, labels, statuses, and values at a readable scale", () => {
+    render(<OverviewPanel data={chipData} holder={holder} />);
+
+    for (const title of screen.getAllByRole("heading")) {
+      expect(fontSizeInPixels(title)).toBeGreaterThanOrEqual(13);
+    }
+
+    for (const label of [
+      "Institutions",
+      "Foreign holding",
+      "Lending pressure",
+      "Foreign",
+      "Investment trust",
+      "Dealer",
+      "Institutional total",
+      "Margin balance / lots",
+      "5-day margin change",
+      "Short/margin ratio",
+      "≤100 lots",
+      "400 lots or more",
+      "1,000 lots or more",
+    ]) {
+      expect(fontSizeInPixels(screen.getByText(label))).toBeGreaterThanOrEqual(12);
+    }
+
+    for (const status of ["Buying", "Stable", "Normal"]) {
+      expect(fontSizeInPixels(screen.getByText(status))).toBeGreaterThanOrEqual(13);
+    }
+
+    for (const value of screen.getAllByText(/^(?:\+|-)?\d+(?:\.\d+)? lots$/)) {
+      expect(fontSizeInPixels(value)).toBeGreaterThanOrEqual(13);
+      expect(getComputedStyle(value).fontFamily).toContain("Roboto Mono");
+    }
+
+    for (const value of screen.getAllByText(/^(?:\+|-)?\d+(?:\.\d+)?%$/)) {
+      expect(fontSizeInPixels(value)).toBeGreaterThanOrEqual(13);
+    }
+
+    for (const change of [
+      "+10 people increase",
+      "-10 people decrease",
+      "Unchanged",
+    ]) {
+      expect(fontSizeInPixels(screen.getByText(change))).toBeGreaterThanOrEqual(12);
+    }
+
+    expect(fontSizeInPixels(screen.getByText(/Data: .*previous:/))).toBeGreaterThanOrEqual(12);
+    for (const current of screen.getAllByTestId("holder-current")) {
+      expect(fontSizeInPixels(current)).toBeGreaterThanOrEqual(13);
+    }
+  });
+
+  it("keeps TDCC error and empty copy readable", () => {
+    const view = render(<OverviewPanel data={chipData} holderError={new Error("offline")} />);
+    expect(fontSizeInPixels(screen.getByTestId("holder-error"))).toBeGreaterThanOrEqual(12);
+
+    view.rerender(<OverviewPanel data={chipData} holder={null} />);
+    expect(fontSizeInPixels(screen.getByTestId("holder-empty"))).toBeGreaterThanOrEqual(12);
   });
 
   it("formats TDCC timestamps as Taiwan calendar dates", () => {

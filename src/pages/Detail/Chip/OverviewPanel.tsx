@@ -97,13 +97,13 @@ function HolderBand({
         [compactChipMedia]: { p: 0.45 },
       }}
     >
-      <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: "block", fontSize: 11.5, lineHeight: 1.35, overflowWrap: "anywhere", [compactChipMedia]: { fontSize: 10, lineHeight: 1.2 } }}>
+      <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: "block", fontSize: 12, lineHeight: 1.35, overflowWrap: "anywhere", [compactChipMedia]: { fontSize: 12, lineHeight: 1.35 } }}>
         {label}
       </Typography>
       <Typography
         data-testid="holder-current"
         color={semanticTokens.analysis.text}
-        sx={{ mt: 0.3, fontSize: 12, lineHeight: 1.35, fontWeight: 750, fontFamily: primitiveTokens.font.numeric, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere", [compactChipMedia]: { mt: 0.15, fontSize: 11, lineHeight: 1.2 } }}
+        sx={{ mt: 0.3, fontSize: 14, lineHeight: 1.35, fontWeight: 750, fontFamily: primitiveTokens.font.numeric, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere", [compactChipMedia]: { mt: 0.15, fontSize: 13, lineHeight: 1.25 } }}
       >
         {current === null
           ? t("Pages.Detail.Chip.holders.unavailable")
@@ -111,7 +111,7 @@ function HolderBand({
       </Typography>
       <Stack direction="row" alignItems="flex-start" spacing={0.3} sx={{ mt: 0.35, minWidth: 0, color, [compactChipMedia]: { mt: 0.15, spacing: 0.15 } }}>
         <Icon aria-hidden="true" sx={{ flexShrink: 0, fontSize: 15, mt: "1px" }} />
-        <Typography component="span" variant="caption" color="inherit" sx={{ minWidth: 0, fontSize: 11.5, lineHeight: 1.35, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere", [compactChipMedia]: { fontSize: 10, lineHeight: 1.2 } }}>
+        <Typography component="span" variant="caption" color="inherit" sx={{ minWidth: 0, fontSize: 12, lineHeight: 1.35, fontVariantNumeric: "tabular-nums", overflowWrap: "anywhere", [compactChipMedia]: { fontSize: 12, lineHeight: 1.35 } }}>
           {change}
         </Typography>
       </Stack>
@@ -137,6 +137,7 @@ export function HolderStructureCard({
       id="holder-structure-title"
       title={t("Pages.Detail.Chip.holders.title")}
       icon={<GroupsRounded />}
+      typography="overview"
     >
       {isLoading ? (
         <Box data-testid="holder-loading" sx={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 0.65 }}>
@@ -152,10 +153,10 @@ export function HolderStructureCard({
         </Typography>
       ) : (
         <>
-          <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: { xs: "none", sm: "block" }, mb: 0.3, fontSize: 10.5, lineHeight: 1.25, [compactChipMedia]: { display: "none" } }}>
+          <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: { xs: "none", sm: "block" }, mb: 0.3, fontSize: 12, lineHeight: 1.3, [compactChipMedia]: { display: "none" } }}>
             {t("Pages.Detail.Chip.holders.scoreNote")}
           </Typography>
-          <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: "block", mb: 0.65, fontSize: 11.5, lineHeight: 1.35, overflowWrap: "anywhere", [compactChipMedia]: { mb: 0.35, fontSize: 10.5 } }}>
+          <Typography variant="caption" color={semanticTokens.analysis.textMuted} sx={{ display: "block", mb: 0.65, fontSize: 12, lineHeight: 1.35, overflowWrap: "anywhere", [compactChipMedia]: { mb: 0.35, fontSize: 12, lineHeight: 1.35 } }}>
             {holder.previous_date
               ? t("Pages.Detail.Chip.holders.period", {
                   current: formatTdccDate(holder.data_date, i18n.language, unavailable),
@@ -205,6 +206,7 @@ export default function OverviewPanel({
         <SectionCard
           id="chip-lights-title"
           title={t("Pages.Detail.Chip.light.title")}
+          typography="overview"
         >
         <Typography
           variant="body2"
@@ -222,28 +224,31 @@ export default function OverviewPanel({
         >
           <StatusCard
             label={t("Pages.Detail.Chip.light.institutional")}
-          status={data.lights.institutional}
-          detail={signedLots(data.institutional.total5d, number) + " " + lots}
-        />
+            status={data.lights.institutional}
+            detail={signedLots(data.institutional.total5d, number) + " " + lots}
+            typography="overview"
+          />
           <StatusCard
             label={t("Pages.Detail.Chip.light.foreignHolding")}
-          status={data.lights.foreignHolding}
-          detail={
-            data.lights.foreignRatio === null
-              ? unavailable
-              : number.format(data.lights.foreignRatio) + "%"
-          }
-        />
+            status={data.lights.foreignHolding}
+            detail={
+              data.lights.foreignRatio === null
+                ? unavailable
+                : number.format(data.lights.foreignRatio) + "%"
+            }
+            typography="overview"
+          />
           <StatusCard
             label={t("Pages.Detail.Chip.light.lendingPressure")}
-          status={data.lights.lendingPressure}
-          detail={
-            data.lights.lendingChangePercent === null
-              ? unavailable
-              : (data.lights.lendingChangePercent > 0 ? "+" : "") +
-                number.format(data.lights.lendingChangePercent) +
-                "%"
+            status={data.lights.lendingPressure}
+            detail={
+              data.lights.lendingChangePercent === null
+                ? unavailable
+                : (data.lights.lendingChangePercent > 0 ? "+" : "") +
+                  number.format(data.lights.lendingChangePercent) +
+                  "%"
             }
+            typography="overview"
           />
         </Box>
         </SectionCard>
@@ -265,27 +270,32 @@ export default function OverviewPanel({
           meta={t("Pages.Detail.Chip.fiveDaysLots")}
           icon={<AccountBalanceRounded />}
           hideMetaAtXs
+          typography="overview"
         >
           <MetricCard
             label={t("Pages.Detail.Chip.foreign")}
             value={signedLots(data.institutional.foreign5d, number) + " " + lots}
             direction={data.institutional.foreign5d}
+            typography="overview"
           />
           <MetricCard
             label={t("Pages.Detail.Chip.trust")}
             value={signedLots(data.institutional.trust5d, number) + " " + lots}
             direction={data.institutional.trust5d}
+            typography="overview"
           />
           <MetricCard
             label={t("Pages.Detail.Chip.dealer")}
             value={signedLots(data.institutional.dealer5d, number) + " " + lots}
             direction={data.institutional.dealer5d}
+            typography="overview"
           />
           <MetricCard
             label={t("Pages.Detail.Chip.total")}
             value={signedLots(data.institutional.total5d, number) + " " + lots}
             direction={data.institutional.total5d}
             emphasized
+            typography="overview"
           />
         </SectionCard>
       </Box>
@@ -295,10 +305,12 @@ export default function OverviewPanel({
           id="margin-title"
           title={t("Pages.Detail.Chip.margin")}
           icon={<GroupsRounded />}
+          typography="overview"
         >
           <MetricCard
             label={t("Pages.Detail.Chip.marginBalance")}
             value={number.format(data.margin.marginBalance) + " " + lots}
+            typography="overview"
           />
           <MetricCard
             label={t("Pages.Detail.Chip.marginChange")}
@@ -308,10 +320,12 @@ export default function OverviewPanel({
               "%"
             }
             direction={data.margin.marginChange5d}
+            typography="overview"
           />
           <MetricCard
             label={t("Pages.Detail.Chip.shortRatio")}
             value={number.format(data.margin.shortMarginRatio) + "%"}
+            typography="overview"
           />
         </SectionCard>
       </Box>

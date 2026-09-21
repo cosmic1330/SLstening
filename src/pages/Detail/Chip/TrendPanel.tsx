@@ -21,7 +21,23 @@ import { compactChipMedia, createNumberFormatter, SectionCard, signedLots } from
 type TrendDay = ChipData["history"][number] & {
   label: string;
   institutionalLots: number;
+  institutionalCumulativeLots: number;
 };
+
+export function buildTrendData(history: ChipData["history"]): TrendDay[] {
+  let cumulativeInstitutionalTotal = 0;
+
+  return history.map((day) => {
+    cumulativeInstitutionalTotal += day.institutionalTotal;
+
+    return {
+      ...day,
+      label: day.date.slice(5),
+      institutionalLots: day.institutionalTotal / 1000,
+      institutionalCumulativeLots: cumulativeInstitutionalTotal / 1000,
+    };
+  });
+}
 
 function TrendTooltip({
   active,
@@ -37,11 +53,15 @@ function TrendTooltip({
   if (!active || !day) return null;
 
   const rows = [
-    { label: t("Pages.Detail.Chip.close"), value: day.close, price: true },
-    { label: t("Pages.Detail.Chip.foreign"), value: day.foreign },
-    { label: t("Pages.Detail.Chip.trust"), value: day.trust },
-    { label: t("Pages.Detail.Chip.dealer"), value: day.dealer },
-    { label: t("Pages.Detail.Chip.total"), value: day.institutionalTotal },
+    {
+      label: t("Pages.Detail.Chip.cumulativeInstitutional"),
+      lots: day.institutionalCumulativeLots,
+      neutral: true,
+    },
+    { label: t("Pages.Detail.Chip.foreign"), lots: day.foreign / 1000 },
+    { label: t("Pages.Detail.Chip.trust"), lots: day.trust / 1000 },
+    { label: t("Pages.Detail.Chip.dealer"), lots: day.dealer / 1000 },
+    { label: t("Pages.Detail.Chip.total"), lots: day.institutionalTotal / 1000 },
   ];
 
   return (
@@ -64,20 +84,18 @@ function TrendTooltip({
       </Typography>
       <Stack spacing={0.4}>
         {rows.map((row) => {
-          const lots = row.value / 1000;
-          const color = row.price
+          const color = row.neutral
             ? semanticTokens.analysis.text
-            : lots > 0
+            : row.lots > 0
               ? semanticTokens.market.gain
-              : lots < 0
+              : row.lots < 0
                 ? semanticTokens.market.loss
                 : semanticTokens.analysis.text;
-          const displayValue = row.price
-            ? number.format(row.value)
-            : (lots > 0 ? "+" : "") +
-              number.format(lots) +
-              " " +
-              t("Pages.Detail.Chip.light.lots");
+          const displayValue =
+            (row.lots > 0 ? "+" : "") +
+            number.format(row.lots) +
+            " " +
+            t("Pages.Detail.Chip.light.lots");
 
           return (
             <Stack
@@ -167,15 +185,7 @@ export default function TrendPanel({ data }: { data: ChipData }) {
     () => createNumberFormatter(i18n.language),
     [i18n.language],
   );
-  const chartData = useMemo<TrendDay[]>(
-    () =>
-      data.history.map((day) => ({
-        ...day,
-        label: day.date.slice(5),
-        institutionalLots: day.institutionalTotal / 1000,
-      })),
-    [data.history],
-  );
+  const chartData = useMemo(() => buildTrendData(data.history), [data.history]);
 
   if (chartData.length === 0) {
     return <Alert severity="info">{t("Pages.Detail.Chip.trendEmpty")}</Alert>;
@@ -228,15 +238,15 @@ export default function TrendPanel({ data }: { data: ChipData }) {
       >
         <LegendItem
           color={semanticTokens.market.gain}
-          label={t("Pages.Detail.Chip.light.status.buying")}
+          label={t("Pages.Detail.Chip.institutionalBuyingLegend")}
         />
         <LegendItem
           color={semanticTokens.market.loss}
-          label={t("Pages.Detail.Chip.light.status.selling")}
+          label={t("Pages.Detail.Chip.institutionalSellingLegend")}
         />
         <LegendItem
           color={semanticTokens.analysis.text}
-          label={t("Pages.Detail.Chip.close")}
+          label={t("Pages.Detail.Chip.cumulativeInstitutionalLegend")}
           line
         />
       </Stack>
@@ -282,11 +292,14 @@ export default function TrendPanel({ data }: { data: ChipData }) {
               tickFormatter={(value) => number.format(value)}
             />
             <YAxis
-              yAxisId="price"
+              yAxisId="cumulative"
               orientation="right"
               width={42}
               tickCount={3}
-              domain={["auto", "auto"]}
+              domain={[
+                (dataMin: number) => Math.min(dataMin, 0),
+                (dataMax: number) => Math.max(dataMax, 0),
+              ]}
               padding={{ top: 12, bottom: 12 }}
               tick={{ fill: semanticTokens.analysis.textMuted, fontSize: 10 }}
               axisLine={false}
@@ -328,8 +341,8 @@ export default function TrendPanel({ data }: { data: ChipData }) {
               ))}
             </Bar>
             <Line
-              yAxisId="price"
-              dataKey="close"
+              yAxisId="cumulative"
+              dataKey="institutionalCumulativeLots"
               stroke={semanticTokens.analysis.text}
               strokeWidth={1.75}
               dot={false}

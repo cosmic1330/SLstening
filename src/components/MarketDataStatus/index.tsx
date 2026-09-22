@@ -22,7 +22,7 @@ export default function MarketDataStatus({ state, retry, compact = false, overla
       {state.phase === "loading" || state.isRefreshing ? reducedMotion ? <HourglassEmptyIcon fontSize="inherit" aria-label={t("marketData.loading")} /> : <CircularProgress size={12} aria-label={t("marketData.loading")} /> : alert ? <ErrorOutlineIcon fontSize="inherit" /> : null}
       {phaseMessage && <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{phaseMessage}</Typography>}
       {badges.map((badge) => <Typography key={badge} variant="caption" sx={{ fontWeight: 700, border: 1, borderColor: "divider", borderRadius: 1, px: .5 }}>{badge}</Typography>)}
-      {((!withData && (state.phase === "empty" || state.phase === "error")) || Boolean(state.error)) && retry && <Button size="small" startIcon={<RefreshIcon />} onClick={stopRetry} sx={{ minHeight: 28 }}>{t("marketData.retry")}</Button>}
+      {((!withData && (state.phase === "empty" || state.phase === "error")) || Boolean(state.error)) && retry && <Button size="small" startIcon={<RefreshIcon />} onClick={stopRetry} disabled={state.isRefreshing} sx={{ minHeight: 28 }}>{t("marketData.retry")}</Button>}
     </Stack>
   </Box>;
 }

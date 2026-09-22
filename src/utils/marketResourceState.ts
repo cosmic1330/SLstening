@@ -36,7 +36,7 @@ export const deriveMarketResourceState = (input: MarketResourceInput): MarketRes
 
   if (!input.enabled) return { phase: "idle", freshness: "unknown", isRefreshing: false, marketSession };
   if (input.hasData) return { phase: "ready", freshness, isRefreshing: Boolean(input.isValidating), marketSession, error: input.error, updatedAt: input.updatedAt };
-  if (input.error) return { phase: "error", freshness, isRefreshing: false, marketSession, error: input.error, updatedAt: input.updatedAt };
-  if (input.isLoading || !input.resolved) return { phase: "loading", freshness, isRefreshing: false, marketSession, updatedAt: input.updatedAt };
+  if (input.error) return { phase: "error", freshness, isRefreshing: Boolean(input.isValidating), marketSession, error: input.error, updatedAt: input.updatedAt };
+  if (input.isLoading || input.isValidating || !input.resolved) return { phase: "loading", freshness, isRefreshing: false, marketSession, updatedAt: input.updatedAt };
   return { phase: "empty", freshness, isRefreshing: false, marketSession, updatedAt: input.updatedAt };
 };

@@ -1,6 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
@@ -200,5 +200,12 @@ export default function useConditionalDeals(
     now: historyNow,
   }), [shouldFetch, fetchHistory, deals.length, historyData, historySWR.isLoading, historySWR.isValidating, historySWR.error, historyUpdatedAt, marketSession, historyNow]);
 
-  return { deals, name, tickDeals, tickState, historyState, retryTick: tickSWR.mutate, retryHistory: historySWR.mutate };
+  const retryTick = useCallback(() => {
+    void tickSWR.mutate();
+  }, [tickSWR.mutate]);
+  const retryHistory = useCallback(() => {
+    void historySWR.mutate();
+  }, [historySWR.mutate]);
+
+  return { deals, name, tickDeals, tickState, historyState, retryTick, retryHistory };
 }

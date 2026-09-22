@@ -14,6 +14,14 @@ describe("deriveMarketResourceState", () => {
     expect(state).toMatchObject({ phase: "ready", freshness: "stale", isRefreshing: true, error: expect.any(Error) });
   });
 
+  it("treats no-data revalidation as loading", () => {
+    expect(deriveMarketResourceState({ enabled: true, hasData: false, resolved: true, isValidating: true })).toMatchObject({ phase: "loading", isRefreshing: false });
+  });
+
+  it("keeps an error visible while its no-data retry is refreshing", () => {
+    expect(deriveMarketResourceState({ enabled: true, hasData: false, resolved: true, isValidating: true, error: new Error("offline") })).toMatchObject({ phase: "error", isRefreshing: true, error: expect.any(Error) });
+  });
+
   it("does not age last-close data while closed", () => {
     expect(deriveMarketResourceState({ enabled: true, hasData: true, resolved: true, updatedAt: 0, staleAfterMs: 1, now: 10, marketSession: "closed" }).freshness).toBe("fresh");
   });

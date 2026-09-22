@@ -61,8 +61,11 @@ describe("MarketDataStatus", () => {
     expect(screen.queryByText(/Updated/)).toBeNull();
     expect(getComputedStyle(screen.getByRole("alert")).zIndex).toBe("30");
 
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(retry).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("progressbar", { name: "Loading market data…" })).toBeTruthy();
+    const retryButton = screen.getByRole("button", { name: "Retry" });
+    expect(retryButton.hasAttribute("disabled")).toBe(true);
+    fireEvent.click(retryButton);
+    expect(retry).not.toHaveBeenCalled();
     expect(parentClick).not.toHaveBeenCalled();
   });
 
@@ -88,6 +91,21 @@ describe("MarketDataStatus", () => {
 
     view.rerender(<MarketDataStatus state={state({ phase: "error", freshness: "unknown", error: new Error("offline") })} retry={vi.fn()} />);
     expect(screen.getByRole("alert").textContent).toContain("Market data could not be updated.");
+  });
+
+  it("retries an empty resource without propagating the click", () => {
+    const retry = vi.fn();
+    const parentClick = vi.fn();
+    render(
+      <div onClick={parentClick}>
+        <MarketDataStatus state={state({ phase: "empty", freshness: "unknown" })} retry={retry} />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+    expect(retry).toHaveBeenCalledOnce();
+    expect(parentClick).not.toHaveBeenCalled();
   });
 
   it("renders no DOM for a standalone stale overlay", () => {

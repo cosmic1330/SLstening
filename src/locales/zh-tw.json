@@ -422,8 +422,7 @@
           "mixed": "法人與信用籌碼沒有形成一致方向，暫時視為凌亂。",
           "retail_crowded": "法人賣超但融資快速增加，散戶接法人籌碼的風險較高。"
         },
-        "institutional": "三大法人",
-        "fiveDaysLots": "近 5 日／張",
+        "institutional": "三大法人（5 日累計）",
         "foreign": "外資",
         "trust": "投信",
         "dealer": "自營商",

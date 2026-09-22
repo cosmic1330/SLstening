@@ -267,7 +267,6 @@ export default function OverviewPanel({
         <SectionCard
           id="institution-title"
           title={t("Pages.Detail.Chip.institutional")}
-          meta={t("Pages.Detail.Chip.fiveDaysLots")}
           icon={<AccountBalanceRounded />}
           hideMetaAtXs
           typography="overview"

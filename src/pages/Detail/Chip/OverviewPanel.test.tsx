@@ -71,11 +71,11 @@ describe("TDCC holder structure", () => {
   it("keeps core overview visible for TDCC loading, error, and empty states", () => {
     const view = render(<OverviewPanel data={chipData} holderLoading />);
     expect(screen.getByTestId("holder-loading")).toBeTruthy();
-    expect(screen.getByText("Institutional investors")).toBeTruthy();
+    expect(screen.getByText("Institutional investors (5-day total)")).toBeTruthy();
 
     view.rerender(<OverviewPanel data={chipData} holderError={new Error("offline")} />);
     expect(screen.getByTestId("holder-error")).toBeTruthy();
-    expect(screen.getByText("Institutional investors")).toBeTruthy();
+    expect(screen.getByText("Institutional investors (5-day total)")).toBeTruthy();
 
     view.rerender(<OverviewPanel data={chipData} holder={null} />);
     expect(screen.getByTestId("holder-empty")).toBeTruthy();
@@ -86,6 +86,15 @@ describe("TDCC holder structure", () => {
     const bands = screen.getByTestId("holder-bands");
     expect(getComputedStyle(bands).display).toBe("grid");
     expect(getComputedStyle(bands).minWidth).toBe("0px");
+  });
+
+  it("marks the institutional section title as a five-day total", async () => {
+    const view = render(<OverviewPanel data={chipData} holder={holder} />);
+    expect(screen.getByRole("heading", { name: "Institutional investors (5-day total)" })).toBeTruthy();
+
+    await i18n.changeLanguage("zh-TW");
+    view.rerender(<OverviewPanel data={chipData} holder={holder} />);
+    expect(screen.getByRole("heading", { name: "三大法人（5 日累計）" })).toBeTruthy();
   });
 
   it("keeps short panes compact at every width and only switches the overview grid when wide", () => {

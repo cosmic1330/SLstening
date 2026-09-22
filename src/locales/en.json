@@ -422,8 +422,7 @@
           "mixed": "Institutional and margin signals disagree, so positioning is currently unclear.",
           "retail_crowded": "Institutions are selling while margin balances rise quickly, increasing retail crowding risk."
         },
-        "institutional": "Institutional investors",
-        "fiveDaysLots": "5 days / lots",
+        "institutional": "Institutional investors (5-day total)",
         "foreign": "Foreign",
         "trust": "Investment trust",
         "dealer": "Dealer",

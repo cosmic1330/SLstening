@@ -1,5 +1,8 @@
 import { create } from "zustand";
 
+const DEBUG_MODE_STORAGE_KEY = "slitenting-debugMode";
+const getStorage = () => typeof globalThis.localStorage === "undefined" ? undefined : globalThis.localStorage;
+
 interface DebugState {
   counts: {
     wtx: number;
@@ -23,7 +26,7 @@ const useDebugStore = create<DebugState>((set) => ({
     otc: 0,
     conditional: 0,
   },
-  isVisible: localStorage.getItem("slitenting-debugMode") === "true",
+  isVisible: getStorage()?.getItem(DEBUG_MODE_STORAGE_KEY) === "true",
   activeInstanceCounts: 0,
   increment: (key) =>
     set((state) => ({
@@ -35,7 +38,7 @@ const useDebugStore = create<DebugState>((set) => ({
   toggleVisibility: () =>
     set((state) => {
       const nextVisible = !state.isVisible;
-      localStorage.setItem("slitenting-debugMode", nextVisible.toString());
+      getStorage()?.setItem(DEBUG_MODE_STORAGE_KEY, nextVisible.toString());
       return { isVisible: nextVisible };
     }),
   updateActiveInstances: (delta) =>

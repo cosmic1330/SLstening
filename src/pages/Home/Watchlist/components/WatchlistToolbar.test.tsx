@@ -1,10 +1,11 @@
 /** @vitest-environment jsdom */
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../../i18n";
 import WatchlistToolbar from "./WatchlistToolbar";
 
 beforeEach(async () => {
+  vi.clearAllMocks();
   await i18n.changeLanguage("en");
 });
 
@@ -14,22 +15,31 @@ const props = {
   query: "",
   onOpenPicker: vi.fn(),
   onOpenAdd: vi.fn(),
-  onOpenMenu: vi.fn(),
+  onOpenManage: vi.fn(),
   onQueryChange: vi.fn(),
   onClearQuery: vi.fn(),
 };
 
-describe("WatchlistToolbar overflow semantics", () => {
-  it("exposes closed and open menu state to assistive technology", () => {
-    const { rerender } = render(<WatchlistToolbar {...props} menuOpen={false} />);
-    const button = screen.getByRole("button", { name: "More actions" });
+describe("WatchlistToolbar", () => {
+  it("opens the category picker, add-stock flow, and category manager", () => {
+    render(<WatchlistToolbar {...props} />);
 
-    expect(button.getAttribute("aria-haspopup")).toBe("menu");
-    expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(button.hasAttribute("aria-controls")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("watchlist.openCategoryPicker", { name: props.activeName }) }));
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("watchlist.addStock") }));
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("watchlist.manage") }));
 
-    rerender(<WatchlistToolbar {...props} menuOpen />);
-    expect(button.getAttribute("aria-expanded")).toBe("true");
-    expect(button.getAttribute("aria-controls")).toBe("watchlist-overflow-menu");
+    expect(props.onOpenPicker).toHaveBeenCalledOnce();
+    expect(props.onOpenAdd).toHaveBeenCalledOnce();
+    expect(props.onOpenManage).toHaveBeenCalledOnce();
+  });
+
+  it("forwards filter updates and clears an active query", () => {
+    render(<WatchlistToolbar {...props} query="2330" />);
+
+    fireEvent.change(screen.getByLabelText(i18n.t("watchlist.filterStocks")), { target: { value: "tsmc" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("watchlist.clearStockFilter") }));
+
+    expect(props.onQueryChange).toHaveBeenCalledWith("tsmc");
+    expect(props.onClearQuery).toHaveBeenCalledOnce();
   });
 });

@@ -85,7 +85,7 @@ const ChartViewport = styled(Box)`
 
 import { CHART_CONFIG } from "./constants/chartConfig";
 import { getChartTitle } from "./constants/chartConfig";
-import { carouselOwnsEvent } from "./interaction";
+import { carouselOwnsEvent, cycleDetailPeriod, shouldHandleDetailShortcut } from "./interaction";
 import { shouldShowDetailFreshness } from "./detailFreshness";
 
 const FullscreenVerticalCarousel: React.FC = () => {
@@ -162,38 +162,24 @@ const FullscreenVerticalCarousel: React.FC = () => {
     [current, scrolling, goToSlide, isDocOpen],
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (scrolling || isDocOpen || !carouselOwnsEvent(e)) return;
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (scrolling || isDocOpen || !shouldHandleDetailShortcut(event)) return;
 
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
+      event.preventDefault();
+
+      if (event.key === "ArrowUp") {
         goToSlide(current - 1);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
+      } else if (event.key === "ArrowDown") {
         goToSlide(current + 1);
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        const options = [
-          UrlTaPerdOptions.Hour,
-          UrlTaPerdOptions.Day,
-          UrlTaPerdOptions.Week,
-        ];
-        const idx = options.indexOf(perd);
-        if (e.key === "ArrowLeft") {
-          if (idx > 0) {
-            e.preventDefault();
-            handleSetPerd(options[idx - 1]);
-          }
-        } else if (e.key === "ArrowRight") {
-          if (idx < options.length - 1) {
-            e.preventDefault();
-            handleSetPerd(options[idx + 1]);
-          }
-        }
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        handleSetPerd(cycleDetailPeriod(perd, event.key));
       }
-    },
-    [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen],
-  );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [current, scrolling, goToSlide, perd, handleSetPerd, isDocOpen]);
 
   const slideVariants: Variants = {
     initial: (direction: number) => ({
@@ -291,7 +277,7 @@ const FullscreenVerticalCarousel: React.FC = () => {
     <ThemeProvider theme={analysisTheme}>
       <PageContainer>
           <DealsContext.Provider value={deals}>
-          <ChartViewport ref={viewportRef} tabIndex={0} aria-label={t("Pages.Detail.GlassBar.navigation")} aria-describedby="detail-chart-summary" onWheel={handleWheel} onKeyDown={handleKeyDown}>
+          <ChartViewport ref={viewportRef} tabIndex={0} aria-label={t("Pages.Detail.GlassBar.navigation")} aria-describedby="detail-chart-summary" onWheel={handleWheel}>
             <Box id="detail-chart-summary" aria-live="polite" aria-atomic="true" sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
               {chartSummary}
             </Box>

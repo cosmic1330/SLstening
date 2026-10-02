@@ -1,3 +1,5 @@
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
@@ -6,6 +8,7 @@ import {
   Alert,
   Autocomplete,
   Box,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -21,8 +24,16 @@ import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useStocksStore from "../../../../store/Stock.store";
-import { primitiveTokens, semanticTokens } from "../../../../theme";
 import { StockStoreType } from "../../../../types";
+import {
+  playfulDialogContentSx,
+  playfulDialogPaperSx,
+  playfulDialogTitleSx,
+  playfulFieldSx,
+  playfulIconButtonSx,
+  playfulPalette,
+  playfulPanelSx,
+} from "./playfulStyles";
 
 interface AddStockDialogProps {
   open: boolean;
@@ -32,16 +43,22 @@ interface AddStockDialogProps {
 
 interface SortableStockRowProps {
   stock: StockStoreType;
+  index: number;
+  total: number;
   pending: boolean;
   onRemove: (stockId: string) => void;
+  onMove: (stockId: string, offset: -1 | 1) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
 }
 
 function SortableStockRow({
   stock,
+  index,
+  total,
   pending,
   onRemove,
+  onMove,
   onDragStart,
   onDragEnd,
 }: SortableStockRowProps) {
@@ -52,10 +69,10 @@ function SortableStockRow({
   return (
     <Reorder.Item
       value={stock.id}
-      drag="y"
+      drag={reduceMotion ? false : "y"}
       dragListener={false}
       dragControls={controls}
-      layout={reduceMotion ? undefined : true}
+      layout={reduceMotion ? (false as unknown as true) : true}
       transition={reduceMotion ? { duration: 0 } : { duration: 0.16 }}
       style={{ listStyle: "none" }}
       onDragEnd={onDragEnd}
@@ -68,39 +85,60 @@ function SortableStockRow({
           minHeight: 56,
           px: 0.75,
           mb: 0.75,
-          borderRadius: primitiveTokens.radius.md,
-          bgcolor: semanticTokens.analysis.surfaceSubtle,
+          border: `2px solid rgba(25, 25, 25, 0.16)`,
+          borderRadius: 2,
+          bgcolor: "rgba(255, 255, 255, 0.78)",
+          boxShadow: "2px 3px 0 rgba(25, 25, 25, 0.18)",
         }}
       >
-        <IconButton
-          disabled={pending}
-          aria-label={t("watchlist.dragHandle", { name: stock.name })}
-          onPointerDown={(event) => {
-            if (pending) return;
-            onDragStart();
-            controls.start(event);
-          }}
-          sx={{
-            minWidth: 44,
-            minHeight: 44,
-            color: semanticTokens.analysis.textMuted,
-            cursor: pending ? "default" : "grab",
-            "&:active": { cursor: "grabbing" },
-          }}
-        >
-          <DragIndicatorIcon aria-hidden="true" />
-        </IconButton>
+        {reduceMotion ? (
+          <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
+            <IconButton
+              disabled={pending || index === 0}
+              aria-label={t("watchlist.moveUp", { name: stock.name })}
+              onClick={() => onMove(stock.id, -1)}
+              sx={playfulIconButtonSx(playfulPalette.muted)}
+            >
+              <ArrowUpwardIcon aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              disabled={pending || index === total - 1}
+              aria-label={t("watchlist.moveDown", { name: stock.name })}
+              onClick={() => onMove(stock.id, 1)}
+              sx={playfulIconButtonSx(playfulPalette.muted)}
+            >
+              <ArrowDownwardIcon aria-hidden="true" />
+            </IconButton>
+          </Stack>
+        ) : (
+          <IconButton
+            disabled={pending}
+            aria-label={t("watchlist.dragHandle", { name: stock.name })}
+            onPointerDown={(event) => {
+              if (pending || reduceMotion) return;
+              onDragStart();
+              controls.start(event);
+            }}
+            sx={{
+              color: playfulPalette.muted,
+              cursor: pending ? "default" : "grab",
+              "&:active": { cursor: "grabbing" },
+              ...playfulIconButtonSx(playfulPalette.muted),
+            }}
+          >
+            <DragIndicatorIcon aria-hidden="true" />
+          </IconButton>
+        )}
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography
             fontWeight={800}
-            sx={{ overflowWrap: "anywhere", lineHeight: 1.25 }}
+            sx={{ overflowWrap: "anywhere", lineHeight: 1.25, fontFamily: '"Roboto Mono", "SFMono-Regular", Consolas, monospace', fontVariantNumeric: "tabular-nums" }}
           >
             {stock.id}
           </Typography>
           <Typography
             variant="caption"
-            color="text.secondary"
-            sx={{ display: "block", overflowWrap: "anywhere" }}
+            sx={{ display: "block", color: playfulPalette.muted, overflowWrap: "anywhere" }}
           >
             {stock.name}
           </Typography>
@@ -110,9 +148,7 @@ function SortableStockRow({
           aria-label={t("watchlist.removeFromCurrent", { name: stock.name })}
           onClick={() => onRemove(stock.id)}
           sx={{
-            minWidth: 44,
-            minHeight: 44,
-            color: semanticTokens.market.loss,
+            ...playfulIconButtonSx(playfulPalette.danger),
           }}
         >
           <DeleteOutlineIcon aria-hidden="true" />
@@ -166,6 +202,9 @@ export default function AddStockDialog({
     [draftIds, stockById],
   );
   const options = useMemo(() => [...stockById.values()], [stockById]);
+  const activeCategoryName = activeCategory && activeCategory.id !== "default-watchlist" && !activeCategory.isDefault
+    ? activeCategory.name
+    : t("watchlist.defaultName");
 
   useEffect(() => {
     if (!open) return;
@@ -234,6 +273,18 @@ export default function AddStockDialog({
     void persistOrder(before, next);
   };
 
+  const handleMove = (stockId: string, offset: -1 | 1) => {
+    if (pendingRef.current) return;
+    const before = [...draftIdsRef.current];
+    const index = before.indexOf(stockId);
+    const nextIndex = index + offset;
+    if (index < 0 || nextIndex < 0 || nextIndex >= before.length) return;
+    const next = [...before];
+    [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+    setDraft(next);
+    void persistOrder(before, next);
+  };
+
   const handleStockSelect = async (stock: StockStoreType | null) => {
     setSearchInput("");
     if (!stock || pendingRef.current) return;
@@ -280,61 +331,68 @@ export default function AddStockDialog({
       fullScreen={fullScreen}
       fullWidth
       maxWidth="sm"
-      PaperProps={{
-        sx: {
-          bgcolor: semanticTokens.analysis.surface,
-          color: semanticTokens.analysis.text,
-          backgroundImage: "none",
-          height: fullScreen ? "100%" : "min(80vh, 720px)",
-          maxHeight: fullScreen ? "100%" : "min(80vh, 720px)",
-          display: "flex",
-          flexDirection: "column",
-        },
-      }}
+      slotProps={{ paper: { sx: playfulDialogPaperSx } }}
     >
-      <DialogTitle component="div" sx={{ flexShrink: 0 }}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography component="h2" variant="h6" fontWeight={900}>
-            {t("watchlist.manageStocks")}
-          </Typography>
+      <DialogTitle component="div" sx={playfulDialogTitleSx}>
+        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1.5}>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+              <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.blue, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+                <SearchIcon fontSize="small" />
+              </Box>
+              <Typography component="h2" sx={{ minWidth: 0, color: playfulPalette.ink, fontSize: { xs: "1.25rem", sm: "1.4rem" }, fontWeight: 950, lineHeight: 1.15, overflowWrap: "anywhere" }}>
+                {t("watchlist.manageStocks")}
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: "wrap" }}>
+              <Typography component="span" sx={{ color: playfulPalette.muted, fontSize: "0.78rem", fontWeight: 700, overflowWrap: "anywhere" }}>
+                {t("watchlist.currentCategoryName", { name: activeCategoryName })}
+              </Typography>
+              <Typography component="span" sx={{ px: 0.9, py: 0.35, border: `1.5px solid ${playfulPalette.outline}`, borderRadius: 99, bgcolor: playfulPalette.yellow, color: playfulPalette.ink, fontSize: "0.7rem", fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+                {t("watchlist.stockCount", { count: currentStocks.length })}
+              </Typography>
+            </Stack>
+          </Box>
           <IconButton
             disabled={pending}
             aria-label={t("watchlist.close")}
             onClick={resetAndClose}
-            sx={{ minWidth: 44, minHeight: 44 }}
+            sx={{ ...playfulIconButtonSx(), bgcolor: playfulPalette.yellow, "&:hover": { bgcolor: playfulPalette.yellow } }}
           >
-            <CloseIcon />
+            <CloseIcon aria-hidden="true" />
           </IconButton>
         </Stack>
       </DialogTitle>
       <DialogContent
         sx={{
-          flex: 1,
+          ...playfulDialogContentSx,
           display: "flex",
           flexDirection: "column",
-          minHeight: 0,
-          overflow: "hidden",
-          px: { xs: 2, sm: 3 },
-          pb: 3,
         }}
+        aria-busy={pending}
       >
         {error ? (
-          <Alert severity="error" role="alert" sx={{ mb: 2, flexShrink: 0 }}>
+          <Alert severity="error" role="alert" sx={{ mb: 1.5, flexShrink: 0, border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
             {error}
           </Alert>
+        ) : null}
+
+        {pending ? (
+          <Stack direction="row" spacing={0.75} alignItems="center" role="status" aria-live="polite" sx={{ mb: 1.25, color: playfulPalette.blueDark, fontSize: "0.78rem", fontWeight: 850 }}>
+            <CircularProgress size={15} sx={{ color: playfulPalette.blueDark }} aria-hidden="true" />
+            {t("watchlist.saving")}
+          </Stack>
         ) : null}
 
         <Box
           component="section"
           aria-labelledby="search-add-stock-title"
-          sx={{ flexShrink: 0 }}
+          sx={{ ...playfulPanelSx, flexShrink: 0, bgcolor: "rgba(107, 183, 232, 0.20)" }}
         >
           <Typography
             id="search-add-stock-title"
             component="h3"
-            variant="subtitle1"
-            fontWeight={900}
-            sx={{ mb: 1 }}
+            sx={{ mb: 1.1, color: playfulPalette.ink, fontSize: "0.96rem", fontWeight: 950 }}
           >
             {t("watchlist.searchAddStock")}
           </Typography>
@@ -348,20 +406,60 @@ export default function AddStockDialog({
             getOptionLabel={(item) => `${item.id} ${item.name}`}
             isOptionEqualToValue={(option, value) => option.id === value.id}
             noOptionsText={t("watchlist.noStockMatches")}
+            slotProps={{
+              paper: {
+                sx: {
+                  mt: 0.75,
+                  border: `2px solid ${playfulPalette.outline}`,
+                  borderRadius: 2,
+                  bgcolor: playfulPalette.paper,
+                  color: playfulPalette.ink,
+                  boxShadow: `4px 5px 0 ${playfulPalette.outline}`,
+                  "& .MuiAutocomplete-noOptions": {
+                    color: playfulPalette.muted,
+                  },
+                  "& .MuiAutocomplete-option": {
+                    color: playfulPalette.ink,
+                  },
+                  "& .MuiAutocomplete-option.Mui-focused": {
+                    bgcolor: "rgba(107, 183, 232, 0.28)",
+                    boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
+                    color: playfulPalette.ink,
+                  },
+                  "& .MuiAutocomplete-option[aria-selected=\"true\"]": {
+                    bgcolor: "rgba(201, 189, 242, 0.32)",
+                    color: playfulPalette.ink,
+                  },
+                },
+              },
+              listbox: {
+                sx: {
+                  color: playfulPalette.ink,
+                  "& .MuiAutocomplete-option": {
+                    color: playfulPalette.ink,
+                  },
+                  "& .MuiAutocomplete-option.Mui-focused": {
+                    bgcolor: "rgba(107, 183, 232, 0.28)",
+                    boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
+                    color: playfulPalette.ink,
+                  },
+                },
+              },
+            }}
             renderOption={(props, option) => {
               const isCurrent = draftIds.includes(option.id);
               return (
-                <Box component="li" {...props} sx={{ minHeight: 52, minWidth: 0 }}>
+                <Box component="li" {...props} sx={{ minHeight: 56, minWidth: 0, borderBottom: "1px solid rgba(25, 25, 25, 0.12)", color: playfulPalette.ink, "&:hover": { bgcolor: "rgba(107, 183, 232, 0.15)" }, "&.Mui-focused": { bgcolor: "rgba(107, 183, 232, 0.28)", boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}` }, "&[aria-selected=\"true\"]": { bgcolor: "rgba(201, 189, 242, 0.32)" } }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%", minWidth: 0 }}>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography fontWeight={800} sx={{ overflowWrap: "anywhere" }}>
+                      <Typography fontWeight={900} sx={{ overflowWrap: "anywhere", fontFamily: '"Roboto Mono", "SFMono-Regular", Consolas, monospace', fontVariantNumeric: "tabular-nums" }}>
                         {option.id}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: "anywhere" }}>
+                      <Typography variant="caption" sx={{ color: playfulPalette.muted, overflowWrap: "anywhere" }}>
                         {option.name}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" color="primary" sx={{ flexShrink: 0, textAlign: "right" }}>
+                    <Typography variant="caption" sx={{ flexShrink: 0, textAlign: "right", color: playfulPalette.blueDark, fontWeight: 900 }}>
                       {t(isCurrent ? "watchlist.moveToTop" : "watchlist.addToCurrent")}
                     </Typography>
                   </Stack>
@@ -382,6 +480,7 @@ export default function AddStockDialog({
                     </InputAdornment>
                   ),
                 }}
+                sx={playfulFieldSx}
               />
             )}
           />
@@ -391,6 +490,8 @@ export default function AddStockDialog({
           component="section"
           aria-labelledby="current-category-stocks-title"
           sx={{
+            ...playfulPanelSx,
+            bgcolor: "rgba(168, 216, 184, 0.24)",
             mt: 3,
             display: "flex",
             flexDirection: "column",
@@ -401,9 +502,7 @@ export default function AddStockDialog({
           <Typography
             id="current-category-stocks-title"
             component="h3"
-            variant="subtitle1"
-            fontWeight={900}
-            sx={{ mb: 1, flexShrink: 0 }}
+            sx={{ mb: 1, flexShrink: 0, color: playfulPalette.ink, fontSize: "0.96rem", fontWeight: 950 }}
           >
             {t("watchlist.currentCategoryStocks")}
           </Typography>
@@ -413,6 +512,7 @@ export default function AddStockDialog({
               minHeight: 0,
               overflowY: "auto",
               pr: 0.5,
+              pl: 0.25,
               display: "flex",
               flexDirection: "column",
             }}
@@ -427,8 +527,11 @@ export default function AddStockDialog({
                 <SortableStockRow
                   key={stock.id}
                   stock={stock}
+                  index={draftIds.indexOf(stock.id)}
+                  total={currentStocks.length}
                   pending={pending}
                   onRemove={(stockId) => void handleRemove(stockId)}
+                  onMove={handleMove}
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                 />
@@ -445,7 +548,7 @@ export default function AddStockDialog({
                   py: 3,
                 }}
               >
-                <Typography color="text.secondary" textAlign="center">
+                <Typography sx={{ color: playfulPalette.muted, fontWeight: 700, textAlign: "center", maxWidth: 280 }}>
                   {t("watchlist.currentCategoryEmpty")}
                 </Typography>
               </Box>

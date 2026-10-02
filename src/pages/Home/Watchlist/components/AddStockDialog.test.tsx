@@ -9,6 +9,8 @@ const reorderHandlers = vi.hoisted(() => ({
   onDragEnd: null as (() => void) | null,
 }));
 
+const motionState = vi.hoisted(() => ({ reduced: false }));
+
 const storeState = vi.hoisted(() => ({
   categories: [
     { id: "category-tech", name: "Tech", stockIds: ["2330", "2317"] },
@@ -51,7 +53,7 @@ vi.mock("framer-motion", () => ({
     },
   },
   useDragControls: () => ({ start: vi.fn() }),
-  useReducedMotion: () => false,
+  useReducedMotion: () => motionState.reduced,
 }));
 
 vi.mock("../../../../store/Stock.store", () => ({
@@ -88,6 +90,7 @@ describe("AddStockDialog category stock management", () => {
     storeState.updateStockOrder.mockReset().mockResolvedValue(undefined);
     reorderHandlers.onReorder = null;
     reorderHandlers.onDragEnd = null;
+    motionState.reduced = false;
   });
 
   it("renders the current category in stored order with the management title", () => {
@@ -175,5 +178,22 @@ describe("AddStockDialog category stock management", () => {
       expect.stringContaining("2330"),
       expect.stringContaining("2317"),
     ]);
+  });
+
+  it("uses accessible move controls when reduced motion is enabled", async () => {
+    motionState.reduced = true;
+    renderDialog();
+
+    expect(screen.queryByRole("button", { name: "Reorder TSMC" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Move TSMC up" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Move Hon Hai up" }));
+
+    await waitFor(() =>
+      expect(storeState.updateStockOrder).toHaveBeenCalledWith(
+        "category-tech",
+        ["2317", "2330"],
+      ),
+    );
   });
 });

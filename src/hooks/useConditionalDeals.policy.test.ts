@@ -4,6 +4,7 @@ import {
   HISTORY_DEDUPE_INTERVAL_CLOSED_MS,
   HISTORY_DEDUPE_INTERVAL_OPEN_MS,
   HISTORY_REFRESH_INTERVAL_MS,
+  INITIAL_TICK_FALLBACK_DELAY_MS,
 } from "./useConditionalDeals";
 
 describe("conditional market request policy", () => {
@@ -17,5 +18,10 @@ describe("conditional market request policy", () => {
       refreshWhenOffline: false,
       revalidateOnFocus: false,
     });
+  });
+
+  it("waits for the subscription event path before one initial tick fallback", () => {
+    expect(INITIAL_TICK_FALLBACK_DELAY_MS).toBeGreaterThanOrEqual(5_000);
+    expect(INITIAL_TICK_FALLBACK_DELAY_MS).toBeLessThanOrEqual(10_000);
   });
 });

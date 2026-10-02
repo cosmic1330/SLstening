@@ -12,6 +12,12 @@ import { deriveMarketResourceState } from "../utils/marketResourceState";
 import { useDocumentVisibility, useFreshnessNow, useMarketSession } from "./useMarketSession";
 
 const TICK_STALE_AFTER_MS = 30_000;
+/**
+ * Give the subscription event path time to deliver its first quote before
+ * SWR makes a one-off recovery request. This stays bounded for a cold start
+ * while avoiding one request per visible card on mount.
+ */
+export const INITIAL_TICK_FALLBACK_DELAY_MS = 7_000;
 export const HISTORY_REFRESH_INTERVAL_MS = 60_000;
 export const HISTORY_DEDUPE_INTERVAL_OPEN_MS = 60_000;
 export const HISTORY_DEDUPE_INTERVAL_CLOSED_MS = 300_000;
@@ -63,6 +69,7 @@ export default function useConditionalDeals(
     state.tickUpdatedAt.get(id),
   );
   const [isTickStale, setIsTickStale] = useState(false);
+  const [initialTickFallbackRequested, setInitialTickFallbackRequested] = useState(false);
 
   useEffect(() => {
     if (!shouldMonitorTick) {
@@ -87,8 +94,28 @@ export default function useConditionalDeals(
     return () => window.clearTimeout(timeoutId);
   }, [id, lastTickUpdatedAt, shouldMonitorTick]);
 
-  // A cold launch needs one snapshot even after close; only poll/fallback while open.
-  const shouldFetchTick = shouldFetch && fetchTick && (!tickDeals || (shouldMonitorTick && isTickStale));
+  useEffect(() => {
+    if (!shouldFetch || !fetchTick || tickDeals) {
+      // Reset the one-shot fallback when this card is hidden/disabled or once
+      // the subscription event path has delivered its first quote.
+      setInitialTickFallbackRequested(false);
+      return;
+    }
+
+    if (initialTickFallbackRequested) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setInitialTickFallbackRequested(true);
+    }, INITIAL_TICK_FALLBACK_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [id, shouldFetch, fetchTick, tickDeals, initialTickFallbackRequested]);
+
+  // Subscription events are the normal cold-start path. SWR only makes one
+  // bounded initial recovery request, or recovers an open-market stale tick.
+  const shouldFetchTick = shouldFetch && fetchTick && (
+    initialTickFallbackRequested || (shouldMonitorTick && isTickStale)
+  );
   const shouldFetchHistory = shouldFetch && fetchHistory;
 
   // --- Tick 資料 (即時價格與成交明細) ---
@@ -107,7 +134,10 @@ export default function useConditionalDeals(
       ...CONDITIONAL_SWR_POLICY,
       revalidateIfStale: true,
       dedupingInterval: 15000, // 15秒內避免重複請求
-      refreshInterval: isMarketOpen ? TICK_STALE_AFTER_MS : 0,
+      // A missing cold-start tick must not turn the fallback into an
+      // interval retry loop. Once data exists, retain the existing bounded
+      // open-market refresh behavior for stale recovery.
+      refreshInterval: isMarketOpen && Boolean(tickDeals) ? TICK_STALE_AFTER_MS : 0,
     },
   );
 
@@ -201,6 +231,10 @@ export default function useConditionalDeals(
   }), [shouldFetch, fetchHistory, deals.length, historyData, historySWR.isLoading, historySWR.isValidating, historySWR.error, historyUpdatedAt, marketSession, historyNow]);
 
   const retryTick = useCallback(() => {
+    // If the subscription event is still pending, make the fallback eligible
+    // immediately. If SWR is already mounted, mutate keeps manual retry
+    // immediate and still respects its deduping interval.
+    setInitialTickFallbackRequested(true);
     void tickSWR.mutate();
   }, [tickSWR.mutate]);
   const retryHistory = useCallback(() => {

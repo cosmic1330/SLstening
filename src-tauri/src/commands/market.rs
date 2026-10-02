@@ -11,41 +11,18 @@ pub async fn subscribe_stock(
 ) -> Result<(), String> {
     manager.subscribe(symbol.clone());
 
-    // 如果處於冷卻期，就不進行立即抓取，避免雪上加霜
-    if manager.is_in_cooldown() {
-        return Ok(());
-    }
-
     // 檢查是否有最近的快取，如果有就直接發送，不需要抓取
     if let Some(tick) = manager.get_from_cache(&symbol) {
         let _ = app.emit("market-update", MarketEvent::Tick(tick));
         return Ok(());
     }
 
-    // 如果正在抓取中，也不重複觸發
-    if manager.in_flight.contains(&symbol) {
-        return Ok(());
-    }
-
-    // 立即抓取一次並發送事件
-    let sym = symbol.clone();
-    let manager_clone = manager.inner().clone();
-
-    tauri::async_runtime::spawn(async move {
-        match manager_clone.fetch_ticks_gated(&[sym.clone()]).await {
-            Ok(ticks) => {
-                if let Some(tick) = ticks.into_iter().next() {
-                    let _ = app.emit("market-update", MarketEvent::Tick(tick));
-                }
-            }
-            Err(e) => {
-                if e.to_string().contains("API_BLOCKED") {
-                    manager_clone.enter_cooldown();
-                    let _ = app.emit("api-blocked", true);
-                }
-            }
-        }
-    });
+    // Cold symbols are handled by the backend warm-up worker. It coalesces
+    // subscriptions arriving in the same visibility window, batches Taiwan
+    // symbols, and serializes all remote work through the shared request gate.
+    // Queue even during cooldown so the worker can retry later without losing
+    // the active subscription.
+    manager.queue_warmup(symbol);
 
     Ok(())
 }

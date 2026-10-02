@@ -3,7 +3,7 @@
  */
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import useMarketSubscriber from "../useMarketSubscriber";
+import useMarketSubscriber, { MARKET_SUBSCRIPTION_DEBOUNCE_MS } from "../useMarketSubscriber";
 
 const invokeMock = vi.hoisted(() => vi.fn());
 
@@ -28,7 +28,7 @@ describe("useMarketSubscriber", () => {
     );
 
     act(() => {
-      vi.advanceTimersByTime(1_499);
+      vi.advanceTimersByTime(MARKET_SUBSCRIPTION_DEBOUNCE_MS - 1);
     });
     expect(invokeMock).not.toHaveBeenCalled();
 

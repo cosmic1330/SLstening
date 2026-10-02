@@ -2,13 +2,32 @@ use crate::error::AppError;
 use dashmap::DashMap;
 use dashmap::DashSet;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::hash::Hash;
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::{AppHandle, Emitter};
-use tokio::sync::Semaphore;
+use tokio::sync::{Notify, Semaphore};
 use ts_rs::TS;
 use urlencoding::{decode, encode};
+
+/// The short window used to collect symbols that become visible together.
+/// Keeping this small makes the first quote responsive while allowing one
+/// request to serve a row of newly-mounted stock cards.
+pub const WARMUP_COALESCE_WINDOW_MS: u64 = 200;
+/// Yahoo's Taiwan tick endpoint accepts multiple symbols. Keep the batch
+/// bounded so one visible burst cannot turn into an oversized request.
+pub const WARMUP_TAIWAN_BATCH_SIZE: usize = 10;
+/// Space sequential warm-up requests to avoid a burst even when many cards
+/// become visible at once. The global request gate still serializes all
+/// history and tick requests.
+pub const WARMUP_BATCH_PACING_MS: u64 = 300;
+/// Minimum spacing between the start of any two Yahoo requests owned by one
+/// market manager. Tick and history requests share this limiter.
+pub const MIN_REQUEST_START_SPACING_MS: u64 = 300;
+/// Number of transient warm-up retries after the initial attempt.
+pub const WARMUP_MAX_RETRY_ATTEMPTS: usize = 3;
+pub const WARMUP_RETRY_BASE_DELAY_MS: u64 = 500;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -116,9 +135,160 @@ where
     }
 }
 
+#[derive(Default)]
+struct WarmupQueue {
+    symbols: VecDeque<String>,
+    queued: HashSet<String>,
+}
+
+impl WarmupQueue {
+    fn push(&mut self, symbol: String) -> bool {
+        if self.queued.insert(symbol.clone()) {
+            self.symbols.push_back(symbol);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn drain(&mut self) -> Vec<String> {
+        let drained: Vec<String> = self.symbols.drain(..).collect();
+        for symbol in &drained {
+            self.queued.remove(symbol);
+        }
+        drained
+    }
+
+    fn requeue<I>(&mut self, symbols: I)
+    where
+        I: IntoIterator<Item = String>,
+    {
+        for symbol in symbols {
+            self.push(symbol);
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.symbols.is_empty()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct WarmupBatches {
+    /// Taiwan stocks and Taiwan indices can be requested in chunks.
+    taiwan: Vec<Vec<String>>,
+    /// Global indices/futures must use the single-symbol endpoint.
+    global: Vec<String>,
+}
+
+fn is_global_tick_symbol(symbol: &str) -> bool {
+    symbol.contains('^') && symbol != "^TWII" && symbol != "^TWOII" || symbol.contains('=')
+}
+
+/// Deduplicate and classify queued symbols without touching the network.
+/// Taiwan symbols are grouped into requests of at most ten; global symbols
+/// remain one request each because their Yahoo endpoint is single-symbol.
+fn classify_warmup_symbols(symbols: &[String]) -> WarmupBatches {
+    let mut seen = HashSet::new();
+    let mut taiwan_symbols = Vec::new();
+    let mut global = Vec::new();
+
+    for symbol in symbols {
+        if !seen.insert(symbol.clone()) {
+            continue;
+        }
+        if is_global_tick_symbol(symbol) {
+            global.push(symbol.clone());
+        } else {
+            taiwan_symbols.push(symbol.clone());
+        }
+    }
+
+    let taiwan = taiwan_symbols
+        .chunks(WARMUP_TAIWAN_BATCH_SIZE)
+        .map(|chunk| chunk.to_vec())
+        .collect();
+
+    WarmupBatches { taiwan, global }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct WarmupRetryPlan {
+    retry: Vec<(String, Duration)>,
+    exhausted: Vec<String>,
+}
+
+#[derive(Default)]
+struct WarmupRetryState {
+    attempts: HashMap<String, usize>,
+}
+
+impl WarmupRetryState {
+    fn plan(&mut self, symbols: &[String]) -> WarmupRetryPlan {
+        let mut seen = HashSet::new();
+        let mut retry = Vec::new();
+        let mut exhausted = Vec::new();
+
+        for symbol in symbols {
+            if !seen.insert(symbol.clone()) {
+                continue;
+            }
+
+            let attempt = self.attempts.get(symbol).copied().unwrap_or(0);
+            if attempt >= WARMUP_MAX_RETRY_ATTEMPTS {
+                self.attempts.remove(symbol);
+                exhausted.push(symbol.clone());
+                continue;
+            }
+
+            let delay = warmup_retry_delay(attempt);
+            self.attempts.insert(symbol.clone(), attempt + 1);
+            retry.push((symbol.clone(), delay));
+        }
+
+        WarmupRetryPlan { retry, exhausted }
+    }
+
+    fn clear(&mut self, symbol: &str) {
+        self.attempts.remove(symbol);
+    }
+
+    fn retain<F>(&mut self, mut keep: F)
+    where
+        F: FnMut(&str) -> bool,
+    {
+        self.attempts.retain(|symbol, _| keep(symbol));
+    }
+}
+
+fn warmup_retry_delay(attempt: usize) -> Duration {
+    let multiplier = 1_u64
+        .checked_shl(attempt.min(16) as u32)
+        .unwrap_or(u64::MAX);
+    Duration::from_millis(WARMUP_RETRY_BASE_DELAY_MS.saturating_mul(multiplier))
+}
+
+/// Reserve the next request start without sleeping while holding a mutex.
+/// Returning the updated deadline lets callers reserve a slot atomically and
+/// then await outside the lock.
+fn request_spacing_decision(
+    now: std::time::Instant,
+    next_allowed_at: Option<std::time::Instant>,
+    spacing: Duration,
+) -> (Duration, std::time::Instant) {
+    let start_at = next_allowed_at
+        .map(|next| if next > now { next } else { now })
+        .unwrap_or(now);
+    (start_at.saturating_duration_since(now), start_at + spacing)
+}
+
 pub struct MarketManager {
-    // 使用 DashSet 提供線程安全的訂閱管理
+    // 使用 DashSet 提供線程安全的活躍訂閱管理。
     pub active_symbols: Arc<DashSet<String>>,
+    // 同一 symbol 可能同時被多張卡片訂閱；只有最後一個訂閱者離開時
+    // 才會從 active_symbols 移除。
+    pub subscriber_counts: DashMap<String, usize>,
+    subscription_lock: std::sync::Mutex<()>,
     // 記錄最後一次被封鎖的時間
     pub last_blocked_at: std::sync::Mutex<Option<std::time::Instant>>,
     // 簡單的資料快取 (Symbol -> (Tick, Timestamp))
@@ -131,31 +301,142 @@ pub struct MarketManager {
     pub in_flight_history: Arc<DashSet<(String, String)>>,
     /// A single permit serializes every Yahoo request issued by this manager.
     pub request_gate: Arc<Semaphore>,
+    /// Reserved request-start slots shared by tick and history requests.
+    request_next_allowed_at: std::sync::Mutex<Option<std::time::Instant>>,
+    /// Symbols waiting for the initial visible-card warm-up request.
+    warmup_queue: std::sync::Mutex<WarmupQueue>,
+    warmup_notify: Arc<Notify>,
 }
 
 impl MarketManager {
     pub fn new() -> Self {
         Self {
             active_symbols: Arc::new(DashSet::new()),
+            subscriber_counts: DashMap::new(),
+            subscription_lock: std::sync::Mutex::new(()),
             last_blocked_at: std::sync::Mutex::new(None),
             cache: DashMap::new(),
             in_flight: Arc::new(DashSet::new()),
             history_cache: DashMap::new(),
             in_flight_history: Arc::new(DashSet::new()),
             request_gate: Arc::new(Semaphore::new(1)),
+            request_next_allowed_at: std::sync::Mutex::new(None),
+            warmup_queue: std::sync::Mutex::new(WarmupQueue::default()),
+            warmup_notify: Arc::new(Notify::new()),
         }
     }
 
     pub fn subscribe(&self, symbol: String) {
-        self.active_symbols.insert(symbol);
+        use dashmap::mapref::entry::Entry;
+
+        let _lock = self
+            .subscription_lock
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match self.subscriber_counts.entry(symbol.clone()) {
+            Entry::Occupied(mut entry) => {
+                *entry.get_mut() += 1;
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(1);
+                self.active_symbols.insert(symbol);
+            }
+        }
     }
 
     pub fn unsubscribe(&self, symbol: String) {
-        self.active_symbols.remove(&symbol);
+        use dashmap::mapref::entry::Entry;
+
+        let _lock = self
+            .subscription_lock
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        match self.subscriber_counts.entry(symbol.clone()) {
+            Entry::Occupied(entry) if *entry.get() <= 1 => {
+                entry.remove();
+                self.active_symbols.remove(&symbol);
+            }
+            Entry::Occupied(mut entry) => {
+                *entry.get_mut() -= 1;
+            }
+            Entry::Vacant(_) => {
+                // An unmatched unsubscribe should not affect a later
+                // subscriber for the same symbol.
+            }
+        }
     }
 
     pub fn get_active_symbols(&self) -> Vec<String> {
         self.active_symbols.iter().map(|s| s.clone()).collect()
+    }
+
+    pub fn subscriber_count(&self, symbol: &str) -> usize {
+        self.subscriber_counts
+            .get(symbol)
+            .map(|count| *count)
+            .unwrap_or(0)
+    }
+
+    fn has_subscribers(&self, symbol: &str) -> bool {
+        self.subscriber_count(symbol) > 0
+    }
+
+    /// Add a symbol to the initial warm-up queue. The queue itself performs
+    /// deduplication, while Notify wakes the single worker responsible for
+    /// draining it.
+    pub fn queue_warmup(&self, symbol: String) {
+        let queued = self
+            .warmup_queue
+            .lock()
+            .map(|mut queue| queue.push(symbol))
+            .unwrap_or(false);
+        if queued {
+            self.warmup_notify.notify_one();
+        }
+    }
+
+    fn has_warmup_work(&self) -> bool {
+        self.warmup_queue
+            .lock()
+            .map(|queue| !queue.is_empty())
+            .unwrap_or(false)
+    }
+
+    fn drain_warmup_queue(&self) -> Vec<String> {
+        self.warmup_queue
+            .lock()
+            .map(|mut queue| queue.drain())
+            .unwrap_or_default()
+    }
+
+    fn requeue_warmup_symbols(&self, symbols: Vec<String>) {
+        let queued = self
+            .warmup_queue
+            .lock()
+            .map(|mut queue| {
+                let before = queue.symbols.len();
+                queue.requeue(symbols);
+                queue.symbols.len() > before
+            })
+            .unwrap_or(false);
+        if queued {
+            self.warmup_notify.notify_one();
+        }
+    }
+
+    fn select_active_uncached(&self, symbols: &[String]) -> Vec<String> {
+        // Keep in-flight symbols eligible. fetch_ticks_gated will join the
+        // existing owner through its pending path; if that owner fails, the
+        // worker can apply its bounded retry policy to the symbol.
+        symbols
+            .iter()
+            .filter(|symbol| self.has_subscribers(symbol) && self.get_from_cache(symbol).is_none())
+            .cloned()
+            .collect()
+    }
+
+    fn active_warmup_batch(&self, batch: Vec<String>) -> Vec<String> {
+        self.select_active_uncached(&batch)
     }
 
     /// 檢查是否處於封鎖冷卻期 (5 分鐘)
@@ -166,6 +447,32 @@ impl MarketManager {
             }
         }
         false
+    }
+
+    fn cooldown_remaining(&self) -> Option<Duration> {
+        let last = self.last_blocked_at.lock().ok().and_then(|last| *last)?;
+        let cooldown = Duration::from_secs(300);
+        Some(cooldown.saturating_sub(last.elapsed()))
+    }
+
+    async fn wait_for_request_start(&self) {
+        let wait = {
+            let mut next_allowed = self
+                .request_next_allowed_at
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            let (wait, reserved_until) = request_spacing_decision(
+                std::time::Instant::now(),
+                *next_allowed,
+                Duration::from_millis(MIN_REQUEST_START_SPACING_MS),
+            );
+            *next_allowed = Some(reserved_until);
+            wait
+        };
+
+        if !wait.is_zero() {
+            tokio::time::sleep(wait).await;
+        }
     }
 
     /// 標記進入冷卻期
@@ -274,11 +581,11 @@ impl MarketManager {
         }
 
         let mut to_fetch = Vec::new();
-        for symbol in owned {
+        for symbol in &owned {
             if let Some(tick) = self.get_from_cache(&symbol) {
                 cached.push(tick);
             } else {
-                to_fetch.push(symbol);
+                to_fetch.push(symbol.clone());
             }
         }
         if to_fetch.is_empty() {
@@ -287,7 +594,27 @@ impl MarketManager {
             return self.wait_for_pending_ticks(pending, cached).await;
         }
 
-        let result = fetch_ticks_batched(&to_fetch).await;
+        self.wait_for_request_start().await;
+        if self.is_in_cooldown() {
+            drop(permit);
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+
+        let mut still_to_fetch = Vec::new();
+        for symbol in to_fetch {
+            if let Some(tick) = self.get_from_cache(&symbol) {
+                cached.push(tick);
+            } else {
+                still_to_fetch.push(symbol);
+            }
+        }
+        if still_to_fetch.is_empty() {
+            ownership.release();
+            drop(permit);
+            return self.wait_for_pending_ticks(pending, cached).await;
+        }
+
+        let result = fetch_ticks_batched(&still_to_fetch).await;
 
         match result {
             Ok(ticks) => {
@@ -372,6 +699,16 @@ impl MarketManager {
             drop(permit);
             return Ok(history);
         }
+        self.wait_for_request_start().await;
+        if self.is_in_cooldown() {
+            drop(permit);
+            return Err(AppError::Unknown("API_BLOCKED".to_string()));
+        }
+        if let Some(history) = self.get_history_from_cache(symbol, period) {
+            ownership.release();
+            drop(permit);
+            return Ok(history);
+        }
 
         let result = fetch_history_data(symbol, period).await;
         match result {
@@ -390,6 +727,185 @@ impl MarketManager {
                 Err(error)
             }
         }
+    }
+
+    async fn wait_for_warmup_work(&self) {
+        loop {
+            if self.has_warmup_work() {
+                return;
+            }
+
+            // Register the notification before checking the queue a second
+            // time. If a subscriber arrives between the first check and the
+            // await, Notify retains the permit and no wake-up is lost.
+            let notified = self.warmup_notify.notified();
+            if self.has_warmup_work() {
+                return;
+            }
+            notified.await;
+        }
+    }
+
+    async fn run_warmup_worker(self: Arc<Self>, app: AppHandle) {
+        let mut retry_state = WarmupRetryState::default();
+
+        loop {
+            retry_state.retain(|symbol| {
+                self.has_subscribers(symbol) && self.get_from_cache(symbol).is_none()
+            });
+            self.wait_for_warmup_work().await;
+            tokio::time::sleep(Duration::from_millis(WARMUP_COALESCE_WINDOW_MS)).await;
+
+            let queued = self.drain_warmup_queue();
+            if queued.is_empty() {
+                continue;
+            }
+
+            let classified = classify_warmup_symbols(&queued);
+            let mut batches = classified.taiwan;
+            batches.extend(classified.global.into_iter().map(|symbol| vec![symbol]));
+
+            // Retry requests are queued only after their backoff. Keeping the
+            // schedule in this worker avoids detached tasks and lets cooldown
+            // handling requeue every still-active symbol in one place.
+            let mut deferred_retries: Vec<(Duration, Vec<String>)> = Vec::new();
+            let mut cooldown_wait = None;
+            for (index, batch) in batches.iter().enumerate() {
+                retry_state.retain(|symbol| {
+                    self.has_subscribers(symbol) && self.get_from_cache(symbol).is_none()
+                });
+                let active_batch = self.active_warmup_batch(batch.clone());
+                if active_batch.is_empty() {
+                    continue;
+                }
+
+                if self.is_in_cooldown() {
+                    let remaining: Vec<String> = batches[index..]
+                        .iter()
+                        .flatten()
+                        .cloned()
+                        .chain(
+                            deferred_retries
+                                .iter()
+                                .flat_map(|(_, symbols)| symbols.iter().cloned()),
+                        )
+                        .collect();
+                    self.requeue_warmup_symbols(remaining);
+                    cooldown_wait = self.cooldown_remaining();
+                    break;
+                }
+
+                match self.fetch_ticks_gated(&active_batch).await {
+                    Ok(ticks) => {
+                        for tick in ticks {
+                            retry_state.clear(&tick.id);
+                            let _ = app.emit("market-update", MarketEvent::Tick(tick));
+                        }
+
+                        // A successful response can still omit one or more
+                        // requested symbols. Treat those as transient misses
+                        // so an active card is not silently abandoned.
+                        let missing = self.select_active_uncached(&active_batch);
+                        let plan = retry_state.plan(&missing);
+                        for symbol in plan.exhausted {
+                            log::warn!(
+                                "Warm-up retries exhausted after missing tick response: {}",
+                                symbol
+                            );
+                        }
+                        for (symbol, delay) in plan.retry {
+                            if let Some((_, symbols)) = deferred_retries
+                                .iter_mut()
+                                .find(|(scheduled, _)| *scheduled == delay)
+                            {
+                                symbols.push(symbol);
+                            } else {
+                                deferred_retries.push((delay, vec![symbol]));
+                            }
+                        }
+                    }
+                    Err(error) => {
+                        // A mixed pending/owned batch can fetch some symbols
+                        // successfully before a pending owner fails. Emit
+                        // those cached results before retrying only the
+                        // symbols that still have no data.
+                        for tick in active_batch
+                            .iter()
+                            .filter_map(|symbol| self.get_from_cache(symbol))
+                        {
+                            retry_state.clear(&tick.id);
+                            let _ = app.emit("market-update", MarketEvent::Tick(tick));
+                        }
+
+                        if error.to_string().contains("API_BLOCKED") {
+                            self.enter_cooldown();
+                            let _ = app.emit("api-blocked", true);
+                            let remaining: Vec<String> = batches[index..]
+                                .iter()
+                                .flatten()
+                                .cloned()
+                                .chain(
+                                    deferred_retries
+                                        .iter()
+                                        .flat_map(|(_, symbols)| symbols.iter().cloned()),
+                                )
+                                .collect();
+                            self.requeue_warmup_symbols(remaining);
+                            cooldown_wait = self.cooldown_remaining();
+                            break;
+                        }
+
+                        let retryable = self.select_active_uncached(&active_batch);
+                        let plan = retry_state.plan(&retryable);
+                        for symbol in plan.exhausted {
+                            log::warn!("Warm-up retries exhausted after request error: {}", symbol);
+                        }
+                        for (symbol, delay) in plan.retry {
+                            if let Some((_, symbols)) = deferred_retries
+                                .iter_mut()
+                                .find(|(scheduled, _)| *scheduled == delay)
+                            {
+                                symbols.push(symbol);
+                            } else {
+                                deferred_retries.push((delay, vec![symbol]));
+                            }
+                        }
+                    }
+                }
+
+                if index + 1 < batches.len() {
+                    tokio::time::sleep(Duration::from_millis(WARMUP_BATCH_PACING_MS)).await;
+                }
+            }
+
+            // Keep queued symbols during the five-minute cooldown, but sleep
+            // until it expires instead of spinning on API_BLOCKED responses.
+            if let Some(delay) = cooldown_wait {
+                tokio::time::sleep(delay).await;
+                continue;
+            }
+
+            deferred_retries.sort_by_key(|(delay, _)| *delay);
+            for (delay, symbols) in deferred_retries {
+                tokio::time::sleep(delay).await;
+                retry_state.retain(|symbol| {
+                    self.has_subscribers(symbol) && self.get_from_cache(symbol).is_none()
+                });
+                let eligible: Vec<String> = symbols
+                    .into_iter()
+                    .filter(|symbol| {
+                        self.has_subscribers(symbol) && self.get_from_cache(symbol).is_none()
+                    })
+                    .collect();
+                self.requeue_warmup_symbols(eligible);
+            }
+        }
+    }
+
+    fn start_warmup_worker(manager: Arc<Self>, app: AppHandle) {
+        tauri::async_runtime::spawn(async move {
+            manager.run_warmup_worker(app).await;
+        });
     }
 }
 
@@ -436,6 +952,10 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
     let manager = Arc::new(MarketManager::new());
     let manager_clone = Arc::clone(&manager);
     let app_clone = app.clone();
+
+    // Initial visible-card requests are coalesced by one worker so each
+    // subscription remains cheap while the first quote still arrives quickly.
+    MarketManager::start_warmup_worker(Arc::clone(&manager), app.clone());
 
     // 啟動即時報價輪詢 (Tick) - 每 30 秒 (大盤指數則依前端需求更頻繁)
     tauri::async_runtime::spawn(async move {
@@ -504,7 +1024,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
             }
 
             // 2. 處理台灣股票/指數 (批量請求)
-            for chunk in tw_batch.chunks(10) {
+            for chunk in tw_batch.chunks(WARMUP_TAIWAN_BATCH_SIZE) {
                 let symbols_to_fetch: Vec<String> = chunk.to_vec();
                 let app_handle = app_clone.clone();
                 let m = Arc::clone(&manager_clone);
@@ -887,7 +1407,12 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
 
 #[cfg(test)]
 mod tests {
-    use super::{InFlightGuard, MarketManager, MarketTick};
+    use super::{
+        classify_warmup_symbols, request_spacing_decision, warmup_retry_delay, InFlightGuard,
+        MarketManager, MarketTick, WarmupQueue, WarmupRetryState, MIN_REQUEST_START_SPACING_MS,
+        WARMUP_MAX_RETRY_ATTEMPTS, WARMUP_RETRY_BASE_DELAY_MS, WARMUP_TAIWAN_BATCH_SIZE,
+    };
+    use std::time::{Duration, Instant};
 
     fn tick(id: &str) -> MarketTick {
         MarketTick {
@@ -902,6 +1427,147 @@ mod tests {
             timestamps: Vec::new(),
             volume: None,
         }
+    }
+
+    #[test]
+    fn subscription_refcounts_keep_symbol_active_until_last_unsubscribe() {
+        let manager = MarketManager::new();
+
+        manager.subscribe("2330".to_string());
+        manager.subscribe("2330".to_string());
+        assert_eq!(manager.subscriber_count("2330"), 2);
+        assert_eq!(manager.get_active_symbols(), vec!["2330".to_string()]);
+
+        manager.unsubscribe("2330".to_string());
+        assert_eq!(manager.subscriber_count("2330"), 1);
+        assert!(manager.active_symbols.contains("2330"));
+
+        manager.unsubscribe("2330".to_string());
+        assert_eq!(manager.subscriber_count("2330"), 0);
+        assert!(!manager.active_symbols.contains("2330"));
+    }
+
+    #[test]
+    fn warmup_queue_deduplicates_and_can_requeue_symbols() {
+        let mut queue = WarmupQueue::default();
+        assert!(queue.push("2330".to_string()));
+        assert!(!queue.push("2330".to_string()));
+        assert_eq!(queue.drain(), vec!["2330".to_string()]);
+
+        queue.requeue(vec!["2330".to_string(), "2317".to_string()]);
+        assert_eq!(queue.drain(), vec!["2330".to_string(), "2317".to_string()]);
+        assert!(queue.is_empty());
+    }
+
+    #[test]
+    fn warmup_classification_deduplicates_and_limits_taiwan_batches() {
+        let symbols: Vec<String> = (0..(WARMUP_TAIWAN_BATCH_SIZE + 1))
+            .map(|index| format!("tw-{index}"))
+            .chain([
+                "tw-0".to_string(),
+                "^TWII".to_string(),
+                "^IXIC".to_string(),
+                "NQ=F".to_string(),
+            ])
+            .collect();
+
+        let batches = classify_warmup_symbols(&symbols);
+        assert_eq!(batches.taiwan.len(), 2);
+        assert_eq!(batches.taiwan[0].len(), WARMUP_TAIWAN_BATCH_SIZE);
+        assert_eq!(batches.taiwan[1].len(), 2);
+        assert_eq!(batches.taiwan[1][0], "tw-10");
+        assert_eq!(batches.taiwan[1][1], "^TWII");
+        assert_eq!(
+            batches.global,
+            vec!["^IXIC".to_string(), "NQ=F".to_string()]
+        );
+    }
+
+    #[test]
+    fn in_flight_active_symbol_remains_eligible_for_pending_resolution() {
+        let manager = MarketManager::new();
+        manager.subscribe("2330".to_string());
+        manager.in_flight.insert("2330".to_string());
+
+        assert_eq!(
+            manager.active_warmup_batch(vec!["2330".to_string()]),
+            vec!["2330".to_string()]
+        );
+    }
+
+    #[test]
+    fn missing_symbol_selection_keeps_only_active_uncached_symbols() {
+        let manager = MarketManager::new();
+        manager.subscribe("active".to_string());
+        manager.subscribe("cached".to_string());
+        manager.subscribe("removed".to_string());
+        manager.update_cache(tick("cached"));
+        manager.unsubscribe("removed".to_string());
+
+        let missing = manager.select_active_uncached(&[
+            "active".to_string(),
+            "cached".to_string(),
+            "removed".to_string(),
+        ]);
+        assert_eq!(missing, vec!["active".to_string()]);
+
+        let mut retry_state = WarmupRetryState::default();
+        let retry_plan = retry_state.plan(&missing);
+        assert_eq!(retry_plan.retry[0].0, "active");
+        assert!(retry_plan.exhausted.is_empty());
+    }
+
+    #[test]
+    fn warmup_retry_plan_uses_exponential_backoff_and_exhausts() {
+        let mut state = WarmupRetryState::default();
+        let symbol = vec!["2330".to_string()];
+
+        for (attempt, expected_delay) in [500, 1_000, 2_000].into_iter().enumerate() {
+            let plan = state.plan(&symbol);
+            assert_eq!(plan.retry.len(), 1);
+            assert_eq!(plan.retry[0].1, Duration::from_millis(expected_delay));
+            assert!(plan.exhausted.is_empty());
+            assert_eq!(
+                warmup_retry_delay(attempt),
+                Duration::from_millis(expected_delay)
+            );
+        }
+
+        let exhausted = state.plan(&symbol);
+        assert!(exhausted.retry.is_empty());
+        assert_eq!(exhausted.exhausted, symbol);
+        assert!(state.attempts.is_empty());
+        assert_eq!(WARMUP_MAX_RETRY_ATTEMPTS, 3);
+        assert_eq!(WARMUP_RETRY_BASE_DELAY_MS, 500);
+
+        let mut unsubscribed = WarmupRetryState::default();
+        let _ = unsubscribed.plan(&symbol);
+        unsubscribed.retain(|_| false);
+        assert!(unsubscribed.attempts.is_empty());
+    }
+
+    #[test]
+    fn request_spacing_decision_reserves_shared_start_slots_without_sleeping() {
+        let now = Instant::now();
+        let spacing = Duration::from_millis(MIN_REQUEST_START_SPACING_MS);
+        let (first_wait, first_reserved) = request_spacing_decision(now, None, spacing);
+        assert_eq!(first_wait, Duration::ZERO);
+        assert_eq!(first_reserved, now + spacing);
+
+        let (second_wait, second_reserved) = request_spacing_decision(
+            now + Duration::from_millis(100),
+            Some(first_reserved),
+            spacing,
+        );
+        assert_eq!(second_wait, Duration::from_millis(200));
+        assert_eq!(second_reserved, first_reserved + spacing);
+
+        let (late_wait, _) = request_spacing_decision(
+            now + Duration::from_millis(700),
+            Some(second_reserved),
+            spacing,
+        );
+        assert_eq!(late_wait, Duration::ZERO);
     }
 
     #[tokio::test]

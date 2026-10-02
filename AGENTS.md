@@ -26,6 +26,16 @@ SLstening is a Tauri 2 desktop application for real-time Taiwan/US stock monitor
 
 When the personal `slstening-frontend-design` and `ui-ux-pro-max` Skills are available, use the former for project-specific workflow and the latter for general UI/UX or chart research. Repository code and this file override generic recommendations.
 
+## Knowledge Management
+
+- Treat [`wiki/index.md`](wiki/index.md) as the entry point for durable project knowledge. Read it before large or cross-cutting changes.
+- From the index, read only the architecture, concept, and decision pages relevant to the task.
+- Source code, tests, configuration, and migrations are the final truth. If the wiki conflicts with them, follow the repository and correct the relevant wiki page as part of the change.
+- Do not update the wiki for every small refactor, isolated bug fix, copy change, or component edit.
+- Update the wiki when a change affects architecture, dependency or framework strategy, an API contract (including Tauri commands or events), state-management or persistence strategy, authentication or authorization, routing architecture, build/release/deployment flow, or another durable technical decision that a future agent is likely to need.
+- Keep pages concise and explain constraints, boundaries, and reasons. Link to authoritative source files instead of reproducing the README or narrating implementation details that are obvious from code.
+- Keep the wiki as OKF v0.2-compatible Markdown with YAML frontmatter and ordinary relative links. Do not introduce runtime tooling, a database, a vector store, RAG, or another service for knowledge management.
+
 ## Sol -> Terra -> Sol workflow
 
 Apply this workflow to material changes to source code, configuration, tests,

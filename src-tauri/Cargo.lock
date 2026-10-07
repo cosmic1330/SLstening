@@ -5037,10 +5037,12 @@ dependencies = [
 name = "slistening"
 version = "0.0.28"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
  "csv",
  "dashmap",
  "log",
+ "rand 0.8.5",
  "reqwest 0.12.11",
  "serde",
  "serde_json",

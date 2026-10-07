@@ -49,8 +49,10 @@ export interface EnhancedDealData {
   obvEma: number | null;
   obvMa20: number | null;
   cmf: number | null;
+  cmfEma: number | null;
   osc: number | null;
   dif: number | null;
+  atr: number | null;
   supertrend: number | null;
   donchianUb: number | null;
   donchianLb: number | null;
@@ -210,8 +212,10 @@ export function calculateIndicators(
       obvEma: obvEmaData.ema,
       obvMa20: obvMa20Data.ma,
       cmf: cmfData.cmf,
+      cmfEma: cmfData.ema,
       osc: macdData.osc ? macdData.osc : null,
       dif: macdData.dif ? macdData.dif[macdData.dif.length - 1] : null,
+      atr: stResult.atr ?? null,
       supertrend: stResult.value,
       donchianUb: donchianResult.upper,
       donchianLb: donchianResult.lower,
@@ -221,4 +225,3 @@ export function calculateIndicators(
     };
   });
 }
-

@@ -87,11 +87,15 @@ pub enum MarketEvent {
 pub struct MarketCacheItem {
     pub tick: MarketTick,
     pub timestamp: std::time::Instant,
+    /// Wall-clock time at which the provider response was stored. `Instant`
+    /// remains the freshness TTL; this field is safe to expose in envelopes.
+    pub fetched_at: i64,
 }
 
 pub struct MarketHistoryCacheItem {
     pub history: MarketHistory,
     pub timestamp: std::time::Instant,
+    pub fetched_at: i64,
 }
 
 struct InFlightGuard<K>
@@ -182,7 +186,9 @@ struct WarmupBatches {
 }
 
 fn is_global_tick_symbol(symbol: &str) -> bool {
-    symbol.contains('^') && symbol != "^TWII" && symbol != "^TWOII" || symbol.contains('=')
+    // Keep warm-up, polling, and direct agent requests on the same market
+    // classifier. AAPL must never be routed through the Taiwan batch API.
+    is_global_symbol(symbol)
 }
 
 /// Deduplicate and classify queued symbols without touching the network.
@@ -484,9 +490,14 @@ impl MarketManager {
 
     /// 從快取中獲取資料 (10 秒有效)
     pub fn get_from_cache(&self, symbol: &str) -> Option<MarketTick> {
+        self.get_from_cache_with_fetched_at(symbol)
+            .map(|(tick, _)| tick)
+    }
+
+    pub fn get_from_cache_with_fetched_at(&self, symbol: &str) -> Option<(MarketTick, i64)> {
         if let Some(item) = self.cache.get(symbol) {
             if item.timestamp.elapsed() < Duration::from_secs(10) {
-                return Some(item.tick.clone());
+                return Some((item.tick.clone(), item.fetched_at));
             }
         }
         None
@@ -499,12 +510,22 @@ impl MarketManager {
             MarketCacheItem {
                 tick,
                 timestamp: std::time::Instant::now(),
+                fetched_at: wall_clock_millis(),
             },
         );
     }
 
     /// 從快取中獲取歷史資料 (盤中 60 秒有效，盤後 300 秒有效)
     pub fn get_history_from_cache(&self, symbol: &str, period: &str) -> Option<MarketHistory> {
+        self.get_history_from_cache_with_fetched_at(symbol, period)
+            .map(|(history, _)| history)
+    }
+
+    pub fn get_history_from_cache_with_fetched_at(
+        &self,
+        symbol: &str,
+        period: &str,
+    ) -> Option<(MarketHistory, i64)> {
         let key = (symbol.to_string(), period.to_string());
         if let Some(item) = self.history_cache.get(&key) {
             let is_open = is_any_market_open_for_symbol(symbol);
@@ -514,7 +535,7 @@ impl MarketManager {
                 Duration::from_secs(300)
             };
             if item.timestamp.elapsed() < lifetime {
-                return Some(item.history.clone());
+                return Some((item.history.clone(), item.fetched_at));
             }
         }
         None
@@ -528,6 +549,7 @@ impl MarketManager {
             MarketHistoryCacheItem {
                 history,
                 timestamp: std::time::Instant::now(),
+                fetched_at: wall_clock_millis(),
             },
         );
     }
@@ -554,8 +576,20 @@ impl MarketManager {
     /// Fetch ticks through the global Yahoo gate. Cache and cooldown are checked
     /// again after the permit is acquired so queued work cannot create a burst.
     pub async fn fetch_ticks_gated(&self, symbols: &[String]) -> Result<Vec<MarketTick>, AppError> {
+        self.fetch_ticks_gated_with_meta(symbols)
+            .await
+            .map(|(ticks, _fetched)| ticks)
+    }
+
+    /// Same operation as fetch_ticks_gated, while reporting whether this
+    /// caller actually owned a provider fetch. A caller that joined another
+    /// request is deliberately reported as cached/coalesced by the agent.
+    pub async fn fetch_ticks_gated_with_meta(
+        &self,
+        symbols: &[String],
+    ) -> Result<(Vec<MarketTick>, bool), AppError> {
         if symbols.is_empty() {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), false));
         }
         if self.is_in_cooldown() {
             return Err(AppError::Unknown("API_BLOCKED".to_string()));
@@ -564,7 +598,10 @@ impl MarketManager {
         let (owned, pending, mut cached) = self.claim_tick_symbols(symbols);
 
         if owned.is_empty() {
-            return self.wait_for_pending_ticks(pending, cached).await;
+            return self
+                .wait_for_pending_ticks(pending, cached)
+                .await
+                .map(|ticks| (ticks, false));
         }
 
         let mut ownership = InFlightGuard::new(self.in_flight.clone(), owned.clone());
@@ -591,7 +628,10 @@ impl MarketManager {
         if to_fetch.is_empty() {
             ownership.release();
             drop(permit);
-            return self.wait_for_pending_ticks(pending, cached).await;
+            return self
+                .wait_for_pending_ticks(pending, cached)
+                .await
+                .map(|ticks| (ticks, false));
         }
 
         self.wait_for_request_start().await;
@@ -611,7 +651,10 @@ impl MarketManager {
         if still_to_fetch.is_empty() {
             ownership.release();
             drop(permit);
-            return self.wait_for_pending_ticks(pending, cached).await;
+            return self
+                .wait_for_pending_ticks(pending, cached)
+                .await
+                .map(|ticks| (ticks, false));
         }
 
         let result = fetch_ticks_batched(&still_to_fetch).await;
@@ -624,7 +667,9 @@ impl MarketManager {
                 cached.extend(ticks);
                 ownership.release();
                 drop(permit);
-                self.wait_for_pending_ticks(pending, cached).await
+                self.wait_for_pending_ticks(pending, cached)
+                    .await
+                    .map(|ticks| (ticks, true))
             }
             Err(error) => {
                 if error.to_string().contains("API_BLOCKED") {
@@ -671,16 +716,35 @@ impl MarketManager {
         symbol: &str,
         period: &str,
     ) -> Result<MarketHistory, AppError> {
+        self.fetch_history_gated_with_meta(symbol, period)
+            .await
+            .map(|(history, _fetched)| history)
+    }
+
+    /// Report whether this caller performed the provider fetch. This lets
+    /// consumers distinguish a live response from a request coalesced onto a
+    /// cache entry populated by another caller.
+    pub async fn fetch_history_gated_with_meta(
+        &self,
+        symbol: &str,
+        period: &str,
+    ) -> Result<(MarketHistory, bool), AppError> {
         if self.is_in_cooldown() {
             return Err(AppError::Unknown("API_BLOCKED".to_string()));
         }
         if let Some(history) = self.get_history_from_cache(symbol, period) {
-            return Ok(history);
+            return Ok((history, false));
         }
 
         let key = (symbol.to_string(), period.to_string());
         if !self.in_flight_history.insert(key.clone()) {
-            return Err(AppError::Unknown("REQUEST_IN_FLIGHT".to_string()));
+            // Join the existing provider request.  The caller can then label
+            // the result cached/coalesced instead of falsely reporting a new
+            // live fetch or failing while the cache is about to be filled.
+            return self
+                .wait_for_pending_history(&key)
+                .await
+                .map(|history| (history, false));
         }
         let mut ownership = InFlightGuard::new(self.in_flight_history.clone(), vec![key.clone()]);
 
@@ -697,7 +761,7 @@ impl MarketManager {
         if let Some(history) = self.get_history_from_cache(symbol, period) {
             ownership.release();
             drop(permit);
-            return Ok(history);
+            return Ok((history, false));
         }
         self.wait_for_request_start().await;
         if self.is_in_cooldown() {
@@ -707,7 +771,7 @@ impl MarketManager {
         if let Some(history) = self.get_history_from_cache(symbol, period) {
             ownership.release();
             drop(permit);
-            return Ok(history);
+            return Ok((history, false));
         }
 
         let result = fetch_history_data(symbol, period).await;
@@ -716,7 +780,7 @@ impl MarketManager {
                 self.update_history_cache(symbol, period, history.clone());
                 ownership.release();
                 drop(permit);
-                Ok(history)
+                Ok((history, true))
             }
             Err(error) => {
                 if error.to_string().contains("API_BLOCKED") {
@@ -727,6 +791,24 @@ impl MarketManager {
                 Err(error)
             }
         }
+    }
+
+    async fn wait_for_pending_history(
+        &self,
+        key: &(String, String),
+    ) -> Result<MarketHistory, AppError> {
+        for _ in 0..200 {
+            if let Some((history, _fetched_at)) =
+                self.get_history_from_cache_with_fetched_at(&key.0, &key.1)
+            {
+                return Ok(history);
+            }
+            if !self.in_flight_history.contains(key) {
+                return Err(AppError::Unknown("No data".to_string()));
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        Err(AppError::Unknown("REQUEST_IN_FLIGHT".to_string()))
     }
 
     async fn wait_for_warmup_work(&self) {
@@ -910,7 +992,13 @@ impl MarketManager {
 }
 
 /// 判斷是否在任何市場的交易時間內
-fn is_any_market_open_for_symbol(_symbol: &str) -> bool {
+fn is_any_market_open_for_symbol(symbol: &str) -> bool {
+    // Until exchange-calendar support is centralized, use the conservative
+    // short cache TTL for global symbols. Reusing Taiwan hours for US data can
+    // otherwise label an actively trading US quote as closed-market cache.
+    if is_global_symbol(symbol) {
+        return true;
+    }
     let now = std::time::SystemTime::now();
     let since_the_epoch = now
         .duration_since(std::time::UNIX_EPOCH)
@@ -989,9 +1077,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                     continue;
                 }
 
-                if s == "^TWII" || s == "^TWOII" {
-                    tw_batch.push(s);
-                } else if s.contains("^") || s.contains("=") {
+                if is_global_symbol(&s) {
                     other_indices.push(s);
                 } else {
                     tw_batch.push(s);
@@ -1062,15 +1148,14 @@ pub(crate) async fn fetch_history_data(
     period: &str,
 ) -> Result<MarketHistory, AppError> {
     // Decode then encode to handle both raw symbols and already-encoded symbols
-    let decoded_symbol = decode(symbol).unwrap_or(std::borrow::Cow::Borrowed(symbol));
+    let provider = provider_symbol(symbol);
+    let decoded_symbol = decode(&provider).unwrap_or(std::borrow::Cow::Borrowed(&provider));
     let encoded_symbol = encode(&decoded_symbol);
 
     // Determine if it's a Global symbol (Indices/Futures) or a Taiwan symbol
     // Taiwan stocks (e.g. "2330") and Taiwan indices ("^TWII", "^TWOII") use Yahoo Taiwan API.
     // Global symbols (e.g. "^IXIC", "NQ=F") use Yahoo Finance's international API.
-    let is_global = (decoded_symbol.starts_with("^") || decoded_symbol.contains("="))
-        && decoded_symbol != "^TWII"
-        && decoded_symbol != "^TWOII";
+    let is_global = is_global_symbol(&decoded_symbol);
 
     let url = if !is_global {
         // Taiwan stocks and indices use Yahoo Taiwan's API
@@ -1144,21 +1229,27 @@ pub(crate) async fn fetch_history_data(
     let ts = result_node["timestamp"].as_array();
 
     let mut history_data = Vec::new();
-    if let (Some(o), Some(c), Some(h), Some(l), Some(t)) = (opens, closes, highs, lows, ts) {
-        for i in 0..o.len() {
-            let open = o[i].as_f64();
-            let close = c[i].as_f64();
-            let high = h[i].as_f64();
-            let low = l[i].as_f64();
-            let time = t[i].as_i64();
-
-            let vol = volumes
-                .and_then(|v_arr| v_arr.get(i))
-                .and_then(|v_val| v_val.as_f64())
-                .unwrap_or(0.0);
-
-            if let (Some(open), Some(close), Some(high), Some(low), Some(time)) =
-                (open, close, high, low, time)
+    if let (Some(o), Some(c), Some(h), Some(l), Some(v), Some(t)) =
+        (opens, closes, highs, lows, volumes, ts)
+    {
+        // Provider arrays are not guaranteed to have identical lengths. Walk
+        // only the common prefix and skip any row with a missing numeric
+        // field. Volume is required by the Rust HistoryPoint contract; using
+        // a synthetic zero would corrupt OBV/CMF/MFI downstream.
+        let length = [o.len(), c.len(), h.len(), l.len(), v.len(), t.len()]
+            .into_iter()
+            .min()
+            .unwrap_or(0);
+        for i in 0..length {
+            let row = (
+                o.get(i).and_then(serde_json::Value::as_f64),
+                c.get(i).and_then(serde_json::Value::as_f64),
+                h.get(i).and_then(serde_json::Value::as_f64),
+                l.get(i).and_then(serde_json::Value::as_f64),
+                v.get(i).and_then(serde_json::Value::as_f64),
+                t.get(i).and_then(serde_json::Value::as_i64),
+            );
+            if let (Some(open), Some(close), Some(high), Some(low), Some(volume), Some(time)) = row
             {
                 history_data.push(HistoryPoint {
                     t: time,
@@ -1166,10 +1257,12 @@ pub(crate) async fn fetch_history_data(
                     h: high,
                     l: low,
                     c: close,
-                    v: vol,
+                    v: volume,
                 });
             }
         }
+    } else {
+        return Err(AppError::Unknown("MISSING_OHLCV_DATA".to_string()));
     }
 
     let mut price = meta["regularMarketPrice"]
@@ -1215,19 +1308,81 @@ pub(crate) async fn fetch_history_data(
     })
 }
 
+/// Return whether a provider symbol belongs to Yahoo's global endpoint.
+/// Taiwan tickers are numeric (or carry an explicit `.TW`/`.TWO` suffix),
+/// while US tickers such as `AAPL` are alphabetic and must never be sent to
+/// the Taiwan endpoint.
+pub(crate) fn is_global_symbol(symbol: &str) -> bool {
+    let decoded = decode(symbol).unwrap_or(std::borrow::Cow::Borrowed(symbol));
+    let value = decoded.trim().to_ascii_uppercase();
+    if value == "^TWII" || value == "^TWOII" || value.starts_with("TW:") {
+        return false;
+    }
+    if value.chars().all(|character| character.is_ascii_digit())
+        || value.ends_with(".TW")
+        || value.ends_with(".TWO")
+    {
+        return false;
+    }
+    value.starts_with('^')
+        || value.contains('=')
+        || value
+            .chars()
+            .any(|character| character.is_ascii_alphabetic())
+}
+
+fn provider_symbol(symbol: &str) -> String {
+    match symbol.split_once(':') {
+        Some((market, value))
+            if (market.eq_ignore_ascii_case("tw") || market.eq_ignore_ascii_case("us"))
+                && !value.trim().is_empty() =>
+        {
+            value.trim().to_string()
+        }
+        _ => symbol.trim().to_string(),
+    }
+}
+
+fn wall_clock_millis() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|duration| duration.as_millis() as i64)
+        .unwrap_or(0)
+}
+
 pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<MarketTick>, AppError> {
     if symbols.is_empty() {
         return Ok(Vec::new());
     }
 
-    // 判斷是否為「非台灣」的全球指數
-    let is_global_index = symbols.len() == 1
-        && (symbols[0].contains("^") || symbols[0].contains("="))
-        && symbols[0] != "^TWII"
-        && symbols[0] != "^TWOII";
+    // Never mix provider markets in one request. Yahoo's Taiwan endpoint
+    // accepts a Taiwan batch, while global tickers require the single-symbol
+    // chart endpoint. Preserve the caller's order as far as each provider
+    // response allows and keep the explicit market mapping at the boundary.
+    let (global_symbols, taiwan_symbols) = split_provider_symbols(symbols);
+    if (global_symbols.len() + taiwan_symbols.len()) > 1 && !global_symbols.is_empty() {
+        let mut ticks = Vec::new();
+        if !taiwan_symbols.is_empty() {
+            ticks.extend(Box::pin(fetch_ticks_batched(&taiwan_symbols)).await?);
+        }
+        for symbol in global_symbols {
+            ticks.extend(Box::pin(fetch_ticks_batched(std::slice::from_ref(&symbol))).await?);
+        }
+        return Ok(ticks);
+    }
 
+    // A qualified US ticker such as AAPL must use Yahoo's global endpoint;
+    // treating every unqualified symbol as a Taiwan ticker silently returned
+    // empty data for US accounts.
+    let is_global_index = symbols.len() == 1 && is_global_symbol(&symbols[0]);
+
+    let provider_symbols: Vec<String> = symbols
+        .iter()
+        .map(|symbol| provider_symbol(symbol))
+        .collect();
     let url = if is_global_index {
-        let decoded = decode(&symbols[0]).unwrap_or(std::borrow::Cow::Borrowed(&symbols[0]));
+        let decoded = decode(&provider_symbols[0])
+            .unwrap_or(std::borrow::Cow::Borrowed(&provider_symbols[0]));
         let encoded = encode(&decoded);
         format!(
             "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1m&range=1d",
@@ -1235,7 +1390,7 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         )
     } else {
         // 台灣股票/指數批量 API
-        let symbols_str = symbols
+        let symbols_str = provider_symbols
             .iter()
             .map(|s| {
                 let decoded = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
@@ -1301,12 +1456,13 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
             decode(&yahoo_symbol).unwrap_or(std::borrow::Cow::Borrowed(&yahoo_symbol));
         let matched_id = symbols
             .iter()
-            .find(|&s| {
-                let decoded_s = decode(s).unwrap_or(std::borrow::Cow::Borrowed(s));
+            .zip(provider_symbols.iter())
+            .find(|(_, provider)| {
+                let decoded_s = decode(provider).unwrap_or(std::borrow::Cow::Borrowed(provider));
                 decoded_yahoo.starts_with(decoded_s.as_ref())
                     || decoded_s.starts_with(decoded_yahoo.as_ref())
             })
-            .cloned()
+            .map(|(original, _)| original.clone())
             .unwrap_or(yahoo_symbol);
 
         let quote = if !chart["quote"].is_null() {
@@ -1405,12 +1561,26 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
     Ok(results)
 }
 
+fn split_provider_symbols(symbols: &[String]) -> (Vec<String>, Vec<String>) {
+    let mut global = Vec::new();
+    let mut taiwan = Vec::new();
+    for symbol in symbols {
+        if is_global_symbol(symbol) {
+            global.push(symbol.clone());
+        } else {
+            taiwan.push(symbol.clone());
+        }
+    }
+    (global, taiwan)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        classify_warmup_symbols, request_spacing_decision, warmup_retry_delay, InFlightGuard,
-        MarketManager, MarketTick, WarmupQueue, WarmupRetryState, MIN_REQUEST_START_SPACING_MS,
-        WARMUP_MAX_RETRY_ATTEMPTS, WARMUP_RETRY_BASE_DELAY_MS, WARMUP_TAIWAN_BATCH_SIZE,
+        classify_warmup_symbols, is_global_symbol, provider_symbol, request_spacing_decision,
+        split_provider_symbols, warmup_retry_delay, InFlightGuard, MarketManager, MarketTick,
+        WarmupQueue, WarmupRetryState, MIN_REQUEST_START_SPACING_MS, WARMUP_MAX_RETRY_ATTEMPTS,
+        WARMUP_RETRY_BASE_DELAY_MS, WARMUP_TAIWAN_BATCH_SIZE,
     };
     use std::time::{Duration, Instant};
 
@@ -1462,9 +1632,9 @@ mod tests {
     #[test]
     fn warmup_classification_deduplicates_and_limits_taiwan_batches() {
         let symbols: Vec<String> = (0..(WARMUP_TAIWAN_BATCH_SIZE + 1))
-            .map(|index| format!("tw-{index}"))
+            .map(|index| format!("{}", 2300 + index))
             .chain([
-                "tw-0".to_string(),
+                "2300".to_string(),
                 "^TWII".to_string(),
                 "^IXIC".to_string(),
                 "NQ=F".to_string(),
@@ -1475,12 +1645,43 @@ mod tests {
         assert_eq!(batches.taiwan.len(), 2);
         assert_eq!(batches.taiwan[0].len(), WARMUP_TAIWAN_BATCH_SIZE);
         assert_eq!(batches.taiwan[1].len(), 2);
-        assert_eq!(batches.taiwan[1][0], "tw-10");
+        assert_eq!(batches.taiwan[1][0], "2310");
         assert_eq!(batches.taiwan[1][1], "^TWII");
         assert_eq!(
             batches.global,
             vec!["^IXIC".to_string(), "NQ=F".to_string()]
         );
+    }
+
+    #[test]
+    fn provider_symbol_market_mapping_keeps_us_tickers_off_taiwan_endpoint() {
+        assert!(!is_global_symbol("2330"));
+        assert!(!is_global_symbol("2330.TW"));
+        assert!(!is_global_symbol("^TWII"));
+        assert!(is_global_symbol("AAPL"));
+        assert!(is_global_symbol("^IXIC"));
+        assert!(is_global_symbol("NQ=F"));
+        assert_eq!(
+            classify_warmup_symbols(&["AAPL".into()]).global,
+            vec!["AAPL"]
+        );
+        let mixed = classify_warmup_symbols(&["2330".into(), "AAPL".into()]);
+        assert_eq!(mixed.taiwan, vec![vec!["2330".to_string()]]);
+        assert_eq!(mixed.global, vec!["AAPL".to_string()]);
+    }
+
+    #[test]
+    fn mixed_provider_batches_are_split_before_url_selection() {
+        let (global, taiwan) = split_provider_symbols(&[
+            "2330".to_string(),
+            "AAPL".to_string(),
+            "US:MSFT".to_string(),
+            "^TWII".to_string(),
+        ]);
+        assert_eq!(global, vec!["AAPL".to_string(), "US:MSFT".to_string()]);
+        assert_eq!(taiwan, vec!["2330".to_string(), "^TWII".to_string()]);
+        assert_eq!(provider_symbol("US:MSFT"), "MSFT");
+        assert_eq!(provider_symbol("TW:2330"), "2330");
     }
 
     #[test]

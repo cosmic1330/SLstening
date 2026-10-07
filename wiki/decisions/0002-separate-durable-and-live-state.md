@@ -15,7 +15,7 @@ The application combines identity, user-curated configuration, a provisioned rel
 Use separate state and persistence boundaries:
 
 - Supabase session handling for identity and profile information.
-- Zustand plus Tauri Store `settings.json` for durable tracked stocks, categories, selection, pins, and recency.
+- Zustand as the account projection; authenticated desktop writes complete snapshots through native account commands to the Google Sheet `SLstening_UserData` row keyed by the verified Supabase user ID. A namespaced Tauri Store cache and the old global keys are retained only for local recovery and explicit one-time import.
 - A separate in-memory Zustand store for latest market ticks and freshness timestamps.
 - Tauri SQL/SQLite migrations for schema-backed local records when that store is used.
 - Feature-local browser or window persistence for view preferences where already implemented.
@@ -25,7 +25,7 @@ Choose a boundary from data lifetime and ownership; do not merge stores merely b
 ## Alternatives
 
 - **Persist the entire Zustand tree:** rejected because high-frequency market ticks would create unnecessary writes and migration burden.
-- **Make Supabase canonical for all state:** not adopted because offline/local desktop state and the existing category model do not have a proven complete synchronization contract.
+- **Make Supabase canonical for all state:** not adopted for this MVP because the requested shared storage is the existing Google Sheet endpoint; the native repository still verifies Supabase identity before every cloud operation.
 - **Put all local state in browser storage:** rejected because it weakens native persistence and relational migration boundaries.
 
 ## Consequences

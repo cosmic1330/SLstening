@@ -1,6 +1,13 @@
 {
   "app": { "loading": "載入中…" },
   "language": { "en": "英文", "zh-TW": "繁體中文" },
+  "accountSync": {
+    "legacyAvailable": "發現這台電腦的舊追蹤資料。要匯入目前帳號嗎？",
+    "import": "匯入目前帳號",
+    "retry": "重新載入",
+    "error": "帳號資料同步失敗：{{error}}",
+    "nativeError": "App 無法連線目前帳號，請重試。"
+  },
   "a11y": {
     "switchLanguage": "切換語言為{{language}}",
     "openStock": "開啟 {{name}}（{{id}}）分析",

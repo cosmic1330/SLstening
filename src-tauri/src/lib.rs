@@ -1,3 +1,5 @@
+mod account;
+mod agent_gateway;
 mod commands;
 mod csv_processor;
 mod error;
@@ -40,6 +42,10 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
+            let account_manager =
+                account::AccountManager::new().map_err(|error| std::io::Error::other(error))?;
+            app.manage(account_manager.clone());
+
             // 監聽更新
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = updater::update(handle).await {
@@ -49,12 +55,25 @@ pub fn run() {
 
             // 初始化市場觀察者 (Market Watcher)
             let market_manager = market_watcher::init(app.handle().clone());
-            app.manage(market_manager);
+            app.manage(market_manager.clone());
+
+            let gateway = agent_gateway::start(app.handle(), account_manager, market_manager)
+                .map_err(std::io::Error::other)?;
+            log::info!("SLstening Agent gateway ready at {}", gateway.endpoint);
+            app.manage(gateway);
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::common::greet,
+            commands::account::account_set_session,
+            commands::account::account_clear_session,
+            commands::account::account_invalidate_session,
+            commands::account::account_get_session,
+            commands::account::agent_get_config,
+            commands::account::account_get_state,
+            commands::account::account_update_state,
+            commands::account::account_import_legacy,
             commands::export::create_csv_from_json,
             commands::storage::get_db_size,
             commands::market::subscribe_stock,

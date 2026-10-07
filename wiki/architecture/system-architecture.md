@@ -15,8 +15,9 @@ This page describes boundaries a change must preserve. It is not a component inv
 1. `src/main.tsx` boots the React application inside the Tauri webview.
 2. `src/App.tsx` composes the theme, user/session provider, router, route guards, and lazy screens.
 3. Authenticated routes mount `AuthenticatedRuntime`, which starts the single market-event bridge and reloads durable stock state.
-4. React invokes registered Tauri commands for native data and persistence work. Rust emits events back to the webview for streaming updates and operational warnings.
-5. Supabase authentication is initialized in the frontend. Local durable stock/category state uses Tauri Store, Tauri startup provisions the SQLite schema, and high-frequency ticks remain in memory.
+4. React invokes registered Tauri commands for native data and persistence work. Rust emits events back to the webview for streaming updates and operational warnings. The authenticated desktop session also establishes a monotonic native account epoch; account state is read and written through the fixed Google Apps Script endpoint after Supabase token verification.
+5. Supabase authentication is initialized in the frontend. Account stock/category state is projected by Zustand and persisted through native account commands; high-frequency ticks remain in memory.
+6. While the desktop app is open, Rust owns a 127.0.0.1 MCP gateway and writes an owner-only discovery file. The bundled stdio bridge forwards Codex JSON-RPC requests to the allowlisted gateway tools; no access token is exposed to MCP.
 
 ## Route Boundaries
 
@@ -34,7 +35,7 @@ Do not add a second router or bypass `RequireAuth` for protected screens. Keep r
 | Concern | Owner | Persistence |
 | --- | --- | --- |
 | Supabase session and profile | `UserContext` | Supabase client session storage |
-| Tracked stocks, categories, active/pinned/recent IDs | `Stock.store` | Tauri Store `settings.json` |
+| Tracked stocks, categories, active/pinned/recent IDs, indicator settings | `Stock.store` projection | Google Sheet `SLstening_UserData` through native account commands; namespaced local cache |
 | Latest market ticks and freshness | `MarketData.store` | Memory only |
 | Provisioned relational schema | Rust/Tauri SQL migrations | SQLite `schoice.db` |
 | View-specific preferences | Feature hooks/components | Local storage or window state where implemented |
@@ -53,5 +54,8 @@ Tauri command names, arguments, return values, event names, and payload shapes a
 - [`src/store/Stock.store.ts`](../../src/store/Stock.store.ts)
 - [`src/store/MarketData.store.ts`](../../src/store/MarketData.store.ts)
 - [`src-tauri/src/lib.rs`](../../src-tauri/src/lib.rs)
+- [`src-tauri/src/account.rs`](../../src-tauri/src/account.rs)
+- [`src-tauri/src/agent_gateway.rs`](../../src-tauri/src/agent_gateway.rs)
+- [`scripts/slstening-agent-bridge.mjs`](../../scripts/slstening-agent-bridge.mjs)
 - [`src-tauri/src/sqlite/migrations.rs`](../../src-tauri/src/sqlite/migrations.rs)
 - [`src-tauri/capabilities/main.json`](../../src-tauri/capabilities/main.json)

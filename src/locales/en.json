@@ -1,6 +1,13 @@
 {
   "app": { "loading": "Loading…" },
   "language": { "en": "English", "zh-TW": "Traditional Chinese" },
+  "accountSync": {
+    "legacyAvailable": "Legacy tracking data was found on this computer. Import it into the current account?",
+    "import": "Import to account",
+    "retry": "Reload",
+    "error": "Account sync failed: {{error}}",
+    "nativeError": "The app could not connect this account. Try again."
+  },
   "a11y": {
     "switchLanguage": "Switch language to {{language}}",
     "openStock": "Open analysis for {{name}} ({{id}})",

@@ -23,9 +23,9 @@ Normalization during reload is part of backward compatibility. Do not replace it
 
 ## Persistence Boundary
 
-`Stock.store` serializes durable changes through a mutation queue before writing Tauri Store `settings.json`. Preserve serialization when adding mutations; overlapping read-modify-write operations can otherwise lose data.
+`Stock.store` serializes durable changes through a mutation queue. In the authenticated desktop runtime, each complete snapshot is validated and sent through native account commands to the Google Sheet Web App with an expected revision. A stale revision is surfaced as a conflict and never overwritten. A namespaced local cache and the original unscoped settings are retained only for recovery and explicit one-time import.
 
-The store also contains Supabase helpers for `watch_stock`, but the current code does not establish Supabase as the canonical source for the complete category model. Do not assume two-way synchronization without implementing and documenting an explicit contract.
+The store also contains Supabase helpers for `watch_stock`, but those compatibility paths do not define category membership. The account snapshot is keyed by the server-verified Supabase `user.id`; email is display metadata only.
 
 ## Change Checklist
 

@@ -15,6 +15,7 @@
     "test:frontend": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:backend": "cd src-tauri && cargo test",
+    "test:bridge": "node --test scripts/slstening-agent-bridge.test.mjs",
     "test:all": "npm run test:frontend && npm run test:backend",
     "package": "npm run test:all && tauri build"
   },

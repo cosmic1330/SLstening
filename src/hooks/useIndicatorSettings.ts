@@ -1,108 +1,55 @@
 import { useCallback, useState } from "react";
+import useStocksStore from "../store/Stock.store";
+import { DEFAULT_INDICATOR_SETTINGS, readLegacyIndicatorSettings } from "../account/snapshot";
+import { isNativeRuntime } from "../account/native";
+import type { IndicatorSettings } from "../account/types";
 
-export interface IndicatorSettings {
-  ma5: number;
-  ma10: number;
-  ma20: number;
-  ma60: number;
-  boll: number;
-  kd: number;
-  mfi: number;
-  rsi: number;
-  ma120: number;
-  ma240: number;
-  emaShort: number;
-  emaLong: number;
-  cmf: number;
-  cmfEma: number;
-  atrLen: number;
-  atrMult: number;
-  donchian: number;
-  cci: number;
-}
+export type { IndicatorSettings } from "../account/types";
 
-const DEFAULT_SETTINGS: IndicatorSettings = {
-  ma5: 5,
-  ma10: 10,
-  ma20: 30,
-  ma60: 60,
-  boll: 30,
-  kd: 9,
-  mfi: 14,
-  rsi: 14,
-  ma120: 120,
-  ma240: 240,
-  emaShort: 5,
-  emaLong: 10,
-  cmf: 21,
-  cmfEma: 5,
-  atrLen: 10,
-  atrMult: 3.0,
-  donchian: 20,
-  cci: 26,
-};
+const LEGACY_KEY = "slitenting-indicator-settings";
 
 export default function useIndicatorSettings() {
-  const [settings, setSettings] = useState<IndicatorSettings>(() => {
-    const saved = localStorage.getItem("slitenting-indicator-settings");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        let modified = false;
+  const accountUserId = useStocksStore((state) => state.accountUserId);
+  const hydrated = useStocksStore((state) => state.hydrated);
+  const accountSettings = useStocksStore((state) => state.indicatorSettings);
+  const updateAccountSetting = useStocksStore((state) => state.updateIndicatorSetting);
+  const resetAccountSettings = useStocksStore((state) => state.resetIndicatorSettings);
+  const nativeRuntime = isNativeRuntime();
+  // A native account transition must never fall back to another account's
+  // legacy localStorage values. Legacy settings are only read by browser
+  // runtime, or by the explicit legacy import path in the account store.
+  const [legacySettings, setLegacySettings] = useState<IndicatorSettings>(() => (
+    nativeRuntime ? { ...DEFAULT_INDICATOR_SETTINGS } : readLegacyIndicatorSettings()
+  ));
+  const accountReady = Boolean(accountUserId) && hydrated;
+  const accountScoped = nativeRuntime ? accountReady : Boolean(accountUserId);
+  const settings = nativeRuntime
+    ? (accountReady ? accountSettings : DEFAULT_INDICATOR_SETTINGS)
+    : (accountScoped ? accountSettings : legacySettings);
 
-        if (!localStorage.getItem("slitenting-indicator-settings-ma30-migrated")) {
-          if (parsed.ma20 === 20) parsed.ma20 = 30;
-          if (parsed.boll === 20) parsed.boll = 30;
-          localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
-          modified = true;
-        }
-
-        if (!localStorage.getItem("slitenting-indicator-settings-supertrend-10-3-migrated")) {
-          parsed.atrLen = 10;
-          parsed.atrMult = 3.0;
-          localStorage.setItem("slitenting-indicator-settings-supertrend-10-3-migrated", "true");
-          modified = true;
-        }
-
-        if (!localStorage.getItem("slitenting-indicator-settings-cci-26-migrated")) {
-          parsed.cci = 26;
-          localStorage.setItem("slitenting-indicator-settings-cci-26-migrated", "true");
-          modified = true;
-        }
-
-        if (modified) {
-          localStorage.setItem("slitenting-indicator-settings", JSON.stringify({ ...DEFAULT_SETTINGS, ...parsed }));
-        }
-
-        return { ...DEFAULT_SETTINGS, ...parsed };
-      } catch (e) {
-        return DEFAULT_SETTINGS;
-      }
+  const updateSetting = useCallback((key: keyof IndicatorSettings, value: number) => {
+    if (nativeRuntime && !accountReady) return;
+    const next = { ...settings, [key]: value };
+    if (accountScoped) {
+      // Queue a key-level update. The store merges against its latest state
+      // when the mutation actually runs, so rapid slider edits cannot replay
+      // an older closure and overwrite a newer setting.
+      void updateAccountSetting(key, value);
+      return;
     }
-    localStorage.setItem("slitenting-indicator-settings-ma30-migrated", "true");
-    localStorage.setItem("slitenting-indicator-settings-supertrend-10-3-migrated", "true");
-    localStorage.setItem("slitenting-indicator-settings-cci-26-migrated", "true");
-    return DEFAULT_SETTINGS;
-  });
-
-  const updateSetting = useCallback(
-    (key: keyof IndicatorSettings, value: number) => {
-      setSettings((prev) => {
-        const next = { ...prev, [key]: value };
-        localStorage.setItem(
-          "slitenting-indicator-settings",
-          JSON.stringify(next)
-        );
-        return next;
-      });
-    },
-    []
-  );
+    setLegacySettings(next);
+    globalThis.localStorage?.setItem(LEGACY_KEY, JSON.stringify(next));
+  }, [accountReady, accountScoped, nativeRuntime, settings, updateAccountSetting]);
 
   const resetSettings = useCallback(() => {
-    localStorage.removeItem("slitenting-indicator-settings");
-    setSettings(DEFAULT_SETTINGS);
-  }, []);
+    if (nativeRuntime && !accountReady) return;
+    if (accountScoped) {
+      void resetAccountSettings();
+      return;
+    }
+    globalThis.localStorage?.removeItem(LEGACY_KEY);
+    setLegacySettings({ ...DEFAULT_INDICATOR_SETTINGS });
+  }, [accountReady, accountScoped, nativeRuntime, resetAccountSettings]);
 
-  return { settings, updateSetting, resetSettings };
+  return { settings, updateSetting, resetSettings, isLoading: nativeRuntime && !accountReady };
 }

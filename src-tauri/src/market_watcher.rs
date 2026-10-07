@@ -1482,9 +1482,9 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
         let previous_close = meta["previousClose"]
             .as_f64()
             .or_else(|| quote["previousClose"].as_f64())
-            .unwrap_or(price);
+            .unwrap_or(0.0);
 
-        let change_percent = if previous_close != 0.0 {
+        let change_percent = if price > 0.0 && previous_close > 0.0 {
             ((price - previous_close) / previous_close) * 100.0
         } else {
             meta["regularMarketChangePercent"].as_f64().unwrap_or(0.0)

@@ -94,6 +94,23 @@ describe("account-scoped stock projection", () => {
     expect(useStocksStore.getState().stocks).toEqual([]);
   });
 
+  it("rejects a non-empty cloud revision with a missing payload", async () => {
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "account_get_state") {
+        return { userId: "user-a", epoch: 1, revision: 3, schemaVersion: 1, data: null, updatedAt: null };
+      }
+      throw new Error(`unexpected invoke ${command}`);
+    });
+
+    await expect(useStocksStore.getState().hydrateAccount("user-a", 1)).rejects.toThrow("INVALID_CLOUD_STATE");
+    expect(useStocksStore.getState()).toMatchObject({
+      hydrated: false,
+      syncStatus: "error",
+      syncError: "INVALID_CLOUD_STATE",
+      cloudRevision: 0,
+    });
+  });
+
   it("offers legacy data once and records the claiming account after import", async () => {
     persisted.set("stocks", [{ id: "2330", name: "TSMC", group: "TW", type: "stock" }]);
     persisted.set("categories", [{ id: DEFAULT_WATCHLIST_ID, name: "", stockIds: ["2330"], isDefault: true }]);

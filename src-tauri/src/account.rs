@@ -1,4 +1,4 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -166,6 +166,7 @@ impl AccountManager {
         )
     }
 
+    #[cfg(test)]
     pub fn set_session(
         &self,
         access_token: String,
@@ -219,6 +220,7 @@ impl AccountManager {
         })
     }
 
+    #[cfg(test)]
     pub fn clear_session(&self) -> Result<(), String> {
         self.invalidate_session()
     }
@@ -232,16 +234,13 @@ impl AccountManager {
         self.invalidate_session_at(transition_id)
     }
 
+    #[cfg(test)]
     pub fn invalidate_session(&self) -> Result<(), String> {
         let transition_id = self.transition.fetch_add(1, Ordering::SeqCst) + 1;
         self.invalidate_session_at(transition_id)
     }
 
     fn invalidate_session_at(&self, transition_id: u64) -> Result<(), String> {
-        // Advance the epoch before acquiring the lock. Even if the lock is
-        // poisoned or a caller observes the returned error, every in-flight
-        // request now fails its epoch check and the gateway is fail-closed.
-        self.epoch.fetch_add(1, Ordering::SeqCst);
         let mut guard = self
             .session
             .write()
@@ -249,6 +248,10 @@ impl AccountManager {
         if self.transition.load(Ordering::SeqCst) != transition_id {
             return Err("STALE_SESSION_TRANSITION".to_string());
         }
+        // Transition validation and revocation share the session write lock.
+        // A stale transition therefore cannot advance the epoch after a newer
+        // transition has installed its session.
+        self.epoch.fetch_add(1, Ordering::SeqCst);
         // Keep the epoch in a tombstone so a late request can never match a
         // newly established session that happens to reuse a token.
         *guard = None;
@@ -794,6 +797,30 @@ mod tests {
         ));
         assert_eq!(
             manager.current_session().expect("current").unwrap().user_id,
+            "user-b"
+        );
+    }
+
+    #[test]
+    fn stale_invalidation_does_not_advance_the_new_sessions_epoch() {
+        let manager = AccountManager::new().expect("manager");
+        manager
+            .set_session_for_transition(1, token_for("user-a"), "user-a".into(), None, None)
+            .expect("session a");
+        let session_b = manager
+            .set_session_for_transition(2, token_for("user-b"), "user-b".into(), None, None)
+            .expect("session b");
+
+        assert_eq!(
+            manager.invalidate_session_at(1),
+            Err("STALE_SESSION_TRANSITION".to_string())
+        );
+        assert_eq!(manager.epoch.load(Ordering::SeqCst), session_b.epoch);
+        assert_eq!(
+            manager
+                .active_session(session_b.epoch)
+                .expect("active b")
+                .user_id,
             "user-b"
         );
     }

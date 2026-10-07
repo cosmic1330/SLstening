@@ -224,6 +224,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       set({ menu });
       const result = await getNativeAccountState(epoch);
       if (!result || result.userId !== userId || result.epoch !== epoch) throw new Error("SESSION_CHANGED");
+      if (result.revision > 0 && !result.data) throw new Error("INVALID_CLOUD_STATE");
       if (result.data) {
         const snapshot = normalizeAccountSnapshot(result.data);
         await saveAccountCache(userId, snapshot);

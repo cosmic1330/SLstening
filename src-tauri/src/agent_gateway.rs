@@ -1046,7 +1046,7 @@ fn normalize_market_symbol(raw: &str) -> Result<(String, &'static str), (i64, St
     let (market, symbol) = match trimmed.split_once(':') {
         Some((prefix, value)) if prefix.eq_ignore_ascii_case("tw") => ("TW", value.trim()),
         Some((prefix, value)) if prefix.eq_ignore_ascii_case("us") => ("US", value.trim()),
-        Some((_, value)) => ("AUTO", value.trim()),
+        Some(_) => return Err((-32602, "INVALID_MARKET_PREFIX".to_string())),
         None => ("AUTO", trimmed),
     };
     if symbol.is_empty() || symbol.len() > 20 {
@@ -1237,6 +1237,8 @@ fn quote_value(
 ) -> Value {
     let price_missing = !tick.price.is_finite() || tick.price <= 0.0;
     let previous_close_missing = !tick.previous_close.is_finite() || tick.previous_close <= 0.0;
+    let change_percent_missing =
+        !tick.change_percent.is_finite() || price_missing || previous_close_missing;
     let observed_at = (tick.refreshed_ts > 0).then_some(tick.refreshed_ts);
     let mut data = serde_json::to_value(&tick).unwrap_or(Value::Null);
     if let Some(object) = data.as_object_mut() {
@@ -1246,7 +1248,7 @@ fn quote_value(
         if previous_close_missing {
             object.insert("previous_close".to_string(), Value::Null);
         }
-        if price_missing || previous_close_missing {
+        if change_percent_missing {
             object.insert("change_percent".to_string(), Value::Null);
         }
         if observed_at.is_none() {
@@ -1259,6 +1261,9 @@ fn quote_value(
     }
     if previous_close_missing {
         missing_fields.push("previous_close");
+    }
+    if change_percent_missing {
+        missing_fields.push("change_percent");
     }
     if observed_at.is_none() {
         missing_fields.push("refreshed_ts");
@@ -2368,6 +2373,36 @@ mod tests {
             normalize_market_symbol("TW:AAPL"),
             Err((-32602, message)) if message == "MARKET_SYMBOL_MISMATCH"
         ));
+        assert!(matches!(
+            normalize_market_symbol("HK:2330"),
+            Err((-32602, message)) if message == "INVALID_MARKET_PREFIX"
+        ));
+    }
+
+    #[test]
+    fn quote_payload_marks_missing_market_values_as_partial() {
+        let tick = MarketTick {
+            id: "2330".to_string(),
+            name: Some("TSMC".to_string()),
+            price: 100.0,
+            change_percent: 0.0,
+            refreshed_ts: 0,
+            closes: vec![],
+            avg_prices: vec![],
+            previous_close: 0.0,
+            timestamps: vec![],
+            volume: None,
+        };
+        let value = quote_value("2330", "2330.TW", "TW", tick, Some(1), "live");
+
+        assert_eq!(value["state"], "partial");
+        assert!(value["data"]["previous_close"].is_null());
+        assert!(value["data"]["change_percent"].is_null());
+        assert!(value["data"]["refreshed_ts"].is_null());
+        assert!(value["missing_fields"]
+            .as_array()
+            .expect("missing fields")
+            .contains(&json!("change_percent")));
     }
 
     #[test]

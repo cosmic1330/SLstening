@@ -64,3 +64,7 @@ Tauri command names, arguments, return values, event names, and payload shapes a
 - [`src/pages/Home/Mcp/index.tsx`](../../src/pages/Home/Mcp/index.tsx)
 - [`scripts/slstening-agent-bridge.mjs`](../../scripts/slstening-agent-bridge.mjs)
 - [`src-tauri/capabilities/main.json`](../../src-tauri/capabilities/main.json)
+
+## Account backup partitioning
+
+The Google Sheet backup is partitioned by `(uuid, type)`: desktop requests use `Desktop`; legacy PhoneApp requests without a type remain `Mobile`. Both retain the existing PhoneApp watchlist-groups payload.

@@ -45,3 +45,7 @@ Choose a boundary from data lifetime and ownership; do not merge stores merely b
 - [`src/context/UserContext.tsx`](../../src/context/UserContext.tsx)
 - [`src/store/Stock.store.ts`](../../src/store/Stock.store.ts)
 - [`src/store/MarketData.store.ts`](../../src/store/MarketData.store.ts)
+
+## Local-first cloud outbox
+
+Account snapshots are durable locally before cloud synchronization. The per-account dirty marker prevents stale pulls from replacing unsynced edits, and cloud writes run FIFO with last-generation status guards.

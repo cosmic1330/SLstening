@@ -9,11 +9,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 /// The desktop app deliberately uses the same endpoint and payload as
 /// PhoneApp. The endpoint stores an opaque JSON string in the `data` column;
 /// desktop-only navigation and indicator settings never cross this boundary.
-pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycbxer7LYSlDagMaQ2vcr-fgljNPtKbyJ-mR10WxNblwTfYAB_KKAdbbPi76Dz-Tpx3aV/exec";
+pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycby4MsYs06coRtd2G-sDfqP-mCN0KWWBTSOpkrMnlE4I2pOXZpsGW1K3KprfGXJGDwYP/exec";
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_DATA_LENGTH: usize = 45_000;
 pub const MAX_STOCKS: usize = 300;
 pub const MAX_CATEGORIES: usize = 100;
+pub const CLIENT_TYPE: &str = "Desktop";
+
+fn pull_request_body(uuid: &str, email: &str) -> Value {
+    json!({"action":"pull", "uuid":uuid, "email":email, "type":CLIENT_TYPE})
+}
+
+fn sync_request_body(uuid: &str, email: &str, data: String) -> Value {
+    json!({"action":"sync", "uuid":uuid, "email":email, "data":data, "type":CLIENT_TYPE})
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -342,11 +351,7 @@ impl AccountManager {
     pub async fn get_state(&self, expected_epoch: u64) -> Result<AccountStateResult, String> {
         let session = self.session_for_epoch(expected_epoch)?;
         let response = match self
-            .post_cloud(json!({
-                "action": "pull",
-                "uuid": session.user_id,
-                "email": session.email,
-            }))
+            .post_cloud(pull_request_body(&session.user_id, &session.email))
             .await
         {
             Ok(response) => response,
@@ -387,12 +392,7 @@ impl AccountManager {
         }
         let session = self.session_for_epoch(expected_epoch)?;
         let response = self
-            .post_cloud(json!({
-                "action": "sync",
-                "uuid": session.user_id,
-                "email": session.email,
-                "data": serialized,
-            }))
+            .post_cloud(sync_request_body(&session.user_id, &session.email, serialized))
             .await?;
         self.session_still_current(&session.user_id, session.epoch)?;
         Ok(AccountWriteResult {
@@ -842,6 +842,15 @@ mod tests {
                 Err(error) if error.starts_with("CLOUD_INVALID:")
             ));
         }
+    }
+
+    #[test]
+    fn cloud_request_bodies_partition_desktop_records() {
+        let pull = pull_request_body("user-a", "a@example.com");
+        let sync = sync_request_body("user-a", "a@example.com", "[]".to_string());
+        assert_eq!(pull["type"], CLIENT_TYPE);
+        assert_eq!(sync["type"], CLIENT_TYPE);
+        assert_eq!(sync["data"], "[]");
     }
 
     #[test]

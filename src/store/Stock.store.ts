@@ -49,6 +49,7 @@ const localNavigation = (snapshot: AccountSnapshot, state: Pick<StocksState, "ac
 });
 
 const accountKey = (userId: string) => `account:${userId}:snapshot`;
+const accountDirtyKey = (userId: string) => `account:${userId}:dirty`;
 
 const readCatalog = async () => {
   const store = await Store.load(CATALOG_FILE);
@@ -68,11 +69,53 @@ const readAccountCache = async (userId: string) => {
   return value && typeof value === "object" ? normalizeAccountSnapshot(value as AccountSnapshot) : null;
 };
 
-const writeAccountCache = async (userId: string, snapshot: AccountSnapshot) => {
+const readAccountDirty = async (userId: string) => {
+  const store = await Store.load(ACCOUNT_STATE_FILE);
+  return (await store.get(accountDirtyKey(userId))) === true;
+};
+
+type DirtyWrite = boolean | "preserve";
+
+const restoreStoreValue = async (store: Awaited<ReturnType<typeof Store.load>>, key: string, value: unknown) => {
+  if (value === undefined) await store.delete(key);
+  else await store.set(key, value);
+};
+
+const writeAccountCache = async (userId: string, snapshot: AccountSnapshot, dirty: DirtyWrite = false) => {
   const store = await Store.load(ACCOUNT_STATE_FILE);
   const { indicatorSettings: _indicatorSettings, ...accountState } = snapshot;
-  await store.set(accountKey(userId), accountState);
-  await store.save();
+  const snapshotKey = accountKey(userId);
+  const dirtyKey = accountDirtyKey(userId);
+  // The Store object stays alive after a failed save. Restore its in-memory
+  // keys too, otherwise a later unrelated save could commit the rejected
+  // snapshot or falsely acknowledge an outbox entry.
+  const previousSnapshot = await store.get(snapshotKey);
+  const previousDirty = await store.get(dirtyKey);
+  const nextDirty = dirty === "preserve" ? previousDirty === true : dirty;
+  try {
+    await store.set(snapshotKey, accountState);
+    await store.set(dirtyKey, nextDirty);
+    await store.save();
+  } catch (error) {
+    try {
+      await restoreStoreValue(store, snapshotKey, previousSnapshot);
+      await restoreStoreValue(store, dirtyKey, previousDirty);
+    } catch { /* Preserve the original persistence error. */ }
+    throw error;
+  }
+};
+
+const clearAccountDirty = async (userId: string) => {
+  const store = await Store.load(ACCOUNT_STATE_FILE);
+  const dirtyKey = accountDirtyKey(userId);
+  const previousDirty = await store.get(dirtyKey);
+  try {
+    await store.set(dirtyKey, false);
+    await store.save();
+  } catch (error) {
+    try { await restoreStoreValue(store, dirtyKey, previousDirty); } catch { /* Preserve the original persistence error. */ }
+    throw error;
+  }
 };
 
 // All account-cache writes share one FIFO. This matters when a hydration read
@@ -83,10 +126,11 @@ const enqueueAccountCacheWrite = (
   userId: string,
   snapshot: AccountSnapshot,
   shouldWrite: () => boolean = () => true,
+  dirty: DirtyWrite = false,
 ) => {
   const write = async () => {
     if (!shouldWrite()) return;
-    await writeAccountCache(userId, snapshot);
+    await writeAccountCache(userId, snapshot, dirty);
   };
   const result = accountCacheWriteQueue.then(write, write);
   accountCacheWriteQueue = result.then(() => undefined, () => undefined);
@@ -96,12 +140,60 @@ const enqueueAccountCacheWrite = (
 const writeLocalProjection = async (state: StocksState) => {
   if (isNativeRuntime()) {
     if (!state.accountUserId || state.accountEpoch === null) return;
-    await enqueueAccountCacheWrite(state.accountUserId, accountSnapshotFrom(state));
+    // Read the dirty marker inside the FIFO write and the same Store object
+    // as the snapshot mutation. A pre-queue read can race an acknowledgment.
+    await enqueueAccountCacheWrite(state.accountUserId, accountSnapshotFrom(state), () => true, "preserve");
     return;
   }
   const store = await Store.load(ACCOUNT_STATE_FILE);
   await store.set("local:snapshot", accountSnapshotFrom(state));
   await store.save();
+};
+
+/** Test-only export keeps the local commit gate independently verifiable
+ * against Rust's validate_snapshot contract. */
+export const __validateSnapshotForLocal = (snapshot: AccountSnapshot) => {
+  const bytes = (value: string) => new TextEncoder().encode(value).length;
+  if (snapshot.stocks.length > 300 || snapshot.categories.length > 100) throw new Error("DATA_LIMIT_EXCEEDED");
+  const stocks = new Set<string>();
+  for (const stock of snapshot.stocks) {
+    if (!stock.id.trim() || bytes(stock.id) > 40 || bytes(stock.name) > 200 || bytes(stock.group) > 40 || bytes(stock.type) > 40 || stocks.has(stock.id)) throw new Error("INVALID_STOCK");
+    stocks.add(stock.id);
+  }
+  const categories = new Set<string>();
+  const memberships = new Set<string>();
+  for (const category of snapshot.categories) {
+    if (!category.id.trim() || bytes(category.name) > 200 || categories.has(category.id)) throw new Error("INVALID_CATEGORY");
+    categories.add(category.id);
+    const members = new Set<string>();
+    for (const id of category.stockIds) {
+      if (!stocks.has(id) || members.has(id)) throw new Error("INVALID_CATEGORY_MEMBERSHIP");
+      members.add(id);
+      memberships.add(id);
+    }
+  }
+  if (memberships.size !== stocks.size) throw new Error("ORPHAN_STOCK");
+  if (snapshot.activeCategoryId && !categories.has(snapshot.activeCategoryId)) throw new Error("INVALID_ACTIVE_CATEGORY");
+  const validateRefs = (ids: string[], error: string) => {
+    const seen = new Set<string>();
+    for (const id of ids) {
+      if (!categories.has(id) || seen.has(id)) throw new Error(error);
+      seen.add(id);
+    }
+  };
+  validateRefs(snapshot.pinnedCategoryIds, "INVALID_PINNED_CATEGORIES");
+  validateRefs(snapshot.recentCategoryIds, "INVALID_RECENT_CATEGORIES");
+  if (snapshot.pinnedCategoryIds.length > 5 || snapshot.recentCategoryIds.length > 3) throw new Error("CATEGORY_LIMIT_EXCEEDED");
+  if (snapshot.pinnedCategoryIds.some((id) => snapshot.recentCategoryIds.includes(id))) throw new Error("CATEGORY_REFERENCE_OVERLAP");
+  const settings = snapshot.indicatorSettings;
+  const indicatorValues = [settings.ma5, settings.ma10, settings.ma20, settings.ma60, settings.boll, settings.kd, settings.mfi, settings.rsi, settings.ma120, settings.ma240, settings.emaShort, settings.emaLong, settings.cmf, settings.cmfEma, settings.atrLen, settings.atrMult, settings.donchian, settings.cci];
+  if (indicatorValues.some((value) => !Number.isFinite(value) || value <= 0 || value > 1000) || settings.atrMult > 20) throw new Error("INVALID_INDICATOR_SETTINGS");
+  const byId = new Map(snapshot.stocks.map((stock) => [stock.id, stock]));
+  const phoneGroups = snapshot.categories.map((category) => ({ id: category.id, name: category.name, stocks: category.stockIds.map((id) => {
+    const stock = byId.get(id)!;
+    return { symbol: stock.id, name: stock.name, price: "---", change: "0.0", isPositive: true };
+  }) }));
+  if (bytes(JSON.stringify(phoneGroups)) > 45_000) throw new Error("DATA_LIMIT_EXCEEDED");
 };
 
 const readIndicatorSettings = async (epoch: number): Promise<IndicatorSettings | null> => {
@@ -146,6 +238,52 @@ const markCloudCommit = (userId: string, epoch: number) => {
   const next = (committedCloudGenerations.get(key) ?? 0) + 1;
   committedCloudGenerations.set(key, next);
   return next;
+};
+let cloudWriteQueue: Promise<void> = Promise.resolve();
+let cloudWriteGeneration = 0;
+const latestCloudWrite = new Map<string, number>();
+/** Test-only reset; stale completions are ignored because their generations no
+ * longer appear in latestCloudWrite. */
+export const __resetStockStoreQueuesForTests = () => {
+  mutationQueue = Promise.resolve();
+  accountCacheWriteQueue = Promise.resolve();
+  cloudWriteQueue = Promise.resolve();
+  latestCloudWrite.clear();
+  committedCloudGenerations.clear();
+  mutationGeneration = 0;
+  hydrationGeneration = 0;
+};
+const scheduleCloudWrite = (
+  get: () => StocksState,
+  set: (partial: Partial<StocksState>) => void,
+  userId: string,
+  epoch: number,
+  snapshot: AccountSnapshot,
+) => {
+  const generation = ++cloudWriteGeneration;
+  const key = cloudGenerationKey(userId, epoch);
+  latestCloudWrite.set(key, generation);
+  const task = async () => {
+    try {
+      await updateNativeAccountState(epoch, snapshot);
+      if (latestCloudWrite.get(key) !== generation) return;
+      markCloudCommit(userId, epoch);
+      // Only acknowledge the matching outbox generation. Rewriting the
+      // captured snapshot here would erase newer local navigation state.
+      const clear = async () => {
+        if (latestCloudWrite.get(key) === generation) await clearAccountDirty(userId);
+      };
+      const queued = accountCacheWriteQueue.then(clear, clear);
+      accountCacheWriteQueue = queued.then(() => undefined, () => undefined);
+      await queued;
+      const current = get();
+      if (latestCloudWrite.get(key) === generation && current.accountUserId === userId && current.accountEpoch === epoch) set({ syncStatus: "synced", syncError: null });
+    } catch (error) {
+      const current = get();
+      if (latestCloudWrite.get(key) === generation && current.accountUserId === userId && current.accountEpoch === epoch) set({ syncStatus: "error", syncError: safeSyncError(error) });
+    }
+  };
+  cloudWriteQueue = cloudWriteQueue.then(task, task);
 };
 const invalidateMutationQueue = () => { mutationGeneration += 1; };
 const invalidateHydration = () => { hydrationGeneration += 1; };
@@ -260,6 +398,7 @@ const commitSnapshot = async (
   next: AccountSnapshot,
 ) => {
   const normalized = normalizeAccountSnapshot(next);
+  __validateSnapshotForLocal(normalized);
   const current = get();
   const userId = current.accountUserId;
   const epoch = current.accountEpoch;
@@ -269,23 +408,15 @@ const commitSnapshot = async (
   };
   if (isNativeRuntime()) {
     if (!userId || epoch === null) throw new Error("ACCOUNT_REQUIRED");
-    set({ syncStatus: "loading", syncError: null });
-    let cloudAttemptMarked = false;
+    // The local cache is the commit boundary. Cloud persistence is an ordered
+    // outbox and never changes the result of this UI action.
     try {
-      await updateNativeAccountState(epoch, normalized);
-      markCloudCommit(userId, epoch);
-      cloudAttemptMarked = true;
+      await enqueueAccountCacheWrite(userId, normalized, isCurrent, true);
       if (!isCurrent()) return;
-      await enqueueAccountCacheWrite(userId, normalized, isCurrent);
-      if (!isCurrent()) return;
-      const latest = get();
-      const projected = localNavigation(normalized, latest);
-      set({ ...projected, accountUserId: userId, accountEpoch: epoch, hydrated: true, syncStatus: "synced", syncError: null });
+      const projected = localNavigation(normalized, get());
+      set({ ...projected, accountUserId: userId, accountEpoch: epoch, hydrated: true, syncStatus: "loading", syncError: null });
+      scheduleCloudWrite(get, set, userId, epoch, normalized);
     } catch (error) {
-      // A pull may have started while this sync was in flight. Even when the
-      // sync fails, it must not publish `synced` over this mutation error or
-      // replace the cache with an older snapshot.
-      if (!cloudAttemptMarked) markCloudCommit(userId, epoch);
       if (isCurrent()) set({ syncStatus: "error", syncError: safeSyncError(error) });
       throw error;
     }
@@ -376,6 +507,20 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const menu = await readCatalog();
       if (!isCurrentHydration() || get().accountUserId !== userId || get().accountEpoch !== epoch) return;
       set({ menu });
+      if (await readAccountDirty(userId)) {
+        const cached = await readAccountCache(userId);
+        if (!cached || !isCurrentHydration() || get().accountUserId !== userId || get().accountEpoch !== epoch) return;
+        // This cache is the authority while its outbox marker is dirty. Do
+        // not overlay cleared/stale in-memory navigation onto it at restart.
+        // Indicator preferences live outside this cache, so retain the
+        // already-primed account-local value and reconcile it as on a clean
+        // hydration.
+        const indicatorFallback = { ...get().indicatorSettings };
+        set({ ...cached, indicatorSettings: indicatorFallback, menu, accountUserId: userId, accountEpoch: epoch, hydrated: true, syncStatus: "loading", syncError: null });
+        reconcileIndicatorSettings(get, set, userId, epoch, indicatorFallback);
+        scheduleCloudWrite(get, set, userId, epoch, cached);
+        return;
+      }
       const result = await getNativeAccountState(epoch);
       if (!result || result.userId !== userId || result.epoch !== epoch) throw new Error("SESSION_CHANGED");
       const cloud = result.data ? normalizeAccountSnapshot(result.data) : emptyAccountSnapshot();
@@ -433,7 +578,12 @@ const useStocksStore = create<StocksState>((set, get) => ({
   syncCurrent: () => enqueueMutation(get, async () => {
     const current = get();
     if (!isNativeRuntime() || !current.accountUserId || current.accountEpoch === null) return;
-    await commitSnapshot(get, set, accountSnapshotFrom(current));
+    const snapshot = accountSnapshotFrom(current);
+    await enqueueAccountCacheWrite(current.accountUserId, snapshot, () => {
+      const latest = get();
+      return latest.accountUserId === current.accountUserId && latest.accountEpoch === current.accountEpoch;
+    }, true);
+    scheduleCloudWrite(get, set, current.accountUserId, current.accountEpoch, snapshot);
   }),
 
   updateIndicatorSettings: (settings) => {

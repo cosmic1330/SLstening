@@ -16,7 +16,7 @@ var API_SCHEMA_VERSION = 1;
 var MAX_DATA_LENGTH = 45000;
 var MAX_GROUPS = 100;
 var MAX_STOCKS = 300;
-var SHEET_HEADERS = ["uuid", "email", "data", "建立時間", "最後同步時間"];
+var SHEET_HEADERS = ["uuid", "email", "data", "建立時間", "最後同步時間", "類型"];
 
 function doPost(event) {
   try {
@@ -27,8 +27,8 @@ function doPost(event) {
     if (request.action === "ping") {
       return jsonResponse_({status: "success", schema_version: API_SCHEMA_VERSION, message: "pong"});
     }
-    if (request.action === "pull") return handlePull_(request.uuid, request.email);
-    if (request.action === "sync") return handleSync_(request.uuid, request.email, request.data);
+    if (request.action === "pull") return handlePull_(request.uuid, request.email, request.type);
+    if (request.action === "sync") return handleSync_(request.uuid, request.email, request.data, request.type);
     throw apiError_("UNKNOWN_ACTION", "Invalid action");
   } catch (error) {
     var code = error && error.code ? error.code : "INTERNAL_ERROR";
@@ -57,7 +57,14 @@ function parseRequest_(event) {
   } else if (request.action === "sync") {
     requireIdentity_(request.uuid, request.email);
   }
+  request.type = normalizeClientType_(request.type);
   return request;
+}
+
+function normalizeClientType_(type) {
+  if (type === undefined || type === null || type === "") return "Mobile";
+  if (type === "Desktop" || type === "Mobile") return type;
+  throw apiError_("INVALID_CLIENT_TYPE", "type must be Desktop or Mobile");
 }
 
 function requireIdentity_(uuid, email) {
@@ -80,9 +87,10 @@ function validateOptionalEmail_(email) {
   }
 }
 
-function handlePull_(uuid, email) {
+function handlePull_(uuid, email, type) {
+  type = normalizeClientType_(type);
   var sheet = getDataSheet_();
-  var rowNumber = findUserRow_(sheet, uuid);
+  var rowNumber = findUserRow_(sheet, uuid, type);
   if (!rowNumber) {
     // A missing backup is an empty account, not a legacy-import state.
     return jsonResponse_({status: "success", schema_version: API_SCHEMA_VERSION, data: "[]", updated_at: null});
@@ -104,20 +112,21 @@ function handlePull_(uuid, email) {
   return jsonResponse_({status: "success", schema_version: API_SCHEMA_VERSION, data: data, updated_at: row[4] || null});
 }
 
-function handleSync_(uuid, email, data) {
+function handleSync_(uuid, email, data, type) {
+  type = normalizeClientType_(type);
   requireIdentity_(uuid, email);
   var normalizedData = normalizePhoneData_(data);
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(10000)) throw apiError_("BUSY", "Data is being updated; retry shortly");
   try {
     var sheet = getDataSheet_();
-    var rowNumber = findUserRow_(sheet, uuid);
+    var rowNumber = findUserRow_(sheet, uuid, type);
     var now = Utilities.formatDate(new Date(), "GMT+8", "yyyy/MM/dd HH:mm:ss");
     if (rowNumber) {
-      sheet.getRange(rowNumber, 2, 1, 4).setValues([[email, normalizedData, sheet.getRange(rowNumber, 4).getValue() || now, now]]);
+      sheet.getRange(rowNumber, 2, 1, 5).setValues([[email, normalizedData, sheet.getRange(rowNumber, 4).getValue() || now, now, type]]);
       return jsonResponse_({status: "success", action: "update", updated_at: now});
     }
-    sheet.appendRow([uuid, email, normalizedData, now, now]);
+    sheet.appendRow([uuid, email, normalizedData, now, now, type]);
     return jsonResponse_({status: "success", action: "insert", updated_at: now});
   } finally {
     lock.releaseLock();
@@ -202,17 +211,18 @@ function getDataSheet_() {
   if (sheet.getLastRow() === 0) sheet.appendRow(SHEET_HEADERS);
   var headers = sheet.getRange(1, 1, 1, SHEET_HEADERS.length).getValues()[0];
   if (headers.join("|") !== SHEET_HEADERS.join("|")) {
-    throw apiError_("SHEET_SCHEMA_INVALID", "The first row must contain uuid,email,data,created,updated");
+    throw apiError_("SHEET_SCHEMA_INVALID", "The first row must contain uuid,email,data,建立時間,最後同步時間,類型");
   }
   return sheet;
 }
 
-function findUserRow_(sheet, uuid) {
+function findUserRow_(sheet, uuid, type) {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return 0;
-  var values = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  var values = sheet.getRange(2, 1, lastRow - 1, 6).getValues();
   for (var index = 0; index < values.length; index += 1) {
-    if (String(values[index][0]) === uuid) return index + 2;
+    var rowType = String(values[index][5] || "").trim() || "Mobile";
+    if (String(values[index][0]) === uuid && rowType === type) return index + 2;
   }
   return 0;
 }

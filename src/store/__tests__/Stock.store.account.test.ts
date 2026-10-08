@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AccountSnapshot } from "../../account/types";
 
 const persisted = vi.hoisted(() => new Map<string, unknown>());
 const invoke = vi.hoisted(() => vi.fn());
@@ -16,14 +17,14 @@ vi.mock("@tauri-apps/plugin-store", () => ({
   })) },
 }));
 
-import useStocksStore from "../Stock.store";
+import useStocksStore, { __resetStockStoreQueuesForTests, __validateSnapshotForLocal } from "../Stock.store";
 
 const settings = {
   ma5: 5, ma10: 10, ma20: 30, ma60: 60, boll: 30, kd: 9, mfi: 14, rsi: 14,
   ma120: 120, ma240: 240, emaShort: 5, emaLong: 10, cmf: 21, cmfEma: 5,
   atrLen: 10, atrMult: 3, donchian: 20, cci: 26,
 };
-const snapshot = (id: string) => ({
+const snapshot = (id: string): AccountSnapshot => ({
   stocks: [{ id, name: `Stock ${id}`, group: "TW", type: "stock" }],
   categories: [{ id: "group-a", name: "A", stockIds: [id] }],
   activeCategoryId: "group-a",
@@ -43,6 +44,7 @@ function resetProjection() {
 
 describe("account-scoped stock projection", () => {
   beforeEach(() => {
+    __resetStockStoreQueuesForTests();
     persisted.clear();
     storeControl.getError = null;
     storeControl.saveError = null;
@@ -81,6 +83,231 @@ describe("account-scoped stock projection", () => {
     await useStocksStore.getState().hydrateAccount("user-a", 1);
     expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
     expect(useStocksStore.getState().indicatorSettings.ma20).toBe(21);
+  });
+
+  it("commits locally and stays dirty when the background cloud write rejects", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") return Promise.reject(new Error("CLOUD_UNAVAILABLE"));
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+    });
+
+    await expect(useStocksStore.getState().addCategory("Local first")).resolves.toBeUndefined();
+    expect(useStocksStore.getState().categories.some((category) => category.name === "Local first")).toBe(true);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+    await vi.waitFor(() => expect(useStocksStore.getState().syncStatus).toBe("error"));
+    expect(useStocksStore.getState().categories.some((category) => category.name === "Local first")).toBe(true);
+  });
+
+  it("preserves a failed dirty edit and later pin across restart without pulling stale cloud data", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") return Promise.reject(new Error("CLOUD_UNAVAILABLE"));
+      if (command === "account_get_state") return Promise.reject(new Error("STALE_PULL_MUST_NOT_RUN"));
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
+    });
+
+    await useStocksStore.getState().addCategory("Unsynced edit");
+    await vi.waitFor(() => expect(useStocksStore.getState().syncStatus).toBe("error"));
+    await useStocksStore.getState().togglePinnedCategory("group-a");
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      pinnedCategoryIds: ["group-a"],
+      categories: expect.arrayContaining([expect.objectContaining({ name: "Unsynced edit" })]),
+    }));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    await useStocksStore.getState().clearAccountProjection();
+    invoke.mockClear();
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
+    expect(useStocksStore.getState()).toMatchObject({
+      pinnedCategoryIds: ["group-a"],
+      categories: expect.arrayContaining([expect.objectContaining({ name: "Unsynced edit" })]),
+    });
+  });
+
+  it("keeps dirty cached navigation while reconciling account-local indicators", async () => {
+    const { indicatorSettings: _indicatorSettings, ...cached } = snapshot("2330");
+    persisted.set("account:user-a:snapshot", { ...cached, pinnedCategoryIds: ["group-a"], recentCategoryIds: [] });
+    persisted.set("account:user-a:dirty", true);
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_get_state") return Promise.reject(new Error("DIRTY_CACHE_MUST_NOT_PULL"));
+      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
+      if (command === "account_get_indicator_settings") return Promise.resolve({ ...settings, ma20: 21 });
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve(null);
+    });
+
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
+    expect(useStocksStore.getState()).toMatchObject({ activeCategoryId: "group-a", pinnedCategoryIds: ["group-a"] });
+    await vi.waitFor(() => expect(useStocksStore.getState().indicatorSettings.ma20).toBe(21));
+    expect(useStocksStore.getState().pinnedCategoryIds).toEqual(["group-a"]);
+  });
+
+  it("rejects invalid local snapshots before publishing or caching them", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const before = persisted.get("account:user-a:snapshot");
+    await expect(useStocksStore.getState().addCategory("x".repeat(201))).rejects.toThrow("INVALID_CATEGORY");
+    expect(useStocksStore.getState().categories).toEqual(snapshot("2330").categories);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(before);
+  });
+
+  it("uses UTF-8 byte limits instead of JavaScript character counts", () => {
+    const invalid = snapshot("2330");
+    invalid.categories[0].name = "台".repeat(67); // 201 UTF-8 bytes
+    expect(() => __validateSnapshotForLocal(invalid)).toThrow("INVALID_CATEGORY");
+  });
+
+  it("rejects every direct duplicate shape that Rust validate_snapshot rejects", () => {
+    const duplicateStock = snapshot("2330");
+    duplicateStock.stocks.push({ ...duplicateStock.stocks[0] });
+    expect(() => __validateSnapshotForLocal(duplicateStock)).toThrow("INVALID_STOCK");
+
+    const duplicateCategory = snapshot("2330");
+    duplicateCategory.categories.push({ ...duplicateCategory.categories[0] });
+    expect(() => __validateSnapshotForLocal(duplicateCategory)).toThrow("INVALID_CATEGORY");
+
+    const duplicateMember = snapshot("2330");
+    duplicateMember.categories[0].stockIds.push("2330");
+    expect(() => __validateSnapshotForLocal(duplicateMember)).toThrow("INVALID_CATEGORY_MEMBERSHIP");
+
+    const duplicatePinned = snapshot("2330");
+    duplicatePinned.pinnedCategoryIds = ["group-a", "group-a"];
+    expect(() => __validateSnapshotForLocal(duplicatePinned)).toThrow("INVALID_PINNED_CATEGORIES");
+
+    const duplicateRecent = snapshot("2330");
+    duplicateRecent.recentCategoryIds = ["group-a", "group-a"];
+    expect(() => __validateSnapshotForLocal(duplicateRecent)).toThrow("INVALID_RECENT_CATEGORIES");
+  });
+
+  it("rejects duplicate stock IDs created by normalization trimming before any local commit", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const before = persisted.get("account:user-a:snapshot");
+    useStocksStore.setState({
+      stocks: [
+        { id: "2330", name: "Stock 2330", group: "TW", type: "stock" },
+        { id: " 2330", name: "Trimmed duplicate", group: "TW", type: "stock" },
+      ],
+      categories: [{ id: "group-a", name: "A", stockIds: ["2330"] }],
+      activeCategoryId: "group-a",
+    });
+
+    await expect(useStocksStore.getState().addCategory("Normalization duplicate")).rejects.toThrow("INVALID_STOCK");
+    expect(persisted.get("account:user-a:snapshot")).toEqual(before);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("rejects invalid indicator settings before a local projection can commit", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const before = persisted.get("account:user-a:snapshot");
+    useStocksStore.setState({ indicatorSettings: { ...settings, atrMult: 21 } });
+
+    await expect(useStocksStore.getState().addCategory("Blocked by indicator validation")).rejects.toThrow("INVALID_INDICATOR_SETTINGS");
+    expect(useStocksStore.getState().categories).toEqual(snapshot("2330").categories);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(before);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("matches finite indicator and atrMult bounds at their local commit boundary", () => {
+    const atLimit = snapshot("2330");
+    atLimit.indicatorSettings = { ...settings, ma5: 1000, atrMult: 20 };
+    expect(() => __validateSnapshotForLocal(atLimit)).not.toThrow();
+
+    const invalidRange = snapshot("2330");
+    invalidRange.indicatorSettings = { ...settings, ma5: 1000.01 };
+    expect(() => __validateSnapshotForLocal(invalidRange)).toThrow("INVALID_INDICATOR_SETTINGS");
+
+    const invalidFinite = snapshot("2330");
+    invalidFinite.indicatorSettings = { ...settings, rsi: Number.NaN };
+    expect(() => __validateSnapshotForLocal(invalidFinite)).toThrow("INVALID_INDICATOR_SETTINGS");
+  });
+
+  it("enforces the exact PhoneApp wire payload byte limit locally", () => {
+    const stocks = Array.from({ length: 300 }, (_, index) => ({
+      id: `TW${index}`,
+      name: "名".repeat(66),
+      group: "TW",
+      type: "stock",
+    }));
+    const oversized = {
+      stocks,
+      categories: [{ id: "group-large", name: "Large", stockIds: stocks.map((stock) => stock.id) }],
+      activeCategoryId: "group-large",
+      pinnedCategoryIds: [],
+      recentCategoryIds: [],
+      indicatorSettings: settings,
+    };
+
+    expect(() => __validateSnapshotForLocal(oversized)).toThrow("DATA_LIMIT_EXCEEDED");
+  });
+
+  it("acknowledges only the dirty marker without overwriting later local navigation", async () => {
+    let resolveCloud!: (value: unknown) => void;
+    const pendingCloud = new Promise((resolve) => { resolveCloud = resolve; });
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+      if (command === "account_update_state") return pendingCloud;
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve(null);
+    });
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    await useStocksStore.getState().addCategory("Cloud snapshot");
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
+
+    await useStocksStore.getState().togglePinnedCategory("group-a");
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({ pinnedCategoryIds: ["group-a"] }));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    resolveCloud({ userId: "user-a", epoch: 1, updatedAt: null });
+    await vi.waitFor(() => expect(persisted.get("account:user-a:dirty")).toBe(false));
+    expect(persisted.get("account:user-a:snapshot")).toMatchObject({ pinnedCategoryIds: ["group-a"] });
+  });
+
+  it("does not publish a mutation when the durable local save fails", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const beforeCategories = useStocksStore.getState().categories;
+    const beforeSnapshot = persisted.get("account:user-a:snapshot");
+    const beforeDirty = persisted.get("account:user-a:dirty");
+    storeControl.saveError = new Error("DISK_FULL");
+    await expect(useStocksStore.getState().addCategory("Not persisted")).rejects.toThrow("DISK_FULL");
+    expect(useStocksStore.getState().categories).toEqual(beforeCategories);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(beforeSnapshot);
+    expect(persisted.get("account:user-a:dirty")).toBe(beforeDirty);
+    expect(useStocksStore.getState().syncStatus).toBe("error");
+  });
+
+  it("rolls back a failed dirty acknowledgment before later local writes", async () => {
+    let resolveCloud!: (value: unknown) => void;
+    const pendingCloud = new Promise((resolve) => { resolveCloud = resolve; });
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+      if (command === "account_update_state") return pendingCloud;
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve(null);
+    });
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    await useStocksStore.getState().addCategory("Awaiting acknowledgement");
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    storeControl.saveError = new Error("DISK_FULL");
+    resolveCloud({ userId: "user-a", epoch: 1, updatedAt: null });
+    await vi.waitFor(() => expect(useStocksStore.getState().syncStatus).toBe("error"));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    storeControl.saveError = null;
+    await useStocksStore.getState().togglePinnedCategory("group-a");
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({ pinnedCategoryIds: ["group-a"] }));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
   });
 
   it("drops delayed A hydration after the projection switches to B", async () => {
@@ -138,7 +365,7 @@ describe("account-scoped stock projection", () => {
         stocks: [expect.objectContaining({ id: "2330" })],
       },
     });
-    expect(useStocksStore.getState()).toMatchObject({ syncStatus: "synced" });
+    await vi.waitFor(() => expect(useStocksStore.getState()).toMatchObject({ syncStatus: "synced" }));
   });
 
   it("keeps mutations behind the pull when cache priming exposes the UI first", async () => {
@@ -244,7 +471,8 @@ describe("account-scoped stock projection", () => {
     await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
 
     const staleHydration = useStocksStore.getState().hydrateAccount("user-a", 1);
-    await vi.waitFor(() => expect(pullCount).toBe(2));
+    // A dirty local projection schedules a push rather than pulling stale cloud data.
+    expect(pullCount).toBe(1);
 
     resolveSync({ userId: "user-a", epoch: 1, updatedAt: null });
     await mutation;
@@ -284,14 +512,14 @@ describe("account-scoped stock projection", () => {
     const mutation = useStocksStore.getState().addStocks([{ id: "2317", name: "Stock 2317", group: "TW", type: "stock" }]);
     await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
     const concurrentHydration = useStocksStore.getState().hydrateAccount("user-a", 1);
-    await vi.waitFor(() => expect(pullCount).toBe(2));
+    expect(pullCount).toBe(1);
 
     rejectSync(new Error("CLOUD_WRITE_FAILED"));
-    await expect(mutation).rejects.toThrow("CLOUD_WRITE_FAILED");
+    await expect(mutation).resolves.toBeUndefined();
     resolveConcurrentPull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
     await concurrentHydration;
 
-    expect(useStocksStore.getState()).toMatchObject({ syncStatus: "error", syncError: "CLOUD_WRITE_FAILED" });
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toContain("2317");
   });
 
   it("treats a missing PhoneApp backup as an empty account", async () => {

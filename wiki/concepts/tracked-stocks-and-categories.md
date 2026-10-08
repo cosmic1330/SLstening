@@ -43,3 +43,7 @@ The old `settings.json` is never read for migration. If it exists, the app shows
 - [`src/store/Stock.store.ts`](../../src/store/Stock.store.ts)
 - [`src/types.ts`](../../src/types.ts)
 - [`src-tauri/tauri.conf.json`](../../src-tauri/tauri.conf.json)
+
+## Local-first desktop persistence
+
+Desktop watchlist mutations commit to the account-scoped local cache first. A durable dirty marker keeps the projection authoritative across restart while an ordered background outbox retries the cloud backup; a failed backup never rolls back the local list.

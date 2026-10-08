@@ -12,7 +12,7 @@ const validGroups = [{
 }];
 
 const loadScript = ({ row = null, throwOnSet = false } = {}) => {
-  const headers = ["uuid", "email", "data", "建立時間", "最後同步時間"];
+  const headers = ["uuid", "email", "data", "建立時間", "最後同步時間", "類型"];
   const rows = [headers, ...(row ? [row] : [])];
   const lockState = { tryCount: 0, releaseCount: 0 };
   const sheet = {
@@ -89,7 +89,7 @@ test("pull returns empty only for a missing row and flags corrupt stored cells",
   assert.equal(missingResponse.data, "[]");
 
   for (const storedData of ["", 0, "not-json", JSON.stringify({ stocks: [] })]) {
-    const script = loadScript({ row: ["user-1", "user@example.com", storedData, "created", "updated"] });
+    const script = loadScript({ row: ["user-1", "user@example.com", storedData, "created", "updated", "Mobile"] });
     assert.throws(
       () => script.handlePull_("user-1", null),
       (error) => error.code === "CORRUPT_STORED_DATA",
@@ -117,11 +117,22 @@ test("sync inserts and updates one serialized groups string and releases the loc
   assert.equal(script.__lockState.releaseCount, 2);
 
   const failing = loadScript({
-    row: ["user-1", "user@example.com", firstData, "created", "updated"],
+    row: ["user-1", "user@example.com", firstData, "created", "updated", "Mobile"],
     throwOnSet: true,
   });
   assert.throws(() => failing.handleSync_("user-1", "user@example.com", firstData), /simulated sheet write failure/);
   assert.equal(failing.__lockState.releaseCount, 1);
+});
+
+test("partitions identical users by Desktop and Mobile while missing type remains Mobile", () => {
+  const script = loadScript();
+  const data = JSON.stringify(validGroups);
+  script.handleSync_("user-1", "user@example.com", data, "Desktop");
+  script.handleSync_("user-1", "user@example.com", JSON.stringify([{ ...validGroups[0], name: "Mobile" }]));
+  assert.equal(script.__rows.length, 3);
+  assert.equal(script.__rows[1][5], "Desktop");
+  assert.equal(script.__rows[2][5], "Mobile");
+  assert.equal(script.parseRequest_({ postData: { contents: JSON.stringify({ action: "pull", uuid: "user-1" }) } }).type, "Mobile");
 });
 
 test("sync validation enforces the character, group, and unique-stock limits", () => {

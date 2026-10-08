@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycbwoj0pC8VR26NGWEU4L8gyXCmuLQqRmzV1n4C89egzLTwpzY6qMQ32xM6fR5Q6DcEl4/exec";
+pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycbxLyYwnHkFo_ArNx2_1LQVe4j_cLYp4DDWRdyE6GYAKg0ZYX9HNjrDMctOnprzMKd4p/exec";
 pub const SCHEMA_VERSION: u32 = 1;
 const MAX_DATA_LENGTH: usize = 45_000;
 const MAX_STOCKS: usize = 300;
@@ -438,28 +438,66 @@ impl AccountManager {
             .json(&body)
             .send()
             .await
-            .map_err(|error| format!("CLOUD_UNAVAILABLE:{error}"))?;
+            .map_err(|_| "CLOUD_UNAVAILABLE".to_string())?;
         let status = response.status();
-        let payload = response
-            .json::<Value>()
-            .await
-            .map_err(|error| format!("CLOUD_INVALID_RESPONSE:{error}"))?;
         if status != StatusCode::OK {
             return Err(format!("CLOUD_HTTP_{}", status.as_u16()));
         }
-        if payload.get("status").and_then(Value::as_str) == Some("error") {
-            return Err(payload
-                .get("code")
-                .and_then(Value::as_str)
-                .unwrap_or("CLOUD_ERROR")
-                .to_string());
-        }
-        if payload.get("status").and_then(Value::as_str) != Some("success") {
-            return Err("CLOUD_INVALID_RESPONSE".to_string());
-        }
+        let body = response
+            .bytes()
+            .await
+            .map_err(|_| "CLOUD_INVALID_RESPONSE:read_body".to_string())?;
+        let payload = decode_cloud_response(status, &body)?;
         let _ = session;
         Ok(payload)
     }
+}
+
+fn decode_cloud_response(status: StatusCode, body: &[u8]) -> Result<Value, String> {
+    // Inspect the HTTP status before decoding an arbitrary response body. A
+    // proxy or Apps Script error page can be HTML, and its JSON parser error
+    // must not hide the useful HTTP status.
+    if status != StatusCode::OK {
+        return Err(format!("CLOUD_HTTP_{}", status.as_u16()));
+    }
+
+    let payload = serde_json::from_slice::<Value>(body)
+        .map_err(|_| format!("CLOUD_INVALID_RESPONSE:{}", invalid_body_reason(body)))?;
+    if payload.get("status").and_then(Value::as_str) == Some("error") {
+        return Err(cloud_error_code(&payload));
+    }
+    if payload.get("status").and_then(Value::as_str) != Some("success") {
+        return Err("CLOUD_INVALID_RESPONSE:status".to_string());
+    }
+    Ok(payload)
+}
+
+fn invalid_body_reason(body: &[u8]) -> &'static str {
+    let trimmed = body.trim_ascii_start();
+    if trimmed.is_empty() {
+        return "empty";
+    }
+    if trimmed.starts_with(b"<") {
+        return "html";
+    }
+    "invalid_json"
+}
+
+fn cloud_error_code(payload: &Value) -> String {
+    payload
+        .get("code")
+        .and_then(Value::as_str)
+        .filter(|code| {
+            !code.is_empty()
+                && code.len() <= 64
+                && code.chars().all(|character| {
+                    character.is_ascii_uppercase()
+                        || character.is_ascii_digit()
+                        || matches!(character, '_' | '-')
+                })
+        })
+        .unwrap_or("CLOUD_ERROR")
+        .to_string()
 }
 
 pub fn validate_snapshot(snapshot: &AccountSnapshot) -> Result<(), String> {
@@ -658,6 +696,68 @@ mod tests {
                 cci: 26.0,
             },
         }
+    }
+
+    #[test]
+    fn non_success_non_json_response_keeps_the_http_status() {
+        let error = decode_cloud_response(
+            StatusCode::SERVICE_UNAVAILABLE,
+            b"<html>access token should never appear in this error</html>",
+        )
+        .expect_err("non-JSON HTTP failures must not decode as success");
+
+        assert_eq!(error, "CLOUD_HTTP_503");
+        assert!(!error.contains("access token"));
+    }
+
+    #[test]
+    fn classifies_invalid_success_bodies_without_exposing_the_body() {
+        let cases = [
+            (b"<html>gateway error</html>".as_slice(), "html"),
+            (b" \n\t".as_slice(), "empty"),
+            (b"{not-json".as_slice(), "invalid_json"),
+        ];
+
+        for (body, reason) in cases {
+            let error = decode_cloud_response(StatusCode::OK, body)
+                .expect_err("invalid success body must fail closed");
+            assert_eq!(error, format!("CLOUD_INVALID_RESPONSE:{reason}"));
+            assert!(!error.contains(std::str::from_utf8(body).unwrap_or("body")));
+        }
+    }
+
+    #[test]
+    fn preserves_safe_json_api_error_codes() {
+        let body = br#"{
+            "status": "error",
+            "code": "AUTH_REQUIRED",
+            "message": "token=do-not-return-this"
+        }"#;
+
+        assert_eq!(
+            decode_cloud_response(StatusCode::OK, body),
+            Err("AUTH_REQUIRED".to_string())
+        );
+    }
+
+    #[test]
+    fn accepts_valid_account_response_but_rejects_health_only_success() {
+        let account = decode_cloud_response(
+            StatusCode::OK,
+            br#"{"status":"success","revision":7,"data":null}"#,
+        )
+        .expect("valid account response");
+        assert_eq!(response_revision(&account), Ok(7));
+
+        let health = decode_cloud_response(
+            StatusCode::OK,
+            br#"{"status":"success","service":"SLstening Cloud API","schema_version":1}"#,
+        )
+        .expect("health response has a valid envelope");
+        assert_eq!(
+            response_revision(&health),
+            Err("CORRUPT_CLOUD_RESPONSE".to_string())
+        );
     }
 
     #[test]

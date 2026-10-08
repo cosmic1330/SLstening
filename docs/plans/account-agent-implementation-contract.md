@@ -12,7 +12,7 @@ No Agent API → local MCP stdio bridge uses a native loopback API and shares th
 
 ## Files / implementation approach
 
-- `src-tauri`: new account/session/cloud repository and agent gateway modules, commands, lib initialization, dependency manifests/lockfile, native tests. The canonical cloud endpoint is `https://script.google.com/macros/s/AKfycbwoj0pC8VR26NGWEU4L8gyXCmuLQqRmzV1n4C89egzLTwpzY6qMQ32xM6fR5Q6DcEl4/exec`. Store it as build/runtime configuration in one source location. Never expose raw database/Tauri access through gateway.
+- `src-tauri`: new account/session/cloud repository and agent gateway modules, commands, lib initialization, dependency manifests/lockfile, native tests. The canonical cloud endpoint is `https://script.google.com/macros/s/AKfycbxLyYwnHkFo_ArNx2_1LQVe4j_cLYp4DDWRdyE6GYAKg0ZYX9HNjrDMctOnprzMKd4p/exec`. Store it as build/runtime configuration in one source location. Never expose raw database/Tauri access through gateway.
 - `src`: typed account API, session integration in UserContext/AuthenticatedRuntime, stock projection and account-scoped indicator state, migration/import UI, sync/loading/conflict/error states, zh-TW/en locales and tests. Preserve existing public tracking methods and invariants.
 - `scripts/slstening-agent-bridge.mjs` executable Node stdio bridge (Node >=18 documented). No dependency on screen scraping or frontend having visited a particular stock. Use an absolute path in generated client configuration; desktop package must include bridge as a Tauri resource and expose actual installed resource location (dev resolution also works).
 - Update concise relevant wiki architecture/concepts/ADR and add agent setup docs. Original proposal remains proposed; mark completed stages and actual deviations clearly.

@@ -7,18 +7,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const runtimeSpies = vi.hoisted(() => ({
   reload: vi.fn(),
-  importLegacy: vi.fn(),
-  repairLegacy: vi.fn(),
-  keepLegacyCurrent: vi.fn(),
+  keepLegacySettings: vi.fn(),
+  deleteLegacySettings: vi.fn(),
   toggleDebug: vi.fn(),
   watchMarket: vi.fn(),
   syncState: {
     syncStatus: "local",
     syncError: null as string | null,
-    legacyImportAvailable: false,
-    legacyRepairAvailable: false,
-    legacyRepairMissingCount: 0,
-    legacyUnresolvedStockIds: [] as string[],
+    legacySettingsPrompt: false,
+    legacySettingsError: null as string | null,
   },
 }));
 
@@ -32,9 +29,11 @@ vi.mock("../../store/Stock.store", () => ({
   default: (selector: (state: Record<string, unknown>) => unknown) => selector({
     ...runtimeSpies.syncState,
     reload: runtimeSpies.reload,
-    importLegacy: runtimeSpies.importLegacy,
-    repairLegacy: runtimeSpies.repairLegacy,
-    keepLegacyCurrent: runtimeSpies.keepLegacyCurrent,
+    keepLegacySettings: runtimeSpies.keepLegacySettings,
+    deleteLegacySettings: runtimeSpies.deleteLegacySettings,
+    applyIndicatorSettings: vi.fn(),
+    accountUserId: null,
+    accountEpoch: null,
   }),
 }));
 vi.mock("../../store/debug.store", () => ({
@@ -43,39 +42,38 @@ vi.mock("../../store/debug.store", () => ({
   },
 }));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en", resolvedLanguage: "en" } }),
 }));
 
 import AuthenticatedRuntime from "../AuthenticatedRuntime";
 
+const renderRuntime = () => render(
+  <MemoryRouter>
+    <Routes>
+      <Route element={<AuthenticatedRuntime />}>
+        <Route index element={<div>protected-content</div>} />
+      </Route>
+    </Routes>
+  </MemoryRouter>,
+);
+
 describe("AuthenticatedRuntime", () => {
   beforeEach(() => {
     runtimeSpies.reload.mockReset();
-    runtimeSpies.importLegacy.mockReset();
-    runtimeSpies.repairLegacy.mockReset();
-    runtimeSpies.keepLegacyCurrent.mockReset();
+    runtimeSpies.keepLegacySettings.mockReset().mockResolvedValue(undefined);
+    runtimeSpies.deleteLegacySettings.mockReset().mockResolvedValue(undefined);
     runtimeSpies.toggleDebug.mockReset();
     runtimeSpies.watchMarket.mockReset();
     Object.assign(runtimeSpies.syncState, {
       syncStatus: "local",
       syncError: null,
-      legacyImportAvailable: false,
-      legacyRepairAvailable: false,
-      legacyRepairMissingCount: 0,
-      legacyUnresolvedStockIds: [],
+      legacySettingsPrompt: false,
+      legacySettingsError: null,
     });
   });
 
   it("starts authenticated-only work once and cleans up the debug shortcut", () => {
-    const view = render(
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AuthenticatedRuntime />}>
-            <Route index element={<div>protected-content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
+    const view = renderRuntime();
 
     expect(screen.getByText("protected-content")).toBeTruthy();
     expect(screen.getByTestId("debug-info")).toBeTruthy();
@@ -90,64 +88,42 @@ describe("AuthenticatedRuntime", () => {
     expect(runtimeSpies.toggleDebug).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the repair dialog choices and catches repair rejection", async () => {
-    Object.assign(runtimeSpies.syncState, {
-      syncStatus: "synced",
-      legacyRepairAvailable: true,
-      legacyRepairMissingCount: 3,
-    });
-    runtimeSpies.repairLegacy.mockRejectedValue(new Error("CLOUD_WRITE_FAILED"));
-    runtimeSpies.keepLegacyCurrent.mockResolvedValue(undefined);
-    const view = render(
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AuthenticatedRuntime />}>
-            <Route index element={<div>protected-content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
+  it("offers a one-time keep/delete choice for the obsolete settings file", async () => {
+    Object.assign(runtimeSpies.syncState, { legacySettingsPrompt: true });
+    const view = renderRuntime();
 
-    const dialog = screen.getByTestId("account-sync-repair-dialog");
-    expect(dialog).toBeTruthy();
-    expect(screen.queryByTestId("account-sync-inline-notice")).toBeNull();
-    expect(screen.getByText("accountSync.legacyRepairAvailable")).toBeTruthy();
-    const repair = screen.getByRole("button", { name: "accountSync.repair" });
-    const keep = screen.getByRole("button", { name: "accountSync.keepCurrent" });
-    const later = screen.getByRole("button", { name: "accountSync.decideLater" });
-    fireEvent.click(repair);
-    fireEvent.click(keep);
-    await waitFor(() => expect(runtimeSpies.repairLegacy).toHaveBeenCalledTimes(1));
-    expect(runtimeSpies.keepLegacyCurrent).toHaveBeenCalledTimes(1);
-    fireEvent.click(later);
-    expect(screen.queryByTestId("account-sync-repair-dialog")).toBeNull();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(screen.getByText("accountSync.legacySettingsMessage")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "accountSync.keepLegacySettings" }));
+    fireEvent.click(screen.getByRole("button", { name: "accountSync.deleteLegacySettings" }));
+    await waitFor(() => {
+      expect(runtimeSpies.keepLegacySettings).toHaveBeenCalledTimes(1);
+      expect(runtimeSpies.deleteLegacySettings).toHaveBeenCalledTimes(1);
+    });
     view.unmount();
   });
 
-  it("offers reload before repair after a revision conflict and catches reload rejection", async () => {
+  it("keeps the obsolete-file dialog retryable after a delete error", async () => {
     Object.assign(runtimeSpies.syncState, {
-      syncStatus: "conflict",
-      syncError: "REVISION_CONFLICT",
-      legacyRepairAvailable: true,
-      legacyRepairMissingCount: 3,
+      legacySettingsPrompt: true,
+      legacySettingsError: "LEGACY_SETTINGS_DELETE_FAILED",
     });
-    runtimeSpies.reload.mockRejectedValue(new Error("RELOAD_FAILED"));
-    runtimeSpies.keepLegacyCurrent.mockResolvedValue(undefined);
-    const view = render(
-      <MemoryRouter>
-        <Routes>
-          <Route element={<AuthenticatedRuntime />}>
-            <Route index element={<div>protected-content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
+    runtimeSpies.deleteLegacySettings.mockRejectedValue(new Error("LEGACY_SETTINGS_DELETE_FAILED"));
+    const view = renderRuntime();
 
-    expect(screen.getByTestId("account-sync-repair-dialog")).toBeTruthy();
-    expect(screen.getByText("accountSync.repairConflict")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "accountSync.reloadForRepair" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "accountSync.repair" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "accountSync.reloadForRepair" }));
+    expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "accountSync.deleteLegacySettings" }));
+    await waitFor(() => expect(runtimeSpies.deleteLegacySettings).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    view.unmount();
+  });
+
+  it("shows a retryable sync error", async () => {
+    Object.assign(runtimeSpies.syncState, { syncStatus: "error", syncError: "CLOUD_UNAVAILABLE" });
+    const view = renderRuntime();
+
+    expect(screen.getByTestId("account-sync-inline-notice")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "accountSync.retry" }));
     await waitFor(() => expect(runtimeSpies.reload).toHaveBeenCalledTimes(2));
     view.unmount();
   });

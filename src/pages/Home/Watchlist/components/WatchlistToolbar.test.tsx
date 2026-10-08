@@ -10,8 +10,9 @@ beforeEach(async () => {
 });
 
 const props = {
-  activeName: "Default",
+  activeName: "Growth",
   stockCount: 2,
+  canAddStock: true,
   query: "",
   onOpenPicker: vi.fn(),
   onOpenAdd: vi.fn(),
@@ -41,5 +42,11 @@ describe("WatchlistToolbar", () => {
 
     expect(props.onQueryChange).toHaveBeenCalledWith("tsmc");
     expect(props.onClearQuery).toHaveBeenCalledOnce();
+  });
+
+  it("disables durable stock additions until a real category exists", () => {
+    render(<WatchlistToolbar {...props} canAddStock={false} />);
+
+    expect((screen.getByRole("button", { name: i18n.t("watchlist.addStock") }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

@@ -4,6 +4,7 @@ import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { semanticTokens } from "../../../theme";
+import { WATCHLIST_RADIUS } from "../constants";
 import MetricTooltipTrigger from "./MetricTooltipTrigger";
 
 export interface MovingAverageMetricProps {
@@ -38,6 +39,7 @@ export default function MovingAverageMetric({ period, lastPrice, ma, deductionVa
       arrow
       enterTouchDelay={0}
       leaveTouchDelay={5000}
+      slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}
     >
       <MetricTooltipTrigger ariaLabel={`${label}: ${ma}, ${t(isUpward ? "stock.signalPositive" : "stock.signalNeutral")}`}>
         <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>

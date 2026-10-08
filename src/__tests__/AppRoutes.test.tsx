@@ -17,7 +17,8 @@ vi.mock("../pages/Login", () => ({ default: () => <div>login-route</div> }));
 vi.mock("../pages/Register", () => ({
   default: () => <div>register-route</div>,
 }));
-vi.mock("../pages/Home", () => ({ default: () => <div>home-route</div> }));
+vi.mock("../pages/Home", () => ({ default: () => <div>home-route<Outlet /></div> }));
+vi.mock("../pages/Home/Mcp", () => ({ default: () => <div>mcp-route</div> }));
 vi.mock("../components/DebugInfo", () => ({ default: () => null }));
 vi.mock("../layout/AuthenticatedRuntime", () => ({
   default: () => <div data-testid="authenticated-runtime"><Outlet /></div>,
@@ -78,5 +79,17 @@ describe("AppRoutes", () => {
     expect(screen.queryByText("login-route")).toBeNull();
     expect(screen.queryByText("detail-route:2330")).toBeNull();
     authState.isLoading = false;
+  });
+
+  it("mounts the protected MCP route under the authenticated Home shell", async () => {
+    authState.session = { user: { id: "user-2" } };
+    render(
+      <MemoryRouter initialEntries={["/dashboard/mcp"]}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("mcp-route")).toBeTruthy();
+    authState.session = null;
   });
 });

@@ -5,7 +5,15 @@ import { Box, Button, CircularProgress, Stack, Typography, useMediaQuery } from 
 import { useTranslation } from "react-i18next";
 import { MarketResourceState } from "../../utils/marketResourceState";
 
-export default function MarketDataStatus({ state, retry, compact = false, overlay = false }: { state: MarketResourceState; retry?: () => void; compact?: boolean; overlay?: boolean }) {
+interface MarketDataStatusProps {
+  state: MarketResourceState;
+  retry?: () => void;
+  compact?: boolean;
+  overlay?: boolean;
+  radius?: string | number;
+}
+
+export default function MarketDataStatus({ state, retry, compact = false, overlay = false, radius }: MarketDataStatusProps) {
   const { t } = useTranslation();
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const stopRetry = (event: React.MouseEvent) => { event.stopPropagation(); retry?.(); };
@@ -17,17 +25,17 @@ export default function MarketDataStatus({ state, retry, compact = false, overla
   const badges = (withData ? [state.isRefreshing ? t("marketData.refreshing") : null, state.error ? t("marketData.staleError") : null] : []).filter((badge): badge is string => Boolean(badge));
   const alert = state.phase === "error" || Boolean(state.error);
   if (!phaseMessage && !badges.length) return null;
-  return <Box role={alert ? "alert" : "status"} aria-live={alert ? undefined : "polite"} sx={{ position: overlay ? "absolute" : "relative", zIndex: overlay ? 30 : undefined, bottom: overlay ? 2 : undefined, left: overlay ? 2 : undefined, right: overlay ? 2 : undefined, maxHeight: overlay ? "calc(100% - 4px)" : undefined, overflow: "auto", pointerEvents: overlay ? "auto" : undefined, bgcolor: overlay ? "rgba(15,18,20,.86)" : undefined, borderRadius: overlay ? 1 : undefined, display: "flex", alignItems: "center", justifyContent: "center", minHeight: compact ? 24 : 48, px: 0.75, color: "text.secondary", textAlign: "center" }}>
+  return <Box role={alert ? "alert" : "status"} aria-live={alert ? undefined : "polite"} sx={{ position: overlay ? "absolute" : "relative", zIndex: overlay ? 30 : undefined, bottom: overlay ? 2 : undefined, left: overlay ? 2 : undefined, right: overlay ? 2 : undefined, maxHeight: overlay ? "calc(100% - 4px)" : undefined, overflow: "auto", pointerEvents: overlay ? "auto" : undefined, bgcolor: overlay ? "rgba(15,18,20,.86)" : undefined, borderRadius: overlay ? (radius ?? 1) : undefined, display: "flex", alignItems: "center", justifyContent: "center", minHeight: compact ? 24 : 48, px: 0.75, color: "text.secondary", textAlign: "center" }}>
     <Stack direction="row" spacing={0.6} alignItems="center" justifyContent="center" flexWrap="wrap">
       {state.phase === "loading" || state.isRefreshing ? reducedMotion ? <HourglassEmptyIcon fontSize="inherit" aria-label={t("marketData.loading")} /> : <CircularProgress size={12} aria-label={t("marketData.loading")} /> : alert ? <ErrorOutlineIcon fontSize="inherit" /> : null}
       {phaseMessage && <Typography variant="caption" sx={{ fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{phaseMessage}</Typography>}
-      {badges.map((badge) => <Typography key={badge} variant="caption" sx={{ fontWeight: 700, border: 1, borderColor: "divider", borderRadius: 1, px: .5 }}>{badge}</Typography>)}
+      {badges.map((badge) => <Typography key={badge} variant="caption" sx={{ fontWeight: 700, border: 1, borderColor: "divider", borderRadius: radius ?? 1, px: .5 }}>{badge}</Typography>)}
       {((!withData && (state.phase === "empty" || state.phase === "error")) || Boolean(state.error)) && retry && (
         // A disabled MUI button can still bubble a synthetic click in jsdom
         // and in a few WebView versions. Keep retry controls from activating
         // an enclosing stock-card click in every state.
         <Box component="span" onClick={(event) => event.stopPropagation()}>
-          <Button size="small" startIcon={<RefreshIcon />} onClick={stopRetry} disabled={state.isRefreshing} sx={{ minHeight: 28 }}>{t("marketData.retry")}</Button>
+          <Button size="small" startIcon={<RefreshIcon />} onClick={stopRetry} disabled={state.isRefreshing} sx={{ minHeight: 28, borderRadius: radius ?? 1 }}>{t("marketData.retry")}</Button>
         </Box>
       )}
     </Stack>

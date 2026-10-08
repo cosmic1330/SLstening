@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import MetricTooltipTrigger from "./MetricTooltipTrigger";
 import { semanticTokens } from "../../../theme";
+import { WATCHLIST_RADIUS } from "../constants";
 
 const sections = [
   { min: 0, max: 0.5, labelKey: "extremelyLow", color: semanticTokens.market.loss },
@@ -31,7 +32,7 @@ export default function VolumeRatio({
   }, [ratio]);
 
   return (
-    <Tooltip title={`${t("stock.volumeRatio")}: ${ratio}`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.volumeRatio")}: ${ratio}`} arrow enterTouchDelay={0} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
       <MetricTooltipTrigger ariaLabel={`${t("stock.volumeRatio")}: ${ratio}`}>
       <Stack
         direction="column"

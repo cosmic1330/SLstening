@@ -1,5 +1,6 @@
 import { ButtonBase } from "@mui/material";
 import { ReactNode } from "react";
+import { WATCHLIST_RADIUS } from "../constants";
 import { semanticTokens } from "../../../theme";
 
 interface MetricTooltipTriggerProps {
@@ -30,7 +31,7 @@ export default function MetricTooltipTrigger({
         minWidth: 44,
         minHeight: 44,
         p: 0,
-        borderRadius: 1,
+        borderRadius: WATCHLIST_RADIUS,
         "&:focus-visible": {
           outline: `2px solid ${semanticTokens.analysis.focus}`,
           outlineOffset: 1,

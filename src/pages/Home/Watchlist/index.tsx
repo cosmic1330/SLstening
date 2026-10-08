@@ -7,7 +7,7 @@ import { STOCK_BOX_HEIGHT } from "../../../components/StockBox/constants";
 import LazyStockBox from "../../../components/StockBox/LazyStockBox";
 import VirtualizedStockList from "../../../components/VirtualizedStockList";
 import useElementHeight from "../../../hooks/useElementHeight";
-import useStocksStore, { isDefaultCategory } from "../../../store/Stock.store";
+import useStocksStore from "../../../store/Stock.store";
 import { analysisTheme, semanticTokens } from "../../../theme";
 import { StockStoreType } from "../../../types";
 import AddStockDialog from "./components/AddStockDialog";
@@ -16,6 +16,7 @@ import CategoryPickerDialog from "./components/CategoryPickerDialog";
 import WatchlistEmptyState from "./components/WatchlistEmptyState";
 import WatchlistLoadingState from "./components/WatchlistLoadingState";
 import WatchlistToolbar from "./components/WatchlistToolbar";
+import { WATCHLIST_RADIUS } from "../../../components/StockBox/constants";
 
 export default function Watchlist() {
   const { t } = useTranslation();
@@ -61,10 +62,8 @@ export default function Watchlist() {
         )
       : currentStocks;
   }, [currentStocks, query]);
-  const activeName =
-    active && isDefaultCategory(active)
-      ? t("watchlist.defaultName")
-      : (active?.name ?? "");
+  const activeName = active?.name ?? t("watchlist.noCategorySelected");
+  const hasCategory = categories.length > 0;
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -91,6 +90,7 @@ export default function Watchlist() {
       <WatchlistToolbar
         activeName={activeName}
         stockCount={currentStocks.length}
+        canAddStock={hasCategory}
         query={query}
         onOpenPicker={() => setPickerOpen(true)}
         onOpenAdd={() => setAddOpen(true)}
@@ -126,11 +126,13 @@ export default function Watchlist() {
         <WatchlistEmptyState
           empty={!currentStocks.length}
           noMatches={currentStocks.length > 0 && !filteredStocks.length}
+          hasCategory={hasCategory}
           onAdd={() => setAddOpen(true)}
+          onCreateCategory={() => setManageOpen(true)}
         />
         <AddStockDialog
           open={addOpen}
-          activeCategoryId={active?.id ?? "default-watchlist"}
+          activeCategoryId={active?.id ?? ""}
           onClose={() => setAddOpen(false)}
         />
         <CategoryPickerDialog
@@ -147,7 +149,7 @@ export default function Watchlist() {
           autoHideDuration={6000}
           onClose={() => setBlocked(false)}
         >
-          <Alert severity="error">{t("home.yahooRateLimited")}</Alert>
+          <Alert severity="error" sx={{ borderRadius: WATCHLIST_RADIUS }}>{t("home.yahooRateLimited")}</Alert>
         </Snackbar>
       </Box>
     </ThemeProvider>

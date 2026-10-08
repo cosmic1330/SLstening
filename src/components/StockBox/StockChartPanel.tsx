@@ -1,6 +1,7 @@
 import { Box, Skeleton } from "@mui/material";
 import { lazy, Suspense } from "react";
 import { useTranslation } from "react-i18next";
+import { WATCHLIST_RADIUS } from "./constants";
 import { semanticTokens } from "../../theme";
 import { TaType, TickDealsType } from "../../types";
 import MarketDataStatus from "../MarketDataStatus";
@@ -12,7 +13,7 @@ const StockTickChart = lazy(() => import("./StockTickChart"));
 
 function ChartAreaFallback({ height }: { height: number }) {
   const { t } = useTranslation();
-  return <Box role="status" aria-live="polite" aria-label={t("app.loading")} sx={{ width: "100%", height, display: "grid", placeItems: "center", color: "text.secondary" }}><Skeleton variant="rectangular" animation={false} sx={{ width: "100%", height: "100%", bgcolor: semanticTokens.analysis.surfaceSubtle }} /></Box>;
+  return <Box role="status" aria-live="polite" aria-label={t("app.loading")} sx={{ width: "100%", height, display: "grid", placeItems: "center", color: "text.secondary" }}><Skeleton variant="rectangular" animation={false} sx={{ width: "100%", height: "100%", bgcolor: semanticTokens.analysis.surfaceSubtle, borderRadius: WATCHLIST_RADIUS }} /></Box>;
 }
 
 interface StockChartPanelProps {
@@ -34,12 +35,12 @@ export default function StockChartPanel({ chartType, deals, tickDeals, state, re
       <StockChartMeta periodLabel={periodLabel} updatedLabel={updatedLabel} />
       <Box sx={{ height: 64, minHeight: 64, display: "flex", alignItems: "flex-end" }}>
       {chartType === "mak" ? (
-        deals.length > 0 ? <Box sx={{ width: "100%", height: "100%", overflow: "hidden", pb: 0.5 }}><Suspense fallback={<ChartAreaFallback height={64} />}><MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip /></Suspense></Box> : <MarketDataStatus state={state} retry={retry} compact />
+        deals.length > 0 ? <Box sx={{ width: "100%", height: "100%", overflow: "hidden", pb: 0.5 }}><Suspense fallback={<ChartAreaFallback height={64} />}><MakChart deals={{ data: deals, change: null, price: null }} height={64} count={60} hideTooltip /></Suspense></Box> : <MarketDataStatus state={state} retry={retry} compact radius={WATCHLIST_RADIUS} />
       ) : tickDeals ? (
         <Suspense fallback={<ChartAreaFallback height={64} />}><StockTickChart tickDeals={tickDeals} /></Suspense>
-      ) : <MarketDataStatus state={state} retry={retry} compact />}
+      ) : <MarketDataStatus state={state} retry={retry} compact radius={WATCHLIST_RADIUS} />}
       </Box>
-      {state.phase === "ready" && <MarketDataStatus state={state} retry={retry} compact overlay />}
+      {state.phase === "ready" && <MarketDataStatus state={state} retry={retry} compact overlay radius={WATCHLIST_RADIUS} />}
     </Box>
   );
 }

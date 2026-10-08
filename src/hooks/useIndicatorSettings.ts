@@ -1,12 +1,10 @@
 import { useCallback, useState } from "react";
 import useStocksStore from "../store/Stock.store";
-import { DEFAULT_INDICATOR_SETTINGS, readLegacyIndicatorSettings } from "../account/snapshot";
+import { DEFAULT_INDICATOR_SETTINGS } from "../account/snapshot";
 import { isNativeRuntime } from "../account/native";
 import type { IndicatorSettings } from "../account/types";
 
 export type { IndicatorSettings } from "../account/types";
-
-const LEGACY_KEY = "slitenting-indicator-settings";
 
 export default function useIndicatorSettings() {
   const accountUserId = useStocksStore((state) => state.accountUserId);
@@ -15,12 +13,7 @@ export default function useIndicatorSettings() {
   const updateAccountSetting = useStocksStore((state) => state.updateIndicatorSetting);
   const resetAccountSettings = useStocksStore((state) => state.resetIndicatorSettings);
   const nativeRuntime = isNativeRuntime();
-  // A native account transition must never fall back to another account's
-  // legacy localStorage values. Legacy settings are only read by browser
-  // runtime, or by the explicit legacy import path in the account store.
-  const [legacySettings, setLegacySettings] = useState<IndicatorSettings>(() => (
-    nativeRuntime ? { ...DEFAULT_INDICATOR_SETTINGS } : readLegacyIndicatorSettings()
-  ));
+  const [legacySettings, setLegacySettings] = useState<IndicatorSettings>(() => ({ ...DEFAULT_INDICATOR_SETTINGS }));
   const accountReady = Boolean(accountUserId) && hydrated;
   const accountScoped = nativeRuntime ? accountReady : Boolean(accountUserId);
   const settings = nativeRuntime
@@ -38,7 +31,6 @@ export default function useIndicatorSettings() {
       return;
     }
     setLegacySettings(next);
-    globalThis.localStorage?.setItem(LEGACY_KEY, JSON.stringify(next));
   }, [accountReady, accountScoped, nativeRuntime, settings, updateAccountSetting]);
 
   const resetSettings = useCallback(() => {
@@ -47,7 +39,6 @@ export default function useIndicatorSettings() {
       void resetAccountSettings();
       return;
     }
-    globalThis.localStorage?.removeItem(LEGACY_KEY);
     setLegacySettings({ ...DEFAULT_INDICATOR_SETTINGS });
   }, [accountReady, accountScoped, nativeRuntime, resetAccountSettings]);
 

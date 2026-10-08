@@ -23,6 +23,7 @@ import {
 import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
 import useStocksStore from "../../../../store/Stock.store";
 import { StockStoreType } from "../../../../types";
 import {
@@ -86,7 +87,7 @@ function SortableStockRow({
           px: 0.75,
           mb: 0.75,
           border: `2px solid rgba(25, 25, 25, 0.16)`,
-          borderRadius: 2,
+          borderRadius: WATCHLIST_RADIUS,
           bgcolor: "rgba(255, 255, 255, 0.78)",
           boxShadow: "2px 3px 0 rgba(25, 25, 25, 0.18)",
         }}
@@ -202,9 +203,7 @@ export default function AddStockDialog({
     [draftIds, stockById],
   );
   const options = useMemo(() => [...stockById.values()], [stockById]);
-  const activeCategoryName = activeCategory && activeCategory.id !== "default-watchlist" && !activeCategory.isDefault
-    ? activeCategory.name
-    : t("watchlist.defaultName");
+  const activeCategoryName = activeCategory?.name ?? t("watchlist.noCategorySelected");
 
   useEffect(() => {
     if (!open) return;
@@ -337,7 +336,7 @@ export default function AddStockDialog({
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1.5}>
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-              <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.blue, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+              <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.blue, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
                 <SearchIcon fontSize="small" />
               </Box>
               <Typography component="h2" sx={{ minWidth: 0, color: playfulPalette.ink, fontSize: { xs: "1.25rem", sm: "1.4rem" }, fontWeight: 950, lineHeight: 1.15, overflowWrap: "anywhere" }}>
@@ -348,7 +347,7 @@ export default function AddStockDialog({
               <Typography component="span" sx={{ color: playfulPalette.muted, fontSize: "0.78rem", fontWeight: 700, overflowWrap: "anywhere" }}>
                 {t("watchlist.currentCategoryName", { name: activeCategoryName })}
               </Typography>
-              <Typography component="span" sx={{ px: 0.9, py: 0.35, border: `1.5px solid ${playfulPalette.outline}`, borderRadius: 99, bgcolor: playfulPalette.yellow, color: playfulPalette.ink, fontSize: "0.7rem", fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+              <Typography component="span" sx={{ px: 0.9, py: 0.35, border: `1.5px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.yellow, color: playfulPalette.ink, fontSize: "0.7rem", fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
                 {t("watchlist.stockCount", { count: currentStocks.length })}
               </Typography>
             </Stack>
@@ -372,7 +371,7 @@ export default function AddStockDialog({
         aria-busy={pending}
       >
         {error ? (
-          <Alert severity="error" role="alert" sx={{ mb: 1.5, flexShrink: 0, border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
+          <Alert severity="error" role="alert" sx={{ mb: 1.5, flexShrink: 0, border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
             {error}
           </Alert>
         ) : null}
@@ -387,7 +386,7 @@ export default function AddStockDialog({
         <Box
           component="section"
           aria-labelledby="search-add-stock-title"
-          sx={{ ...playfulPanelSx, flexShrink: 0, bgcolor: "rgba(107, 183, 232, 0.20)" }}
+          sx={{ ...playfulPanelSx, mt:1.5, flexShrink: 0, bgcolor: "rgba(107, 183, 232, 0.20)" }}
         >
           <Typography
             id="search-add-stock-title"
@@ -411,7 +410,7 @@ export default function AddStockDialog({
                 sx: {
                   mt: 0.75,
                   border: `2px solid ${playfulPalette.outline}`,
-                  borderRadius: 2,
+                  borderRadius: WATCHLIST_RADIUS,
                   bgcolor: playfulPalette.paper,
                   color: playfulPalette.ink,
                   boxShadow: `4px 5px 0 ${playfulPalette.outline}`,
@@ -449,7 +448,7 @@ export default function AddStockDialog({
             renderOption={(props, option) => {
               const isCurrent = draftIds.includes(option.id);
               return (
-                <Box component="li" {...props} sx={{ minHeight: 56, minWidth: 0, borderBottom: "1px solid rgba(25, 25, 25, 0.12)", color: playfulPalette.ink, "&:hover": { bgcolor: "rgba(107, 183, 232, 0.15)" }, "&.Mui-focused": { bgcolor: "rgba(107, 183, 232, 0.28)", boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}` }, "&[aria-selected=\"true\"]": { bgcolor: "rgba(201, 189, 242, 0.32)" } }}>
+                <Box component="li" {...props} sx={{ minHeight: 56, minWidth: 0, borderBottom: "1px solid rgba(25, 25, 25, 0.12)", borderRadius: WATCHLIST_RADIUS, color: playfulPalette.ink, "&:hover": { bgcolor: "rgba(107, 183, 232, 0.15)" }, "&.Mui-focused": { bgcolor: "rgba(107, 183, 232, 0.28)", boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}` }, "&[aria-selected=\"true\"]": { bgcolor: "rgba(201, 189, 242, 0.32)" } }}>
                   <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%", minWidth: 0 }}>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Typography fontWeight={900} sx={{ overflowWrap: "anywhere", fontFamily: '"Roboto Mono", "SFMono-Regular", Consolas, monospace', fontVariantNumeric: "tabular-nums" }}>

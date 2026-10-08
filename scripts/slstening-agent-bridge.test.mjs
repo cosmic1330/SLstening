@@ -23,6 +23,44 @@ function runBridge(discovery, messages) {
   });
 }
 
+function runPrintConfig(discovery) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [join(process.cwd(), "scripts/slstening-agent-bridge.mjs"), "--print-config"], {
+      env: { ...process.env, SLISTENING_AGENT_DISCOVERY: discovery },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+test("--print-config emits safe client configuration without discovery secrets", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "slstening-bridge-config-"));
+  const discovery = join(directory, "slstening-agent.json");
+  const secret = "distinctive-print-config-secret-should-never-leak";
+  await writeFile(discovery, JSON.stringify({
+    endpoint: "http://127.0.0.1:43123/mcp",
+    token: secret,
+    bridgePath: "/opt/slistening/scripts/slstening-agent-bridge.mjs",
+    protocolVersion: "2025-06-18",
+  }));
+  if (process.platform !== "win32") await chmod(discovery, 0o600);
+
+  const result = await runPrintConfig(discovery);
+  assert.equal(result.code, 0);
+  assert.deepEqual(JSON.parse(result.stdout), {
+    command: "node",
+    args: ["/opt/slistening/scripts/slstening-agent-bridge.mjs"],
+    protocolVersion: "2025-06-18",
+  });
+  assert.doesNotMatch(result.stdout, /token/i);
+  assert.equal(result.stdout.includes(secret), false);
+});
+
 test("stdio bridge forwards MCP requests and preserves JSON-RPC errors", async () => {
   const server = createServer((request, response) => {
     let body = "";

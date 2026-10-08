@@ -6,7 +6,6 @@ import i18n from "../../../../i18n";
 
 const storeState = vi.hoisted(() => ({
   categories: [
-    { id: "default-watchlist", name: "", stockIds: ["2330"], isDefault: true },
     { id: "category-alpha", name: "Alpha", stockIds: ["2317"] },
     { id: "category-beta", name: "Beta", stockIds: ["2454"] },
   ],
@@ -33,7 +32,6 @@ vi.mock("framer-motion", () => ({
 
 vi.mock("../../../../store/Stock.store", () => ({
   default: (selector: (state: typeof storeState) => unknown) => selector(storeState),
-  isDefaultCategory: (category: { id: string; isDefault?: boolean }) => category.id === "default-watchlist" || category.isDefault === true,
 }));
 
 import CategoryManageDialog from "./CategoryManageDialog";
@@ -55,12 +53,12 @@ describe("CategoryManageDialog", () => {
     cleanup();
   });
 
-  it("shows the manager heading, locked default list, and category actions", () => {
+  it("shows the manager heading and actions for every real category", () => {
     renderDialog();
 
     expect(screen.getByRole("heading", { name: "Manage categories" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Watchlist" })).toBeTruthy();
-    expect(screen.getByText("The default watchlist cannot be renamed or deleted.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Categories" })).toBeTruthy();
+    expect(screen.queryByText(/default watchlist/i)).toBeNull();
     expect(screen.getByRole("button", { name: "New category" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Pin Alpha" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Rename Alpha" })).toBeTruthy();

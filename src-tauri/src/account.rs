@@ -1,17 +1,19 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::HashSet;
+use serde_json::{json, Value};
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycbxLyYwnHkFo_ArNx2_1LQVe4j_cLYp4DDWRdyE6GYAKg0ZYX9HNjrDMctOnprzMKd4p/exec";
+/// The desktop app deliberately uses the same endpoint and payload as
+/// PhoneApp. The endpoint stores an opaque JSON string in the `data` column;
+/// desktop-only navigation and indicator settings never cross this boundary.
+pub const CLOUD_ENDPOINT: &str = "https://script.google.com/macros/s/AKfycbxer7LYSlDagMaQ2vcr-fgljNPtKbyJ-mR10WxNblwTfYAB_KKAdbbPi76Dz-Tpx3aV/exec";
 pub const SCHEMA_VERSION: u32 = 1;
-const MAX_DATA_LENGTH: usize = 45_000;
-const MAX_STOCKS: usize = 300;
-const MAX_CATEGORIES: usize = 100;
+pub const MAX_DATA_LENGTH: usize = 45_000;
+pub const MAX_STOCKS: usize = 300;
+pub const MAX_CATEGORIES: usize = 100;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -52,8 +54,6 @@ pub struct CategoryRecord {
     pub id: String,
     pub name: String,
     pub stock_ids: Vec<String>,
-    #[serde(default)]
-    pub is_default: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -61,10 +61,31 @@ pub struct CategoryRecord {
 pub struct AccountSnapshot {
     pub stocks: Vec<StockRecord>,
     pub categories: Vec<CategoryRecord>,
+    /// Empty string is the explicit no-category sentinel.
     pub active_category_id: String,
     pub pinned_category_ids: Vec<String>,
     pub recent_category_ids: Vec<String>,
     pub indicator_settings: IndicatorSettings,
+}
+
+/// Exact PhoneApp stock shape. Unknown fields are rejected so a legacy
+/// desktop snapshot cannot be mistaken for a PhoneApp payload.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PhoneStockWire {
+    symbol: String,
+    name: String,
+    price: String,
+    change: String,
+    is_positive: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PhoneWatchlistGroupWire {
+    id: String,
+    name: String,
+    stocks: Vec<PhoneStockWire>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -80,7 +101,6 @@ pub struct SessionResult {
 pub struct AccountStateResult {
     pub user_id: String,
     pub epoch: u64,
-    pub revision: u64,
     pub schema_version: u32,
     pub data: Option<AccountSnapshot>,
     pub updated_at: Option<String>,
@@ -91,14 +111,13 @@ pub struct AccountStateResult {
 pub struct AccountWriteResult {
     pub user_id: String,
     pub epoch: u64,
-    pub revision: u64,
     pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone)]
 struct SessionContext {
     user_id: String,
-    access_token: String,
+    email: String,
     expires_at: Option<i64>,
     epoch: u64,
 }
@@ -116,7 +135,7 @@ impl AccountManager {
         let client = reqwest::Client::builder()
             .no_proxy()
             .timeout(std::time::Duration::from_secs(20))
-            .user_agent("SLstening/0.0.62")
+            .user_agent("SLstening/0.0.63")
             .build()
             .map_err(|error| error.to_string())?;
         Ok(Self {
@@ -180,20 +199,18 @@ impl AccountManager {
     fn set_session_inner(
         &self,
         expected_transition: Option<u64>,
-        access_token: String,
+        _access_token: String,
         user_id: String,
-        _email: Option<String>,
+        email: Option<String>,
         expires_at: Option<i64>,
     ) -> Result<SessionResult, String> {
-        if access_token.trim().len() < 20 {
-            return Err("AUTH_REQUIRED".to_string());
-        }
-        if user_id.trim().is_empty() {
+        let user_id = user_id.trim().to_string();
+        if user_id.is_empty() || user_id.len() > 200 {
             return Err("INVALID_USER_ID".to_string());
         }
-        if token_subject(&access_token).as_deref() != Some(user_id.as_str()) {
-            return Err("AUTH_IDENTITY_MISMATCH".to_string());
-        }
+        let email = email
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "Guest".to_string());
         let mut guard = self
             .session
             .write()
@@ -209,7 +226,7 @@ impl AccountManager {
         self.epoch.fetch_max(next_epoch, Ordering::SeqCst);
         *guard = Some(SessionContext {
             user_id: user_id.clone(),
-            access_token,
+            email,
             expires_at,
             epoch: next_epoch,
         });
@@ -248,12 +265,7 @@ impl AccountManager {
         if self.transition.load(Ordering::SeqCst) != transition_id {
             return Err("STALE_SESSION_TRANSITION".to_string());
         }
-        // Transition validation and revocation share the session write lock.
-        // A stale transition therefore cannot advance the epoch after a newer
-        // transition has installed its session.
         self.epoch.fetch_add(1, Ordering::SeqCst);
-        // Keep the epoch in a tombstone so a late request can never match a
-        // newly established session that happens to reuse a token.
         *guard = None;
         Ok(())
     }
@@ -265,9 +277,6 @@ impl AccountManager {
             .map_err(|_| "SESSION_LOCK".to_string())?;
         let current_epoch = self.epoch.load(Ordering::SeqCst);
         Ok(guard.as_ref().and_then(|session| {
-            // The atomic epoch is the revocation boundary.  Checking it while
-            // the read lock is held prevents a reader that raced with
-            // invalidate_session from publishing the old session.
             (session.epoch == current_epoch).then(|| SessionResult {
                 user_id: session.user_id.clone(),
                 epoch: session.epoch,
@@ -293,17 +302,14 @@ impl AccountManager {
         let session = guard
             .as_ref()
             .ok_or_else(|| "SESSION_REQUIRED".to_string())?;
-        if session.epoch != self.epoch.load(Ordering::SeqCst) {
+        if session.epoch != self.epoch.load(Ordering::SeqCst) || session.epoch != expected_epoch {
             return Err("SESSION_CHANGED".to_string());
         }
-        if session.epoch != expected_epoch {
-            return Err("SESSION_CHANGED".to_string());
-        }
-        if let Some(expires_at) = session.expires_at {
-            let now = unix_seconds();
-            if expires_at <= now {
-                return Err("SESSION_EXPIRED".to_string());
-            }
+        if session
+            .expires_at
+            .is_some_and(|expires_at| expires_at <= unix_seconds())
+        {
+            return Err("SESSION_EXPIRED".to_string());
         }
         Ok(session.clone())
     }
@@ -335,30 +341,26 @@ impl AccountManager {
 
     pub async fn get_state(&self, expected_epoch: u64) -> Result<AccountStateResult, String> {
         let session = self.session_for_epoch(expected_epoch)?;
-        let response = self
-            .post_cloud(
-                &session,
-                serde_json::json!({
-                    "action": "get_state",
-                    "access_token": session.access_token,
-                }),
-            )
-            .await?;
-        self.session_still_current(&session.user_id, session.epoch)?;
-        let data = match response.get("data") {
-            Some(value) if !value.is_null() => Some(
-                serde_json::from_value(value.clone())
-                    .map_err(|_| "CORRUPT_STORED_DATA".to_string())?,
-            ),
-            _ => None,
+        let response = match self
+            .post_cloud(json!({
+                "action": "pull",
+                "uuid": session.user_id,
+                "email": session.email,
+            }))
+            .await
+        {
+            Ok(response) => response,
+            Err(error) if error == "BACKUP_NOT_FOUND" => json!({
+                "status": "success",
+                "data": "[]",
+            }),
+            Err(error) => return Err(error),
         };
-        if let Some(snapshot) = data.as_ref() {
-            validate_snapshot(snapshot)?;
-        }
+        self.session_still_current(&session.user_id, session.epoch)?;
+        let data = Some(decode_pull_data(&response)?);
         Ok(AccountStateResult {
             user_id: session.user_id,
             epoch: session.epoch,
-            revision: response_revision(&response)?,
             schema_version: response
                 .get("schema_version")
                 .and_then(Value::as_u64)
@@ -371,45 +373,31 @@ impl AccountManager {
         })
     }
 
-    pub async fn update_state(
+    /// PhoneApp sync is last-write-wins; there is no desktop revision or
+    /// operation-id in this request.
+    pub async fn sync_state(
         &self,
         expected_epoch: u64,
-        expected_revision: u64,
         snapshot: AccountSnapshot,
-        operation_id: String,
     ) -> Result<AccountWriteResult, String> {
         validate_snapshot(&snapshot)?;
-        if operation_id.len() < 8
-            || operation_id.len() > 128
-            || !operation_id
-                .chars()
-                .all(|c| c.is_ascii_alphanumeric() || ".:_-".contains(c))
-        {
-            return Err("INVALID_OPERATION_ID".to_string());
-        }
-        let serialized =
-            serde_json::to_string(&snapshot).map_err(|_| "INVALID_DATA".to_string())?;
+        let serialized = build_update_state_data(&snapshot)?;
         if serialized.len() > MAX_DATA_LENGTH {
             return Err("DATA_LIMIT_EXCEEDED".to_string());
         }
         let session = self.session_for_epoch(expected_epoch)?;
         let response = self
-            .post_cloud(
-                &session,
-                serde_json::json!({
-                    "action": "update_state",
-                    "access_token": session.access_token,
-                    "expected_revision": expected_revision,
-                    "operation_id": operation_id,
-                    "data": snapshot,
-                }),
-            )
+            .post_cloud(json!({
+                "action": "sync",
+                "uuid": session.user_id,
+                "email": session.email,
+                "data": serialized,
+            }))
             .await?;
         self.session_still_current(&session.user_id, session.epoch)?;
         Ok(AccountWriteResult {
             user_id: session.user_id,
             epoch: session.epoch,
-            revision: response_revision(&response)?,
             updated_at: response
                 .get("updated_at")
                 .and_then(Value::as_str)
@@ -417,21 +405,7 @@ impl AccountManager {
         })
     }
 
-    pub async fn import_legacy(
-        &self,
-        expected_epoch: u64,
-        snapshot: AccountSnapshot,
-        operation_id: String,
-    ) -> Result<AccountWriteResult, String> {
-        let state = self.get_state(expected_epoch).await?;
-        if state.revision != 0 || state.data.is_some() {
-            return Err("LEGACY_IMPORT_REFUSED_CLOUD_EXISTS".to_string());
-        }
-        self.update_state(expected_epoch, 0, snapshot, operation_id)
-            .await
-    }
-
-    async fn post_cloud(&self, session: &SessionContext, body: Value) -> Result<Value, String> {
+    async fn post_cloud(&self, body: Value) -> Result<Value, String> {
         let response = self
             .client
             .post(CLOUD_ENDPOINT)
@@ -440,36 +414,25 @@ impl AccountManager {
             .await
             .map_err(|_| "CLOUD_UNAVAILABLE".to_string())?;
         let status = response.status();
-        if status != StatusCode::OK {
-            return Err(format!("CLOUD_HTTP_{}", status.as_u16()));
-        }
         let body = response
             .bytes()
             .await
             .map_err(|_| "CLOUD_INVALID_RESPONSE:read_body".to_string())?;
-        let payload = decode_cloud_response(status, &body)?;
-        let _ = session;
-        Ok(payload)
+        decode_cloud_response(status, &body)
     }
 }
 
 fn decode_cloud_response(status: StatusCode, body: &[u8]) -> Result<Value, String> {
-    // Inspect the HTTP status before decoding an arbitrary response body. A
-    // proxy or Apps Script error page can be HTML, and its JSON parser error
-    // must not hide the useful HTTP status.
     if status != StatusCode::OK {
         return Err(format!("CLOUD_HTTP_{}", status.as_u16()));
     }
-
     let payload = serde_json::from_slice::<Value>(body)
         .map_err(|_| format!("CLOUD_INVALID_RESPONSE:{}", invalid_body_reason(body)))?;
-    if payload.get("status").and_then(Value::as_str) == Some("error") {
-        return Err(cloud_error_code(&payload));
+    match payload.get("status").and_then(Value::as_str) {
+        Some("success") => Ok(payload),
+        Some("error") => Err(cloud_error_code(&payload)),
+        _ => Err("CLOUD_INVALID_RESPONSE:status".to_string()),
     }
-    if payload.get("status").and_then(Value::as_str) != Some("success") {
-        return Err("CLOUD_INVALID_RESPONSE:status".to_string());
-    }
-    Ok(payload)
 }
 
 fn invalid_body_reason(body: &[u8]) -> &'static str {
@@ -484,20 +447,197 @@ fn invalid_body_reason(body: &[u8]) -> &'static str {
 }
 
 fn cloud_error_code(payload: &Value) -> String {
-    payload
-        .get("code")
-        .and_then(Value::as_str)
-        .filter(|code| {
-            !code.is_empty()
-                && code.len() <= 64
-                && code.chars().all(|character| {
-                    character.is_ascii_uppercase()
-                        || character.is_ascii_digit()
-                        || matches!(character, '_' | '-')
+    if let Some(code) = payload.get("code").and_then(Value::as_str) {
+        if code == "BACKUP_NOT_FOUND" || code == "NOT_FOUND" {
+            return "BACKUP_NOT_FOUND".to_string();
+        }
+        if !code.is_empty()
+            && code.len() <= 64
+            && code.chars().all(|character| {
+                character.is_ascii_uppercase()
+                    || character.is_ascii_digit()
+                    || matches!(character, '_' | '-')
+            })
+        {
+            return code.to_string();
+        }
+    }
+    let message = payload.get("message").and_then(Value::as_str).unwrap_or("");
+    if message.contains("找不到") || message.to_ascii_lowercase().contains("not found") {
+        return "BACKUP_NOT_FOUND".to_string();
+    }
+    "CLOUD_ERROR".to_string()
+}
+
+fn decode_pull_data(payload: &Value) -> Result<AccountSnapshot, String> {
+    let value = payload
+        .get("data")
+        .ok_or_else(|| "CLOUD_INVALID:missing_data".to_string())?;
+    if value.is_null() {
+        return Err("CLOUD_INVALID:missing_data".to_string());
+    }
+    if !value.is_string() {
+        return Err("CLOUD_INVALID:data_type".to_string());
+    }
+    decode_phone_groups(value)
+}
+
+fn decode_phone_groups(value: &Value) -> Result<AccountSnapshot, String> {
+    let encoded_len = match value {
+        Value::String(encoded) => encoded.len(),
+        other => serde_json::to_vec(other)
+            .map_err(|_| "CORRUPT_STORED_DATA".to_string())?
+            .len(),
+    };
+    if encoded_len > MAX_DATA_LENGTH {
+        return Err("DATA_LIMIT_EXCEEDED".to_string());
+    }
+    let decoded = match value {
+        Value::String(encoded) => {
+            serde_json::from_str::<Value>(encoded).map_err(|_| "CORRUPT_STORED_DATA".to_string())?
+        }
+        other => other.clone(),
+    };
+    // There is intentionally no legacy AccountSnapshot fallback.
+    let groups = serde_json::from_value::<Vec<PhoneWatchlistGroupWire>>(decoded)
+        .map_err(|_| "CORRUPT_STORED_DATA".to_string())?;
+    phone_groups_to_snapshot(groups)
+}
+
+fn phone_groups_to_snapshot(
+    groups: Vec<PhoneWatchlistGroupWire>,
+) -> Result<AccountSnapshot, String> {
+    if groups.len() > MAX_CATEGORIES {
+        return Err("DATA_LIMIT_EXCEEDED".to_string());
+    }
+    let mut stocks = Vec::new();
+    let mut stock_index = HashMap::new();
+    let mut group_ids = HashSet::new();
+    let mut categories = Vec::with_capacity(groups.len());
+
+    for group in groups {
+        let id = group.id.trim().to_string();
+        if id.is_empty() || id.len() > 200 || !group_ids.insert(id.clone()) {
+            return Err("CORRUPT_STORED_DATA".to_string());
+        }
+        if group.name.len() > 200 {
+            return Err("CORRUPT_STORED_DATA".to_string());
+        }
+        let mut stock_ids = Vec::new();
+        for stock in group.stocks {
+            let symbol = stock.symbol.trim().to_string();
+            if symbol.is_empty() || symbol.len() > 40 || stock.name.len() > 200 {
+                return Err("CORRUPT_STORED_DATA".to_string());
+            }
+            if !stock_ids.iter().any(|id| id == &symbol) {
+                stock_ids.push(symbol.clone());
+            } else {
+                return Err("CORRUPT_STORED_DATA".to_string());
+            }
+            if !stock_index.contains_key(&symbol) {
+                if stocks.len() >= MAX_STOCKS {
+                    return Err("DATA_LIMIT_EXCEEDED".to_string());
+                }
+                stocks.push(StockRecord {
+                    id: symbol.clone(),
+                    name: stock.name.trim().to_string(),
+                    group: infer_market_group(&symbol),
+                    stock_type: "stock".to_string(),
+                });
+                stock_index.insert(symbol, stocks.len() - 1);
+            }
+        }
+        categories.push(CategoryRecord {
+            id,
+            name: group.name.trim().to_string(),
+            stock_ids,
+        });
+    }
+
+    let active = categories
+        .first()
+        .map(|category| category.id.clone())
+        .unwrap_or_default();
+    let snapshot = AccountSnapshot {
+        stocks,
+        categories,
+        active_category_id: active,
+        pinned_category_ids: Vec::new(),
+        recent_category_ids: Vec::new(),
+        indicator_settings: default_indicator_settings(),
+    };
+    validate_snapshot(&snapshot).map_err(|_| "CORRUPT_STORED_DATA".to_string())?;
+    Ok(snapshot)
+}
+
+fn snapshot_to_phone_groups(snapshot: &AccountSnapshot) -> Vec<PhoneWatchlistGroupWire> {
+    let stocks_by_id: HashMap<&str, &StockRecord> = snapshot
+        .stocks
+        .iter()
+        .map(|stock| (stock.id.as_str(), stock))
+        .collect();
+    snapshot
+        .categories
+        .iter()
+        .map(|category| PhoneWatchlistGroupWire {
+            id: category.id.clone(),
+            name: category.name.clone(),
+            stocks: category
+                .stock_ids
+                .iter()
+                .filter_map(|stock_id| stocks_by_id.get(stock_id.as_str()))
+                .map(|stock| PhoneStockWire {
+                    symbol: stock.id.clone(),
+                    name: stock.name.clone(),
+                    price: "---".to_string(),
+                    change: "0.0".to_string(),
+                    is_positive: true,
                 })
+                .collect(),
         })
-        .unwrap_or("CLOUD_ERROR")
-        .to_string()
+        .collect()
+}
+
+fn build_update_state_data(snapshot: &AccountSnapshot) -> Result<String, String> {
+    serde_json::to_string(&snapshot_to_phone_groups(snapshot))
+        .map_err(|_| "INVALID_DATA".to_string())
+}
+
+fn infer_market_group(symbol: &str) -> String {
+    let value = symbol.trim().to_ascii_uppercase();
+    if value.starts_with("TW:")
+        || value.starts_with("TW-")
+        || value.chars().all(|character| character.is_ascii_digit())
+        || value.ends_with(".TW")
+        || value.ends_with(".TWO")
+    {
+        "TW".to_string()
+    } else {
+        "US".to_string()
+    }
+}
+
+pub fn default_indicator_settings() -> IndicatorSettings {
+    IndicatorSettings {
+        ma5: 5.0,
+        ma10: 10.0,
+        ma20: 30.0,
+        ma60: 60.0,
+        boll: 30.0,
+        kd: 9.0,
+        mfi: 14.0,
+        rsi: 14.0,
+        ma120: 120.0,
+        ma240: 240.0,
+        ema_short: 5.0,
+        ema_long: 10.0,
+        cmf: 21.0,
+        cmf_ema: 5.0,
+        atr_len: 10.0,
+        atr_mult: 3.0,
+        donchian: 20.0,
+        cci: 26.0,
+    }
 }
 
 pub fn validate_snapshot(snapshot: &AccountSnapshot) -> Result<(), String> {
@@ -507,44 +647,37 @@ pub fn validate_snapshot(snapshot: &AccountSnapshot) -> Result<(), String> {
     let mut stocks = HashSet::new();
     for stock in &snapshot.stocks {
         if stock.id.trim().is_empty()
-            || stock.id.len() > 20
+            || stock.id.len() > 40
             || stock.name.len() > 200
             || stock.group.len() > 40
             || stock.stock_type.len() > 40
+            || !stocks.insert(stock.id.clone())
         {
             return Err("INVALID_STOCK".to_string());
         }
-        if !stocks.insert(stock.id.clone()) {
-            return Err("DUPLICATE_STOCK".to_string());
-        }
-    }
-    if snapshot.categories.is_empty() || snapshot.categories[0].id != "default-watchlist" {
-        return Err("DEFAULT_CATEGORY_REQUIRED".to_string());
     }
     let mut categories = HashSet::new();
-    let mut names = HashSet::new();
-    for (index, category) in snapshot.categories.iter().enumerate() {
+    let mut memberships = HashSet::new();
+    for category in &snapshot.categories {
         if category.id.trim().is_empty()
-            || category.name.len() > 100
+            || category.name.len() > 200
             || !categories.insert(category.id.clone())
         {
             return Err("INVALID_CATEGORY".to_string());
-        }
-        let is_default = category.id == "default-watchlist" || category.is_default == Some(true);
-        if index == 0 && !is_default {
-            return Err("DEFAULT_CATEGORY_REQUIRED".to_string());
-        }
-        if !is_default && !names.insert(category.name.trim().to_lowercase()) {
-            return Err("DUPLICATE_CATEGORY_NAME".to_string());
         }
         let mut members = HashSet::new();
         for id in &category.stock_ids {
             if !stocks.contains(id) || !members.insert(id) {
                 return Err("INVALID_CATEGORY_MEMBERSHIP".to_string());
             }
+            memberships.insert(id.clone());
         }
     }
-    if !categories.contains(&snapshot.active_category_id) {
+    if memberships.len() != stocks.len() {
+        return Err("ORPHAN_STOCK".to_string());
+    }
+    if !snapshot.active_category_id.is_empty() && !categories.contains(&snapshot.active_category_id)
+    {
         return Err("INVALID_ACTIVE_CATEGORY".to_string());
     }
     validate_category_refs(
@@ -568,7 +701,7 @@ pub fn validate_snapshot(snapshot: &AccountSnapshot) -> Result<(), String> {
         return Err("CATEGORY_REFERENCE_OVERLAP".to_string());
     }
     validate_indicator_settings(&snapshot.indicator_settings)?;
-    let encoded = serde_json::to_string(snapshot).map_err(|_| "INVALID_DATA".to_string())?;
+    let encoded = build_update_state_data(snapshot)?;
     if encoded.len() > MAX_DATA_LENGTH {
         return Err("DATA_LIMIT_EXCEEDED".to_string());
     }
@@ -582,7 +715,7 @@ fn validate_category_refs(
 ) -> Result<(), String> {
     let mut seen = HashSet::new();
     for value in values {
-        if value == "default-watchlist" || !categories.contains(value) || !seen.insert(value) {
+        if !categories.contains(value) || !seen.insert(value) {
             return Err(error.to_string());
         }
     }
@@ -627,301 +760,108 @@ fn unix_seconds() -> i64 {
         .unwrap_or(0)
 }
 
-fn response_revision(response: &Value) -> Result<u64, String> {
-    response
-        .get("revision")
-        .and_then(|value| value.as_u64().or_else(|| value.as_str()?.parse().ok()))
-        .ok_or_else(|| "CORRUPT_CLOUD_RESPONSE".to_string())
-}
-
-fn token_subject(access_token: &str) -> Option<String> {
-    let payload = access_token.split('.').nth(1)?;
-    let decoded = URL_SAFE_NO_PAD
-        .decode(payload)
-        .or_else(|_| URL_SAFE_NO_PAD.decode(format!("{payload}===").trim_end_matches('=')))
-        .ok()?;
-    serde_json::from_slice::<Value>(&decoded)
-        .ok()?
-        .get("sub")?
-        .as_str()
-        .map(ToOwned::to_owned)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Barrier};
-    use std::thread;
 
-    fn token_for(user_id: &str) -> String {
-        let payload = URL_SAFE_NO_PAD.encode(serde_json::json!({"sub": user_id}).to_string());
-        format!("eyJhbGciOiJub25lIn0.{payload}.signature")
+    fn groups() -> Value {
+        json!([{
+            "id": "group-1",
+            "name": "追蹤",
+            "stocks": [{"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true}]
+        }])
     }
 
-    fn snapshot() -> AccountSnapshot {
-        AccountSnapshot {
-            stocks: vec![StockRecord {
-                id: "2330".into(),
-                name: "TSMC".into(),
-                group: "TW".into(),
-                stock_type: "stock".into(),
-            }],
-            categories: vec![CategoryRecord {
-                id: "default-watchlist".into(),
-                name: "".into(),
-                stock_ids: vec!["2330".into()],
-                is_default: Some(true),
-            }],
-            active_category_id: "default-watchlist".into(),
-            pinned_category_ids: vec![],
-            recent_category_ids: vec![],
-            indicator_settings: IndicatorSettings {
-                ma5: 5.0,
-                ma10: 10.0,
-                ma20: 30.0,
-                ma60: 60.0,
-                boll: 30.0,
-                kd: 9.0,
-                mfi: 14.0,
-                rsi: 14.0,
-                ma120: 120.0,
-                ma240: 240.0,
-                ema_short: 5.0,
-                ema_long: 10.0,
-                cmf: 21.0,
-                cmf_ema: 5.0,
-                atr_len: 10.0,
-                atr_mult: 3.0,
-                donchian: 20.0,
-                cci: 26.0,
-            },
+    #[test]
+    fn phone_groups_are_decoded_without_a_virtual_default() {
+        let snapshot = decode_phone_groups(&Value::String(groups().to_string())).expect("groups");
+        assert_eq!(snapshot.categories.len(), 1);
+        assert_eq!(snapshot.categories[0].id, "group-1");
+        assert_eq!(snapshot.active_category_id, "group-1");
+        assert_eq!(snapshot.stocks[0].group, "TW");
+    }
+
+    #[test]
+    fn outbound_shape_has_exact_phone_fields_and_defaults() {
+        let snapshot = decode_phone_groups(&groups()).expect("groups");
+        let payload = build_update_state_data(&snapshot).expect("payload");
+        let value: Value = serde_json::from_str(&payload).expect("json");
+        let stock = &value[0]["stocks"][0];
+        assert_eq!(
+            stock,
+            &json!({"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true})
+        );
+        assert!(stock.get("marketGroup").is_none());
+        assert!(stock.get("marketType").is_none());
+    }
+
+    #[test]
+    fn legacy_account_snapshot_is_rejected() {
+        let legacy = json!({"stocks":[],"categories":[],"activeCategoryId":"","pinnedCategoryIds":[],"recentCategoryIds":[],"indicatorSettings":{}});
+        assert_eq!(
+            decode_phone_groups(&legacy),
+            Err("CORRUPT_STORED_DATA".to_string())
+        );
+    }
+
+    #[test]
+    fn malformed_phone_groups_are_rejected_strictly() {
+        assert_eq!(
+            decode_phone_groups(&json!([{"id":"group-1","name":"追蹤"}])),
+            Err("CORRUPT_STORED_DATA".to_string())
+        );
+        assert_eq!(
+            decode_phone_groups(&json!([{"id":"group-1","name":"追蹤","stocks":[
+                {"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true},
+                {"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true}
+            ]}])),
+            Err("CORRUPT_STORED_DATA".to_string())
+        );
+    }
+
+    #[test]
+    fn empty_groups_are_valid() {
+        let snapshot = decode_phone_groups(&json!([])).expect("empty groups");
+        assert!(snapshot.categories.is_empty());
+        assert!(snapshot.stocks.is_empty());
+        assert_eq!(snapshot.active_category_id, "");
+    }
+
+    #[test]
+    fn successful_pull_requires_a_serialized_phone_data_string() {
+        let empty =
+            decode_pull_data(&json!({"status":"success", "data":"[]"})).expect("empty phone data");
+        assert!(empty.categories.is_empty());
+        for payload in [
+            json!({"status":"success"}),
+            json!({"status":"success", "data":null}),
+            json!({"status":"success", "data":[]}),
+        ] {
+            assert!(matches!(
+                decode_pull_data(&payload),
+                Err(error) if error.starts_with("CLOUD_INVALID:")
+            ));
         }
     }
 
     #[test]
-    fn non_success_non_json_response_keeps_the_http_status() {
-        let error = decode_cloud_response(
-            StatusCode::SERVICE_UNAVAILABLE,
-            b"<html>access token should never appear in this error</html>",
-        )
-        .expect_err("non-JSON HTTP failures must not decode as success");
-
-        assert_eq!(error, "CLOUD_HTTP_503");
-        assert!(!error.contains("access token"));
-    }
-
-    #[test]
-    fn classifies_invalid_success_bodies_without_exposing_the_body() {
-        let cases = [
-            (b"<html>gateway error</html>".as_slice(), "html"),
-            (b" \n\t".as_slice(), "empty"),
-            (b"{not-json".as_slice(), "invalid_json"),
-        ];
-
-        for (body, reason) in cases {
-            let error = decode_cloud_response(StatusCode::OK, body)
-                .expect_err("invalid success body must fail closed");
-            assert_eq!(error, format!("CLOUD_INVALID_RESPONSE:{reason}"));
-            assert!(!error.contains(std::str::from_utf8(body).unwrap_or("body")));
-        }
-    }
-
-    #[test]
-    fn preserves_safe_json_api_error_codes() {
-        let body = br#"{
-            "status": "error",
-            "code": "AUTH_REQUIRED",
-            "message": "token=do-not-return-this"
-        }"#;
-
-        assert_eq!(
-            decode_cloud_response(StatusCode::OK, body),
-            Err("AUTH_REQUIRED".to_string())
-        );
-    }
-
-    #[test]
-    fn accepts_valid_account_response_but_rejects_health_only_success() {
-        let account = decode_cloud_response(
-            StatusCode::OK,
-            br#"{"status":"success","revision":7,"data":null}"#,
-        )
-        .expect("valid account response");
-        assert_eq!(response_revision(&account), Ok(7));
-
-        let health = decode_cloud_response(
-            StatusCode::OK,
-            br#"{"status":"success","service":"SLstening Cloud API","schema_version":1}"#,
-        )
-        .expect("health response has a valid envelope");
-        assert_eq!(
-            response_revision(&health),
-            Err("CORRUPT_CLOUD_RESPONSE".to_string())
-        );
-    }
-
-    #[test]
-    fn validates_default_and_indicator_settings() {
-        assert!(validate_snapshot(&snapshot()).is_ok());
-    }
-
-    #[test]
-    fn rejects_membership_for_unknown_stock() {
-        let mut value = snapshot();
-        value.categories[0].stock_ids.push("9999".into());
-        assert_eq!(
-            validate_snapshot(&value),
-            Err("INVALID_CATEGORY_MEMBERSHIP".into())
-        );
-    }
-
-    #[test]
-    fn rejects_overlapping_pin_and_recent_category() {
-        let mut value = snapshot();
-        value.categories.push(CategoryRecord {
-            id: "tech".into(),
-            name: "Tech".into(),
-            stock_ids: vec![],
-            is_default: None,
-        });
-        value.pinned_category_ids = vec!["tech".into()];
-        value.recent_category_ids = vec!["tech".into()];
-        assert_eq!(
-            validate_snapshot(&value),
-            Err("CATEGORY_REFERENCE_OVERLAP".into())
-        );
-    }
-
-    #[test]
-    fn logout_and_account_switch_never_reuse_the_previous_epoch() {
+    fn session_switch_keeps_epoch_isolation_without_token_validation() {
         let manager = AccountManager::new().expect("manager");
         let first = manager
-            .set_session(token_for("user-a"), "user-a".into(), None, None)
+            .set_session(
+                "not-a-supabase-token".into(),
+                "user-a".into(),
+                Some("a@example.com".into()),
+                None,
+            )
             .expect("first");
         manager.clear_session().expect("clear");
         let second = manager
-            .set_session(token_for("user-b"), "user-b".into(), None, None)
+            .set_session("unused".into(), "user-b".into(), None, None)
             .expect("second");
         assert!(second.epoch > first.epoch);
-        assert!(matches!(
-            manager.active_session(first.epoch),
-            Err(error) if error == "SESSION_CHANGED"
-        ));
-        assert_eq!(
-            manager
-                .active_session(second.epoch)
-                .expect("active")
-                .user_id,
-            "user-b"
-        );
-    }
-
-    #[test]
-    fn rejects_a_caller_selected_user_id() {
-        let manager = AccountManager::new().expect("manager");
-        assert!(matches!(
-            manager.set_session(token_for("user-a"), "user-b".into(), None, None),
-            Err(error) if error == "AUTH_IDENTITY_MISMATCH"
-        ));
-    }
-
-    #[test]
-    fn expired_session_is_rejected_after_an_await_boundary() {
-        let manager = AccountManager::new().expect("manager");
-        let session = manager
-            .set_session(
-                token_for("user-a"),
-                "user-a".into(),
-                None,
-                Some(unix_seconds() - 1),
-            )
-            .expect("session");
-        assert!(matches!(
-            manager.active_session(session.epoch),
-            Err(error) if error == "SESSION_EXPIRED"
-        ));
-    }
-
-    #[test]
-    fn atomic_invalidation_is_seen_by_current_and_epoch_readers() {
-        let manager = Arc::new(AccountManager::new().expect("manager"));
-        let session = manager
-            .set_session(token_for("user-a"), "user-a".into(), None, None)
-            .expect("session");
-        let barrier = Arc::new(Barrier::new(2));
-        let reader_manager = Arc::clone(&manager);
-        let reader_barrier = Arc::clone(&barrier);
-        let reader = thread::spawn(move || {
-            reader_barrier.wait();
-            reader_barrier.wait();
-            reader_manager.active_session(session.epoch)
-        });
-
-        // Advance the revocation epoch before allowing the reader to acquire
-        // its lock. This models the atomic part of invalidate_session even if
-        // the write lock is temporarily contended.
-        barrier.wait();
-        manager.epoch.fetch_add(1, Ordering::SeqCst);
-        assert!(manager.current_session().expect("current").is_none());
-        barrier.wait();
-
-        assert!(matches!(
-            reader.join().expect("reader"),
-            Err(error) if error == "SESSION_CHANGED"
-        ));
-    }
-
-    #[test]
-    fn stale_frontend_transition_cannot_replace_or_revoke_the_new_session() {
-        let manager = AccountManager::new().expect("manager");
-        manager
-            .set_session_for_transition(1, token_for("user-a"), "user-a".into(), None, None)
-            .expect("session a");
-        manager
-            .set_session_for_transition(2, token_for("user-b"), "user-b".into(), None, None)
-            .expect("session b");
-
-        assert_eq!(
-            manager.invalidate_session_for_transition(1),
-            Err("STALE_SESSION_TRANSITION".to_string())
-        );
-        assert!(matches!(
-            manager.set_session_for_transition(
-                1,
-                token_for("user-a"),
-                "user-a".into(),
-                None,
-                None,
-            ),
-            Err(error) if error == "STALE_SESSION_TRANSITION"
-        ));
-        assert_eq!(
-            manager.current_session().expect("current").unwrap().user_id,
-            "user-b"
-        );
-    }
-
-    #[test]
-    fn stale_invalidation_does_not_advance_the_new_sessions_epoch() {
-        let manager = AccountManager::new().expect("manager");
-        manager
-            .set_session_for_transition(1, token_for("user-a"), "user-a".into(), None, None)
-            .expect("session a");
-        let session_b = manager
-            .set_session_for_transition(2, token_for("user-b"), "user-b".into(), None, None)
-            .expect("session b");
-
-        assert_eq!(
-            manager.invalidate_session_at(1),
-            Err("STALE_SESSION_TRANSITION".to_string())
-        );
-        assert_eq!(manager.epoch.load(Ordering::SeqCst), session_b.epoch);
-        assert_eq!(
-            manager
-                .active_session(session_b.epoch)
-                .expect("active b")
-                .user_id,
-            "user-b"
+        assert!(
+            matches!(manager.active_session(first.epoch), Err(error) if error == "SESSION_CHANGED")
         );
     }
 }

@@ -1,14 +1,15 @@
 import { Box, Card, CardActionArea, CardContent, styled } from "@mui/material";
 import { motion, MotionProps } from "framer-motion";
 import { ReactNode } from "react";
+import { WATCHLIST_RADIUS } from "./constants";
 import { primitiveTokens, semanticTokens } from "../../theme";
 
 const MotionCard = motion(Card);
 
-const StyledCard = styled(MotionCard)(({ theme }) => ({
+const StyledCard = styled(MotionCard)(() => ({
   position: "relative",
   background: semanticTokens.analysis.surface,
-  borderRadius: theme.shape.borderRadius,
+  borderRadius: WATCHLIST_RADIUS,
   border: `1px solid ${semanticTokens.analysis.borderSubtle}`,
   boxShadow: primitiveTokens.shadow.panel,
   overflow: "hidden",
@@ -65,7 +66,7 @@ export default function StockCard({
           zIndex: 1,
           width: "100%",
           height: "100%",
-          borderRadius: 0,
+          borderRadius: WATCHLIST_RADIUS,
           bgcolor: "transparent",
           "&:focus-visible": {
             outline: `3px solid ${semanticTokens.analysis.focus}`,

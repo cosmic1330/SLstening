@@ -13,10 +13,12 @@ import {
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import { semanticTokens } from "../../../../theme";
+import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
 
 interface WatchlistToolbarProps {
   activeName: string;
   stockCount: number;
+  canAddStock: boolean;
   query: string;
   onOpenPicker: () => void;
   onOpenAdd: () => void;
@@ -28,6 +30,7 @@ interface WatchlistToolbarProps {
 export default function WatchlistToolbar({
   activeName,
   stockCount,
+  canAddStock,
   query,
   onOpenPicker,
   onOpenAdd,
@@ -53,6 +56,7 @@ export default function WatchlistToolbar({
         <Button
           onClick={onOpenPicker}
           aria-label={t("watchlist.openCategoryPicker", { name: activeName })}
+          sx={{ borderRadius: WATCHLIST_RADIUS }}
         >
           <Box textAlign="left" minWidth={0}>
             <Typography noWrap fontWeight={800} color="white">
@@ -67,8 +71,10 @@ export default function WatchlistToolbar({
           <Button
             variant="contained"
             startIcon={<AddIcon />}
+            disabled={!canAddStock}
             onClick={onOpenAdd}
             size="small"
+            sx={{ borderRadius: WATCHLIST_RADIUS }}
           >
             {t("watchlist.addStock")}
           </Button>
@@ -78,6 +84,7 @@ export default function WatchlistToolbar({
             startIcon={<SettingsIcon />}
             onClick={onOpenManage}
             size="small"
+            sx={{ borderRadius: WATCHLIST_RADIUS }}
           >
             {t("watchlist.manage")}
           </Button>
@@ -103,7 +110,7 @@ export default function WatchlistToolbar({
                 <IconButton
                   aria-label={t("watchlist.clearStockFilter")}
                   onClick={onClearQuery}
-                  sx={{ minWidth: 44, minHeight: 44 }}
+                  sx={{ minWidth: 44, minHeight: 44, borderRadius: WATCHLIST_RADIUS }}
                 >
                   <ClearIcon />
                 </IconButton>
@@ -113,7 +120,7 @@ export default function WatchlistToolbar({
         }}
         sx={{
           mt: 2,
-          "& .MuiOutlinedInput-root": { minHeight: 44, color: "inherit" },
+          "& .MuiOutlinedInput-root": { minHeight: 44, color: "inherit", borderRadius: WATCHLIST_RADIUS },
         }}
       />
     </Box>

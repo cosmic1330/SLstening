@@ -8,32 +8,32 @@ status: stable
 
 ## Why This Matters
 
-The watchlist is durable user configuration, not a projection of live market data. Category membership, ordering, selection, pinning, and recency must remain coherent across reloads and migrations from older stored shapes.
+The watchlist is durable user configuration, not a projection of live market data. Category membership, ordering, selection, pinning, and recency must remain coherent across reloads; this version starts clean and does not migrate the obsolete desktop settings shape.
 
 ## Model and Invariants
 
-- The default category ID is `default-watchlist` and it remains first.
+- There is no built-in or virtual category. Empty category lists are valid; the active-category sentinel is the empty string.
 - Stock identity must be stable; category and stock IDs are the relationships persisted by the store.
 - Custom category names are trimmed and compared case-insensitively for uniqueness.
 - Deleting or normalizing categories must repair active, pinned, and recent category references.
 - A stock with no remaining category membership is removed rather than kept as an orphan.
 - Pinned categories are capped at five.
 
-Normalization during reload is part of backward compatibility. Do not replace it with an unchecked deserialize-and-use path.
+Normalization during reload applies only to the current PhoneApp group projection and local navigation references. It is not a migration path for the obsolete `settings.json` file.
 
 ## Persistence Boundary
 
-`Stock.store` serializes durable changes through a mutation queue. In the authenticated desktop runtime, each complete snapshot is validated and sent through native account commands to the Google Sheet Web App with an expected revision. A stale revision is surfaced as a conflict and never overwritten. A namespaced local cache and the original unscoped settings are retained only for recovery and explicit one-time import.
+`Stock.store` serializes durable changes through a mutation queue. In the authenticated desktop runtime, real stocks and category memberships are validated and sent through native account commands to the PhoneApp Web App using last-write-wins `sync`. The cloud payload is a serialized PhoneApp `WatchlistGroup[]`; every stock has exactly `symbol`, `name`, `price: "---"`, `change: "0.0"`, and `isPositive: true`. Desktop-only `marketGroup`/`marketType` values are inferred locally and never uploaded. Active/recent navigation and pinned IDs stay in `account-state.json`; indicator settings stay in `preferences.json`; the shared menu stays in `catalog.json`.
 
-The store also contains Supabase helpers for `watch_stock`, but those compatibility paths do not define category membership. The account snapshot is keyed by the server-verified Supabase `user.id`; email is display metadata only.
+The native reader accepts PhoneApp's serialized JSON string containing the groups array and rejects decoded arrays and the old desktop `AccountSnapshot` object. Missing PhoneApp data is an empty account. Missing market metadata is classified locally using Taiwan numeric symbols versus US symbols.
 
-Legacy import reads the device-wide `settings.json` stocks first and then resolves IDs referenced by every category against the shared local `menu` catalog. The resolved union is uploaded, while the full menu remains device-shared and reconstructable. Unresolved IDs are retained as a visible warning. If a locally claimed account was imported by a version that dropped those memberships, the same account receives a dismissible repair dialog with repair, keep-current, and decide-later choices. Repair merges missing categories and members while preserving current cloud preferences and is marked complete only after the cloud write succeeds. Keep-current stores a typed per-account local disposition without changing cloud data; decide-later only dismisses the dialog for the current mounted session.
+The store also contains Supabase helpers for `watch_stock`, but those compatibility paths do not define category membership. The account snapshot is keyed by the immutable Supabase `user.id` supplied by the authenticated desktop session; email is sent as PhoneApp-compatible identity metadata. The endpoint does not receive or verify a Supabase access token.
 
-An import also writes a user-bound pending reservation before its cloud request. The reservation keeps the same operation ID for retries, prevents another local account from claiming the legacy backup while the request is ambiguous, and is reconciled into the claim when that same account later observes the committed cloud state.
+The old `settings.json` is never read for migration. If it exists, the app shows a localized one-time choice to keep it as a backup or delete the exact app-data file; the disposition is stored in `account-state.json`. Deletion failures keep the dialog retryable.
 
 ## Change Checklist
 
-- Preserve old stored data through reload normalization or an explicit migration.
+- Do not load or copy obsolete settings data; only present the one-time keep/delete choice when the exact legacy file exists.
 - Update every dependent reference when changing category identity or deletion behavior.
 - Keep list keys stable and selectors narrow so live quote updates do not rerender the full watchlist.
 - Run frontend tests and, for persistence or shared-contract changes, `npm run test:all`.

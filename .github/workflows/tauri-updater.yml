@@ -31,6 +31,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
   publish-app:
+    needs: changelog
     permissions:
       contents: write
     strategy:
@@ -95,11 +96,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: slistening-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
           releaseName: "Slistening v__VERSION__"
-          releaseBody: ${{ needs.changeconsole.outputs.release_body }}
+          releaseBody: ${{ needs.changelog.outputs.release_body }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}

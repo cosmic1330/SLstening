@@ -39,7 +39,6 @@ export interface NativeSessionResult {
 export interface NativeAccountState {
   userId: string;
   epoch: number;
-  revision: number;
   schemaVersion: number;
   data: AccountSnapshot | null;
   updatedAt: string | null;
@@ -48,14 +47,11 @@ export interface NativeAccountState {
 export interface NativeAccountWriteResult {
   userId: string;
   epoch: number;
-  revision: number;
   updatedAt: string | null;
 }
 
-export interface LegacyImportResult {
-  userId: string;
-  epoch: number;
-  revision: number;
-  updatedAt: string | null;
+export interface LegacySettingsStatus {
+  present: boolean;
+  disposition: "keep" | "delete" | null;
+  path: string;
 }
-

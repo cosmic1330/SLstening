@@ -1,19 +1,14 @@
 import { CategoryType } from "../../../types";
-import { isDefaultCategory } from "../../../store/Stock.store";
 
 export interface CategoryGroups {
-  defaultCategory: CategoryType | null;
   pinned: CategoryType[];
   recent: CategoryType[];
   others: CategoryType[];
   visibleCount: number;
 }
 
-export function categoryDisplayName(
-  category: CategoryType,
-  defaultName: string,
-) {
-  return isDefaultCategory(category) ? defaultName : category.name;
+export function categoryDisplayName(category: CategoryType) {
+  return category.name || category.id;
 }
 
 export function groupCategories({
@@ -21,28 +16,22 @@ export function groupCategories({
   pinnedCategoryIds,
   recentCategoryIds,
   query,
-  defaultName,
   locale,
 }: {
   categories: CategoryType[];
   pinnedCategoryIds: string[];
   recentCategoryIds: string[];
   query: string;
-  defaultName: string;
   locale: string;
 }): CategoryGroups {
   const byId = new Map(categories.map((category) => [category.id, category]));
   const normalizedQuery = query.trim().toLocaleLowerCase(locale);
   const matches = (category: CategoryType) =>
     !normalizedQuery ||
-    categoryDisplayName(category, defaultName)
+    categoryDisplayName(category)
       .toLocaleLowerCase(locale)
       .includes(normalizedQuery);
-
-  const defaultCandidate = categories.find(isDefaultCategory) ?? null;
-  const defaultCategory =
-    defaultCandidate && matches(defaultCandidate) ? defaultCandidate : null;
-  const seen = new Set(defaultCandidate ? [defaultCandidate.id] : []);
+  const seen = new Set<string>();
 
   const take = (ids: string[]) =>
     ids.flatMap((id) => {
@@ -58,19 +47,12 @@ export function groupCategories({
   const collator = new Intl.Collator(locale, { sensitivity: "base" });
   const others = categories
     .filter((category) => !seen.has(category.id) && matches(category))
-    .sort((left, right) =>
-      collator.compare(
-        categoryDisplayName(left, defaultName),
-        categoryDisplayName(right, defaultName),
-      ),
-    );
+    .sort((left, right) => collator.compare(categoryDisplayName(left), categoryDisplayName(right)));
 
   return {
-    defaultCategory,
     pinned,
     recent,
     others,
-    visibleCount:
-      (defaultCategory ? 1 : 0) + pinned.length + recent.length + others.length,
+    visibleCount: pinned.length + recent.length + others.length,
   };
 }

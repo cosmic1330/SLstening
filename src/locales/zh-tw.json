@@ -2,21 +2,14 @@
   "app": { "loading": "載入中…" },
   "language": { "en": "英文", "zh-TW": "繁體中文" },
   "accountSync": {
-    "legacyAvailable": "發現這台電腦的舊追蹤資料。要匯入目前帳號嗎？",
-    "import": "匯入目前帳號",
-    "legacyRepairAvailable": "目前帳號的舊資料匯入時遺漏了 {{count}} 個分類成員。請選擇修復舊資料，或保留目前資料。",
-    "legacyRepairTitle": "處理舊資料匯入",
-    "repair": "修復舊資料",
-    "keepCurrent": "保留目前資料",
-    "decideLater": "稍後決定",
-    "repairing": "正在處理匯入資料，請稍候…",
-    "repairFailed": "修復舊資料失敗（{{error}}）。可以重試修復，或保留目前資料。",
-    "repairConflict": "雲端資料已有變更，請先重新載入後再修復（{{error}}）。也可以保留目前資料。",
-    "reloadForRepair": "重新載入雲端資料",
-    "legacyUnresolved": "有 {{count}} 個舊分類股票無法從本機目錄解析（{{ids}}），已保留可辨識的資料。",
     "retry": "重新載入",
     "error": "帳號資料同步失敗：{{error}}",
-    "nativeError": "App 無法連線目前帳號，請重試。"
+    "nativeError": "App 無法連線目前帳號，請重試。",
+    "legacySettingsTitle": "發現舊設定檔",
+    "legacySettingsMessage": "此版本之後不再使用舊的 settings.json。你可以保留它作為備份，或刪除整個舊檔案。",
+    "keepLegacySettings": "保留舊檔",
+    "deleteLegacySettings": "刪除舊檔",
+    "legacySettingsDeleteFailed": "舊檔案刪除失敗（{{error}}），請重試或選擇保留。"
   },
   "a11y": {
     "switchLanguage": "切換語言為{{language}}",
@@ -38,7 +31,82 @@
     "label": "主要導覽",
     "tracking": "自選",
     "market": "市場",
-    "settings": "設定"
+    "settings": "設定",
+    "mcp": "MCP",
+    "mcpWithStatus": "MCP：{{status}}"
+  },
+  "mcp": {
+    "eyebrow": "本機 Agent 橋接",
+    "title": "MCP 連線",
+    "subtitle": "連接 Codex 或其他 stdio MCP 用戶端到正在執行的桌面 App，不會暴露帳號 token。",
+    "statusTitle": "Gateway 狀態",
+    "status": {
+      "unavailable": "無法使用",
+      "ready": "已就緒，等待用戶端",
+      "active": "最近有活動"
+    },
+    "statusDescription": {
+      "unavailable": "本機 Gateway 目前無法使用，請保持桌面 App 開啟後再試。",
+      "ready": "Gateway 可以使用，但最近 60 秒沒有處理成功的已驗證用戶端請求。",
+      "active": "最近 60 秒內至少有一個已驗證的 MCP 請求成功處理。"
+    },
+    "lastActivity": "最後用戶端活動：{{time}}",
+    "noActivity": "尚無已驗證活動",
+    "justNow": "剛剛",
+    "secondsAgo": "{{count}} 秒前",
+    "minutesAgo": "{{count}} 分鐘前",
+    "hoursAgo": "{{count}} 小時前",
+    "daysAgo": "{{count}} 天前",
+    "securityTitle": "安全的本機連線",
+    "securityDescription": "MCP 請求只會留在這台電腦，並由正在執行的 App 驗證。Bearer token 只保留在僅限擁有者讀取的 discovery 檔，不會在這裡顯示或複製。",
+    "desktopOnly": "MCP 設定只在桌面 App 執行時提供。請先啟動 App 並登入，再複製用戶端設定。",
+    "tools": {
+      "title": "可用工具",
+      "description": "本機 Gateway 提供 16 個受限工具。讀取工具可檢視帳戶與市場資料；管理工具可變更自選資料或技術指標設定。",
+      "read": {
+        "title": "讀取與查詢",
+        "description": "檢視連線狀態、自選清單、市場資料與分析結果，不會變更已儲存的帳戶資料。",
+        "count": "{{count}} 個讀取工具"
+      },
+      "manage": {
+        "title": "寫入與管理",
+        "description": "管理自選、分類與技術指標設定；每個請求仍由此桌面 App 驗證。",
+        "count": "{{count}} 個管理工具"
+      },
+      "items": {
+        "get_context": "讀取已驗證的連線資訊與可用能力。",
+        "list_watchlists": "列出追蹤股票、分類與技術指標設定。",
+        "get_quotes": "讀取追蹤代號的受限即時報價。",
+        "get_history": "讀取單一代號的受限 OHLCV 歷史資料。",
+        "get_technical_indicators": "依帳戶設定讀取技術指標。",
+        "get_chip_analysis": "讀取台股法人與融資融券分析。",
+        "get_analysis_snapshot": "讀取追蹤股票的一份受限分析快照。",
+        "add_stock": "將股票加入目前作用中的分類。",
+        "remove_stock": "從帳戶與所有分類移除股票。",
+        "create_category": "建立自選分類。",
+        "rename_category": "重新命名自選分類。",
+        "delete_category": "刪除自選分類。",
+        "set_category_members": "取代分類中的股票成員。",
+        "reorder_category": "設定單一分類的完整排序。",
+        "update_indicator_settings": "更新一項或多項技術指標設定。",
+        "reset_indicator_settings": "將技術指標設定重設為 SLstening 預設值。"
+      }
+    },
+    "setupTitle": "連接用戶端",
+    "codexTitle": "Codex",
+    "codexDescription": "將這段內容加入 ~/.codex/config.toml。Codex 桌面版、CLI 與 IDE 共用這份 MCP 設定。",
+    "codexStepSave": "將內容儲存到 ~/.codex/config.toml。",
+    "codexStepRestart": "儲存後重新啟動對應的 Codex 用戶端。",
+    "codexStepVerify": "使用 codex mcp list 或 /mcp 驗證。",
+    "genericTitle": "一般 stdio MCP 用戶端",
+    "genericDescription": "將這段 JSON 貼到 stdio MCP 主機使用的用戶端設定。",
+    "genericStepPaste": "將內容貼到主機的 MCP 設定。",
+    "genericStepRestart": "重新啟動主機，讓它重新載入設定。",
+    "genericStepVerify": "確認出現 slistening server 並可以列出工具。",
+    "copyConfig": "複製設定",
+    "copied": "設定已複製",
+    "copyFailed": "無法複製設定，請確認桌面 App 正在執行後再試。",
+    "configUnavailable": "請先啟動桌面 App 以產生設定。"
   },
   "home": {
     "marketOverview": "市場脈動",
@@ -65,7 +133,13 @@
     }
   },
   "watchlist": {
-    "defaultName": "自選",
+    "noCategorySelected": "尚未選擇分類",
+    "createFirstCategory": "請先建立分類，再加入股票。",
+    "createCategory": "建立分類",
+    "emptyNoCategoriesTitle": "先建立一個分類",
+    "emptyNoCategoriesDescription": "建立分類後，就能整理想持續追蹤的股票。",
+    "emptyNoStocksTitle": "加入第一檔股票",
+    "emptyNoStocksDescription": "搜尋股票並加入這個分類，開始追蹤市場變化。",
     "summary": "{{count}} 檔",
     "stockCount": "{{count}} 檔",
     "addStock": "加入股票",
@@ -97,7 +171,6 @@
     "save": "儲存",
     "cancel": "取消",
     "close": "關閉",
-    "defaultLocked": "預設自選不可重新命名或刪除。",
     "errors": {
       "CATEGORY_NAME_REQUIRED": "請輸入分類名稱。",
       "CATEGORY_NAME_DUPLICATE": "已有相同名稱的分類。",
@@ -112,7 +185,6 @@
     "openCategoryPicker": "目前分類：{{name}}，選擇其他分類",
     "categorySearch": "搜尋分類",
     "clear": "清除",
-    "defaultSection": "預設",
     "pinned": "已釘選",
     "recent": "最近使用",
     "allCategories": "所有分類",

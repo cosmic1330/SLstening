@@ -1,6 +1,7 @@
 import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
 import { useTranslation } from "react-i18next";
+import { WATCHLIST_RADIUS } from "../constants";
 
 export default function TickCount({
   tickDeals,
@@ -11,7 +12,7 @@ export default function TickCount({
   const count = tickDeals?.closes.length || 0;
 
   return (
-    <Tooltip title={`${t("stock.tickCount")}: ${count}`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.tickCount")}: ${count}`} arrow enterTouchDelay={0} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
       <Stack direction="column" spacing={0} alignItems="center" sx={{ width: "100%" }}>
         <Typography
           sx={{

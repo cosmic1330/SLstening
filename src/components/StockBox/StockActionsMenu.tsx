@@ -6,6 +6,7 @@ import { Box, IconButton, ListItemIcon, Menu, MenuItem, Tooltip } from "@mui/mat
 import { open as openExternal } from "@tauri-apps/plugin-shell";
 import { MouseEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { WATCHLIST_RADIUS } from "./constants";
 import { semanticTokens } from "../../theme";
 import { StockStoreType } from "../../types";
 
@@ -32,7 +33,7 @@ export default function StockActionsMenu({ stock, name, canDelete, onRemove, onD
 
   return (
     <Box component="span">
-      <Tooltip title={t("watchlist.more")}>
+      <Tooltip title={t("watchlist.more")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
         <IconButton
         aria-label={t("watchlist.more")}
         aria-haspopup="menu"
@@ -42,6 +43,7 @@ export default function StockActionsMenu({ stock, name, canDelete, onRemove, onD
           minWidth: 44,
           minHeight: 44,
           color: semanticTokens.analysis.text,
+          borderRadius: WATCHLIST_RADIUS,
           "&:focus-visible": { outline: `2px solid ${semanticTokens.analysis.focus}`, outlineOffset: 2 },
         }}
       >
@@ -52,20 +54,21 @@ export default function StockActionsMenu({ stock, name, canDelete, onRemove, onD
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={close}
+        slotProps={{ paper: { sx: { borderRadius: WATCHLIST_RADIUS } } }}
         MenuListProps={{ "aria-label": t("watchlist.more") }}
       >
-        <MenuItem onClick={(event) => { stop(event); void launchTradingView(); }} sx={{ minHeight: 44 }}>
+        <MenuItem onClick={(event) => { stop(event); void launchTradingView(); }} sx={{ minHeight: 44, borderRadius: WATCHLIST_RADIUS }}>
           <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
           {t("a11y.tradingView", { name })}
         </MenuItem>
         {onRemove ? (
-          <MenuItem onClick={(event) => { stop(event); close(); onRemove(); }} sx={{ minHeight: 44 }}>
+          <MenuItem onClick={(event) => { stop(event); close(); onRemove(); }} sx={{ minHeight: 44, borderRadius: WATCHLIST_RADIUS }}>
             <ListItemIcon><CloseIcon fontSize="small" /></ListItemIcon>
             {t("a11y.removeStock", { name })}
           </MenuItem>
         ) : null}
         {canDelete ? (
-          <MenuItem onClick={(event) => { stop(event); close(); onDelete(); }} sx={{ minHeight: 44 }}>
+          <MenuItem onClick={(event) => { stop(event); close(); onDelete(); }} sx={{ minHeight: 44, borderRadius: WATCHLIST_RADIUS }}>
             <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
             {t("a11y.deleteStock", { name })}
           </MenuItem>

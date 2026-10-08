@@ -2,21 +2,14 @@
   "app": { "loading": "Loading…" },
   "language": { "en": "English", "zh-TW": "Traditional Chinese" },
   "accountSync": {
-    "legacyAvailable": "Legacy tracking data was found on this computer. Import it into the current account?",
-    "import": "Import to account",
-    "legacyRepairAvailable": "The original import missed {{count}} category memberships. Choose whether to repair the old data or keep the current data.",
-    "legacyRepairTitle": "Handle legacy import",
-    "repair": "Repair old data",
-    "keepCurrent": "Keep current data",
-    "decideLater": "Decide later",
-    "repairing": "Processing imported data. Please wait…",
-    "repairFailed": "Repair failed ({{error}}). You can retry the repair or keep the current data.",
-    "repairConflict": "Cloud data changed. Reload it before repairing ({{error}}), or keep the current data.",
-    "reloadForRepair": "Reload cloud data",
-    "legacyUnresolved": "{{count}} legacy category stocks could not be resolved from the local catalog ({{ids}}). Recognized data was retained.",
     "retry": "Reload",
     "error": "Account sync failed: {{error}}",
-    "nativeError": "The app could not connect this account. Try again."
+    "nativeError": "The app could not connect this account. Try again.",
+    "legacySettingsTitle": "Old settings file found",
+    "legacySettingsMessage": "This version no longer uses the old settings.json file. Choose whether to keep it as a backup or delete it.",
+    "keepLegacySettings": "Keep old file",
+    "deleteLegacySettings": "Delete old file",
+    "legacySettingsDeleteFailed": "The old file could not be deleted ({{error}}). Try again or keep the file."
   },
   "a11y": {
     "switchLanguage": "Switch language to {{language}}",
@@ -38,7 +31,82 @@
     "label": "Main navigation",
     "tracking": "Tracking",
     "market": "Market",
-    "settings": "Settings"
+    "settings": "Settings",
+    "mcp": "MCP",
+    "mcpWithStatus": "MCP: {{status}}"
+  },
+  "mcp": {
+    "eyebrow": "Local agent bridge",
+    "title": "MCP connection",
+    "subtitle": "Connect Codex or another stdio MCP client to the running desktop App without exposing your account token.",
+    "statusTitle": "Gateway status",
+    "status": {
+      "unavailable": "Unavailable",
+      "ready": "Ready, waiting for a client",
+      "active": "Active"
+    },
+    "statusDescription": {
+      "unavailable": "The local gateway is not available. Keep the desktop App open and try again.",
+      "ready": "The gateway is available, but no authenticated client request was handled in the last 60 seconds.",
+      "active": "At least one authenticated MCP request was handled successfully in the last 60 seconds."
+    },
+    "lastActivity": "Last client activity: {{time}}",
+    "noActivity": "No authenticated activity yet",
+    "justNow": "just now",
+    "secondsAgo": "{{count}} seconds ago",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago",
+    "daysAgo": "{{count}} days ago",
+    "securityTitle": "Safe local connection",
+    "securityDescription": "MCP requests stay on this computer and are authenticated by the running App. The bearer token remains in the owner-only discovery file and is never shown or copied here.",
+    "desktopOnly": "MCP setup is available while the desktop App is running. Start the App and sign in before copying a client configuration.",
+    "tools": {
+      "title": "Available tools",
+      "description": "This local gateway exposes 16 bounded tools. Read tools inspect account and market data; manage tools change your tracked data or indicator settings.",
+      "read": {
+        "title": "Read and query",
+        "description": "Inspect session context, watchlists, market data, and analysis without changing saved account data.",
+        "count": "{{count}} read tools"
+      },
+      "manage": {
+        "title": "Write and manage",
+        "description": "Manage watchlists, categories, and indicator settings. Requests remain authenticated by this desktop App.",
+        "count": "{{count}} manage tools"
+      },
+      "items": {
+        "get_context": "Read the authenticated session and available capabilities.",
+        "list_watchlists": "List tracked stocks, categories, and indicator settings.",
+        "get_quotes": "Read bounded live quotes for tracked symbols.",
+        "get_history": "Read bounded OHLCV history for one symbol.",
+        "get_technical_indicators": "Read technical indicators using your account settings.",
+        "get_chip_analysis": "Read Taiwan institutional and margin analysis.",
+        "get_analysis_snapshot": "Read one bounded analysis snapshot for tracked stocks.",
+        "add_stock": "Add a stock to the active category.",
+        "remove_stock": "Remove a stock from your account and categories.",
+        "create_category": "Create a watchlist category.",
+        "rename_category": "Rename a watchlist category.",
+        "delete_category": "Delete a watchlist category.",
+        "set_category_members": "Replace a category's stock membership.",
+        "reorder_category": "Set the complete order of one category.",
+        "update_indicator_settings": "Update one or more indicator settings.",
+        "reset_indicator_settings": "Reset indicator settings to SLstening defaults."
+      }
+    },
+    "setupTitle": "Connect a client",
+    "codexTitle": "Codex",
+    "codexDescription": "Add this block to ~/.codex/config.toml. Codex desktop, CLI, and IDE share this MCP configuration.",
+    "codexStepSave": "Save the block in ~/.codex/config.toml.",
+    "codexStepRestart": "Restart the relevant Codex client after saving.",
+    "codexStepVerify": "Verify with codex mcp list or /mcp.",
+    "genericTitle": "Generic stdio MCP client",
+    "genericDescription": "Paste this JSON into the client configuration used by your stdio MCP host.",
+    "genericStepPaste": "Paste the block into the host's MCP configuration.",
+    "genericStepRestart": "Restart the host so it reloads the configuration.",
+    "genericStepVerify": "Confirm that the slistening server appears and can list tools.",
+    "copyConfig": "Copy config",
+    "copied": "Configuration copied",
+    "copyFailed": "Could not copy the configuration. Try again while the desktop App is running.",
+    "configUnavailable": "Start the desktop App to generate this configuration."
   },
   "home": {
     "marketOverview": "Market overview",
@@ -65,7 +133,13 @@
     }
   },
   "watchlist": {
-    "defaultName": "Watchlist",
+    "noCategorySelected": "No category selected",
+    "createFirstCategory": "Create a category before adding stocks.",
+    "createCategory": "Create category",
+    "emptyNoCategoriesTitle": "Start with a category",
+    "emptyNoCategoriesDescription": "Create a category to organize the stocks you want to follow.",
+    "emptyNoStocksTitle": "Add your first stock",
+    "emptyNoStocksDescription": "Search for a stock and add it here to begin tracking it.",
     "summary": "{{count}} instruments",
     "stockCount": "{{count}} stocks",
     "addStock": "Add stock",
@@ -97,7 +171,6 @@
     "save": "Save",
     "cancel": "Cancel",
     "close": "Close",
-    "defaultLocked": "The default watchlist cannot be renamed or deleted.",
     "errors": {
       "CATEGORY_NAME_REQUIRED": "Enter a category name.",
       "CATEGORY_NAME_DUPLICATE": "A category with this name already exists.",
@@ -112,7 +185,6 @@
     "openCategoryPicker": "Current category: {{name}}. Choose another category",
     "categorySearch": "Search categories",
     "clear": "Clear",
-    "defaultSection": "Default",
     "pinned": "Pinned",
     "recent": "Recent",
     "allCategories": "All categories",

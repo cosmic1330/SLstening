@@ -13,6 +13,7 @@ const Detail = lazy(() => import("./pages/Detail"));
 const Home = lazy(() => import("./pages/Home"));
 const Watchlist = lazy(() => import("./pages/Home/Watchlist"));
 const Market = lazy(() => import("./pages/Home/Market"));
+const Mcp = lazy(() => import("./pages/Home/Mcp"));
 const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Setting = lazy(() => import("./pages/Home/Setting"));
@@ -50,6 +51,7 @@ export function AppRoutes() {
             <Route index element={<LazyRoute><Watchlist /></LazyRoute>} />
             <Route path="setting" element={<LazyRoute><Setting /></LazyRoute>} />
             <Route path="market" element={<LazyRoute><Market /></LazyRoute>} />
+            <Route path="mcp" element={<LazyRoute><Mcp /></LazyRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>

@@ -3,6 +3,8 @@ mod agent_gateway;
 mod commands;
 mod csv_processor;
 mod error;
+mod legacy_settings;
+mod local_preferences;
 mod market_watcher;
 mod models;
 mod updater;
@@ -39,6 +41,9 @@ pub fn run() {
             let account_manager =
                 account::AccountManager::new().map_err(|error| std::io::Error::other(error))?;
             app.manage(account_manager.clone());
+            let local_preferences = local_preferences::LocalPreferencesManager::new(handle.clone());
+            app.manage(local_preferences.clone());
+            app.manage(legacy_settings::LegacySettingsManager::new(handle.clone()));
 
             // 監聽更新
             tauri::async_runtime::spawn(async move {
@@ -51,8 +56,12 @@ pub fn run() {
             let market_manager = market_watcher::init(app.handle().clone());
             app.manage(market_manager.clone());
 
-            let gateway = match agent_gateway::start(app.handle(), account_manager, market_manager)
-            {
+            let gateway = match agent_gateway::start(
+                app.handle(),
+                account_manager,
+                market_manager,
+                local_preferences,
+            ) {
                 Ok(gateway) => {
                     log::info!("SLstening Agent gateway ready at {}", gateway.endpoint);
                     gateway
@@ -77,9 +86,14 @@ pub fn run() {
             commands::account::account_invalidate_session,
             commands::account::account_get_session,
             commands::account::agent_get_config,
+            commands::account::legacy_settings_status,
+            commands::account::legacy_settings_keep,
+            commands::account::legacy_settings_delete,
             commands::account::account_get_state,
             commands::account::account_update_state,
-            commands::account::account_import_legacy,
+            commands::account::account_get_indicator_settings,
+            commands::account::account_update_indicator_settings,
+            commands::account::account_reset_indicator_settings,
             commands::export::create_csv_from_json,
             commands::market::subscribe_stock,
             commands::market::unsubscribe_stock,

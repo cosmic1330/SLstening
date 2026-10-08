@@ -5,7 +5,6 @@ import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
-import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
 import SearchIcon from "@mui/icons-material/Search";
@@ -31,7 +30,8 @@ import {
 import { Reorder, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import useStocksStore, { isDefaultCategory } from "../../../../store/Stock.store";
+import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
+import useStocksStore from "../../../../store/Stock.store";
 import { CategoryType } from "../../../../types";
 import {
   playfulButtonSx,
@@ -88,8 +88,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const defaultCategory = categories.find(isDefaultCategory);
-  const customCategories = categories.filter((category) => !isDefaultCategory(category));
+  const customCategories = categories;
   const filteredCategories = customCategories.filter((category) => category.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const pinnedCategories = useMemo(
     () => pinnedDraft.map((id) => categories.find((category) => category.id === id)).filter((category): category is CategoryType => Boolean(category)),
@@ -180,7 +179,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
       <DialogTitle component="div" sx={playfulDialogTitleSx}>
         <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1.5}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-            <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.pink, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+            <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.pink, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
               <FolderOutlinedIcon fontSize="small" />
             </Box>
             <Box sx={{ minWidth: 0 }}>
@@ -204,7 +203,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
       </DialogTitle>
       <DialogContent sx={playfulDialogContentSx} aria-busy={pending}>
         {error ? (
-          <Alert role="alert" severity="error" sx={{ mb: 1.5, border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
+          <Alert role="alert" severity="error" sx={{ mb: 1.5, border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
             {error}
           </Alert>
         ) : null}
@@ -218,7 +217,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
         {deleteCandidate ? (
           <Box component="section" aria-labelledby="delete-category-title" sx={{ ...playfulPanelSx, bgcolor: playfulPalette.dangerSoft, mt: 0.5 }}>
             <Stack direction="row" spacing={1} alignItems="flex-start">
-              <Box aria-hidden="true" sx={{ width: 40, height: 40, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.danger, color: playfulPalette.white, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+              <Box aria-hidden="true" sx={{ width: 40, height: 40, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.danger, color: playfulPalette.white, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
                 <DeleteOutlineIcon fontSize="small" />
               </Box>
               <Box sx={{ minWidth: 0 }}>
@@ -238,7 +237,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                 component="form"
                 aria-labelledby="category-editor-title"
                 onSubmit={(event) => { event.preventDefault(); void saveName(); }}
-                sx={{ ...playfulPanelSx, mb: 2, bgcolor: "rgba(244, 181, 208, 0.28)" }}
+                sx={{ ...playfulPanelSx, mt:1.5, mb: 2, bgcolor: "rgba(244, 181, 208, 0.28)" }}
               >
                 <Typography id="category-editor-title" component="h3" sx={{ color: playfulPalette.ink, fontSize: "0.98rem", fontWeight: 950 }}>
                   {editor.id ? t("watchlist.rename") : t("watchlist.newCategory")}
@@ -268,32 +267,11 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                 type="button"
                 startIcon={<AddIcon aria-hidden="true" />}
                 onClick={() => setEditor({ name: "" })}
-                sx={{ ...playfulButtonSx(playfulPalette.blue), mb: 2, justifyContent: "flex-start", px: 1.5 }}
+                sx={{ ...playfulButtonSx(playfulPalette.blue), mt:1.5, mb: 2, justifyContent: "flex-start", px: 1.5 }}
               >
                 {t("watchlist.newCategory")}
               </Button>
             )}
-
-            {defaultCategory ? (
-              <Box component="section" aria-labelledby="default-watchlist-title" sx={{ ...playfulPanelSx, mb: 2, bgcolor: "rgba(201, 189, 242, 0.28)" }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: 2, bgcolor: playfulPalette.lavender, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
-                    <LockOutlinedIcon fontSize="small" />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography id="default-watchlist-title" component="h3" sx={{ color: playfulPalette.ink, fontSize: "0.94rem", fontWeight: 950 }}>
-                      {t("watchlist.defaultName")}
-                    </Typography>
-                    <Typography component="p" sx={{ mt: 0.35, color: playfulPalette.muted, fontSize: "0.74rem", fontWeight: 650, lineHeight: 1.35 }}>
-                      {t("watchlist.defaultLocked")}
-                    </Typography>
-                  </Box>
-                  <Typography component="span" sx={{ flexShrink: 0, color: playfulPalette.ink, fontSize: "0.72rem", fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
-                    {t("watchlist.stockCount", { count: defaultCategory.stockIds.length })}
-                  </Typography>
-                </Stack>
-              </Box>
-            ) : null}
 
             <Divider sx={{ mb: 2, borderColor: "rgba(25, 25, 25, 0.18)" }} />
             <TextField
@@ -313,22 +291,22 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                 {filteredCategories.map((category) => {
                   const pinned = pinnedDraft.includes(category.id);
                   return (
-                    <Stack key={category.id} direction="row" alignItems="center" spacing={0.6} sx={{ minWidth: 0, minHeight: 64, px: 1, py: 0.65, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: 2, bgcolor: category.id === editor?.id ? "rgba(107, 183, 232, 0.24)" : "rgba(255, 255, 255, 0.72)" }}>
+                    <Stack key={category.id} direction="row" alignItems="center" spacing={0.6} sx={{ minWidth: 0, minHeight: 64, px: 1, py: 0.65, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: WATCHLIST_RADIUS, bgcolor: category.id === editor?.id ? "rgba(107, 183, 232, 0.24)" : "rgba(255, 255, 255, 0.72)" }}>
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography noWrap component="p" sx={{ color: playfulPalette.ink, fontSize: "0.86rem", fontWeight: 850 }}>{category.name}</Typography>
                         <Typography component="p" sx={{ mt: 0.25, color: playfulPalette.muted, fontSize: "0.7rem", fontWeight: 650, fontVariantNumeric: "tabular-nums" }}>{t("watchlist.stockCount", { count: category.stockIds.length })}</Typography>
                       </Box>
-                      <Tooltip title={pinned ? t("watchlist.unpin") : t("watchlist.pin")}>
+                      <Tooltip title={pinned ? t("watchlist.unpin") : t("watchlist.pin")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
                         <IconButton disabled={pending} aria-label={pinned ? t("watchlist.unpinCategory", { name: category.name }) : t("watchlist.pinCategory", { name: category.name })} onClick={() => void togglePin(category.id)} sx={{ ...playfulIconButtonSx(playfulPalette.blueDark), bgcolor: pinned ? playfulPalette.yellow : playfulPalette.white, "&:hover": { bgcolor: pinned ? playfulPalette.yellow : playfulPalette.white } }}>
                           {pinned ? <PushPinIcon aria-hidden="true" /> : <PushPinOutlinedIcon aria-hidden="true" />}
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={t("watchlist.rename")}>
+                      <Tooltip title={t("watchlist.rename")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
                         <IconButton disabled={pending} aria-label={t("watchlist.renameCategory", { name: category.name })} onClick={() => { setEditor({ id: category.id, name: category.name }); setError(""); }} sx={playfulIconButtonSx(playfulPalette.blueDark)}>
                           <EditOutlinedIcon aria-hidden="true" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title={t("watchlist.delete")}>
+                      <Tooltip title={t("watchlist.delete")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
                         <IconButton disabled={pending} aria-label={t("watchlist.deleteCategory", { name: category.name })} onClick={() => setDeleteCandidate(category)} sx={playfulIconButtonSx(playfulPalette.danger)}>
                           <DeleteOutlineIcon aria-hidden="true" />
                         </IconButton>
@@ -362,7 +340,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                       transition={reduceMotion ? { duration: 0 } : { duration: 0.16 }}
                       style={{ listStyle: "none" }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={0.4} sx={{ minWidth: 0, minHeight: 56, px: 0.6, mb: 0.75, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: 2, bgcolor: "rgba(255, 255, 255, 0.72)" }}>
+                      <Stack direction="row" alignItems="center" spacing={0.4} sx={{ minWidth: 0, minHeight: 56, px: 0.6, mb: 0.75, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: WATCHLIST_RADIUS, bgcolor: "rgba(255, 255, 255, 0.72)" }}>
                         <PushPinIcon fontSize="small" sx={{ mx: 0.35, color: playfulPalette.blueDark }} aria-hidden="true" />
                         <Typography noWrap component="span" sx={{ minWidth: 0, flex: 1, color: playfulPalette.ink, fontSize: "0.82rem", fontWeight: 800 }}>{category.name}</Typography>
                         <IconButton disabled={index === 0 || pending} aria-label={t("watchlist.moveUp", { name: category.name })} onClick={() => setPinnedDraft((ids) => move(ids, index, -1))} sx={playfulIconButtonSx()}>

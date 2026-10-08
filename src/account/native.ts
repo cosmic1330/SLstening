@@ -2,7 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Session } from "@supabase/supabase-js";
 import type {
   AccountSnapshot,
-  LegacyImportResult,
+  IndicatorSettings,
+  LegacySettingsStatus,
   NativeAccountState,
   NativeAccountWriteResult,
   NativeSessionResult,
@@ -56,28 +57,48 @@ export async function getNativeAccountState(expectedEpoch: number): Promise<Nati
 
 export async function updateNativeAccountState(
   expectedEpoch: number,
-  expectedRevision: number,
   data: AccountSnapshot,
-  operationId: string,
 ): Promise<NativeAccountWriteResult> {
   return invoke<NativeAccountWriteResult>("account_update_state", {
     expectedEpoch,
-    expectedRevision,
     data,
-    operationId,
   });
 }
 
-export async function importNativeLegacyState(
+export async function getLegacySettingsStatus(): Promise<LegacySettingsStatus | null> {
+  if (!isNativeRuntime()) return null;
+  return invoke<LegacySettingsStatus>("legacy_settings_status");
+}
+
+export async function keepLegacySettings(): Promise<LegacySettingsStatus | null> {
+  if (!isNativeRuntime()) return null;
+  return invoke<LegacySettingsStatus>("legacy_settings_keep");
+}
+
+export async function deleteLegacySettings(): Promise<LegacySettingsStatus | null> {
+  if (!isNativeRuntime()) return null;
+  return invoke<LegacySettingsStatus>("legacy_settings_delete");
+}
+
+export async function getNativeIndicatorSettings(expectedEpoch: number): Promise<IndicatorSettings | null> {
+  if (!isNativeRuntime()) return null;
+  return invoke<IndicatorSettings | null>("account_get_indicator_settings", { expectedEpoch });
+}
+
+export async function updateNativeIndicatorSettings(
   expectedEpoch: number,
-  data: AccountSnapshot,
-  operationId: string,
-): Promise<LegacyImportResult> {
-  return invoke<LegacyImportResult>("account_import_legacy", {
+  settings: Partial<IndicatorSettings>,
+  base: IndicatorSettings,
+): Promise<IndicatorSettings> {
+  return invoke<IndicatorSettings>("account_update_indicator_settings", {
     expectedEpoch,
-    data,
-    operationId,
+    settings,
+    base,
   });
+}
+
+export async function resetNativeIndicatorSettings(expectedEpoch: number): Promise<IndicatorSettings> {
+  return invoke<IndicatorSettings>("account_reset_indicator_settings", { expectedEpoch });
 }
 
 export interface AgentGatewayConfig {
@@ -87,6 +108,7 @@ export interface AgentGatewayConfig {
   bridgePath: string;
   protocolVersion: string;
   error: string | null;
+  lastClientActivityAt: number | null;
 }
 
 export async function getAgentGatewayConfig(): Promise<AgentGatewayConfig | null> {

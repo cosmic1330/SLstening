@@ -4,6 +4,7 @@ import { Stack, Typography, Tooltip } from "@mui/material";
 import { TickDealsType } from "../../../types";
 import { useTranslation } from "react-i18next";
 import { semanticTokens } from "../../../theme";
+import { WATCHLIST_RADIUS } from "../constants";
 import MetricTooltipTrigger from "./MetricTooltipTrigger";
 
 export default function AvgPrice({
@@ -18,7 +19,7 @@ export default function AvgPrice({
   const isAbove = lastPrice >= avgPrice;
 
   return (
-    <Tooltip title={`${t("stock.averagePrice")}: ${avgPrice}`} arrow enterTouchDelay={0}>
+    <Tooltip title={`${t("stock.averagePrice")}: ${avgPrice}`} arrow enterTouchDelay={0} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
       <MetricTooltipTrigger
         ariaLabel={`${t("stock.averagePrice")}: ${avgPrice > 0 ? avgPrice.toFixed(2) : "--"}, ${t(isAbove ? "stock.aboveAverage" : "stock.belowAverage")}`}
       >

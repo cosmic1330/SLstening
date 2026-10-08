@@ -1,4 +1,5 @@
 import type { SxProps, Theme } from "@mui/material/styles";
+import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
 
 export const playfulPalette = {
   canvas: "#FFF8F3",
@@ -41,7 +42,7 @@ export const playfulDialogPaperSx: SxProps<Theme> = {
     linear-gradient(135deg, rgba(243, 211, 109, 0.14), transparent 42%),
     linear-gradient(315deg, rgba(168, 216, 184, 0.15), transparent 45%)`,
   border: { xs: 0, sm: `3px solid ${playfulPalette.outline}` },
-  borderRadius: { xs: 0, sm: 4 },
+  borderRadius: WATCHLIST_RADIUS,
   boxShadow: { xs: "none", sm: `8px 9px 0 ${playfulPalette.outline}` },
 };
 
@@ -82,7 +83,7 @@ export const playfulPanelSx: SxProps<Theme> = {
   minWidth: 0,
   p: { xs: 1.25, sm: 1.5 },
   border: `2px solid ${playfulPalette.outline}`,
-  borderRadius: 3,
+  borderRadius: WATCHLIST_RADIUS,
   backgroundColor: "rgba(255, 253, 248, 0.90)",
   boxShadow: `4px 5px 0 rgba(25, 25, 25, 0.92)`,
 };
@@ -91,7 +92,7 @@ export const playfulButtonSx = (backgroundColor: string): SxProps<Theme> => ({
   minHeight: 44,
   minWidth: 44,
   border: `2px solid ${playfulPalette.outline}`,
-  borderRadius: 2,
+  borderRadius: WATCHLIST_RADIUS,
   boxShadow: `3px 3px 0 ${playfulPalette.outline}`,
   bgcolor: backgroundColor,
   color: playfulPalette.ink,
@@ -128,7 +129,7 @@ export const playfulIconButtonSx = (color: string = playfulPalette.ink): SxProps
   flexShrink: 0,
   color,
   border: `2px solid ${playfulPalette.outline}`,
-  borderRadius: 2,
+  borderRadius: WATCHLIST_RADIUS,
   bgcolor: playfulPalette.white,
   boxShadow: `2px 2px 0 ${playfulPalette.outline}`,
   transition: "transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease",
@@ -156,7 +157,7 @@ export const playfulFieldSx: SxProps<Theme> = {
     minHeight: 48,
     color: playfulPalette.ink,
     bgcolor: playfulPalette.white,
-    borderRadius: 2,
+    borderRadius: WATCHLIST_RADIUS,
     "& fieldset": { border: `2px solid rgba(25, 25, 25, 0.38)` },
     "&:hover fieldset": { borderColor: playfulPalette.outline },
     "&.Mui-focused fieldset": { border: `3px solid ${playfulPalette.blueDark}` },

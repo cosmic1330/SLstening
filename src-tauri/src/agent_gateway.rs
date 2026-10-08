@@ -1,8 +1,9 @@
 use crate::account::{
-    validate_snapshot, AccountManager, AccountSnapshot, CategoryRecord, IndicatorSettings,
-    StockRecord,
+    validate_indicator_settings, validate_snapshot, AccountManager, AccountSnapshot,
+    AccountStateResult, CategoryRecord, IndicatorSettings, StockRecord,
 };
 use crate::commands::chip;
+use crate::local_preferences::LocalPreferencesManager;
 use crate::market_watcher::{is_global_symbol, HistoryPoint, MarketManager, MarketTick};
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -12,7 +13,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -32,6 +33,7 @@ pub struct AgentGateway {
     pub bridge_path: PathBuf,
     available: bool,
     error: Option<String>,
+    last_client_activity_at: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -43,6 +45,7 @@ pub struct AgentGatewayConfig {
     pub bridge_path: String,
     pub protocol_version: String,
     pub error: Option<String>,
+    pub last_client_activity_at: Option<u64>,
 }
 
 impl AgentGateway {
@@ -54,6 +57,10 @@ impl AgentGateway {
             bridge_path: self.bridge_path.to_string_lossy().to_string(),
             protocol_version: MCP_PROTOCOL_VERSION.to_string(),
             error: self.error.clone(),
+            last_client_activity_at: match self.last_client_activity_at.load(Ordering::Acquire) {
+                0 => None,
+                value => Some(value),
+            },
         }
     }
 
@@ -74,6 +81,7 @@ impl AgentGateway {
             bridge_path,
             available: false,
             error: Some(sanitize_gateway_error(&error.into())),
+            last_client_activity_at: Arc::new(AtomicU64::new(0)),
         }
     }
 }
@@ -91,9 +99,11 @@ struct GatewayContext {
     token: String,
     port: u16,
     account: AccountManager,
+    local_preferences: LocalPreferencesManager,
     market: Arc<MarketManager>,
     app: AppHandle,
     rate: Arc<Mutex<RateLimit>>,
+    last_client_activity_at: Arc<AtomicU64>,
 }
 
 #[derive(Clone)]
@@ -175,6 +185,7 @@ pub fn start(
     app: &AppHandle,
     account: AccountManager,
     market: Arc<MarketManager>,
+    local_preferences: LocalPreferencesManager,
 ) -> Result<AgentGateway, String> {
     let app_data_dir = app
         .path()
@@ -202,10 +213,12 @@ pub fn start(
         return Err(sanitize_gateway_error(&error));
     }
 
+    let last_client_activity_at = Arc::new(AtomicU64::new(0));
     let context = GatewayContext {
         token,
         port,
         account,
+        local_preferences,
         market,
         app: app.clone(),
         rate: Arc::new(Mutex::new(RateLimit {
@@ -213,6 +226,7 @@ pub fn start(
             requests: 0,
             active: 0,
         })),
+        last_client_activity_at: Arc::clone(&last_client_activity_at),
     };
     let limiter = ConnectionLimiter::new(AGENT_MAX_WORKERS);
     let cleanup_path = discovery_path.clone();
@@ -279,6 +293,7 @@ pub fn start(
         bridge_path,
         available: true,
         error: None,
+        last_client_activity_at,
     })
 }
 
@@ -380,6 +395,7 @@ fn handle_connection(mut stream: TcpStream, context: GatewayContext) -> Result<(
             return Ok(());
         }
     };
+    let mut dispatch_succeeded = false;
     let result = if request.path == "/mcp" && request.method == "POST" {
         if !constant_time_eq(
             request.authorization.as_deref().unwrap_or(""),
@@ -391,15 +407,25 @@ fn handle_connection(mut stream: TcpStream, context: GatewayContext) -> Result<(
         } else if !enter_request(&context.rate) {
             Err((429, "RATE_LIMITED".to_string()))
         } else {
-            let result = dispatch_rpc(&context, &request.body, request_deadline)
-                .map(|value| (200, value.to_string()));
+            let result = dispatch_rpc(&context, &request.body, request_deadline);
+            dispatch_succeeded = result
+                .as_ref()
+                .map(|response| response.get("error").is_none())
+                .unwrap_or(false);
+            let result = result.map(|value| (200, value.to_string()));
             leave_request(&context.rate);
             result
         }
     } else {
         Err((404, "NOT_FOUND".to_string()))
     };
-    write_http_response(&mut stream, result)
+    let response = write_http_response(&mut stream, result);
+    record_client_activity_if_successful(
+        &context.last_client_activity_at,
+        dispatch_succeeded,
+        response.is_ok(),
+    );
+    response
 }
 
 struct HttpRequest {
@@ -591,7 +617,7 @@ fn tool_definitions() -> Vec<Value> {
         ),
         tool(
             "add_stock",
-            "Add a stock to the default watchlist.",
+            "Add a stock to the active category, or the first real category when no category is active. Returns CATEGORY_REQUIRED when the account has no categories.",
             json!({"type":"object","properties":{"stock":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"group":{"type":"string"},"type":{"type":"string"}},"required":["id","name","group","type"]}},"required":["stock"],"additionalProperties":false}),
         ),
         tool(
@@ -659,7 +685,7 @@ fn call_tool(
         "content":[{"type":"text","text":serde_json::to_string(&structured).unwrap_or_else(|_| "{}".to_string())}],
         "structuredContent":structured,
         "isError":false,
-        "_meta":{"configuration_revision": structured.get("configuration_revision").cloned().unwrap_or(Value::Null)}
+        "_meta":{"configuration_epoch": structured.get("configuration_epoch").cloned().unwrap_or(Value::Null)}
     }))
 }
 
@@ -680,20 +706,28 @@ fn execute_tool(
         .map_err(internal_error)?;
     let result = match name {
         "get_context" => Ok((vec![], {
-            let state = block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
+            let _state =
+                block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
             envelope(
-                state.revision,
+                session.epoch,
                 json!({"context":{"account":{"id":session.user_id},"epoch":session.epoch,"capabilities":{"read":true,"write":true,"market":true,"chip_analysis":true},"app":{"open":true,"authenticated":true}}}),
             )
         })),
         "list_watchlists" => {
             let state = block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
-            let data = account_snapshot_or_empty(&state).map_err(internal_error)?;
-            Ok((vec![], envelope(state.revision, json!({"watchlists":data}))))
+            let data = account_snapshot_with_local_indicator_settings(
+                context,
+                &session.user_id,
+                session.epoch,
+                &state,
+                deadline,
+            )
+            .map_err(internal_error)?;
+            Ok((vec![], envelope(session.epoch, json!({"watchlists":data}))))
         }
         "get_quotes" => {
             let state = block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
-            let configuration_revision = state.revision;
+            let configuration_epoch = session.epoch;
             let symbols = requested_symbols(args, &state).map_err(internal_error)?;
             let mut warnings = Vec::new();
             let quote_results = parallel_quotes(context, &symbols, deadline);
@@ -717,7 +751,7 @@ fn execute_tool(
             Ok((
                 vec![],
                 envelope_with_warnings(
-                    configuration_revision,
+                    configuration_epoch,
                     json!({"quotes":quotes}),
                     Value::Array(warnings),
                 ),
@@ -727,9 +761,7 @@ fn execute_tool(
             let symbol = string_arg(args, "symbol")?;
             let period = args.get("period").and_then(Value::as_str).unwrap_or("d");
             let bars = bounded_bars(args.get("bars"));
-            let configuration_revision = block_on_state(context, session.epoch, deadline)
-                .map_err(internal_error)?
-                .revision;
+            let configuration_epoch = session.epoch;
             match get_history(context, symbol, period, deadline) {
                 Ok(history_result) => {
                     let history = trim_history(history_result.data, bars);
@@ -737,7 +769,7 @@ fn execute_tool(
                     Ok((
                         vec![],
                         envelope(
-                            configuration_revision,
+                            configuration_epoch,
                             json!({"symbol":symbol,"provider_symbol":provider_symbol(symbol),"market":market_name(symbol),"period":period,"interval":period,"bars":history,"source":"SLstening via MarketManager","observed_at":observed_at,"fetched_at":history_result.fetched_at,"freshness":history_result.freshness,"state":"available","currency":if is_global_symbol(symbol) { "USD" } else { "TWD" },"units":{"price":"currency_per_share","volume":"shares"},"timezone":Value::Null,"adjustment":"unknown","unfinished_bar":Value::Null}),
                         ),
                     ))
@@ -745,7 +777,7 @@ fn execute_tool(
                 Err((code, message)) => Ok((
                     vec![],
                     envelope_with_warnings(
-                        configuration_revision,
+                        configuration_epoch,
                         json!({"symbol":symbol,"provider_symbol":provider_symbol(symbol),"market":market_name(symbol),"period":period,"interval":period,"bars":Value::Null,"source":"SLstening via MarketManager","observed_at":Value::Null,"state":"error","freshness":"unknown","fetched_at":Value::Null,"currency":if is_global_symbol(symbol) { "USD" } else { "TWD" },"units":{"price":"currency_per_share","volume":"shares"},"timezone":Value::Null,"adjustment":"unknown","unfinished_bar":Value::Null}),
                         json!([{"symbol":symbol,"code":stable_market_error_code(&message, "HISTORY_PROVIDER_UNAVAILABLE"),"message":message,"retryable":true,"provider_code":code}]),
                     ),
@@ -756,7 +788,14 @@ fn execute_tool(
             let symbol = string_arg(args, "symbol")?;
             let period = args.get("period").and_then(Value::as_str).unwrap_or("d");
             let state = block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
-            let data = account_snapshot_or_empty(&state).map_err(internal_error)?;
+            let data = account_snapshot_with_local_indicator_settings(
+                context,
+                &session.user_id,
+                session.epoch,
+                &state,
+                deadline,
+            )
+            .map_err(internal_error)?;
             match get_history(context, symbol, period, deadline) {
                 Ok(history_result) => {
                     let indicators =
@@ -764,7 +803,7 @@ fn execute_tool(
                     Ok((
                         vec![],
                         envelope(
-                            state.revision,
+                            session.epoch,
                             json!({"symbol":symbol,"provider_symbol":provider_symbol(symbol),"market":market_name(symbol),"period":period,"settings":data.indicator_settings,"indicators":indicators,"technical_metadata":{"algorithm":"SLstening app indicator surface","algorithm_version":"app-canonical-v1","sample_size":history_result.data.len(),"warmup_policy":"seed_first_observation","rounding":"periods_rounded"},"source":"SLstening native history","freshness":history_result.freshness,"fetched_at":history_result.fetched_at,"state":"available","currency":if is_global_symbol(symbol) { "USD" } else { "TWD" },"units":{"price":"currency_per_share","volume":"shares"},"timezone":Value::Null,"adjustment":"unknown","unfinished_bar":Value::Null}),
                         ),
                     ))
@@ -772,7 +811,7 @@ fn execute_tool(
                 Err((code, message)) => Ok((
                     vec![],
                     envelope_with_warnings(
-                        state.revision,
+                        session.epoch,
                         json!({"symbol":symbol,"provider_symbol":provider_symbol(symbol),"market":market_name(symbol),"period":period,"interval":period,"indicators":Value::Null,"technical_metadata":Value::Null,"source":"SLstening via MarketManager","state":"error","freshness":"unknown","fetched_at":Value::Null,"observed_at":Value::Null,"currency":if is_global_symbol(symbol) { "USD" } else { "TWD" },"units":{"price":"currency_per_share","volume":"shares"},"timezone":Value::Null,"adjustment":"unknown","unfinished_bar":Value::Null}),
                         json!([{"symbol":symbol,"code":stable_market_error_code(&message, "HISTORY_PROVIDER_UNAVAILABLE"),"message":message,"retryable":true,"provider_code":code}]),
                     ),
@@ -781,9 +820,7 @@ fn execute_tool(
         }
         "get_chip_analysis" => {
             let symbol = string_arg(args, "symbol")?;
-            let configuration_revision = block_on_state(context, session.epoch, deadline)
-                .map_err(internal_error)?
-                .revision;
+            let configuration_epoch = session.epoch;
             let (provider_symbol, market) = normalize_market_symbol(symbol)?;
             if market != "TW"
                 || !provider_symbol
@@ -793,7 +830,7 @@ fn execute_tool(
                 return Ok((
                     vec![],
                     envelope_with_warnings(
-                        configuration_revision,
+                        configuration_epoch,
                         json!({"symbol":symbol,"state":"unsupported","data":Value::Null}),
                         json!([{"symbol":symbol,"code":"CHIP_DATA_TW_ONLY","message":"chip analysis is available for Taiwan stock symbols","retryable":false}]),
                     ),
@@ -813,7 +850,7 @@ fn execute_tool(
                 Ok(data) => Ok((
                     vec![],
                     envelope(
-                        configuration_revision,
+                        configuration_epoch,
                         serde_json::to_value(data)
                             .map_err(|_| (-32010, "CHIP_SERIALIZE_FAILED".to_string()))?,
                     ),
@@ -821,7 +858,7 @@ fn execute_tool(
                 Err(message) => Ok((
                     vec![],
                     envelope_with_warnings(
-                        configuration_revision,
+                        configuration_epoch,
                         json!({"symbol":symbol,"state":"error","data":Value::Null}),
                         json!([{"symbol":symbol,"code":"CHIP_PROVIDER_UNAVAILABLE","message":message,"retryable":true}]),
                     ),
@@ -830,7 +867,14 @@ fn execute_tool(
         }
         "get_analysis_snapshot" => {
             let state = block_on_state(context, session.epoch, deadline).map_err(internal_error)?;
-            let data = account_snapshot_or_empty(&state).map_err(internal_error)?;
+            let data = account_snapshot_with_local_indicator_settings(
+                context,
+                &session.user_id,
+                session.epoch,
+                &state,
+                deadline,
+            )
+            .map_err(internal_error)?;
             let symbols = requested_symbols(args, &state).map_err(internal_error)?;
             let period = args.get("period").and_then(Value::as_str).unwrap_or("d");
             let include_history = args
@@ -867,7 +911,7 @@ fn execute_tool(
             Ok((
                 vec![],
                 envelope_with_warnings(
-                    state.revision,
+                    session.epoch,
                     json!({"items":items,"period":period,"settings":data.indicator_settings}),
                     Value::Array(warnings),
                 ),
@@ -884,13 +928,18 @@ fn execute_tool(
                 if !data.stocks.iter().any(|item| item.id == stock.id) {
                     data.stocks.insert(0, stock.clone());
                 }
-                let default = data
+                let category_index = data
                     .categories
-                    .iter_mut()
-                    .find(|category| category.id == "default-watchlist")
-                    .ok_or("DEFAULT_CATEGORY_REQUIRED")?;
-                if !default.stock_ids.contains(&stock.id) {
-                    default.stock_ids.insert(0, stock.id.clone());
+                    .iter()
+                    .position(|category| category.id == data.active_category_id)
+                    .or_else(|| (!data.categories.is_empty()).then_some(0))
+                    .ok_or("CATEGORY_REQUIRED")?;
+                let category = data
+                    .categories
+                    .get_mut(category_index)
+                    .ok_or("CATEGORY_REQUIRED")?;
+                if !category.stock_ids.contains(&stock.id) {
+                    category.stock_ids.insert(0, stock.id.clone());
                 }
                 Ok(())
             })
@@ -909,17 +958,17 @@ fn execute_tool(
             let name = trimmed_category_name(string_arg(args, "name")?)
                 .map_err(|error| (-32602, error))?;
             mutate(context, session.epoch, deadline, |data| {
-                if data.categories.iter().any(|category| {
-                    category.id != "default-watchlist"
-                        && category.name.trim().eq_ignore_ascii_case(&name)
-                }) {
+                if data
+                    .categories
+                    .iter()
+                    .any(|category| category.name.trim().eq_ignore_ascii_case(&name))
+                {
                     return Err("DUPLICATE_CATEGORY_NAME".to_string());
                 }
                 data.categories.push(CategoryRecord {
                     id: random_identifier("category"),
                     name,
                     stock_ids: vec![],
-                    is_default: None,
                 });
                 Ok(())
             })
@@ -929,13 +978,8 @@ fn execute_tool(
             let name = trimmed_category_name(string_arg(args, "name")?)
                 .map_err(|error| (-32602, error))?;
             mutate(context, session.epoch, deadline, |data| {
-                if id == "default-watchlist" {
-                    return Err("DEFAULT_CATEGORY_IMMUTABLE".to_string());
-                }
                 if data.categories.iter().any(|category| {
-                    category.id != id
-                        && category.id != "default-watchlist"
-                        && category.name.trim().eq_ignore_ascii_case(&name)
+                    category.id != id && category.name.trim().eq_ignore_ascii_case(&name)
                 }) {
                     return Err("DUPLICATE_CATEGORY_NAME".to_string());
                 }
@@ -950,14 +994,15 @@ fn execute_tool(
         "delete_category" => {
             let id = string_arg(args, "categoryId")?.to_string();
             mutate(context, session.epoch, deadline, |data| {
-                if id == "default-watchlist" {
-                    return Err("DEFAULT_CATEGORY_IMMUTABLE".to_string());
-                }
                 data.categories.retain(|category| category.id != id);
                 data.pinned_category_ids.retain(|value| value != &id);
                 data.recent_category_ids.retain(|value| value != &id);
                 if data.active_category_id == id {
-                    data.active_category_id = "default-watchlist".to_string();
+                    data.active_category_id = data
+                        .categories
+                        .first()
+                        .map(|category| category.id.clone())
+                        .unwrap_or_default();
                 }
                 let memberships: std::collections::HashSet<String> = data
                     .categories
@@ -1020,24 +1065,23 @@ fn execute_tool(
                 .and_then(Value::as_object)
                 .ok_or((-32602, "settings must be an object".to_string()))?
                 .clone();
-            mutate(context, session.epoch, deadline, |data| {
-                let mut current = serde_json::to_value(&data.indicator_settings)
-                    .map_err(|_| "INVALID_INDICATOR_SETTINGS".to_string())?;
-                let target = current
-                    .as_object_mut()
-                    .ok_or("INVALID_INDICATOR_SETTINGS")?;
-                for (key, value) in settings {
-                    target.insert(key, value);
-                }
-                data.indicator_settings = serde_json::from_value(current)
-                    .map_err(|_| "INVALID_INDICATOR_SETTINGS".to_string())?;
-                Ok(())
-            })
+            update_local_indicator_settings(
+                context,
+                &session.user_id,
+                session.epoch,
+                Some(settings),
+                false,
+                deadline,
+            )
         }
-        "reset_indicator_settings" => mutate(context, session.epoch, deadline, |data| {
-            data.indicator_settings = default_indicator_settings();
-            Ok(())
-        }),
+        "reset_indicator_settings" => update_local_indicator_settings(
+            context,
+            &session.user_id,
+            session.epoch,
+            None,
+            true,
+            deadline,
+        ),
         _ => Err((-32601, format!("Unknown tool: {name}"))),
     };
     // Every tool may await market or cloud work. Re-check the native session
@@ -1063,19 +1107,12 @@ where
     let mut data = account_snapshot_or_empty(&state).map_err(internal_error)?;
     operation(&mut data).map_err(|error| (-32602, error))?;
     validate_snapshot(&data).map_err(internal_error)?;
-    let result = block_on_write(context, epoch, state.revision, data.clone(), deadline)
-        .map_err(internal_error)?;
+    let result = block_on_write(context, epoch, data.clone(), deadline).map_err(internal_error)?;
     let _ = context.app.emit(
         "account-state-updated",
-        json!({"userId":result.user_id,"epoch":result.epoch,"revision":result.revision}),
+        json!({"userId":result.user_id,"epoch":result.epoch}),
     );
-    Ok((
-        vec![],
-        envelope(
-            result.revision,
-            json!({"data":data,"revision":result.revision}),
-        ),
-    ))
+    Ok((vec![], envelope(epoch, json!({"data":data,"epoch":epoch}))))
 }
 
 fn block_on_state(
@@ -1094,20 +1131,14 @@ fn block_on_state(
 fn block_on_write(
     context: &GatewayContext,
     epoch: u64,
-    revision: u64,
     data: AccountSnapshot,
     deadline: Instant,
 ) -> Result<crate::account::AccountWriteResult, String> {
     let remaining = remaining_time(deadline)?;
     tauri::async_runtime::block_on(async move {
-        tokio::time::timeout(
-            remaining,
-            context
-                .account
-                .update_state(epoch, revision, data, random_identifier("operation")),
-        )
-        .await
-        .map_err(|_| "DEADLINE_EXCEEDED".to_string())?
+        tokio::time::timeout(remaining, context.account.sync_state(epoch, data))
+            .await
+            .map_err(|_| "DEADLINE_EXCEEDED".to_string())?
     })
 }
 
@@ -1122,38 +1153,136 @@ fn internal_error(error: String) -> (i64, String) {
     (-32000, error)
 }
 
-fn envelope(revision: u64, value: Value) -> Value {
-    envelope_with_warnings(revision, value, Value::Array(Vec::new()))
+fn envelope(epoch: u64, value: Value) -> Value {
+    envelope_with_warnings(epoch, value, Value::Array(Vec::new()))
 }
 
-fn envelope_with_warnings(revision: u64, value: Value, warnings: Value) -> Value {
-    json!({"schema_version":1,"snapshot_id":format!("snapshot-{revision}"),"generated_at":unix_millis(),"configuration_revision":revision,"data":value,"warnings":warnings})
+fn envelope_with_warnings(epoch: u64, value: Value, warnings: Value) -> Value {
+    json!({"schema_version":1,"snapshot_id":format!("snapshot-epoch-{epoch}"),"generated_at":unix_millis(),"configuration_epoch":epoch,"data":value,"warnings":warnings})
 }
 
 fn empty_account_snapshot() -> AccountSnapshot {
     AccountSnapshot {
         stocks: Vec::new(),
-        categories: vec![CategoryRecord {
-            id: "default-watchlist".to_string(),
-            name: String::new(),
-            stock_ids: Vec::new(),
-            is_default: Some(true),
-        }],
-        active_category_id: "default-watchlist".to_string(),
+        categories: Vec::new(),
+        active_category_id: String::new(),
         pinned_category_ids: Vec::new(),
         recent_category_ids: Vec::new(),
         indicator_settings: default_indicator_settings(),
     }
 }
 
+fn account_snapshot_with_local_indicator_settings(
+    context: &GatewayContext,
+    user_id: &str,
+    epoch: u64,
+    state: &AccountStateResult,
+    deadline: Instant,
+) -> Result<AccountSnapshot, String> {
+    let mut data = account_snapshot_or_empty(state)?;
+    let local_settings = context.local_preferences.read_indicator_settings(
+        &context.account,
+        user_id,
+        epoch,
+        deadline,
+    )?;
+    overlay_local_indicator_settings(&mut data, local_settings.as_ref())?;
+    Ok(data)
+}
+
+fn overlay_local_indicator_settings(
+    data: &mut AccountSnapshot,
+    local: Option<&IndicatorSettings>,
+) -> Result<(), String> {
+    let Some(local) = local else {
+        return Ok(());
+    };
+    validate_indicator_settings(local)?;
+    data.indicator_settings = local.clone();
+    Ok(())
+}
+
+fn update_local_indicator_settings(
+    context: &GatewayContext,
+    user_id: &str,
+    epoch: u64,
+    patch: Option<serde_json::Map<String, Value>>,
+    reset: bool,
+    deadline: Instant,
+) -> Result<(Vec<Value>, Value), (i64, String)> {
+    context
+        .account
+        .active_session(epoch)
+        .map_err(internal_error)?;
+    remaining_time(deadline).map_err(internal_error)?;
+    let local = context
+        .local_preferences
+        .read_indicator_settings(&context.account, user_id, epoch, deadline)
+        .map_err(internal_error)?;
+    let base = if let Some(local) = local {
+        local
+    } else if reset {
+        default_indicator_settings()
+    } else {
+        let state = block_on_state(context, epoch, deadline).map_err(internal_error)?;
+        account_snapshot_or_empty(&state)
+            .map_err(internal_error)?
+            .indicator_settings
+    };
+    let data = if reset {
+        context
+            .local_preferences
+            .reset_indicator_settings(&context.account, user_id, epoch, deadline)
+            .map_err(internal_error)?
+    } else {
+        context
+            .local_preferences
+            .patch_indicator_settings(
+                &context.account,
+                user_id,
+                epoch,
+                patch.unwrap_or_default(),
+                &base,
+                deadline,
+            )
+            .map_err(|error| {
+                if error == "INVALID_INDICATOR_SETTINGS" {
+                    (-32602, error)
+                } else {
+                    internal_error(error)
+                }
+            })?
+    };
+    context
+        .account
+        .active_session(epoch)
+        .map_err(internal_error)?;
+    let _ = context.app.emit(
+        "account-local-preferences-updated",
+        json!({
+            "userId": user_id,
+            "epoch": epoch,
+            "indicatorSettings": data.clone(),
+        }),
+    );
+    Ok((
+        vec![],
+        envelope(
+            epoch,
+            json!({
+                "data": {"indicatorSettings": data},
+                "settings": data,
+                "epoch": epoch,
+                "scope": "local",
+            }),
+        ),
+    ))
+}
+
 fn account_snapshot_or_empty(
     state: &crate::account::AccountStateResult,
 ) -> Result<AccountSnapshot, String> {
-    match (&state.data, state.revision) {
-        (Some(data), _) => Ok(data.clone()),
-        (None, 0) => Ok(empty_account_snapshot()),
-        (None, _) => Err("CORRUPT_CLOUD_RESPONSE".to_string()),
-    }
+    Ok(state.data.clone().unwrap_or_else(empty_account_snapshot))
 }
 
 fn requested_symbols(
@@ -2363,6 +2492,16 @@ fn unix_millis() -> u128 {
         .as_millis()
 }
 
+fn record_client_activity_if_successful(
+    last_client_activity_at: &AtomicU64,
+    dispatch_succeeded: bool,
+    response_succeeded: bool,
+) {
+    if dispatch_succeeded && response_succeeded {
+        last_client_activity_at.store(unix_millis() as u64, Ordering::Release);
+    }
+}
+
 fn round_two(value: f64) -> f64 {
     (value * 100.0).round() / 100.0
 }
@@ -2370,11 +2509,15 @@ fn round_two(value: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::local_preferences::apply_indicator_patch;
     use std::io::Write;
     use std::net::TcpListener;
 
     fn parse_loopback_request(builder: impl FnOnce(u16) -> String) -> Result<HttpRequest, String> {
-        let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+        let listener = match TcpListener::bind("127.0.0.1:0") {
+            Ok(listener) => listener,
+            Err(_) => return Err("LOOPBACK_UNAVAILABLE".to_string()),
+        };
         let address = listener.local_addr().expect("address");
         let request = builder(address.port());
         let sender = thread::spawn(move || {
@@ -2401,6 +2544,9 @@ mod tests {
         let valid = parse_loopback_request(|port| {
             format!("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nContent-Length: 2\r\n\r\n{{}}")
         });
+        if matches!(&valid, Err(error) if error == "LOOPBACK_UNAVAILABLE") {
+            return;
+        }
         assert!(valid.is_ok());
         let wrong_host = parse_loopback_request(|port| {
             format!(
@@ -2462,11 +2608,32 @@ mod tests {
             bridge_path: PathBuf::from("/tmp/bridge.mjs"),
             available: false,
             error: Some("AGENT_BIND_FAILED".to_string()),
+            last_client_activity_at: Arc::new(AtomicU64::new(0)),
         };
         let config = gateway.config();
         assert!(!config.available);
         assert_eq!(config.error.as_deref(), Some("AGENT_BIND_FAILED"));
+        assert_eq!(config.last_client_activity_at, None);
+        let serialized = serde_json::to_value(&config).expect("config serializes");
+        assert!(serialized["lastClientActivityAt"].is_null());
+        assert!(serialized.get("token").is_none());
         assert!(!config.endpoint.contains("token"));
+    }
+
+    #[test]
+    fn client_activity_is_recorded_only_after_dispatch_and_http_success() {
+        let activity = AtomicU64::new(0);
+
+        // Unauthorized, forbidden, rate-limited, and malformed JSON requests
+        // never reach a successful dispatch and must not turn the indicator
+        // green.
+        record_client_activity_if_successful(&activity, false, true);
+        assert_eq!(activity.load(Ordering::Acquire), 0);
+        record_client_activity_if_successful(&activity, true, false);
+        assert_eq!(activity.load(Ordering::Acquire), 0);
+
+        record_client_activity_if_successful(&activity, true, true);
+        assert!(activity.load(Ordering::Acquire) > 0);
     }
 
     #[test]
@@ -2575,6 +2742,35 @@ mod tests {
     }
 
     #[test]
+    fn local_indicator_overlay_wins_over_cloud_defaults() {
+        let mut cloud = empty_account_snapshot();
+        cloud.indicator_settings.ma5 = 5.0;
+        let mut local = empty_account_snapshot();
+        local.indicator_settings.ma5 = 17.0;
+
+        overlay_local_indicator_settings(&mut cloud, Some(&local.indicator_settings))
+            .expect("valid local preferences");
+
+        assert_eq!(cloud.indicator_settings.ma5, 17.0);
+    }
+
+    #[test]
+    fn local_indicator_update_changes_cache_value_without_a_cloud_write_payload() {
+        let mut snapshot = empty_account_snapshot();
+        let patch = serde_json::from_value::<serde_json::Map<String, Value>>(
+            json!({"ma5": 21.0, "rsi": 22.0}),
+        )
+        .expect("indicator patch");
+
+        snapshot.indicator_settings = apply_indicator_patch(&snapshot.indicator_settings, patch)
+            .expect("valid indicator patch");
+
+        assert_eq!(snapshot.indicator_settings.ma5, 21.0);
+        assert_eq!(snapshot.indicator_settings.rsi, 22.0);
+        assert!(snapshot.categories.is_empty());
+    }
+
+    #[test]
     fn qualified_market_symbols_preserve_provider_mapping() {
         assert_eq!(
             normalize_market_symbol("US:AAPL").unwrap(),
@@ -2625,31 +2821,21 @@ mod tests {
     }
 
     #[test]
-    fn revision_zero_without_payload_is_a_valid_empty_account_snapshot() {
+    fn missing_payload_is_a_valid_empty_account_snapshot() {
         let state = crate::account::AccountStateResult {
             user_id: "user-a".to_string(),
             epoch: 1,
-            revision: 0,
             schema_version: 1,
             data: None,
             updated_at: None,
         };
         let snapshot = account_snapshot_or_empty(&state).expect("empty account");
         assert!(snapshot.stocks.is_empty());
-        assert_eq!(snapshot.categories[0].id, "default-watchlist");
+        assert!(snapshot.categories.is_empty());
         assert_eq!(snapshot.indicator_settings, default_indicator_settings());
         assert!(requested_symbols(&json!({}), &state)
             .expect("empty requested symbols")
             .is_empty());
-
-        let corrupt = crate::account::AccountStateResult {
-            revision: 2,
-            ..state
-        };
-        assert_eq!(
-            account_snapshot_or_empty(&corrupt),
-            Err("CORRUPT_CLOUD_RESPONSE".to_string())
-        );
     }
 
     #[test]

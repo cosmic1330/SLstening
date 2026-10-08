@@ -159,13 +159,13 @@ describe("Settings page", () => {
     expect(saved.nasdaq).toBe(false);
   });
 
-  it("edits and resets an indicator while preserving storage behavior", () => {
+  it("edits and resets an indicator without using the obsolete settings key", () => {
     renderSetting();
     openDisclosure(/Technical indicator settings/);
 
     const ma5 = screen.getByRole("spinbutton", { name: "Short MA (5)" }) as HTMLInputElement;
     fireEvent.change(ma5, { target: { value: "17" } });
-    expect(JSON.parse(localStorage.getItem("slitenting-indicator-settings") ?? "{}").ma5).toBe(17);
+    expect(localStorage.getItem("slitenting-indicator-settings")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Restore defaults" }));
     expect(ma5.value).toBe("5");

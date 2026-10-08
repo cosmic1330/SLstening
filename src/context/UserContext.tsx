@@ -176,7 +176,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         setNativeSessionError(null);
         const projectionUserId = useStocksStore.getState().accountUserId;
         if (userChanged || nativeSessionRetry > 0 || projectionUserId !== session.user.id) {
-          await useStocksStore.getState().hydrateAccount(session.user.id, nativeSession.epoch);
+          await useStocksStore.getState().initializeAccount(session.user.id, nativeSession.epoch);
+          if (sessionTransition.current !== transition) return;
         }
         if (nativeSessionRetry > 0) setNativeSessionRetry(0);
       } catch (error) {

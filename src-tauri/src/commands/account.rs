@@ -1,8 +1,19 @@
 use crate::account::{
-    AccountManager, AccountSnapshot, AccountStateResult, AccountWriteResult, SessionResult,
+    AccountManager, AccountSnapshot, AccountStateResult, AccountWriteResult, IndicatorSettings,
+    SessionResult,
 };
 use crate::agent_gateway::{AgentGateway, AgentGatewayConfig};
+use crate::legacy_settings::{LegacySettingsManager, LegacySettingsStatus};
+use crate::local_preferences::LocalPreferencesManager;
+use serde_json::{Map, Value};
+use std::time::{Duration, Instant};
 use tauri::State;
+
+const LOCAL_PREFERENCES_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+
+fn local_preferences_deadline() -> Instant {
+    Instant::now() + LOCAL_PREFERENCES_COMMAND_TIMEOUT
+}
 
 #[tauri::command]
 pub fn account_set_session(
@@ -47,6 +58,27 @@ pub fn agent_get_config(gateway: State<'_, AgentGateway>) -> AgentGatewayConfig 
 }
 
 #[tauri::command]
+pub fn legacy_settings_status(
+    manager: State<'_, LegacySettingsManager>,
+) -> Result<LegacySettingsStatus, String> {
+    manager.status()
+}
+
+#[tauri::command]
+pub fn legacy_settings_keep(
+    manager: State<'_, LegacySettingsManager>,
+) -> Result<LegacySettingsStatus, String> {
+    manager.keep()
+}
+
+#[tauri::command]
+pub fn legacy_settings_delete(
+    manager: State<'_, LegacySettingsManager>,
+) -> Result<LegacySettingsStatus, String> {
+    manager.delete()
+}
+
+#[tauri::command]
 pub async fn account_get_state(
     expected_epoch: u64,
     manager: State<'_, AccountManager>,
@@ -57,24 +89,57 @@ pub async fn account_get_state(
 #[tauri::command]
 pub async fn account_update_state(
     expected_epoch: u64,
-    expected_revision: u64,
     data: AccountSnapshot,
-    operation_id: String,
     manager: State<'_, AccountManager>,
 ) -> Result<AccountWriteResult, String> {
-    manager
-        .update_state(expected_epoch, expected_revision, data, operation_id)
-        .await
+    manager.sync_state(expected_epoch, data).await
 }
 
 #[tauri::command]
-pub async fn account_import_legacy(
+pub fn account_get_indicator_settings(
     expected_epoch: u64,
-    data: AccountSnapshot,
-    operation_id: String,
     manager: State<'_, AccountManager>,
-) -> Result<AccountWriteResult, String> {
-    manager
-        .import_legacy(expected_epoch, data, operation_id)
-        .await
+    preferences: State<'_, LocalPreferencesManager>,
+) -> Result<Option<IndicatorSettings>, String> {
+    let session = manager.active_session(expected_epoch)?;
+    preferences.read_indicator_settings(
+        &manager,
+        &session.user_id,
+        expected_epoch,
+        local_preferences_deadline(),
+    )
+}
+
+#[tauri::command]
+pub fn account_update_indicator_settings(
+    expected_epoch: u64,
+    settings: Map<String, Value>,
+    base: IndicatorSettings,
+    manager: State<'_, AccountManager>,
+    preferences: State<'_, LocalPreferencesManager>,
+) -> Result<IndicatorSettings, String> {
+    let session = manager.active_session(expected_epoch)?;
+    preferences.patch_indicator_settings(
+        &manager,
+        &session.user_id,
+        expected_epoch,
+        settings,
+        &base,
+        local_preferences_deadline(),
+    )
+}
+
+#[tauri::command]
+pub fn account_reset_indicator_settings(
+    expected_epoch: u64,
+    manager: State<'_, AccountManager>,
+    preferences: State<'_, LocalPreferencesManager>,
+) -> Result<IndicatorSettings, String> {
+    let session = manager.active_session(expected_epoch)?;
+    preferences.reset_indicator_settings(
+        &manager,
+        &session.user_id,
+        expected_epoch,
+        local_preferences_deadline(),
+    )
 }

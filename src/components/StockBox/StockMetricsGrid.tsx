@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { semanticTokens } from "../../theme";
 import { TaType, TickDealsType } from "../../types";
 import { hasSamples, hasVolumeBaseline } from "../../utils/marketMetrics";
+import { WATCHLIST_RADIUS } from "./constants";
 import AvgPrice from "./Items/AvgPrice";
 import Ma10 from "./Items/Ma10";
 import Ma20 from "./Items/Ma20";
@@ -10,7 +11,7 @@ import Ma5 from "./Items/Ma5";
 import VolumeRatio from "./Items/VolumeRatio";
 
 const MetricSurface = ({ children }: { children: React.ReactNode }) => (
-  <Box sx={{ minWidth: 0, minHeight: 44, p: "0 6px", borderRadius: 1, bgcolor: semanticTokens.analysis.inset, border: `1px solid ${semanticTokens.analysis.borderSubtle}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", transition: "background-color 160ms ease, border-color 160ms ease", "&:hover": { bgcolor: semanticTokens.analysis.chartInset, borderColor: semanticTokens.analysis.border }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } }}>
+  <Box sx={{ minWidth: 0, minHeight: 44, p: "0 6px", borderRadius: WATCHLIST_RADIUS, bgcolor: semanticTokens.analysis.inset, border: `1px solid ${semanticTokens.analysis.borderSubtle}`, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", transition: "background-color 160ms ease, border-color 160ms ease", "&:hover": { bgcolor: semanticTokens.analysis.chartInset, borderColor: semanticTokens.analysis.border }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } }}>
     {children}
   </Box>
 );

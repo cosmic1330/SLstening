@@ -12,3 +12,11 @@ export const stockBoxTokens = {
   textMuted: semanticTokens.analysis.textMuted,
   focus: semanticTokens.analysis.focus,
 } as const;
+
+/**
+ * Radius shared by StockBox surfaces and the Watchlist route that hosts them.
+ *
+ * Keep this as an explicit CSS value instead of a MUI numeric radius so the
+ * compact Watchlist surface is not coupled to the global theme multiplier.
+ */
+export const WATCHLIST_RADIUS = "8px" as const;

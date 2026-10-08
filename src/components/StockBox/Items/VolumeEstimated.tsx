@@ -1,6 +1,7 @@
 import { Box, Tooltip, Typography } from "@mui/material";
 import { TaType } from "../../../types";
 import { useTranslation } from "react-i18next";
+import { WATCHLIST_RADIUS } from "../constants";
 
 export default function VolumeEstimated({
   deals,
@@ -24,6 +25,7 @@ export default function VolumeEstimated({
       </Typography>
       <Tooltip
         title={`${t("stock.previousVolume")} ${deals.length > 0 && deals[deals.length - 2].v}`}
+        slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}
       >
         <Typography
           variant="body2"

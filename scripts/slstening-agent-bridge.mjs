@@ -99,6 +99,20 @@ async function callAppWithTimeout(request, controller) {
   }
 }
 
+function clientConfig(discovery) {
+  const bridgePath = typeof discovery.bridgePath === "string" && discovery.bridgePath.length > 0
+    ? discovery.bridgePath
+    : process.argv[1];
+  const config = {
+    command: "node",
+    args: [bridgePath],
+  };
+  if (typeof discovery.protocolVersion === "string" && discovery.protocolVersion.length > 0) {
+    config.protocolVersion = discovery.protocolVersion;
+  }
+  return config;
+}
+
 function errorResponse(id, code, message) {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
 }
@@ -149,7 +163,7 @@ async function handleLine(line) {
 
 if (process.argv.includes("--print-config")) {
   try {
-    process.stdout.write(`${JSON.stringify(await readDiscovery())}\n`);
+    process.stdout.write(`${JSON.stringify(clientConfig(await readDiscovery()))}\n`);
     process.exit(0);
   } catch (error) {
     log(error.message);

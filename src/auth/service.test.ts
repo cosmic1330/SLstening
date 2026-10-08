@@ -4,6 +4,8 @@ import {
   exchangeOAuthCallback,
   parseOAuthCallback,
   removeLegacyPasswordStorage,
+  safeAuthErrorMessage,
+  signOutLocal,
 } from "./service";
 
 describe("authentication storage and OAuth callbacks", () => {
@@ -66,5 +68,20 @@ describe("authentication storage and OAuth callbacks", () => {
     expect(await exchangeOAuthCallback(client, resolvedError)).toEqual({ kind: "code", code: "resolved-error" });
     expect(await exchangeOAuthCallback(client, rejectedError)).toEqual({ kind: "error" });
     expect(await exchangeOAuthCallback(client, rejectedError)).toEqual({ kind: "code", code: "rejected-error" });
+  });
+
+  it("signs out only the current Supabase session", async () => {
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    await signOutLocal({ auth: { signOut } } as never);
+
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
+  });
+
+  it("redacts authentication material from errors shown in the UI", () => {
+    const message = safeAuthErrorMessage(new Error("authorization: Bearer secret access_token=jwt-value"));
+
+    expect(message).not.toContain("secret");
+    expect(message).not.toContain("jwt-value");
+    expect(message).toContain("redacted");
   });
 });

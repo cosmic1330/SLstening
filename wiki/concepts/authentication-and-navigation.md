@@ -10,6 +10,8 @@ status: stable
 
 `UserProvider` initializes the Supabase session, subscribes to auth-state changes, and loads profile data such as `plan_tier`. Route guards wait for this initialization before deciding whether to show an authenticated screen or redirect.
 
+The Settings page exposes a local-device logout action. `UserContext.signOut` calls Supabase Auth with `scope: "local"`, so other devices stay signed in. Successful auth-state transition drives the existing native session teardown and account projection cleanup; cloud and legacy data are retained. Failures keep the session available for retry and expose a sanitized message to the UI.
+
 Authentication state is not the same as authorization. The current `isPaid` behavior is intentionally permissive for compatibility and is not a trustworthy premium-access boundary.
 
 ## OAuth Across Browser and Desktop
@@ -34,6 +36,7 @@ Frontend publishable Supabase credentials are expected to be public. Real data a
 - Verify both browser and Tauri deep-link callback paths.
 - Keep redirect destinations internal and loop-free.
 - Treat plan enforcement or database policy changes as security-sensitive architecture work and document the actual trusted boundary.
+- Keep local logout behavior centralized in `UserContext`; do not clear account data as part of sign-out.
 
 ## Source Anchors
 

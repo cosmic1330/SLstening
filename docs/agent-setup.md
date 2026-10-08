@@ -2,6 +2,8 @@
 
 SLstening 啟動後會在本機 loopback 建立 MCP HTTP gateway，只有目前已登入的 Supabase 帳號可以使用。App 會在自己的 application-data 目錄建立 owner-only 的 `slstening-agent.json`；檔案包含隨機 bearer token、port 與 bridge 路徑。登出、切換帳號或 token 過期後，gateway 會拒絕帳號工具；關閉 App 後 gateway 隨行程消失。
 
+MCP 是可選整合。若 loopback bind、權限或執行緒建立失敗，App 仍會正常啟動；`agent_get_config` 會回報 `available: false` 與不含敏感資訊的錯誤代碼，bridge 會將請求轉成 `APP_UNAVAILABLE`。Gateway 也會限制同時連線數，避免只連線但不送 HTTP header 的 client 耗盡 App 執行緒。
+
 Codex 使用 Node.js 18 以上的 `scripts/slstening-agent-bridge.mjs`，bridge 只讀 discovery file，不會取得或轉發 Supabase access token。測試環境可用：
 
 ```sh
@@ -21,6 +23,12 @@ codex mcp list
 Codex 桌面版、CLI 與 IDE 共用這份設定。新增後請重新啟動 Codex，並在 App 已開啟且登入時用 `/mcp` 確認 `slstening` 已連線。若日後移動 repository 或改用封裝版 App，請移除舊設定後以 discovery file 的 `bridgePath` 重新註冊。
 
 MCP 工具包含清單、報價、K 線、技術指標、籌碼分析，以及新增／刪除股票、建立／改名／刪除分類、調整成員與順序、更新／重設指標參數。寫入直接執行，並使用雲端 revision 做樂觀鎖；衝突會回傳錯誤並要求重新讀取。revision `0` 且尚無資料的全新帳號會先使用安全的預設清單，再以 revision `0` 建立第一筆資料。
+
+舊版 `settings.json` 的 `stocks` 可能只包含預設清單，但自訂分類仍保留股票 ID。匯入時會以本機共享 `menu` 目錄解析這些 ID，僅將實際追蹤股票與分類同步到雲端，不會上傳完整 menu。無法解析的 ID 會在畫面上列出數量；對已經匯入且同一帳號仍保留本機 claim 的資料，App 會在可關閉的 Dialog 提供「修復舊資料」、「保留目前資料」與「稍後決定」三個選擇。修復使用目前雲端 revision，衝突或網路錯誤不會標記完成；保留目前資料只寫入該帳號的本機 typed disposition，不會修改雲端。稍後決定只關閉本次執行階段的提示。
+
+匯入雲端請求前會先在 `settings.json` 建立綁定帳號與 operation ID 的 pending reservation。切換到其他帳號時，其他帳號不會被提供這份 legacy backup；若請求結果不明確，原帳號重新登入後會以相同 operation ID 重試或依已提交的雲端資料完成 claim。
+
+在 Windows 開發模式中，關閉 Tauri 視窗後出現 `ELIFECYCLE` 搭配 `4294967295` 通常是 pnpm/Vite 的開發命令收到應用程式結束訊號；若 App 仍保持開啟，這行不代表 MCP gateway 已崩潰。只有在 App 自行關閉或無法繼續使用時，才應依 `agent_get_config` 的 unavailable 狀態與 App log 排查。
 
 使用者已選擇本版本不顯示額外的 Agent permission UI；因此把 bridge 加入 Codex 前，請確認目前 App 登入的是要被讀寫的帳號。若不希望 Agent 能修改資料，請不要啟動 bridge。
 

@@ -57,9 +57,21 @@ pub fn run() {
             let market_manager = market_watcher::init(app.handle().clone());
             app.manage(market_manager.clone());
 
-            let gateway = agent_gateway::start(app.handle(), account_manager, market_manager)
-                .map_err(std::io::Error::other)?;
-            log::info!("SLstening Agent gateway ready at {}", gateway.endpoint);
+            let gateway = match agent_gateway::start(app.handle(), account_manager, market_manager)
+            {
+                Ok(gateway) => {
+                    log::info!("SLstening Agent gateway ready at {}", gateway.endpoint);
+                    gateway
+                }
+                Err(error) => {
+                    // MCP is an optional local integration. A bind, path, or
+                    // thread failure must not prevent the stock app from
+                    // starting, and the command remains available so clients
+                    // can see a safe unavailable status.
+                    log::error!("SLstening Agent gateway unavailable: {error}");
+                    agent_gateway::AgentGateway::unavailable(app.handle(), error)
+                }
+            };
             app.manage(gateway);
 
             Ok(())

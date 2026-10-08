@@ -12,6 +12,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -25,29 +26,62 @@ const ANALYSIS_DEADLINE: Duration = Duration::from_secs(25);
 const AGENT_MAX_WORKERS: usize = 8;
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
 
-#[derive(Clone)]
 pub struct AgentGateway {
     pub endpoint: String,
     pub discovery_path: PathBuf,
     pub bridge_path: PathBuf,
+    available: bool,
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AgentGatewayConfig {
+    pub available: bool,
     pub endpoint: String,
     pub discovery_path: String,
     pub bridge_path: String,
     pub protocol_version: String,
+    pub error: Option<String>,
 }
 
 impl AgentGateway {
     pub fn config(&self) -> AgentGatewayConfig {
         AgentGatewayConfig {
+            available: self.available,
             endpoint: self.endpoint.clone(),
             discovery_path: self.discovery_path.to_string_lossy().to_string(),
             bridge_path: self.bridge_path.to_string_lossy().to_string(),
             protocol_version: MCP_PROTOCOL_VERSION.to_string(),
+            error: self.error.clone(),
+        }
+    }
+
+    pub fn unavailable(app: &AppHandle, error: impl Into<String>) -> Self {
+        let discovery_path = app
+            .path()
+            .app_data_dir()
+            .ok()
+            .map(|path| path.join("slstening-agent.json"))
+            .unwrap_or_default();
+        let bridge_path = resolve_bridge_path(app);
+        if !discovery_path.as_os_str().is_empty() {
+            cleanup_discovery(&discovery_path);
+        }
+        Self {
+            endpoint: String::new(),
+            discovery_path,
+            bridge_path,
+            available: false,
+            error: Some(sanitize_gateway_error(&error.into())),
+        }
+    }
+}
+
+impl Drop for AgentGateway {
+    fn drop(&mut self) {
+        if !self.discovery_path.as_os_str().is_empty() {
+            cleanup_discovery(&self.discovery_path);
         }
     }
 }
@@ -60,6 +94,58 @@ struct GatewayContext {
     market: Arc<MarketManager>,
     app: AppHandle,
     rate: Arc<Mutex<RateLimit>>,
+}
+
+#[derive(Clone)]
+struct ConnectionLimiter {
+    active: Arc<AtomicUsize>,
+    max: usize,
+}
+
+struct ConnectionPermit {
+    active: Arc<AtomicUsize>,
+}
+
+impl ConnectionLimiter {
+    fn new(max: usize) -> Self {
+        Self {
+            active: Arc::new(AtomicUsize::new(0)),
+            max,
+        }
+    }
+
+    fn try_acquire(&self) -> Option<ConnectionPermit> {
+        let mut current = self.active.load(Ordering::Acquire);
+        loop {
+            if current >= self.max {
+                return None;
+            }
+            match self.active.compare_exchange_weak(
+                current,
+                current + 1,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => {
+                    return Some(ConnectionPermit {
+                        active: Arc::clone(&self.active),
+                    });
+                }
+                Err(actual) => current = actual,
+            }
+        }
+    }
+
+    #[cfg(test)]
+    fn active(&self) -> usize {
+        self.active.load(Ordering::Acquire)
+    }
+}
+
+impl Drop for ConnectionPermit {
+    fn drop(&mut self) {
+        self.active.fetch_sub(1, Ordering::AcqRel);
+    }
 }
 
 #[derive(Debug)]
@@ -90,24 +176,31 @@ pub fn start(
     account: AccountManager,
     market: Arc<MarketManager>,
 ) -> Result<AgentGateway, String> {
-    let listener =
-        TcpListener::bind(("127.0.0.1", 0)).map_err(|error| format!("AGENT_BIND:{error}"))?;
-    listener
-        .set_nonblocking(false)
-        .map_err(|error| format!("AGENT_BIND:{error}"))?;
-    let port = listener
-        .local_addr()
-        .map_err(|error| error.to_string())?
-        .port();
-    let token = random_token();
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| error.to_string())?;
-    fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
+        .map_err(|error| sanitize_gateway_error(&error.to_string()))?;
+    fs::create_dir_all(&app_data_dir)
+        .map_err(|error| sanitize_gateway_error(&error.to_string()))?;
     let discovery_path = app_data_dir.join("slstening-agent.json");
+    // A previous process may have exited without running Drop. Never leave a
+    // stale bearer token for the bridge to discover before this run is ready.
+    cleanup_discovery(&discovery_path);
+    let listener = TcpListener::bind(("127.0.0.1", 0))
+        .map_err(|error| sanitize_gateway_error(&format!("AGENT_BIND:{error}")))?;
+    listener
+        .set_nonblocking(false)
+        .map_err(|error| sanitize_gateway_error(&format!("AGENT_BIND:{error}")))?;
+    let port = listener
+        .local_addr()
+        .map_err(|error| sanitize_gateway_error(&error.to_string()))?
+        .port();
+    let token = random_token();
     let bridge_path = resolve_bridge_path(app);
-    write_discovery(&discovery_path, port, &token, &bridge_path)?;
+    if let Err(error) = write_discovery(&discovery_path, port, &token, &bridge_path) {
+        cleanup_discovery(&discovery_path);
+        return Err(sanitize_gateway_error(&error));
+    }
 
     let context = GatewayContext {
         token,
@@ -121,30 +214,120 @@ pub fn start(
             active: 0,
         })),
     };
+    let limiter = ConnectionLimiter::new(AGENT_MAX_WORKERS);
+    let cleanup_path = discovery_path.clone();
     thread::Builder::new()
         .name("slstening-agent-gateway".to_string())
         .spawn(move || {
             for stream in listener.incoming() {
                 match stream {
                     Ok(stream) => {
+                        let Some(permit) = limiter.try_acquire() else {
+                            // Dropping the stream immediately keeps the
+                            // accept loop responsive when clients connect but
+                            // never send HTTP headers.
+                            continue;
+                        };
                         let context = context.clone();
-                        let _ = thread::Builder::new()
+                        if let Err(error) = thread::Builder::new()
                             .name("slstening-agent-request".to_string())
                             .spawn(move || {
-                                let _ = handle_connection(stream, context);
-                            });
+                                let _permit = permit;
+                                let result =
+                                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                                        handle_connection(stream, context)
+                                    }));
+                                match result {
+                                    Ok(Ok(())) => {}
+                                    Ok(Err(error)) if is_normal_connection_error(&error) => {
+                                        log::debug!("Agent gateway connection ended: {error}");
+                                    }
+                                    Ok(Err(error)) => {
+                                        log::warn!(
+                                            "Agent gateway request failed: {}",
+                                            sanitize_gateway_error(&error)
+                                        );
+                                    }
+                                    Err(_) => {
+                                        log::error!("Agent gateway request worker panicked");
+                                    }
+                                }
+                            })
+                        {
+                            log::warn!(
+                                "Agent gateway worker unavailable: {}",
+                                sanitize_gateway_error(&error.to_string())
+                            );
+                        }
                     }
-                    Err(error) => log::warn!("Agent gateway accept failed: {error}"),
+                    Err(error) => log::warn!(
+                        "Agent gateway accept failed: {}",
+                        sanitize_gateway_error(&error.to_string())
+                    ),
                 }
             }
+            cleanup_discovery(&cleanup_path);
         })
-        .map_err(|error| format!("AGENT_START:{error}"))?;
+        .map_err(|error| {
+            cleanup_discovery(&discovery_path);
+            sanitize_gateway_error(&format!("AGENT_START:{error}"))
+        })?;
 
     Ok(AgentGateway {
         endpoint: format!("http://127.0.0.1:{port}/mcp"),
         discovery_path,
         bridge_path,
+        available: true,
+        error: None,
     })
+}
+
+fn cleanup_discovery(path: &Path) {
+    match fs::remove_file(path) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(_) => {}
+    }
+}
+
+fn sanitize_gateway_error(error: &str) -> String {
+    if matches!(
+        error,
+        "AGENT_BIND_FAILED"
+            | "AGENT_START_FAILED"
+            | "AGENT_PERMISSION_DENIED"
+            | "AGENT_UNAVAILABLE"
+    ) {
+        return error.to_string();
+    }
+    let code = if error.contains("AGENT_BIND") {
+        "AGENT_BIND_FAILED"
+    } else if error.contains("AGENT_START") {
+        "AGENT_START_FAILED"
+    } else if error.contains("permission") || error.contains("Permission") {
+        "AGENT_PERMISSION_DENIED"
+    } else {
+        "AGENT_UNAVAILABLE"
+    };
+    code.to_string()
+}
+
+fn is_normal_connection_error(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    [
+        "broken pipe",
+        "connection reset",
+        "connection aborted",
+        "connection closed",
+        "timed out",
+        "invalid_http",
+        "invalid_body",
+        "content_length_required",
+        "host_required",
+        "chunked_unsupported",
+    ]
+    .iter()
+    .any(|needle| lower.contains(needle))
 }
 
 fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
@@ -2248,6 +2431,42 @@ mod tests {
             leave_request(&rate);
         }
         assert!(!enter_request(&rate));
+    }
+
+    #[test]
+    fn connection_limiter_rejects_excess_clients_and_releases_every_slot() {
+        let limiter = ConnectionLimiter::new(AGENT_MAX_WORKERS);
+        let permits = (0..AGENT_MAX_WORKERS)
+            .map(|_| limiter.try_acquire().expect("slot"))
+            .collect::<Vec<_>>();
+        assert_eq!(limiter.active(), AGENT_MAX_WORKERS);
+        assert!(limiter.try_acquire().is_none());
+        drop(permits);
+        assert_eq!(limiter.active(), 0);
+        assert!(limiter.try_acquire().is_some());
+    }
+
+    #[test]
+    fn malformed_or_disconnected_connection_errors_are_not_app_fatal() {
+        assert!(is_normal_connection_error("INVALID_HTTP"));
+        assert!(is_normal_connection_error("Broken pipe"));
+        assert!(is_normal_connection_error("connection reset by peer"));
+        assert!(!is_normal_connection_error("worker invariant violated"));
+    }
+
+    #[test]
+    fn unavailable_gateway_config_is_explicit_and_does_not_expose_details() {
+        let gateway = AgentGateway {
+            endpoint: String::new(),
+            discovery_path: PathBuf::from("/tmp/slstening-agent.json"),
+            bridge_path: PathBuf::from("/tmp/bridge.mjs"),
+            available: false,
+            error: Some("AGENT_BIND_FAILED".to_string()),
+        };
+        let config = gateway.config();
+        assert!(!config.available);
+        assert_eq!(config.error.as_deref(), Some("AGENT_BIND_FAILED"));
+        assert!(!config.endpoint.contains("token"));
     }
 
     #[test]

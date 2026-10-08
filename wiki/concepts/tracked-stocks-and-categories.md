@@ -27,6 +27,10 @@ Normalization during reload is part of backward compatibility. Do not replace it
 
 The store also contains Supabase helpers for `watch_stock`, but those compatibility paths do not define category membership. The account snapshot is keyed by the server-verified Supabase `user.id`; email is display metadata only.
 
+Legacy import reads the device-wide `settings.json` stocks first and then resolves IDs referenced by every category against the shared local `menu` catalog. The resolved union is uploaded, while the full menu remains device-shared and reconstructable. Unresolved IDs are retained as a visible warning. If a locally claimed account was imported by a version that dropped those memberships, the same account receives a dismissible repair dialog with repair, keep-current, and decide-later choices. Repair merges missing categories and members while preserving current cloud preferences and is marked complete only after the cloud write succeeds. Keep-current stores a typed per-account local disposition without changing cloud data; decide-later only dismisses the dialog for the current mounted session.
+
+An import also writes a user-bound pending reservation before its cloud request. The reservation keeps the same operation ID for retries, prevents another local account from claiming the legacy backup while the request is ambiguous, and is reconciled into the claim when that same account later observes the committed cloud state.
+
 ## Change Checklist
 
 - Preserve old stored data through reload normalization or an explicit migration.

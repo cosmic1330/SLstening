@@ -33,21 +33,36 @@ export const emptyAccountSnapshot = (): AccountSnapshot => ({
   indicatorSettings: { ...DEFAULT_INDICATOR_SETTINGS },
 });
 
+export interface LegacySnapshotDetails {
+  snapshot: AccountSnapshot;
+  unresolvedStockIds: string[];
+}
+
+export interface LegacyRepairPlan {
+  snapshot: AccountSnapshot;
+  unresolvedStockIds: string[];
+  missingCategoryIds: string[];
+  missingMemberships: Array<{ categoryId: string; stockIds: string[] }>;
+}
+
 export function normalizeAccountSnapshot(value: AccountSnapshot): AccountSnapshot {
-  const stocks = value.stocks.filter((stock, index, list) =>
-    stock && typeof stock.id === "string" && list.findIndex((item) => item.id === stock.id) === index,
+  const sourceStocks = Array.isArray(value.stocks) ? value.stocks : [];
+  const stocks = sourceStocks.filter((stock, index, list) =>
+    stock && typeof stock.id === "string" && list.findIndex((item) => item?.id === stock.id) === index,
   );
   const stockIds = new Set(stocks.map((stock) => stock.id));
-  const sourceCategories = Array.isArray(value.categories) ? value.categories : [];
+  const sourceCategories = Array.isArray(value.categories)
+    ? value.categories.filter((category) => category && typeof category.id === "string")
+    : [];
   const defaultSource = sourceCategories.find((category) => category.id === DEFAULT_WATCHLIST_ID || category.isDefault === true);
   const categories: CategoryType[] = [
-    { id: DEFAULT_WATCHLIST_ID, name: "", stockIds: unique(defaultSource?.stockIds ?? stocks.map((stock) => stock.id)), isDefault: true },
+    { id: DEFAULT_WATCHLIST_ID, name: "", stockIds: unique(Array.isArray(defaultSource?.stockIds) ? defaultSource.stockIds : stocks.map((stock) => stock.id)), isDefault: true },
     ...sourceCategories
       .filter((category) => category.id !== DEFAULT_WATCHLIST_ID && category.isDefault !== true && typeof category.id === "string")
       .map((category) => ({
         id: category.id,
-        name: category.name.trim(),
-        stockIds: unique(category.stockIds ?? []),
+        name: typeof category.name === "string" ? category.name.trim() : "",
+        stockIds: unique(Array.isArray(category.stockIds) ? category.stockIds.filter((id): id is string => typeof id === "string") : []),
       })),
   ].map((category) => ({
     ...category,
@@ -96,13 +111,120 @@ export function readLegacyIndicatorSettings(): IndicatorSettings {
 }
 
 export async function readLegacySnapshot(): Promise<AccountSnapshot> {
+  const details = await readLegacySnapshotDetails();
+  return details.snapshot;
+}
+
+/**
+ * Read the old, device-wide snapshot without serializing the shared menu.
+ * Older versions persisted only the default category's stocks, while custom
+ * categories retained IDs that can be resolved from the local menu catalog.
+ */
+export async function readLegacySnapshotDetails(): Promise<LegacySnapshotDetails> {
   const store = await Store.load("settings.json");
-  const stocks = ((await store.get("stocks")) as StockStoreType[]) || [];
-  const categories = ((await store.get("categories")) as CategoryType[]) || [];
+  const storedStocks = (await store.get("stocks")) as StockStoreType[] | undefined;
+  const storedMenu = (await store.get("menu")) as StockStoreType[] | undefined;
+  const storedCategories = (await store.get("categories")) as CategoryType[] | undefined;
+  const legacyStocks = Array.isArray(storedStocks) ? storedStocks : [];
+  const menu = Array.isArray(storedMenu) ? storedMenu : [];
+  const categories = Array.isArray(storedCategories) ? storedCategories : [];
   const activeCategoryId = ((await store.get("activeCategoryId")) as string | undefined) || DEFAULT_WATCHLIST_ID;
   const pinnedCategoryIds = ((await store.get("pinnedCategoryIds")) as string[] | undefined) || [];
   const recentCategoryIds = ((await store.get("recentCategoryIds")) as string[] | undefined) || [];
-  return normalizeAccountSnapshot({ stocks, categories, activeCategoryId, pinnedCategoryIds, recentCategoryIds, indicatorSettings: readLegacyIndicatorSettings() });
+  const knownStocks = new Set<string>();
+  const stocks: StockStoreType[] = [];
+  const isStockRecord = (stock: StockStoreType | undefined): stock is StockStoreType => Boolean(
+    stock
+    && typeof stock.id === "string"
+    && stock.id.trim()
+    && typeof stock.name === "string"
+    && typeof stock.group === "string"
+    && typeof stock.type === "string",
+  );
+  const addStock = (stock: StockStoreType | undefined) => {
+    if (!isStockRecord(stock) || knownStocks.has(stock.id)) return;
+    knownStocks.add(stock.id);
+    stocks.push(stock);
+  };
+  // Keep the original order first, then append category members in category
+  // order. This makes the repair deterministic and preserves existing UI
+  // ordering as far as the old data allows.
+  legacyStocks.forEach(addStock);
+  const menuById = new Map(menu.filter(isStockRecord).map((stock) => [stock.id, stock]));
+  const unresolvedStockIds: string[] = [];
+  for (const category of categories) {
+    const categoryStockIds = Array.isArray(category?.stockIds) ? category.stockIds : [];
+    for (const stockId of categoryStockIds) {
+      if (typeof stockId !== "string" || !stockId.trim()) continue;
+      if (knownStocks.has(stockId)) continue;
+      const resolved = menuById.get(stockId);
+      if (resolved) addStock(resolved);
+      else if (!unresolvedStockIds.includes(stockId)) unresolvedStockIds.push(stockId);
+    }
+  }
+  const snapshot = normalizeAccountSnapshot({ stocks, categories, activeCategoryId, pinnedCategoryIds, recentCategoryIds, indicatorSettings: readLegacyIndicatorSettings() });
+  return { snapshot, unresolvedStockIds };
+}
+
+/**
+ * Build an explicit, local repair preview. The caller must perform the cloud
+ * optimistic-lock write; this helper never mutates persisted or cloud state.
+ */
+export function buildLegacyRepairPlan(current: AccountSnapshot, legacy: LegacySnapshotDetails): LegacyRepairPlan {
+  const currentSnapshot = normalizeAccountSnapshot(current);
+  const legacySnapshot = normalizeAccountSnapshot(legacy.snapshot);
+  const currentCategories = new Map(currentSnapshot.categories.map((category) => [category.id, category]));
+  const missingCategoryIds: string[] = [];
+  const missingMemberships: Array<{ categoryId: string; stockIds: string[] }> = [];
+  for (const legacyCategory of legacySnapshot.categories) {
+    const currentCategory = currentCategories.get(legacyCategory.id);
+    if (!currentCategory) {
+      if (legacyCategory.id !== DEFAULT_WATCHLIST_ID) missingCategoryIds.push(legacyCategory.id);
+      continue;
+    }
+    const missing = legacyCategory.stockIds.filter((stockId) => !currentCategory.stockIds.includes(stockId));
+    if (missing.length) missingMemberships.push({ categoryId: legacyCategory.id, stockIds: missing });
+  }
+  const mergedStocks = [...currentSnapshot.stocks];
+  const stockIds = new Set(mergedStocks.map((stock) => stock.id));
+  for (const stock of legacySnapshot.stocks) {
+    if (!stockIds.has(stock.id)) {
+      mergedStocks.push(stock);
+      stockIds.add(stock.id);
+    }
+  }
+  const mergedCategories = currentSnapshot.categories.map((category) => ({ ...category, stockIds: [...category.stockIds] }));
+  for (const legacyCategory of legacySnapshot.categories) {
+    const currentCategory = mergedCategories.find((category) => category.id === legacyCategory.id);
+    if (currentCategory) {
+      for (const stockId of legacyCategory.stockIds) {
+        if (stockIds.has(stockId) && !currentCategory.stockIds.includes(stockId)) currentCategory.stockIds.push(stockId);
+      }
+    } else if (legacyCategory.id !== DEFAULT_WATCHLIST_ID) {
+      // Native validation keeps custom names unique. If a user renamed a
+      // current category to the old name, merge the recoverable memberships
+      // into that existing category instead of creating an invalid duplicate.
+      const sameName = mergedCategories.find((category) =>
+        category.id !== DEFAULT_WATCHLIST_ID
+        && category.name.trim().toLocaleLowerCase() === legacyCategory.name.trim().toLocaleLowerCase(),
+      );
+      const target = sameName ?? legacyCategory;
+      if (sameName) {
+        for (const stockId of legacyCategory.stockIds) {
+          if (stockIds.has(stockId) && !sameName.stockIds.includes(stockId)) sameName.stockIds.push(stockId);
+        }
+      } else {
+        mergedCategories.push({ ...target, stockIds: legacyCategory.stockIds.filter((stockId) => stockIds.has(stockId)) });
+      }
+    }
+  }
+  const snapshot = normalizeAccountSnapshot({ ...currentSnapshot, stocks: mergedStocks, categories: mergedCategories });
+  return {
+    snapshot,
+    unresolvedStockIds: [...legacy.unresolvedStockIds],
+    missingCategoryIds,
+    missingMemberships,
+  };
 }
 
 export function hasPersonalData(snapshot: AccountSnapshot) {

@@ -4,15 +4,32 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../i18n";
 import useUIStore from "../../../store/UI.store";
-import Setting from ".";
 
 const mocks = vi.hoisted(() => ({
+  stockState: {
+    accountUserId: null,
+    hydrated: false,
+    indicatorSettings: {},
+    updateIndicatorSetting: vi.fn(),
+    resetIndicatorSettings: vi.fn(),
+    update_menu: vi.fn(),
+  },
+  stockStore: vi.fn(),
   download: {
     disable: false,
     handleDownloadMenu: vi.fn(),
   },
   setAlwaysOnTop: vi.fn(),
+  user: {
+    session: { user: { email: "person@example.com" } },
+    signOut: vi.fn().mockResolvedValue(undefined),
+    isSigningOut: false,
+    signOutError: null as string | null,
+  },
 }));
+mocks.stockStore.mockImplementation((selector?: (state: typeof mocks.stockState) => unknown) => (
+  selector ? selector(mocks.stockState) : mocks.stockState
+));
 
 vi.mock("../../../hooks/useDownloadStocks", () => ({
   default: () => mocks.download,
@@ -22,9 +39,30 @@ vi.mock("../../../store/debug.store", () => ({
   default: () => ({ isVisible: false, toggleVisibility: vi.fn() }),
 }));
 
+vi.mock("../../../context/UserContext", () => ({
+  useUser: () => mocks.user,
+}));
+
+vi.mock("../../../supabase", () => ({
+  supabase: { auth: {} },
+}));
+
+vi.mock("../../../store/Stock.store", () => ({
+  default: mocks.stockStore,
+}));
+
+vi.mock("../../../account/native", () => ({
+  clearNativeSession: vi.fn(),
+  establishNativeSession: vi.fn(),
+  invalidateNativeSession: vi.fn(),
+  isNativeRuntime: vi.fn(() => false),
+}));
+
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({ setAlwaysOnTop: mocks.setAlwaysOnTop })),
 }));
+
+import Setting from ".";
 
 const renderSetting = () =>
   render(
@@ -45,6 +83,11 @@ beforeEach(async () => {
   mocks.download.disable = false;
   mocks.download.handleDownloadMenu.mockReset();
   mocks.setAlwaysOnTop.mockReset();
+  mocks.user.session = { user: { email: "person@example.com" } };
+  mocks.user.signOut.mockReset();
+  mocks.user.signOut.mockResolvedValue(undefined);
+  mocks.user.isSigningOut = false;
+  mocks.user.signOutError = null;
   await i18n.changeLanguage("en");
 });
 
@@ -137,6 +180,34 @@ describe("Settings page", () => {
     const update = screen.getByRole("button", { name: /Updating/ });
     expect(update.getAttribute("aria-busy")).toBe("true");
     expect(update.textContent).toContain("Updating");
+  });
+
+  it("shows the signed-in account and starts local sign-out", () => {
+    renderSetting();
+
+    expect(screen.getByRole("heading", { name: "Account" })).toBeTruthy();
+    expect(screen.getByText("person@example.com")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+
+    expect(mocks.user.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the logout action while sign-out is pending", () => {
+    mocks.user.isSigningOut = true;
+    renderSetting();
+
+    const logout = screen.getByRole("button", { name: "Signing out…" });
+    expect((logout as HTMLButtonElement).disabled).toBe(true);
+    expect(logout.getAttribute("aria-busy")).toBe("true");
+  });
+
+  it("shows a safe sign-out error while keeping the account visible", () => {
+    mocks.user.signOutError = "Network unavailable";
+    renderSetting();
+
+    expect(screen.getByRole("alert").textContent).toContain("Could not sign out: Network unavailable");
+    expect(screen.getByText("person@example.com")).toBeTruthy();
   });
 
   it("changes the i18next language from the explicit language options", async () => {

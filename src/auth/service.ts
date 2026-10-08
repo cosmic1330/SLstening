@@ -22,6 +22,38 @@ export function saveRememberedEmail(remember: boolean, email: string, storage: S
   else storage?.removeItem(REMEMBERED_EMAIL_KEY);
 }
 
+const AUTH_ERROR_FALLBACK = "Unable to sign out. Please try again.";
+
+/**
+ * Keep authentication failures useful to the UI without allowing token or
+ * authorization material from an SDK error to reach the screen.
+ */
+export function safeAuthErrorMessage(error: unknown): string {
+  const rawMessage = error instanceof Error
+    ? error.message
+    : typeof error === "object" && error !== null && "message" in error && typeof error.message === "string"
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "";
+  if (!rawMessage.trim()) return AUTH_ERROR_FALLBACK;
+
+  const sanitized = rawMessage
+    .replace(/bearer\s+[^\s,;]+/gi, "authorization redacted")
+    .replace(/(["']?(?:access_token|refresh_token|authorization|token|jwt)["']?\s*[:=]\s*["']?)[^"',;\s}]+/gi, "$1[redacted]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+
+  return sanitized || AUTH_ERROR_FALLBACK;
+}
+
+/** Sign out only this persisted Supabase session. */
+export async function signOutLocal(client: Pick<SupabaseClient, "auth">): Promise<void> {
+  const { error } = await client.auth.signOut({ scope: "local" });
+  if (error) throw error;
+}
+
 export function isTauriDesktop() {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }

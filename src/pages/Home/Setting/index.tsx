@@ -1,14 +1,15 @@
+import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
+import ChartIcon from "@mui/icons-material/BarChart";
+import BugReportIcon from "@mui/icons-material/BugReport";
+import DownloadIcon from "@mui/icons-material/CloudDownload";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import TopIcon from "@mui/icons-material/Layers";
+import LogoutIcon from "@mui/icons-material/Logout";
+import PersonIcon from "@mui/icons-material/PersonOutline";
+import SettingsIcon from "@mui/icons-material/Settings";
+import TuneIcon from "@mui/icons-material/Tune";
 import {
-  ArrowBackIosNew as ArrowBackIcon,
-  BarChart as ChartIcon,
-  BugReport as BugReportIcon,
-  CloudDownload as DownloadIcon,
-  ExpandMore as ExpandMoreIcon,
-  Layers as TopIcon,
-  Settings as SettingsIcon,
-  Tune as TuneIcon,
-} from "@mui/icons-material";
-import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -24,6 +25,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
+import { useUser } from "../../../context/UserContext";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
 import useDebugStore from "../../../store/debug.store";
 import useUIStore from "../../../store/UI.store";
@@ -398,6 +400,7 @@ function DisclosureCard({
 
 function Setting() {
   const { t, i18n } = useTranslation();
+  const { session, signOut, isSigningOut, signOutError } = useUser();
   const { handleDownloadMenu, disable } = useDownloadStocks();
   const navigate = useNavigate();
   const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
@@ -424,6 +427,11 @@ function Setting() {
   const [marketInfoOpen, setMarketInfoOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [indicatorOpen, setIndicatorOpen] = useState(false);
+  const accountEmail = session?.user.email?.trim() || t("settings.accountUnknown");
+
+  const handleSignOut = useCallback(() => {
+    void signOut().catch(() => undefined);
+  }, [signOut]);
 
   const handleAlwaysOnTopChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -666,6 +674,47 @@ function Setting() {
               <IndicatorSettingsSection />
             </DisclosureCard>
           </Stack>
+
+          <SectionCard aria-labelledby="settings-account-heading" sx={{ mt: 2.25 }}>
+            <SectionHeading
+              headingId="settings-account-heading"
+              icon={<PersonIcon fontSize="small" />}
+              title={t("settings.account")}
+              hint={t("settings.accountHint")}
+              accent={settingsPalette.lavender}
+            />
+            <Stack spacing={1} sx={{ px: { xs: 1, sm: 1.5 }, pb: 1.5 }}>
+              <SettingRow sx={{ alignItems: { xs: "stretch", sm: "center" }, flexDirection: { xs: "column", sm: "row" } }}>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+                  <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.lavender }} aria-hidden="true">
+                    <PersonIcon fontSize="small" />
+                  </SectionIcon>
+                  <SettingRowText title={t("settings.accountEmail")} hint={accountEmail} />
+                </Stack>
+                <FocusableButton
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={isSigningOut}
+                  aria-busy={isSigningOut}
+                  aria-label={t(isSigningOut ? "settings.signingOut" : "settings.logout")}
+                  startIcon={isSigningOut ? <CircularProgress size={16} color="inherit" aria-hidden="true" /> : <LogoutIcon fontSize="small" aria-hidden="true" />}
+                  sx={{
+                    width: { xs: "100%", sm: "auto" },
+                    backgroundColor: "#F2B8B5",
+                    "&:hover": { backgroundColor: "#E99C97" },
+                    "&.Mui-disabled": { color: "rgba(25, 25, 25, 0.72)", backgroundColor: "#EBCBC8", borderColor: "rgba(25, 25, 25, 0.45)" },
+                  }}
+                >
+                  {isSigningOut ? t("settings.signingOut") : t("settings.logout")}
+                </FocusableButton>
+              </SettingRow>
+              {signOutError ? (
+                <Alert severity="error" role="alert" sx={{ border: `2px solid ${settingsPalette.outline}`, borderRadius: 15, color: settingsPalette.ink, fontWeight: 700 }}>
+                  {t("settings.signOutError", { error: signOutError })}
+                </Alert>
+              ) : null}
+            </Stack>
+          </SectionCard>
         </MainCard>
 
         <Stack alignItems="center" spacing={0.75} sx={{ mt: 3.5, opacity: 0.72 }}>

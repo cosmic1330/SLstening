@@ -1,6 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { exchangeOAuthCallback, removeLegacyPasswordStorage } from "../auth/service";
+import { exchangeOAuthCallback, removeLegacyPasswordStorage, safeAuthErrorMessage, signOutLocal } from "../auth/service";
 import { useTauriOAuthCallback } from "../auth/useTauriOAuthCallback";
 import { supabase } from "../supabase";
 import { clearNativeSession, establishNativeSession, invalidateNativeSession, isNativeRuntime } from "../account/native";
@@ -17,6 +17,9 @@ interface UserContextType {
   nativeSessionError: string | null;
   retryNativeSession: () => void;
   oauthCallbackStatus: OAuthCallbackStatus;
+  signOut: () => Promise<void>;
+  isSigningOut: boolean;
+  signOutError: string | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -30,6 +33,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [initializationAttempt, setInitializationAttempt] = useState(0);
   const [nativeSessionError, setNativeSessionError] = useState<string | null>(null);
   const [nativeSessionRetry, setNativeSessionRetry] = useState(0);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  const signOutInFlight = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     removeLegacyPasswordStorage();
@@ -62,6 +68,29 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     setInitError(false);
     setIsLoading(true);
     setInitializationAttempt((attempt) => attempt + 1);
+  }, []);
+
+  const signOut = useCallback(() => {
+    if (signOutInFlight.current) return signOutInFlight.current;
+
+    setIsSigningOut(true);
+    setSignOutError(null);
+    const request = signOutLocal(supabase)
+      .catch((error: unknown) => {
+        const safeMessage = safeAuthErrorMessage(error);
+        setSignOutError(safeMessage);
+        // Consumers can catch the sanitized error while the session remains
+        // available for retrying the local sign-out.
+        throw new Error(safeMessage);
+      })
+      .finally(() => {
+        if (signOutInFlight.current === request) {
+          signOutInFlight.current = null;
+          setIsSigningOut(false);
+        }
+      });
+    signOutInFlight.current = request;
+    return request;
   }, []);
 
   useEffect(() => {
@@ -171,7 +200,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [session?.access_token, session?.expires_at, session?.user.id, nativeSessionRetry]);
 
   return (
-    <UserContext.Provider value={{ isPaid, session, isLoading, initError, retrySessionInitialization, nativeSessionError, retryNativeSession, oauthCallbackStatus }}>
+    <UserContext.Provider value={{ isPaid, session, isLoading, initError, retrySessionInitialization, nativeSessionError, retryNativeSession, oauthCallbackStatus, signOut, isSigningOut, signOutError }}>
       {children}
     </UserContext.Provider>
   );

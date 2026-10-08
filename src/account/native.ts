@@ -81,10 +81,12 @@ export async function importNativeLegacyState(
 }
 
 export interface AgentGatewayConfig {
+  available: boolean;
   endpoint: string;
   discoveryPath: string;
   bridgePath: string;
   protocolVersion: string;
+  error: string | null;
 }
 
 export async function getAgentGatewayConfig(): Promise<AgentGatewayConfig | null> {

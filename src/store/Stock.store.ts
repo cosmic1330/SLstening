@@ -3,7 +3,8 @@ import { create } from "zustand";
 import { CategoryType, StockStoreType } from "../types";
 import { DEFAULT_WATCHLIST_ID as ACCOUNT_DEFAULT_WATCHLIST_ID } from "../account/constants";
 import { getNativeAccountState, importNativeLegacyState, isNativeRuntime, updateNativeAccountState } from "../account/native";
-import { emptyAccountSnapshot, hasPersonalData, normalizeAccountSnapshot, readLegacySnapshot, DEFAULT_INDICATOR_SETTINGS } from "../account/snapshot";
+import { buildLegacyRepairPlan, emptyAccountSnapshot, hasPersonalData, normalizeAccountSnapshot, readLegacySnapshotDetails, DEFAULT_INDICATOR_SETTINGS } from "../account/snapshot";
+import type { LegacySnapshotDetails } from "../account/snapshot";
 import type { AccountSnapshot, IndicatorSettings } from "../account/types";
 
 export const DEFAULT_WATCHLIST_ID = ACCOUNT_DEFAULT_WATCHLIST_ID;
@@ -46,7 +47,20 @@ const saveAccountCache = async (userId: string, snapshot: AccountSnapshot) => {
   await store.set(`account:${userId}:snapshot`, snapshot);
   await store.save();
 };
+const legacySnapshotKey = (userId: string) => `account:${userId}:legacy-snapshot`;
+const legacyRepairKey = (userId: string) => `account:${userId}:legacy-repaired`;
+const legacyRepairDispositionKey = (userId: string) => `account:${userId}:legacy-repair-disposition`;
 const LEGACY_CLAIM_KEY = "slstening-legacy-import-claim";
+const LEGACY_PENDING_KEY = "slstening-legacy-import-pending";
+export type LegacyRepairDisposition = "repaired" | "keep-current";
+interface LegacyImportClaim {
+  userId: string;
+  operationId?: string;
+}
+interface LegacyImportReservation extends LegacySnapshotDetails {
+  userId: string;
+  operationId: string;
+}
 const accountSnapshotFrom = (state: Pick<StocksState, "stocks" | "categories" | "activeCategoryId" | "pinnedCategoryIds" | "recentCategoryIds" | "indicatorSettings">): AccountSnapshot => ({
   stocks: state.stocks,
   categories: state.categories,
@@ -57,6 +71,34 @@ const accountSnapshotFrom = (state: Pick<StocksState, "stocks" | "categories" | 
 });
 const operationId = (prefix: string) => `${prefix}-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`}`;
 const randomIdentifier = (prefix: string) => `${prefix}-${typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`}`;
+
+const readRetainedLegacy = async (store: Store, userId: string): Promise<LegacySnapshotDetails | null> => {
+  const value = await store.get(legacySnapshotKey(userId)) as Partial<LegacySnapshotDetails> | undefined;
+  if (!value?.snapshot || !Array.isArray(value.unresolvedStockIds)) return null;
+  return { snapshot: normalizeAccountSnapshot(value.snapshot), unresolvedStockIds: [...new Set(value.unresolvedStockIds.filter((id): id is string => typeof id === "string"))] };
+};
+const readLegacyReservation = async (store: Store): Promise<LegacyImportReservation | null> => {
+  const value = await store.get(LEGACY_PENDING_KEY) as Partial<LegacyImportReservation> | undefined;
+  if (!value?.userId || !value.operationId || !value.snapshot || !Array.isArray(value.unresolvedStockIds)) return null;
+  return {
+    userId: value.userId,
+    operationId: value.operationId,
+    snapshot: normalizeAccountSnapshot(value.snapshot),
+    unresolvedStockIds: [...new Set(value.unresolvedStockIds.filter((id): id is string => typeof id === "string"))],
+  };
+};
+const readLegacyRepairDisposition = async (store: Store, userId: string): Promise<LegacyRepairDisposition | null> => {
+  const value = await store.get(legacyRepairDispositionKey(userId));
+  if (value === "repaired" || value === "keep-current") return value;
+  // Versions before the typed disposition stored a boolean marker. Treat a
+  // completed repair as the equivalent typed state during migration.
+  return (await store.get(legacyRepairKey(userId))) === true ? "repaired" : null;
+};
+const safeSyncError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  const redacted = message.replace(/(access[_-]?token|authorization|bearer|token)\s*[:=]\s*[^\s,;]+/gi, "$1=[redacted]");
+  return (redacted || "UNKNOWN_ERROR").slice(0, 240);
+};
 const commitAccountSnapshot = async (
   get: () => StocksState,
   set: (partial: Partial<StocksState>) => void,
@@ -73,9 +115,11 @@ const commitAccountSnapshot = async (
       const latest = get();
       return latest.accountUserId === userId && latest.accountEpoch === epoch;
     };
+    if (!isCurrent()) return;
     set({ syncStatus: "loading", syncError: null });
     try {
       const result = await updateNativeAccountState(epoch, current.cloudRevision, normalized, operationId("ui"));
+      if (!isCurrent()) return;
       await saveAccountCache(userId, normalized);
       if (!isCurrent()) return;
       set({ ...normalized, hydrated: true, cloudRevision: result.revision, syncStatus: "synced", syncError: null });
@@ -137,15 +181,21 @@ interface StocksState {
   accountUserId: string | null;
   accountEpoch: number | null;
   cloudRevision: number;
-  syncStatus: "local" | "loading" | "synced" | "importable" | "conflict" | "error";
+  syncStatus: "local" | "loading" | "repairing" | "synced" | "importable" | "conflict" | "error";
   syncError: string | null;
   legacyImportAvailable: boolean;
+  legacyRepairAvailable: boolean;
+  legacyRepairMissingCount: number;
+  legacyUnresolvedStockIds: string[];
+  legacyRepairDisposition: LegacyRepairDisposition | null;
   increase: (stock: StockStoreType) => Promise<void>;
   remove: (id: string) => Promise<void>;
   removeStocks: (ids: string[]) => Promise<void>;
   reload: () => Promise<void>;
   hydrateAccount: (userId: string, epoch: number) => Promise<void>;
   importLegacy: () => Promise<void>;
+  repairLegacy: () => Promise<void>;
+  keepLegacyCurrent: () => Promise<void>;
   clearAccountProjection: () => Promise<void>;
   setAccountSyncError: (message: string) => void;
   syncCurrent: () => Promise<void>;
@@ -174,7 +224,7 @@ interface StocksState {
 const useStocksStore = create<StocksState>((set, get) => ({
   stocks: [], menu: [], categories: [], activeCategoryId: DEFAULT_WATCHLIST_ID, hydrated: false, pinnedCategoryIds: [], recentCategoryIds: [],
   indicatorSettings: { ...DEFAULT_INDICATOR_SETTINGS }, accountUserId: null, accountEpoch: null, cloudRevision: 0,
-  syncStatus: "local", syncError: null, legacyImportAvailable: false,
+  syncStatus: "local", syncError: null, legacyImportAvailable: false, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: [], legacyRepairDisposition: null,
   reload: () => enqueueMutation(get, async () => {
     if (isNativeRuntime()) {
       const { accountUserId, accountEpoch } = get();
@@ -213,7 +263,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const latest = get();
       return latest.accountUserId === userId && latest.accountEpoch === epoch;
     };
-    set({ accountUserId: userId, accountEpoch: epoch, hydrated: false, syncStatus: "loading", syncError: null, legacyImportAvailable: false });
+    set({ accountUserId: userId, accountEpoch: epoch, hydrated: false, syncStatus: "loading", syncError: null, legacyImportAvailable: false, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: [], legacyRepairDisposition: null });
     try {
       // The shared menu is device data, while the account snapshot is cloud
       // data. Load it first so a native restart never renders an empty
@@ -222,21 +272,62 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const menu = ((await store.get("menu")) as StockStoreType[]) || [];
       if (!isCurrent()) return;
       set({ menu });
+      const pendingReservation = await readLegacyReservation(store);
+      if (!isCurrent()) return;
       const result = await getNativeAccountState(epoch);
       if (!result || result.userId !== userId || result.epoch !== epoch) throw new Error("SESSION_CHANGED");
       if (result.revision > 0 && !result.data) throw new Error("INVALID_CLOUD_STATE");
       if (result.data) {
         const snapshot = normalizeAccountSnapshot(result.data);
+        let claim = (await store.get(LEGACY_CLAIM_KEY)) as LegacyImportClaim | undefined;
+        if (pendingReservation?.userId === userId && (!claim || claim.userId === userId)) {
+          if (!isCurrent()) return;
+          await store.set(legacySnapshotKey(userId), pendingReservation);
+          if (!isCurrent()) return;
+          await store.set(`account:${userId}:legacy-imported`, true);
+          if (!isCurrent()) return;
+          await store.set(LEGACY_CLAIM_KEY, { userId, operationId: pendingReservation.operationId });
+          if (!isCurrent()) return;
+          await store.delete(LEGACY_PENDING_KEY);
+          if (!isCurrent()) return;
+          await store.save();
+          if (!isCurrent()) return;
+          claim = { userId, operationId: pendingReservation.operationId };
+        }
+        let legacyRepairAvailable = false;
+        let legacyRepairMissingCount = 0;
+        let legacyUnresolvedStockIds: string[] = [];
+        let legacyRepairDisposition: LegacyRepairDisposition | null = null;
+        if (claim?.userId === userId) {
+          const retained = await readRetainedLegacy(store, userId) ?? pendingReservation ?? await readLegacySnapshotDetails();
+          legacyUnresolvedStockIds = retained.unresolvedStockIds;
+          legacyRepairDisposition = await readLegacyRepairDisposition(store, userId);
+          if (!legacyRepairDisposition) {
+            const plan = buildLegacyRepairPlan(snapshot, retained);
+            legacyRepairAvailable = plan.missingCategoryIds.length > 0 || plan.missingMemberships.length > 0;
+            legacyRepairMissingCount = plan.missingMemberships.reduce((total, item) => total + item.stockIds.length, 0)
+              + plan.missingCategoryIds.reduce((total, categoryId) => total + (retained.snapshot.categories.find((category) => category.id === categoryId)?.stockIds.length ?? 0), 0);
+          }
+        }
+        if (!isCurrent()) return;
         await saveAccountCache(userId, snapshot);
         if (!isCurrent()) return;
-        set({ ...snapshot, accountUserId: userId, accountEpoch: epoch, cloudRevision: result.revision, hydrated: true, syncStatus: "synced", syncError: null, legacyImportAvailable: false });
+        set({ ...snapshot, accountUserId: userId, accountEpoch: epoch, cloudRevision: result.revision, hydrated: true, syncStatus: "synced", syncError: null, legacyImportAvailable: false, legacyRepairAvailable, legacyRepairMissingCount, legacyUnresolvedStockIds, legacyRepairDisposition });
         return;
       }
-      const claim = (await store.get(LEGACY_CLAIM_KEY)) as { userId?: string } | undefined;
-      const legacy = claim && claim.userId !== userId ? emptyAccountSnapshot() : await readLegacySnapshot();
-      const importable = !claim || claim.userId === userId ? hasPersonalData(legacy) : false;
+      const claim = (await store.get(LEGACY_CLAIM_KEY)) as LegacyImportClaim | undefined;
+      const legacyOwner = claim?.userId ?? pendingReservation?.userId;
+      const legacyDetails = legacyOwner && legacyOwner !== userId
+        ? null
+        : pendingReservation?.userId === userId
+          ? pendingReservation
+          : await readLegacySnapshotDetails();
+      const legacy = legacyDetails?.snapshot ?? emptyAccountSnapshot();
+      const importable = Boolean(legacyDetails) && (!claim || claim.userId === userId)
+        ? hasPersonalData(legacy) || legacyDetails!.unresolvedStockIds.length > 0
+        : false;
       if (!isCurrent()) return;
-      set({ ...emptyAccountSnapshot(), accountUserId: userId, accountEpoch: epoch, cloudRevision: 0, hydrated: true, syncStatus: importable ? "importable" : "synced", syncError: null, legacyImportAvailable: importable });
+      set({ ...emptyAccountSnapshot(), accountUserId: userId, accountEpoch: epoch, cloudRevision: 0, hydrated: true, syncStatus: importable ? "importable" : "synced", syncError: null, legacyImportAvailable: importable, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: legacyDetails?.unresolvedStockIds ?? [], legacyRepairDisposition: null });
     } catch (error) {
       if (!isCurrent()) return;
       const message = error instanceof Error ? error.message : String(error);
@@ -253,25 +344,58 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const latest = get();
       return latest.accountUserId === userId && latest.accountEpoch === epoch;
     };
-    const legacy = await readLegacySnapshot();
-    if (!isCurrent()) return;
-    const key = `account:${userId}:legacy-import-operation-id`;
     const store = await Store.load("settings.json");
+    const claim = await store.get(LEGACY_CLAIM_KEY) as LegacyImportClaim | undefined;
+    const pending = await readLegacyReservation(store);
+    if (!isCurrent()) return;
+    if (claim?.userId && claim.userId !== userId) throw new Error("LEGACY_IMPORT_RESERVED");
+    if (pending && pending.userId !== userId) throw new Error("LEGACY_IMPORT_RESERVED");
+    const legacyDetails = pending ?? await readLegacySnapshotDetails();
+    if (!isCurrent()) return;
+    const legacy = legacyDetails.snapshot;
+    const key = `account:${userId}:legacy-import-operation-id`;
     const storedOperationId = (await store.get(key)) as string | undefined;
-    const importOperationId = storedOperationId || operationId("legacy-import");
-    await store.set(key, importOperationId);
-    await store.save();
+    const importOperationId = pending?.operationId || storedOperationId || operationId("legacy-import");
+    if (!pending) {
+      const reservation: LegacyImportReservation = {
+        userId,
+        operationId: importOperationId,
+        snapshot: legacy,
+        unresolvedStockIds: legacyDetails.unresolvedStockIds,
+      };
+      if (!isCurrent()) return;
+      await store.set(key, importOperationId);
+      if (!isCurrent()) return;
+      await store.set(LEGACY_PENDING_KEY, reservation);
+      if (!isCurrent()) return;
+      await store.save();
+      if (!isCurrent()) return;
+    } else if (storedOperationId !== importOperationId) {
+      if (!isCurrent()) return;
+      await store.set(key, importOperationId);
+      if (!isCurrent()) return;
+      await store.save();
+      if (!isCurrent()) return;
+    }
     if (!isCurrent()) return;
     set({ syncStatus: "loading", syncError: null });
     try {
+      if (!isCurrent()) return;
       const result = await importNativeLegacyState(epoch, legacy, importOperationId);
+      if (!isCurrent()) return;
       await saveAccountCache(userId, legacy);
       if (!isCurrent()) return;
+      await store.set(legacySnapshotKey(userId), legacyDetails);
+      if (!isCurrent()) return;
       await store.set(`account:${userId}:legacy-imported`, true);
+      if (!isCurrent()) return;
       await store.set(LEGACY_CLAIM_KEY, { userId, operationId: importOperationId });
+      if (!isCurrent()) return;
+      await store.delete(LEGACY_PENDING_KEY);
+      if (!isCurrent()) return;
       await store.save();
       if (!isCurrent()) return;
-      set({ ...legacy, accountUserId: userId, accountEpoch: epoch, cloudRevision: result.revision, hydrated: true, syncStatus: "synced", syncError: null, legacyImportAvailable: false });
+      set({ ...legacy, accountUserId: userId, accountEpoch: epoch, cloudRevision: result.revision, hydrated: true, syncStatus: "synced", syncError: null, legacyImportAvailable: false, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: legacyDetails.unresolvedStockIds, legacyRepairDisposition: null });
     } catch (error) {
       if (!isCurrent()) return;
       const message = error instanceof Error ? error.message : String(error);
@@ -279,15 +403,86 @@ const useStocksStore = create<StocksState>((set, get) => ({
       throw error;
     }
   },
+  repairLegacy: async () => {
+    const current = get();
+    if (!current.accountUserId || current.accountEpoch === null || !current.legacyRepairAvailable || !isNativeRuntime()) throw new Error("LEGACY_REPAIR_UNAVAILABLE");
+    const userId = current.accountUserId;
+    const epoch = current.accountEpoch;
+    const isCurrent = () => {
+      const latest = get();
+      return latest.accountUserId === userId && latest.accountEpoch === epoch;
+    };
+    if (!isCurrent()) return;
+    set({ syncStatus: "repairing", syncError: null });
+    try {
+      if (!isCurrent()) return;
+      const store = await Store.load("settings.json");
+      if (!isCurrent()) return;
+      const claim = await store.get(LEGACY_CLAIM_KEY) as LegacyImportClaim | undefined;
+      if (!isCurrent()) return;
+      if (claim?.userId !== userId) throw new Error("LEGACY_REPAIR_UNAVAILABLE");
+      const retained = await readRetainedLegacy(store, userId) ?? await readLegacySnapshotDetails();
+      if (!isCurrent()) return;
+      const plan = buildLegacyRepairPlan(accountSnapshotFrom(current), retained);
+      if (!isCurrent()) return;
+      const result = await updateNativeAccountState(epoch, current.cloudRevision, plan.snapshot, operationId("legacy-repair"));
+      if (!isCurrent()) return;
+      await saveAccountCache(userId, plan.snapshot);
+      if (!isCurrent()) return;
+      await store.set(legacySnapshotKey(userId), retained);
+      if (!isCurrent()) return;
+      await store.set(legacyRepairDispositionKey(userId), "repaired");
+      if (!isCurrent()) return;
+      await store.set(legacyRepairKey(userId), true);
+      if (!isCurrent()) return;
+      await store.save();
+      if (!isCurrent()) return;
+      set({ ...plan.snapshot, accountUserId: userId, accountEpoch: epoch, cloudRevision: result.revision, hydrated: true, syncStatus: "synced", syncError: null, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: plan.unresolvedStockIds, legacyRepairDisposition: "repaired" });
+    } catch (error) {
+      if (!isCurrent()) return;
+      const message = safeSyncError(error);
+      set({ syncStatus: message.includes("REVISION_CONFLICT") ? "conflict" : "error", syncError: message, legacyRepairAvailable: true });
+      throw error;
+    }
+  },
+  keepLegacyCurrent: async () => {
+    const current = get();
+    if (!current.accountUserId || current.accountEpoch === null || !current.legacyRepairAvailable || !isNativeRuntime()) throw new Error("LEGACY_REPAIR_UNAVAILABLE");
+    const userId = current.accountUserId;
+    const epoch = current.accountEpoch;
+    const isCurrent = () => {
+      const latest = get();
+      return latest.accountUserId === userId && latest.accountEpoch === epoch;
+    };
+    if (!isCurrent()) return;
+    set({ syncStatus: "repairing", syncError: null });
+    try {
+      if (!isCurrent()) return;
+      const store = await Store.load("settings.json");
+      if (!isCurrent()) return;
+      const claim = await store.get(LEGACY_CLAIM_KEY) as LegacyImportClaim | undefined;
+      if (!isCurrent()) return;
+      if (claim?.userId !== userId) throw new Error("LEGACY_REPAIR_UNAVAILABLE");
+      await store.set(legacyRepairDispositionKey(userId), "keep-current");
+      if (!isCurrent()) return;
+      await store.save();
+      if (!isCurrent()) return;
+      set({ syncStatus: "synced", syncError: null, legacyRepairAvailable: false, legacyRepairDisposition: "keep-current" });
+    } catch (error) {
+      if (!isCurrent()) return;
+      set({ syncStatus: "error", syncError: safeSyncError(error), legacyRepairAvailable: true });
+      throw error;
+    }
+  },
   clearAccountProjection: async () => {
     invalidateMutationQueue();
-    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudRevision: 0, hydrated: false, syncStatus: "local", syncError: null, legacyImportAvailable: false });
+    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudRevision: 0, hydrated: false, syncStatus: "local", syncError: null, legacyImportAvailable: false, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: [], legacyRepairDisposition: null });
   },
   setAccountSyncError: (message) => {
     // Keep the account projection fail-closed while retaining an actionable
     // error for AccountSyncNotice. The native UserContext retry will
     // establish a fresh session and hydrate it again.
-    set({ hydrated: false, syncStatus: "error", syncError: message, legacyImportAvailable: false });
+    set({ hydrated: false, syncStatus: "error", syncError: message, legacyImportAvailable: false, legacyRepairAvailable: false, legacyRepairMissingCount: 0, legacyUnresolvedStockIds: [], legacyRepairDisposition: null });
   },
   syncCurrent: () => enqueueMutation(get, async () => {
     const current = get();

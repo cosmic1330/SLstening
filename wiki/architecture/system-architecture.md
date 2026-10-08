@@ -17,7 +17,7 @@ This page describes boundaries a change must preserve. It is not a component inv
 3. Authenticated routes mount `AuthenticatedRuntime`, which starts the single market-event bridge and reloads durable stock state.
 4. React invokes registered Tauri commands for native data and persistence work. Rust emits events back to the webview for streaming updates and operational warnings. The authenticated desktop session also establishes a monotonic native account epoch; account state is read and written through the fixed Google Apps Script endpoint after Supabase token verification.
 5. Supabase authentication is initialized in the frontend. Account stock/category state is projected by Zustand and persisted through native account commands; high-frequency ticks remain in memory.
-6. While the desktop app is open, Rust owns a 127.0.0.1 MCP gateway and writes an owner-only discovery file. The bundled stdio bridge forwards Codex JSON-RPC requests to the allowlisted gateway tools; no access token is exposed to MCP.
+6. While the desktop app is open, Rust owns an optional 127.0.0.1 MCP gateway and writes an owner-only discovery file. Startup failure leaves the Tauri app usable and exposes an unavailable status through `agent_get_config`; the gateway bounds accepted connections and isolates worker panics. The bundled stdio bridge forwards Codex JSON-RPC requests to the allowlisted gateway tools; no access token is exposed to MCP.
 
 ## Route Boundaries
 

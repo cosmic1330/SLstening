@@ -16,9 +16,10 @@
 - **SWR**: 資料獲取、快取與重新驗證。
 - **React Router 7**: 單頁面應用路由。
 
-## 資料庫與雲端服務
-- **SQLite (via Tauri SQL Plugin)**: 本地端資料存儲。
-- **Supabase**: 雲端身份驗證與資料同步。
+## 資料與雲端服務
+- **Google Sheet**: 依 Supabase 使用者 ID 儲存追蹤清單、類別與指標設定。
+- **Tauri Store**: 本機帳號 namespace 復原快取。
+- **Supabase**: 使用者身份驗證。
 
 ## 開發工具
 - **pnpm**: 套件管理器。

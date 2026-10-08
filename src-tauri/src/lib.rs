@@ -5,7 +5,6 @@ mod csv_processor;
 mod error;
 mod market_watcher;
 mod models;
-mod sqlite;
 mod updater;
 use tauri::Manager;
 
@@ -22,11 +21,6 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(
-            tauri_plugin_sql::Builder::new()
-                .add_migrations("sqlite:schoice.db", sqlite::migrations::value())
-                .build(),
-        )
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -87,7 +81,6 @@ pub fn run() {
             commands::account::account_update_state,
             commands::account::account_import_legacy,
             commands::export::create_csv_from_json,
-            commands::storage::get_db_size,
             commands::market::subscribe_stock,
             commands::market::unsubscribe_stock,
             commands::market::get_market_data,

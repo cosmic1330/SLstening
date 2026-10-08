@@ -48,7 +48,7 @@
 ## Global Constraints (Always On)
 | REQ-ID | Description | Status | Last Updated | History | Notes |
 |--------|-------------|--------|--------------|---------|-------|
-| REQ-005 | 離線優先 (Offline-First) 策略 | Active | 2026-03-12 | v1: 原始規範 | UI 優先從本地 SQLite 讀取 |
+| REQ-005 | 帳號資料同步與本機復原 | Active | 2026-10-08 | v1: 取代舊離線 SQLite 規範 | UI 依目前 Supabase 帳號載入 Google Sheet；Tauri Store 僅供復原 |
 | REQ-006 | 嚴格錯誤處理：Rust Command 禁止使用 unwrap() 或 expect() | Active | 2026-03-13 | v1: 原始規範; v2: 檢視發現違規 | 需修復 lib.rs 中的 unwrap |
 | REQ-007 | 圖表效能限制：單次渲染數據點建議控制在 300 - 500 點內 | Active | 2026-03-12 | v1: 原始規範 | 防止 Webview 渲染阻塞 |
 | REQ-008 | MUI 全局禁用 TouchRipple | Active | 2026-03-13 | v1: 原始規範; v2: 檢視發現未實作 | 需建立 ThemeProvider |

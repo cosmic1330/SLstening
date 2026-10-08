@@ -7,9 +7,8 @@
 
 ### 1. 後端 (Rust - `src-tauri`)
 - **Tauri Core**: 負責視窗管理、系統 API 調用、更新機制等。
-- **Command Layer**: 提供供前端調用的非同步指令，例如資料庫查詢、檔案 IO。
-- **SQLite (Plugin-sql)**: 本地持久化存儲的核心，存儲股票代碼、歷史成交資料與使用者偏好設定。
-- **Migrations**: 所有資料庫結構變更皆透過 `migrations/*.sql` 進行版本控制。
+- **Command Layer**: 提供供前端調用的非同步指令，例如帳號資料同步、行情訂閱與檔案 IO。
+- **Account persistence**: 追蹤清單、類別與指標設定透過原生帳號命令寫入依 Supabase 使用者 ID 區分的 Google Sheet；Tauri Store 僅提供本機復原快取。
 
 ### 2. 前端 (React + Vite - `src`)
 - **React 18**: 組件化開發架構。
@@ -19,7 +18,7 @@
     - **Zustand**: 全域且需持久化的狀態（如自選股列表）。
     - **React Context**: 組件樹內的局部狀態共享。
 - **資料流**:
-    - **Offline-First**: 優先讀取本地 SQLite 資料。
+    - **Account-aware sync**: 優先載入目前帳號的本機復原快取並與 Google Sheet 同步。
     - **Event-Driven**: Rust 完成背景更新後透過 `emit` 通知前端渲染。
 
 ### 3. 雲端整合 (Supabase)

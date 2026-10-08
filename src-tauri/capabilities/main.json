@@ -19,9 +19,6 @@
     "updater:allow-download-and-install",
     "process:default",
     "process:allow-restart",
-    "sql:allow-load",
-    "sql:allow-select",
-    "sql:allow-execute",
     "opener:allow-open-url"
   ]
 }

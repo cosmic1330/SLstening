@@ -30,7 +30,7 @@ The release workflow builds signed Tauri bundles for macOS, Linux, and Windows f
 ## Environment Boundaries
 
 - The Supabase URL and publishable client key are currently frontend configuration in `src/supabase.ts`; they are not secrets. Authorization must still be enforced by trusted backend/database policies.
-- `VITE_DATABASE_URL` is referenced by `src/database/postgres.ts`, but no current import site establishes that module as an active runtime path. Do not promote it to a required environment variable without confirming usage.
+- Account-owned tracking data is stored in the Google Sheet through the native account commands. Tauri Store is used only for namespaced local recovery; live market data remains in memory and no SQLite database is initialized by the app.
 - Local `.env` contents are intentionally not documented here. Add only variable names and contracts that source code and deployment configuration prove are required.
 
 ## Known Verification Point
@@ -46,4 +46,3 @@ The JavaScript/Tauri app version is `0.0.62`, while `src-tauri/Cargo.toml` decla
 - [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)
 - [`.github/workflows/tauri-updater.yml`](../../.github/workflows/tauri-updater.yml)
 - [`src/supabase.ts`](../../src/supabase.ts)
-- [`src/database/postgres.ts`](../../src/database/postgres.ts)

@@ -37,7 +37,6 @@ Do not add a second router or bypass `RequireAuth` for protected screens. Keep r
 | Supabase session and profile | `UserContext` | Supabase client session storage |
 | Tracked stocks, categories, active/pinned/recent IDs, indicator settings | `Stock.store` projection | Google Sheet `SLstening_UserData` through native account commands; namespaced local cache |
 | Latest market ticks and freshness | `MarketData.store` | Memory only |
-| Provisioned relational schema | Rust/Tauri SQL migrations | SQLite `schoice.db` |
 | View-specific preferences | Feature hooks/components | Local storage or window state where implemented |
 
 Do not assume similarly named stores are interchangeable. Choose persistence from the lifetime and ownership of the data, then update [ADR 0002](../decisions/0002-separate-durable-and-live-state.md) if the strategy changes.
@@ -57,5 +56,4 @@ Tauri command names, arguments, return values, event names, and payload shapes a
 - [`src-tauri/src/account.rs`](../../src-tauri/src/account.rs)
 - [`src-tauri/src/agent_gateway.rs`](../../src-tauri/src/agent_gateway.rs)
 - [`scripts/slstening-agent-bridge.mjs`](../../scripts/slstening-agent-bridge.mjs)
-- [`src-tauri/src/sqlite/migrations.rs`](../../src-tauri/src/sqlite/migrations.rs)
 - [`src-tauri/capabilities/main.json`](../../src-tauri/capabilities/main.json)

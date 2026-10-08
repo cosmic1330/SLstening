@@ -5,13 +5,12 @@
 ![React](https://img.shields.io/badge/React-20232a?logo=react&logoColor=61dafb)
 ![Vite](https://img.shields.io/badge/Vite-646cff?logo=vite&logoColor=fff)
 ![Tauri](https://img.shields.io/badge/Tauri-ffc131?logo=tauri&logoColor=black)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
 ![Supabase](https://img.shields.io/badge/Supabase-3ecf8e?logo=supabase&logoColor=white)
 ![Last Commit](https://img.shields.io/github/last-commit/cosmic1330/SLstening?color=orange)
 
 # SLstening 📈💻
 
-> Tags: `Tauri` `React` `TypeScript` `Vite` `SQLite` `Supabase` `OAuth2` `Stock` `Technical Analysis` `Backtest` `Zustand` `Plugin` `i18n` `Desktop App` `Modern UI` `台股` `美股` `多語系` `策略回測` `即時股價` `桌面應用`
+> Tags: `Tauri` `React` `TypeScript` `Vite` `Supabase` `OAuth2` `Stock` `Technical Analysis` `Backtest` `Zustand` `Plugin` `i18n` `Desktop App` `Modern UI` `台股` `美股` `多語系` `策略回測` `即時股價` `桌面應用`
 
 一個基於 **Tauri + React + TypeScript** 的現代化股票監控與技術分析桌面應用。
 
@@ -19,7 +18,7 @@
 
 - **前端**：React 18, Vite, TypeScript, MUI, Zustand
 - **桌面應用**：Tauri (Rust)
-- **資料庫**：SQLite (本地), Supabase (雲端)
+- **資料儲存**：Google Sheet（帳號設定與追蹤資料）、Tauri Store（本機復原快取）、Supabase（認證）
 - **認證**：Google OAuth2, Supabase Auth
 - **技術指標/回測**：自訂技術指標、策略回測
 - **多語系**：i18next (支援繁體中文/英文)
@@ -43,12 +42,6 @@
    # 或 npm run build_app / yarn build_app
    ```
 
-## 快速初始化資料庫 ⚡
-
-首次啟動時，建議下載並導入提供的 SQLite 資料庫檔案，加速股票資料初始化：
-
-[點此下載資料庫檔案](https://drive.google.com/drive/folders/1dh2F9hPT3TQOaR9pPAPIYFYg5oMHP2wL?usp=drive_link)
-
 ## 主要功能 🌟
 
 - 📊 即時台股/美股股價監控
@@ -57,7 +50,7 @@
 - 🛎️ 策略自訂與警示通知
 - 🌏 多語系介面（繁體中文/英文）
 - 🔐 Google/Supabase OAuth2 登入
-- 💾 本地 SQLite 快速查詢
+- ☁️ 依帳號同步追蹤清單、類別與指標設定
 - 🧩 插件化架構，易於擴充
 - 🖥️ 現代化 UI/UX
 

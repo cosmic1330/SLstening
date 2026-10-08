@@ -9,14 +9,14 @@
 - **前端**: React, TypeScript, Vite
 - **UI**: Material-UI, Recharts (圖表), Framer Motion (動畫)
 - **狀態管理**: Zustand, React Context
-- **後端/服務**: Supabase (使用者驗證), SQLite (本地端資料庫)
+- **後端/服務**: Supabase (使用者驗證), Google Sheet (帳號資料), Tauri Store (本機復原快取)
 
 ## 主要功能
 
 - **股票追蹤**: 使用者可以新增、移除和查看自選股列表。
 - **資料視覺化**: 提供多種技術分析圖表，包括 K線、均線 (MA)、隨機指標 (KD)、能量潮 (OBV) 以及自定義的 MJ、MR 指標圖。
 - **智慧選股 (Schoice)**: 強大的篩選功能，允許使用者透過 UI 建立複雜的查詢條件，篩選出符合特定技術指標和基本面條件的股票。
-- **資料管理**: 從網路下載股票資料，並儲存在本地的 SQLite 資料庫中，以實現快速存取。
+- **資料管理**: 追蹤清單、類別與指標設定依 Supabase 使用者 ID 儲存在 Google Sheet；即時市場資料只存在記憶體中，本機 Tauri Store 僅供復原使用。
 - **使用者系統**: 透過 Supabase 進行使用者註冊和登入。
 - **自動更新**: 應用程式會自動檢查並安裝更新。
 
@@ -32,7 +32,7 @@
   - **`store/`**: 全域狀態管理 (Zustand)。
   - **`utils/`**: 各種工具函式。
 - **`src-tauri/`**: 後端 Rust 應用程式的原始碼。
-  - **`src/`**: Rust 的主要程式碼，包含 Tauri 指令、外掛設定和資料庫遷移。
+  - **`src/`**: Rust 的主要程式碼，包含 Tauri 指令與外掛設定。
 - **`public/`**: 靜態資源 (圖示、圖片等)。
 - **`supabase/`**: Supabase 的設定和雲端函式。
 

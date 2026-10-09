@@ -52,6 +52,11 @@ describe('Utility Functions', () => {
         const date = new Date('2024-05-21T13:30:00+08:00');
         expect(checkTimeRange(date)).toBe(true);
     });
+
+    it('should return false one minute after close', () => {
+        const date = new Date('2024-05-21T13:31:00+08:00');
+        expect(checkTimeRange(date)).toBe(false);
+    });
   });
 
   describe('getTimeProgressPercent', () => {
@@ -69,8 +74,20 @@ describe('Utility Functions', () => {
       expect(getTimeProgressPercent(baseDate.getTime())).toBe(0);
     });
 
+    it('should return 0 exactly at market open', () => {
+      const baseDate = new Date('2024-05-21T09:00:00+08:00');
+      vi.setSystemTime(baseDate);
+      expect(getTimeProgressPercent(baseDate.getTime())).toBe(0);
+    });
+
     it('should return 100 after market close', () => {
       const baseDate = new Date('2024-05-21T14:00:00+08:00');
+      vi.setSystemTime(baseDate);
+      expect(getTimeProgressPercent(baseDate.getTime())).toBe(100);
+    });
+
+    it('should return 100 exactly at market close', () => {
+      const baseDate = new Date('2024-05-21T13:30:00+08:00');
       vi.setSystemTime(baseDate);
       expect(getTimeProgressPercent(baseDate.getTime())).toBe(100);
     });

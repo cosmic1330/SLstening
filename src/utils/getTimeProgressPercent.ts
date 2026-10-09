@@ -1,19 +1,28 @@
+import {
+  compareTaipeiCalendarDate,
+  getTaipeiDateTimeParts,
+  taipeiMinutesSinceMidnight,
+} from "./taipeiTime";
+
+const MARKET_OPEN_MINUTES = 9 * 60;
+const MARKET_CLOSE_MINUTES = 13 * 60 + 30;
+
 export default function getTimeProgressPercent(timestamp: number): number {
-  const start = new Date(timestamp);;
-  start.setHours(9, 0, 0, 0); // 09:00:00
+  const sessionDate = getTaipeiDateTimeParts(timestamp);
+  const now = getTaipeiDateTimeParts(new Date());
+  if (!sessionDate || !now) return 0;
 
-  const end = new Date(timestamp);;
-  end.setHours(13, 30, 0, 0); // 13:30:00
+  const dateOrder = compareTaipeiCalendarDate(now, sessionDate);
+  if (dateOrder < 0) return 0;
+  if (dateOrder > 0) return 100;
 
-  const now = new Date();
+  const currentMinutes = taipeiMinutesSinceMidnight(now);
+  if (currentMinutes <= MARKET_OPEN_MINUTES) return 0;
+  if (currentMinutes >= MARKET_CLOSE_MINUTES) return 100;
 
-  if (now < start) return 0; // 早於 09:00，進度為 0%
-  if (now > end) return 100; // 超過 13:30，進度為 100%
-
-  const progress =
-    ((now.getTime() - start.getTime()) / (end.getTime() - start.getTime())) *
-    100;
-
-  // 確保進度在 0 ~ 100 之間（避免浮點數誤差導致超過 100）
-  return Math.round(Math.min(100, Math.max(0, progress)));
+  return Math.round(
+    ((currentMinutes - MARKET_OPEN_MINUTES) /
+      (MARKET_CLOSE_MINUTES - MARKET_OPEN_MINUTES)) *
+      100,
+  );
 }

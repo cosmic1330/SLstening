@@ -20,6 +20,7 @@ status: stable
 - `subscribe_stock`, `unsubscribe_stock`, `get_market_data`, `get_chip_data`, `market-update`, and `api-blocked` are cross-language contracts.
 - Validate stock identity, finite numeric values, aligned history arrays, and timestamp/freshness meaning at boundaries.
 - Preserve Taiwan market semantics: red means rising and green means falling, with a non-color cue for direction.
+- Taiwan trading-session checks and intraday progress use the `Asia/Taipei` wall clock, independent of the host or CI time zone.
 
 ## Performance Rules
 

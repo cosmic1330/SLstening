@@ -3,11 +3,11 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
-import SearchIcon from "@mui/icons-material/Search";
 import {
   Alert,
   Box,
@@ -19,7 +19,6 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  InputAdornment,
   Stack,
   TextField,
   Tooltip,
@@ -27,8 +26,14 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { Reorder, useReducedMotion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
 import useStocksStore from "../../../../store/Stock.store";
@@ -57,7 +62,155 @@ const move = (ids: string[], index: number, offset: number) => {
   return next;
 };
 
-export default function CategoryManageDialog({ open, onClose }: CategoryManageDialogProps) {
+const sameOrder = (left: string[], right: string[]) =>
+  left.length === right.length &&
+  left.every((id, index) => id === right[index]);
+
+const reconcileIds = (draft: string[], validIds: string[]) => {
+  const valid = new Set(validIds);
+  const next = [
+    ...draft.filter((id) => valid.has(id)),
+    ...validIds.filter((id) => !draft.includes(id)),
+  ];
+  return sameOrder(draft, next) ? draft : next;
+};
+
+interface SortableCategoryRowProps {
+  category: CategoryType;
+  index: number;
+  total: number;
+  pending: boolean;
+  reduceMotion: boolean | null;
+  onMove: (offset: -1 | 1) => void;
+  actions?: ReactNode;
+}
+
+function SortableCategoryRow({
+  category,
+  index,
+  total,
+  pending,
+  reduceMotion,
+  onMove,
+  actions,
+}: SortableCategoryRowProps) {
+  const { t } = useTranslation();
+  const controls = useDragControls();
+
+  return (
+    <Reorder.Item
+      value={category.id}
+      drag={reduceMotion ? false : "y"}
+      dragListener={false}
+      dragControls={controls}
+      layout={reduceMotion ? (false as unknown as true) : true}
+      transition={reduceMotion ? { duration: 0 } : { duration: 0.16 }}
+      style={{ listStyle: "none" }}
+    >
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={0.25}
+        sx={{
+          minWidth: 0,
+          minHeight: 64,
+          px: 0.6,
+          py: 0.65,
+          mb: 0.9,
+          border: `2px solid rgba(25, 25, 25, 0.14)`,
+          borderRadius: WATCHLIST_RADIUS,
+          bgcolor: "rgba(255, 255, 255, 0.72)",
+        }}
+      >
+        {reduceMotion ? (
+          <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
+            <IconButton
+              disabled={pending || index === 0}
+              aria-label={t("watchlist.moveUp", { name: category.name })}
+              onClick={() => onMove(-1)}
+              sx={playfulIconButtonSx()}
+            >
+              <ArrowUpwardIcon aria-hidden="true" />
+            </IconButton>
+            <IconButton
+              disabled={pending || index === total - 1}
+              aria-label={t("watchlist.moveDown", { name: category.name })}
+              onClick={() => onMove(1)}
+              sx={playfulIconButtonSx()}
+            >
+              <ArrowDownwardIcon aria-hidden="true" />
+            </IconButton>
+          </Stack>
+        ) : (
+          <IconButton
+            disabled={pending}
+            aria-label={t("watchlist.dragHandle", { name: category.name })}
+            aria-keyshortcuts="ArrowUp ArrowDown"
+            onPointerDown={(event) => {
+              if (pending || reduceMotion) return;
+              controls.start(event);
+            }}
+            onKeyDown={(event) => {
+              if (pending) return;
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                onMove(-1);
+              } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                onMove(1);
+              }
+            }}
+            sx={{
+              ...playfulIconButtonSx(),
+              touchAction: "none",
+              cursor: pending ? "default" : "grab",
+              "&:active": { cursor: "grabbing" },
+            }}
+          >
+            <DragIndicatorIcon aria-hidden="true" />
+          </IconButton>
+        )}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            noWrap
+            component="p"
+            sx={{
+              pl: 1.5,
+              color: playfulPalette.ink,
+              fontSize: "0.86rem",
+              fontWeight: 850,
+            }}
+          >
+            {category.name}
+          </Typography>
+          <Typography
+            component="p"
+            sx={{
+              pl: 1.5,
+              mt: 0.25,
+              color: playfulPalette.muted,
+              fontSize: "0.7rem",
+              fontWeight: 650,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {t("watchlist.stockCount", { count: category.stockIds.length })}
+          </Typography>
+        </Box>
+        {actions ? (
+          <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
+            {actions}
+          </Stack>
+        ) : null}
+      </Stack>
+    </Reorder.Item>
+  );
+}
+
+export default function CategoryManageDialog({
+  open,
+  onClose,
+}: CategoryManageDialogProps) {
   const { t } = useTranslation();
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down("sm"));
@@ -68,42 +221,94 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
   const addCategory = useStocksStore((state) => state.addCategory);
   const renameCategory = useStocksStore((state) => state.renameCategory);
   const removeCategory = useStocksStore((state) => state.removeCategory);
-  const togglePinnedCategory = useStocksStore((state) => state.togglePinnedCategory);
-  const reorderPinnedCategories = useStocksStore((state) => state.reorderPinnedCategories);
+  const togglePinnedCategory = useStocksStore(
+    (state) => state.togglePinnedCategory,
+  );
+  const reorderPinnedCategories = useStocksStore(
+    (state) => state.reorderPinnedCategories,
+  );
+  const updateCategories = useStocksStore((state) => state.updateCategories);
+  const [categoryDraftIds, setCategoryDraftIds] = useState<string[]>([]);
+  const [categoryBaselineIds, setCategoryBaselineIds] = useState<string[]>([]);
   const [pinnedDraft, setPinnedDraft] = useState<string[]>([]);
-  const [editor, setEditor] = useState<{ id?: string; name: string } | null>(null);
-  const [deleteCandidate, setDeleteCandidate] = useState<CategoryType | null>(null);
+  const [pinnedBaselineIds, setPinnedBaselineIds] = useState<string[]>([]);
+  const [editor, setEditor] = useState<{ id?: string; name: string } | null>(
+    null,
+  );
+  const [deleteCandidate, setDeleteCandidate] = useState<CategoryType | null>(
+    null,
+  );
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
-  const [query, setQuery] = useState("");
+
+  const categoryIds = useMemo(
+    () => categories.map((category) => category.id),
+    [categories],
+  );
+  const categoryIdSignature = categoryIds.join("\u0001");
+  const pinnedIdSignature = pinnedCategoryIds.join("\u0001");
 
   useEffect(() => {
     if (!open) return;
+    setCategoryDraftIds(categoryIds);
+    setCategoryBaselineIds(categoryIds);
     setPinnedDraft([...pinnedCategoryIds]);
+    setPinnedBaselineIds([...pinnedCategoryIds]);
     setEditor(null);
     setDeleteCandidate(null);
     setError("");
-    setQuery("");
-  // Seed the draft only when the dialog opens; store updates must not erase an in-progress reorder.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Seed the draft only when the dialog opens; store updates must not erase an in-progress reorder.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const customCategories = categories;
-  const filteredCategories = customCategories.filter((category) => category.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
+  useEffect(() => {
+    if (!open) return;
+    setCategoryDraftIds((draft) => reconcileIds(draft, categoryIds));
+    setCategoryBaselineIds((baseline) => reconcileIds(baseline, categoryIds));
+  }, [categoryIdSignature, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    setPinnedDraft((draft) => reconcileIds(draft, pinnedCategoryIds));
+    setPinnedBaselineIds((baseline) =>
+      reconcileIds(baseline, pinnedCategoryIds),
+    );
+  }, [categoryIdSignature, open, pinnedIdSignature]);
+
+  const orderedCategories = useMemo(() => {
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    return categoryDraftIds.flatMap((id) => {
+      const category = byId.get(id);
+      return category ? [category] : [];
+    });
+  }, [categories, categoryDraftIds]);
   const pinnedCategories = useMemo(
-    () => pinnedDraft.map((id) => categories.find((category) => category.id === id)).filter((category): category is CategoryType => Boolean(category)),
+    () =>
+      pinnedDraft
+        .map((id) => categories.find((category) => category.id === id))
+        .filter((category): category is CategoryType => Boolean(category)),
     [categories, pinnedDraft],
   );
   const orphanCount = useMemo(() => {
     if (!deleteCandidate) return 0;
-    const otherIds = new Set(categories.filter((category) => category.id !== deleteCandidate.id).flatMap((category) => category.stockIds));
-    return deleteCandidate.stockIds.filter((id) => !otherIds.has(id) && stocks.some((stock) => stock.id === id)).length;
+    const otherIds = new Set(
+      categories
+        .filter((category) => category.id !== deleteCandidate.id)
+        .flatMap((category) => category.stockIds),
+    );
+    return deleteCandidate.stockIds.filter(
+      (id) => !otherIds.has(id) && stocks.some((stock) => stock.id === id),
+    ).length;
   }, [categories, deleteCandidate, stocks]);
-  const isDraftDirty = JSON.stringify(pinnedDraft) !== JSON.stringify(pinnedCategoryIds);
+  const categoryOrderDirty = !sameOrder(categoryDraftIds, categoryBaselineIds);
+  const pinnedOrderDirty = !sameOrder(pinnedDraft, pinnedBaselineIds);
+  const isDraftDirty = categoryOrderDirty || pinnedOrderDirty;
 
   const errorText = (value: unknown) => {
     const code = value instanceof Error ? value.message : "";
-    return t(`watchlist.errors.${code}`, { defaultValue: t("watchlist.saveFailed") });
+    return t(`watchlist.errors.${code}`, {
+      defaultValue: t("watchlist.saveFailed"),
+    });
   };
 
   const saveName = async () => {
@@ -123,11 +328,18 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
 
   const togglePin = async (id: string) => {
     if (pending) return;
+    const shouldPin = !pinnedDraft.includes(id);
     setPending(true);
     setError("");
     try {
       await togglePinnedCategory(id);
-      setPinnedDraft((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+      setPinnedDraft((current) =>
+        shouldPin
+          ? current.includes(id)
+            ? current
+            : [...current, id]
+          : current.filter((item) => item !== id),
+      );
     } catch (value) {
       setError(errorText(value));
     } finally {
@@ -141,7 +353,9 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
     setError("");
     try {
       await removeCategory(deleteCandidate.id);
-      setPinnedDraft((current) => current.filter((id) => id !== deleteCandidate.id));
+      setPinnedDraft((current) =>
+        current.filter((id) => id !== deleteCandidate.id),
+      );
       setDeleteCandidate(null);
     } catch {
       setError(t("watchlist.saveFailed"));
@@ -150,12 +364,15 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
     }
   };
 
-  const applyPinnedOrder = async () => {
+  const applyDraftOrders = async () => {
     if (pending) return;
     setPending(true);
     setError("");
     try {
-      await reorderPinnedCategories(pinnedDraft);
+      if (categoryOrderDirty) await updateCategories(orderedCategories);
+      if (pinnedOrderDirty) await reorderPinnedCategories(pinnedDraft);
+      setCategoryBaselineIds(categoryDraftIds);
+      setPinnedBaselineIds(pinnedDraft);
     } catch {
       setError(t("watchlist.saveFailed"));
     } finally {
@@ -177,16 +394,62 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
       slotProps={{ paper: { sx: playfulDialogPaperSx } }}
     >
       <DialogTitle component="div" sx={playfulDialogTitleSx}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1.5}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
-            <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.pink, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+        <Stack
+          direction="row"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          spacing={1.5}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            sx={{ minWidth: 0, flex: 1 }}
+          >
+            <Box
+              aria-hidden="true"
+              sx={{
+                width: 38,
+                height: 38,
+                flexShrink: 0,
+                display: "grid",
+                placeItems: "center",
+                border: `2px solid ${playfulPalette.outline}`,
+                borderRadius: WATCHLIST_RADIUS,
+                bgcolor: playfulPalette.pink,
+                boxShadow: `2px 2px 0 ${playfulPalette.outline}`,
+              }}
+            >
               <FolderOutlinedIcon fontSize="small" />
             </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography component="h2" sx={{ color: playfulPalette.ink, fontSize: { xs: "1.25rem", sm: "1.4rem" }, fontWeight: 950, lineHeight: 1.15, overflowWrap: "anywhere" }}>
+            <Box
+              sx={{
+                pl: 1.5,
+                minWidth: 0,
+              }}
+            >
+              <Typography
+                component="h2"
+                sx={{
+                  color: playfulPalette.ink,
+                  fontSize: { xs: "1.25rem", sm: "1.4rem" },
+                  fontWeight: 950,
+                  lineHeight: 1.15,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {t("watchlist.manage")}
               </Typography>
-              <Typography component="p" sx={{ mt: 0.45, color: playfulPalette.muted, fontSize: "0.76rem", fontWeight: 650, lineHeight: 1.35 }}>
+              <Typography
+                component="p"
+                sx={{
+                  mt: 0.45,
+                  color: playfulPalette.muted,
+                  fontSize: "0.76rem",
+                  fontWeight: 650,
+                  lineHeight: 1.35,
+                }}
+              >
                 {t("watchlist.pinnedOrderHint")}
               </Typography>
             </Box>
@@ -195,7 +458,11 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
             disabled={pending}
             aria-label={t("watchlist.close")}
             onClick={close}
-            sx={{ ...playfulIconButtonSx(), bgcolor: playfulPalette.yellow, "&:hover": { bgcolor: playfulPalette.yellow } }}
+            sx={{
+              ...playfulIconButtonSx(),
+              bgcolor: playfulPalette.yellow,
+              "&:hover": { bgcolor: playfulPalette.yellow },
+            }}
           >
             <CloseIcon aria-hidden="true" />
           </IconButton>
@@ -203,28 +470,96 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
       </DialogTitle>
       <DialogContent sx={playfulDialogContentSx} aria-busy={pending}>
         {error ? (
-          <Alert role="alert" severity="error" sx={{ mb: 1.5, border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
+          <Alert
+            role="alert"
+            severity="error"
+            sx={{
+              mb: 1.5,
+              border: `2px solid ${playfulPalette.outline}`,
+              borderRadius: WATCHLIST_RADIUS,
+              bgcolor: playfulPalette.dangerSoft,
+              color: playfulPalette.ink,
+              fontWeight: 750,
+            }}
+          >
             {error}
           </Alert>
         ) : null}
         {pending ? (
-          <Stack direction="row" spacing={0.75} alignItems="center" role="status" aria-live="polite" sx={{ mb: 1.25, color: playfulPalette.blueDark, fontSize: "0.78rem", fontWeight: 850 }}>
-            <CircularProgress size={15} sx={{ color: playfulPalette.blueDark }} aria-hidden="true" />
+          <Stack
+            direction="row"
+            spacing={0.75}
+            alignItems="center"
+            role="status"
+            aria-live="polite"
+            sx={{
+              mb: 1.25,
+              color: playfulPalette.blueDark,
+              fontSize: "0.78rem",
+              fontWeight: 850,
+            }}
+          >
+            <CircularProgress
+              size={15}
+              sx={{ color: playfulPalette.blueDark }}
+              aria-hidden="true"
+            />
             {t("watchlist.saving")}
           </Stack>
         ) : null}
 
         {deleteCandidate ? (
-          <Box component="section" aria-labelledby="delete-category-title" sx={{ ...playfulPanelSx, bgcolor: playfulPalette.dangerSoft, mt: 0.5 }}>
+          <Box
+            component="section"
+            aria-labelledby="delete-category-title"
+            sx={{
+              ...playfulPanelSx,
+              bgcolor: playfulPalette.dangerSoft,
+              mt: 0.5,
+            }}
+          >
             <Stack direction="row" spacing={1} alignItems="flex-start">
-              <Box aria-hidden="true" sx={{ width: 40, height: 40, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.danger, color: playfulPalette.white, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+              <Box
+                aria-hidden="true"
+                sx={{
+                  width: 40,
+                  height: 40,
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  border: `2px solid ${playfulPalette.outline}`,
+                  borderRadius: WATCHLIST_RADIUS,
+                  bgcolor: playfulPalette.danger,
+                  color: playfulPalette.white,
+                  boxShadow: `2px 2px 0 ${playfulPalette.outline}`,
+                }}
+              >
                 <DeleteOutlineIcon fontSize="small" />
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography id="delete-category-title" component="h3" sx={{ color: playfulPalette.ink, fontSize: "1rem", fontWeight: 950, lineHeight: 1.2, overflowWrap: "anywhere" }}>
+                <Typography
+                  id="delete-category-title"
+                  component="h3"
+                  sx={{
+                    color: playfulPalette.ink,
+                    fontSize: "1rem",
+                    fontWeight: 950,
+                    lineHeight: 1.2,
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   {t("watchlist.deleteTitle", { name: deleteCandidate.name })}
                 </Typography>
-                <Typography component="p" sx={{ mt: 0.75, color: playfulPalette.muted, fontSize: "0.82rem", fontWeight: 650, lineHeight: 1.45 }}>
+                <Typography
+                  component="p"
+                  sx={{
+                    mt: 0.75,
+                    color: playfulPalette.muted,
+                    fontSize: "0.82rem",
+                    fontWeight: 650,
+                    lineHeight: 1.45,
+                  }}
+                >
                   {t("watchlist.deleteMessage", { count: orphanCount })}
                 </Typography>
               </Box>
@@ -236,11 +571,29 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
               <Box
                 component="form"
                 aria-labelledby="category-editor-title"
-                onSubmit={(event) => { event.preventDefault(); void saveName(); }}
-                sx={{ ...playfulPanelSx, mt:1.5, mb: 2, bgcolor: "rgba(244, 181, 208, 0.28)" }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void saveName();
+                }}
+                sx={{
+                  ...playfulPanelSx,
+                  mt: 1.5,
+                  mb: 2,
+                  bgcolor: "rgba(244, 181, 208, 0.28)",
+                }}
               >
-                <Typography id="category-editor-title" component="h3" sx={{ color: playfulPalette.ink, fontSize: "0.98rem", fontWeight: 950 }}>
-                  {editor.id ? t("watchlist.rename") : t("watchlist.newCategory")}
+                <Typography
+                  id="category-editor-title"
+                  component="h3"
+                  sx={{
+                    color: playfulPalette.ink,
+                    fontSize: "0.98rem",
+                    fontWeight: 950,
+                  }}
+                >
+                  {editor.id
+                    ? t("watchlist.rename")
+                    : t("watchlist.newCategory")}
                 </Typography>
                 <TextField
                   autoFocus
@@ -248,15 +601,34 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                   disabled={pending}
                   label={t("watchlist.categoryName")}
                   value={editor.name}
-                  onChange={(event) => setEditor({ ...editor, name: event.target.value })}
+                  onChange={(event) =>
+                    setEditor({ ...editor, name: event.target.value })
+                  }
                   error={Boolean(error)}
                   sx={{ ...playfulFieldSx, mt: 1.25 }}
                 />
-                <Stack direction="row" justifyContent="flex-end" spacing={1} mt={1.5}>
-                  <Button disabled={pending} type="button" onClick={() => { setEditor(null); setError(""); }} sx={playfulButtonSx(playfulPalette.white)}>
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  spacing={1}
+                  mt={1.5}
+                >
+                  <Button
+                    disabled={pending}
+                    type="button"
+                    onClick={() => {
+                      setEditor(null);
+                      setError("");
+                    }}
+                    sx={playfulButtonSx(playfulPalette.white)}
+                  >
                     {t("watchlist.cancel")}
                   </Button>
-                  <Button disabled={pending} type="submit" sx={playfulButtonSx(playfulPalette.blue)}>
+                  <Button
+                    disabled={pending}
+                    type="submit"
+                    sx={playfulButtonSx(playfulPalette.blue)}
+                  >
                     {t("watchlist.save")}
                   </Button>
                 </Stack>
@@ -267,81 +639,233 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
                 type="button"
                 startIcon={<AddIcon aria-hidden="true" />}
                 onClick={() => setEditor({ name: "" })}
-                sx={{ ...playfulButtonSx(playfulPalette.blue), mt:1.5, mb: 2, justifyContent: "flex-start", px: 1.5 }}
+                sx={{
+                  ...playfulButtonSx(playfulPalette.blue),
+                  mt: 1.5,
+                  mb: 2,
+                  justifyContent: "flex-start",
+                  px: 1.5,
+                }}
               >
                 {t("watchlist.newCategory")}
               </Button>
             )}
 
             <Divider sx={{ mb: 2, borderColor: "rgba(25, 25, 25, 0.18)" }} />
-            <Box component="section" aria-labelledby="custom-category-list-title">
-              <Typography id="custom-category-list-title" component="h3" sx={{ mb: 0.75, color: playfulPalette.ink, fontSize: "0.9rem", fontWeight: 950 }}>
+            <Box
+              component="section"
+              aria-labelledby="custom-category-list-title"
+            >
+              <Typography
+                id="custom-category-list-title"
+                component="h3"
+                sx={{
+                  mb: 0.75,
+                  color: playfulPalette.ink,
+                  fontSize: "0.9rem",
+                  fontWeight: 950,
+                }}
+              >
                 {t("watchlist.categories")}
               </Typography>
-              <Stack spacing={0.9}>
-                {filteredCategories.map((category) => {
-                  const pinned = pinnedDraft.includes(category.id);
-                  return (
-                    <Stack key={category.id} direction="row" alignItems="center" spacing={0.6} sx={{ minWidth: 0, minHeight: 64, px: 1, py: 0.65, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: WATCHLIST_RADIUS, bgcolor: category.id === editor?.id ? "rgba(107, 183, 232, 0.24)" : "rgba(255, 255, 255, 0.72)" }}>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography noWrap component="p" sx={{ color: playfulPalette.ink, fontSize: "0.86rem", fontWeight: 850 }}>{category.name}</Typography>
-                        <Typography component="p" sx={{ mt: 0.25, color: playfulPalette.muted, fontSize: "0.7rem", fontWeight: 650, fontVariantNumeric: "tabular-nums" }}>{t("watchlist.stockCount", { count: category.stockIds.length })}</Typography>
-                      </Box>
-                      <Tooltip title={pinned ? t("watchlist.unpin") : t("watchlist.pin")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
-                        <IconButton disabled={pending} aria-label={pinned ? t("watchlist.unpinCategory", { name: category.name }) : t("watchlist.pinCategory", { name: category.name })} onClick={() => void togglePin(category.id)} sx={{ ...playfulIconButtonSx(playfulPalette.blueDark), bgcolor: pinned ? playfulPalette.yellow : playfulPalette.white, "&:hover": { bgcolor: pinned ? playfulPalette.yellow : playfulPalette.white } }}>
-                          {pinned ? <PushPinIcon aria-hidden="true" /> : <PushPinOutlinedIcon aria-hidden="true" />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t("watchlist.rename")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
-                        <IconButton disabled={pending} aria-label={t("watchlist.renameCategory", { name: category.name })} onClick={() => { setEditor({ id: category.id, name: category.name }); setError(""); }} sx={playfulIconButtonSx(playfulPalette.blueDark)}>
-                          <EditOutlinedIcon aria-hidden="true" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t("watchlist.delete")} slotProps={{ tooltip: { sx: { borderRadius: WATCHLIST_RADIUS } } }}>
-                        <IconButton disabled={pending} aria-label={t("watchlist.deleteCategory", { name: category.name })} onClick={() => setDeleteCandidate(category)} sx={playfulIconButtonSx(playfulPalette.danger)}>
-                          <DeleteOutlineIcon aria-hidden="true" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  );
-                })}
-                {!customCategories.length ? <Typography sx={{ color: playfulPalette.muted, fontSize: "0.82rem", fontWeight: 650, textAlign: "center", py: 2.5 }}>{t("watchlist.noCustomCategories")}</Typography> : null}
-                {customCategories.length > 0 && !filteredCategories.length ? <Typography sx={{ color: playfulPalette.muted, fontSize: "0.82rem", fontWeight: 650, textAlign: "center", py: 2.5 }}>{t("watchlist.noCategories")}</Typography> : null}
-              </Stack>
+              {orderedCategories.length ? (
+                <Reorder.Group
+                  axis="y"
+                  values={categoryDraftIds}
+                  onReorder={(ids) => {
+                    if (!pending) setCategoryDraftIds(ids);
+                  }}
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
+                  {orderedCategories.map((category, index) => {
+                    const pinned = pinnedDraft.includes(category.id);
+                    return (
+                      <SortableCategoryRow
+                        key={category.id}
+                        category={category}
+                        index={index}
+                        total={orderedCategories.length}
+                        pending={pending}
+                        reduceMotion={reduceMotion}
+                        onMove={(offset) =>
+                          setCategoryDraftIds((ids) => move(ids, index, offset))
+                        }
+                        actions={
+                          <>
+                            <Tooltip
+                              title={
+                                pinned
+                                  ? t("watchlist.unpin")
+                                  : t("watchlist.pin")
+                              }
+                              slotProps={{
+                                tooltip: {
+                                  sx: { borderRadius: WATCHLIST_RADIUS },
+                                },
+                              }}
+                            >
+                              <IconButton
+                                disabled={pending}
+                                aria-label={
+                                  pinned
+                                    ? t("watchlist.unpinCategory", {
+                                        name: category.name,
+                                      })
+                                    : t("watchlist.pinCategory", {
+                                        name: category.name,
+                                      })
+                                }
+                                onClick={() => void togglePin(category.id)}
+                                sx={{
+                                  ...playfulIconButtonSx(
+                                    playfulPalette.blueDark,
+                                  ),
+                                  bgcolor: pinned
+                                    ? playfulPalette.yellow
+                                    : playfulPalette.white,
+                                  "&:hover": {
+                                    bgcolor: pinned
+                                      ? playfulPalette.yellow
+                                      : playfulPalette.white,
+                                  },
+                                }}
+                              >
+                                {pinned ? (
+                                  <PushPinIcon aria-hidden="true" />
+                                ) : (
+                                  <PushPinOutlinedIcon aria-hidden="true" />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip
+                              title={t("watchlist.rename")}
+                              slotProps={{
+                                tooltip: {
+                                  sx: { borderRadius: WATCHLIST_RADIUS },
+                                },
+                              }}
+                            >
+                              <IconButton
+                                disabled={pending}
+                                aria-label={t("watchlist.renameCategory", {
+                                  name: category.name,
+                                })}
+                                onClick={() => {
+                                  setEditor({
+                                    id: category.id,
+                                    name: category.name,
+                                  });
+                                  setError("");
+                                }}
+                                sx={playfulIconButtonSx(
+                                  playfulPalette.blueDark,
+                                )}
+                              >
+                                <EditOutlinedIcon aria-hidden="true" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip
+                              title={t("watchlist.delete")}
+                              slotProps={{
+                                tooltip: {
+                                  sx: { borderRadius: WATCHLIST_RADIUS },
+                                },
+                              }}
+                            >
+                              <IconButton
+                                disabled={pending}
+                                aria-label={t("watchlist.deleteCategory", {
+                                  name: category.name,
+                                })}
+                                onClick={() => setDeleteCandidate(category)}
+                                sx={playfulIconButtonSx(playfulPalette.danger)}
+                              >
+                                <DeleteOutlineIcon aria-hidden="true" />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        }
+                      />
+                    );
+                  })}
+                </Reorder.Group>
+              ) : (
+                <Typography
+                  sx={{
+                    color: playfulPalette.muted,
+                    fontSize: "0.82rem",
+                    fontWeight: 650,
+                    textAlign: "center",
+                    py: 2.5,
+                  }}
+                >
+                  {t("watchlist.noCustomCategories")}
+                </Typography>
+              )}
             </Box>
 
             {pinnedCategories.length ? (
-              <Box component="section" aria-labelledby="pinned-order-title" sx={{ ...playfulPanelSx, mt: 2.25, bgcolor: "rgba(243, 211, 109, 0.24)" }}>
-                <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 0.5 }}>
+              <Box
+                component="section"
+                aria-labelledby="pinned-order-title"
+                sx={{
+                  ...playfulPanelSx,
+                  mt: 2.25,
+
+                  bgcolor: "rgba(243, 211, 109, 0.24)",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  spacing={0.75}
+                  sx={{ mb: 0.5 }}
+                >
                   <PushPinIcon fontSize="small" aria-hidden="true" />
-                  <Typography id="pinned-order-title" component="h3" sx={{ color: playfulPalette.ink, fontSize: "0.94rem", fontWeight: 950 }}>
+                  <Typography
+                    id="pinned-order-title"
+                    component="h3"
+                    sx={{
+                      color: playfulPalette.ink,
+                      fontSize: "0.94rem",
+                      fontWeight: 950,
+                    }}
+                  >
                     {t("watchlist.pinnedOrder")}
                   </Typography>
                 </Stack>
-                <Typography component="p" sx={{ mb: 1, color: playfulPalette.muted, fontSize: "0.74rem", fontWeight: 650, lineHeight: 1.4 }}>
+                <Typography
+                  component="p"
+                  sx={{
+                    mb: 1,
+                    color: playfulPalette.muted,
+                    fontSize: "0.74rem",
+                    fontWeight: 650,
+                    lineHeight: 1.4,
+                  }}
+                >
                   {t("watchlist.pinnedOrderHint")}
                 </Typography>
-                <Reorder.Group axis="y" values={pinnedDraft} onReorder={setPinnedDraft} style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                <Reorder.Group
+                  axis="y"
+                  values={pinnedDraft}
+                  onReorder={(ids) => {
+                    if (!pending) setPinnedDraft(ids);
+                  }}
+                  style={{ listStyle: "none", margin: 0, padding: 0 }}
+                >
                   {pinnedCategories.map((category, index) => (
-                    <Reorder.Item
+                    <SortableCategoryRow
                       key={category.id}
-                      value={category.id}
-                      dragListener={!reduceMotion}
-                      layout={reduceMotion ? (false as unknown as true) : true}
-                      transition={reduceMotion ? { duration: 0 } : { duration: 0.16 }}
-                      style={{ listStyle: "none" }}
-                    >
-                      <Stack direction="row" alignItems="center" spacing={0.4} sx={{ minWidth: 0, minHeight: 56, px: 0.6, mb: 0.75, border: `2px solid rgba(25, 25, 25, 0.14)`, borderRadius: WATCHLIST_RADIUS, bgcolor: "rgba(255, 255, 255, 0.72)" }}>
-                        <PushPinIcon fontSize="small" sx={{ mx: 0.35, color: playfulPalette.blueDark }} aria-hidden="true" />
-                        <Typography noWrap component="span" sx={{ minWidth: 0, flex: 1, color: playfulPalette.ink, fontSize: "0.82rem", fontWeight: 800 }}>{category.name}</Typography>
-                        <IconButton disabled={index === 0 || pending} aria-label={t("watchlist.moveUp", { name: category.name })} onClick={() => setPinnedDraft((ids) => move(ids, index, -1))} sx={playfulIconButtonSx()}>
-                          <ArrowUpwardIcon aria-hidden="true" />
-                        </IconButton>
-                        <IconButton disabled={index === pinnedDraft.length - 1 || pending} aria-label={t("watchlist.moveDown", { name: category.name })} onClick={() => setPinnedDraft((ids) => move(ids, index, 1))} sx={playfulIconButtonSx()}>
-                          <ArrowDownwardIcon aria-hidden="true" />
-                        </IconButton>
-                      </Stack>
-                    </Reorder.Item>
+                      category={category}
+                      index={index}
+                      total={pinnedCategories.length}
+                      pending={pending}
+                      reduceMotion={reduceMotion}
+                      onMove={(offset) =>
+                        setPinnedDraft((ids) => move(ids, index, offset))
+                      }
+                    />
                   ))}
                 </Reorder.Group>
               </Box>
@@ -349,22 +873,69 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ position: "sticky", bottom: 0, flexShrink: 0, zIndex: 1, gap: 1, px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 }, borderTop: `2px solid ${playfulPalette.outline}`, bgcolor: "rgba(255, 253, 248, 0.96)", flexWrap: "wrap" }}>
+      <DialogActions
+        sx={{
+          position: "sticky",
+          bottom: 0,
+          flexShrink: 0,
+          zIndex: 1,
+          gap: 1,
+          px: { xs: 2, sm: 3 },
+          py: { xs: 1.5, sm: 2 },
+          borderTop: `2px solid ${playfulPalette.outline}`,
+          bgcolor: "rgba(255, 253, 248, 0.96)",
+          flexWrap: "wrap",
+        }}
+      >
         {deleteCandidate ? (
           <>
-            <Button disabled={pending} type="button" onClick={() => setDeleteCandidate(null)} sx={{ ...playfulButtonSx(playfulPalette.white), flex: { xs: 1, sm: "initial" } }}>
+            <Button
+              disabled={pending}
+              type="button"
+              onClick={() => setDeleteCandidate(null)}
+              sx={{
+                
+                ...playfulButtonSx(playfulPalette.white),
+                flex: { xs: 1, sm: "initial" },
+              }}
+            >
               {t("watchlist.cancel")}
             </Button>
-            <Button disabled={pending} type="button" onClick={() => void confirmDelete()} sx={{ ...playfulButtonSx(playfulPalette.dangerSoft), color: playfulPalette.dangerText, flex: { xs: 1, sm: "initial" } }}>
+            <Button
+              disabled={pending}
+              type="button"
+              onClick={() => void confirmDelete()}
+              sx={{
+                ...playfulButtonSx(playfulPalette.dangerSoft),
+                color: playfulPalette.dangerText,
+                flex: { xs: 1, sm: "initial" },
+              }}
+            >
               {t("watchlist.confirmDelete")}
             </Button>
           </>
         ) : (
           <>
-            <Button disabled={pending} type="button" onClick={close} sx={{ ...playfulButtonSx(playfulPalette.white), flex: { xs: 1, sm: "initial" } }}>
+            <Button
+              disabled={pending}
+              type="button"
+              onClick={close}
+              sx={{
+                ...playfulButtonSx(playfulPalette.white),
+                flex: { xs: 1, sm: "initial" },
+              }}
+            >
               {t("watchlist.close")}
             </Button>
-            <Button disabled={pending || !isDraftDirty} type="button" onClick={() => void applyPinnedOrder()} sx={{ ...playfulButtonSx(playfulPalette.blue), flex: { xs: 1, sm: "initial" } }}>
+            <Button
+              disabled={pending || !isDraftDirty}
+              type="button"
+              onClick={() => void applyDraftOrders()}
+              sx={{
+                ...playfulButtonSx(playfulPalette.blue),
+                flex: { xs: 1, sm: "initial" },
+              }}
+            >
               {t("watchlist.save")}
             </Button>
           </>

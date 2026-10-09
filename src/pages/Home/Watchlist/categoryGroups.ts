@@ -44,10 +44,8 @@ export function groupCategories({
 
   const pinned = take(pinnedCategoryIds);
   const recent = take(recentCategoryIds);
-  const collator = new Intl.Collator(locale, { sensitivity: "base" });
   const others = categories
-    .filter((category) => !seen.has(category.id) && matches(category))
-    .sort((left, right) => collator.compare(categoryDisplayName(left), categoryDisplayName(right)));
+    .filter((category) => !seen.has(category.id) && matches(category));
 
   return {
     pinned,

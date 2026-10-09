@@ -200,7 +200,7 @@
     "renameCategory": "重新命名 {{name}}",
     "deleteCategory": "刪除 {{name}}",
     "pinnedOrder": "已釘選分類排序",
-    "pinnedOrderHint": "可拖曳或使用箭頭；按下套用後才會儲存排序。",
+    "pinnedOrderHint": "拖曳把手即可排序；使用鍵盤時可按上下方向鍵。分類與釘選順序會一起儲存。",
     "deleteTitle": "刪除「{{name}}」？",
     "deleteMessage": "分類將被移除；僅存在此分類的 {{count}} 檔股票也會一併刪除。",
     "confirmDelete": "刪除分類"

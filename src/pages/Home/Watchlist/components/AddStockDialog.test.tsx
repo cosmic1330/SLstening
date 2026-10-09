@@ -123,11 +123,15 @@ describe("AddStockDialog category stock management", () => {
     ]);
   });
 
-  it("opens the catalog options when the auto-focused search field receives focus", async () => {
+  it("keeps the auto-focused catalog closed until the user searches", async () => {
     renderDialog();
 
     const search = screen.getByRole("combobox");
     await waitFor(() => expect(document.activeElement).toBe(search));
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(screen.queryByRole("option")).toBeNull();
+
+    fireEvent.change(search, { target: { value: "2" } });
     expect(await screen.findByRole("option", { name: /2330.*TSMC.*Move to top/ })).toBeTruthy();
     expect(screen.getByRole("option", { name: /2454.*MediaTek.*Add to this category/ })).toBeTruthy();
   });
@@ -144,10 +148,12 @@ describe("AddStockDialog category stock management", () => {
 
     const search = screen.getByRole("combobox");
     await waitFor(() => expect(document.activeElement).toBe(search));
-    expect((await screen.findAllByRole("option")).length).toBe(100);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const listbox = await screen.findByRole("listbox");
+    const optionCount = () => listbox.querySelectorAll('[role="option"]').length;
+    expect(optionCount()).toBe(100);
 
     const scrollToListboxBottom = () => {
-      const listbox = screen.getByRole("listbox");
       Object.defineProperties(listbox, {
         clientHeight: { configurable: true, value: 400 },
         scrollHeight: { configurable: true, value: 800 },
@@ -157,20 +163,20 @@ describe("AddStockDialog category stock management", () => {
     };
 
     scrollToListboxBottom();
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(200));
+    await waitFor(() => expect(optionCount()).toBe(200));
 
     scrollToListboxBottom();
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(250));
+    await waitFor(() => expect(optionCount()).toBe(250));
 
     // MUI can emit a non-user `reset` input event while keyboard navigation
     // updates the highlighted option. That event must not collapse a list the
     // user has already progressively revealed.
     fireEvent.keyDown(search, { key: "End" });
     scrollToListboxBottom();
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(250));
+    await waitFor(() => expect(optionCount()).toBe(250));
 
     fireEvent.change(search, { target: { value: "CAT" } });
-    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(100));
+    await waitFor(() => expect(optionCount()).toBe(100));
   });
 
   it("searches a stock beyond the initial catalog page directly", async () => {

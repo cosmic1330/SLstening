@@ -200,7 +200,7 @@
     "renameCategory": "Rename {{name}}",
     "deleteCategory": "Delete {{name}}",
     "pinnedOrder": "Pinned category order",
-    "pinnedOrderHint": "Drag or use the arrows. Changes are saved only when you apply the order.",
+    "pinnedOrderHint": "Drag the handle to reorder; keyboard users can press Up or Down. Category and pinned order changes are saved together.",
     "deleteTitle": "Delete {{name}}?",
     "deleteMessage": "This removes the category. {{count}} stocks used only here will also be deleted.",
     "confirmDelete": "Delete category"

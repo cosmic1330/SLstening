@@ -616,7 +616,6 @@ export default function AddStockDialog({
             </Stack>
           ) : (
             <Autocomplete
-              openOnFocus
               filterOptions={catalogFilter}
               options={options}
               value={null}

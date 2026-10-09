@@ -24,4 +24,22 @@ describe("groupCategories", () => {
     expect(result.visibleCount).toBe(1);
     expect(groupCategories({ categories, pinnedCategoryIds: [], recentCategoryIds: [], query: "watch", locale: "en" }).visibleCount).toBe(0);
   });
+
+  it("preserves the persisted input order for unpinned categories", () => {
+    const storedOrder: CategoryType[] = [
+      { id: "zeta", name: "Zeta", stockIds: [] },
+      { id: "alpha", name: "Alpha", stockIds: [] },
+      { id: "beta", name: "Beta", stockIds: [] },
+    ];
+
+    const result = groupCategories({
+      categories: storedOrder,
+      pinnedCategoryIds: [],
+      recentCategoryIds: [],
+      query: "",
+      locale: "en",
+    });
+
+    expect(result.others.map((item) => item.id)).toEqual(["zeta", "alpha", "beta"]);
+  });
 });

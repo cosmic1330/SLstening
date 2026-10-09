@@ -47,7 +47,8 @@ vi.mock("../../../../store/Stock.store", () => ({
 
 import CategoryManageDialog from "./CategoryManageDialog";
 
-const renderDialog = () => render(<CategoryManageDialog open onClose={vi.fn()} />);
+const renderDialog = (onClose = vi.fn()) =>
+  render(<CategoryManageDialog open onClose={onClose} />);
 
 describe("CategoryManageDialog", () => {
   beforeEach(async () => {
@@ -82,8 +83,21 @@ describe("CategoryManageDialog", () => {
     expect(screen.getByRole("button", { name: "Rename Alpha" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Delete Alpha" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Reorder Alpha" })).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: "Save" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Move Alpha up" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Move Alpha down" })).toBeNull();
+  });
+
+  it("closes immediately from the header Save when no order draft changed", async () => {
+    const onClose = vi.fn();
+    renderDialog(onClose);
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(storeState.updateCategories).not.toHaveBeenCalled();
+    expect(storeState.reorderPinnedCategories).not.toHaveBeenCalled();
   });
 
   it("adds a category through the sticker editor", async () => {
@@ -135,14 +149,15 @@ describe("CategoryManageDialog", () => {
     await act(async () => { resolveToggle?.(); });
 
     expect(screen.getByRole("button", { name: "Unpin Alpha" })).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("persists a normal-motion handle keyboard reorder only after Save", async () => {
-    renderDialog();
+    const onClose = vi.fn();
+    renderDialog(onClose);
 
     const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
-    expect(save.disabled).toBe(true);
+    expect(save.disabled).toBe(false);
     fireEvent.keyDown(screen.getByRole("button", { name: "Reorder Alpha" }), { key: "ArrowDown" });
 
     expect(storeState.updateCategories).not.toHaveBeenCalled();
@@ -158,7 +173,7 @@ describe("CategoryManageDialog", () => {
       { id: "category-beta", name: "Beta", stockIds: ["2454"] },
       { id: "category-alpha", name: "Alpha", stockIds: ["2317"] },
     ]);
-    await waitFor(() => expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
   it("uses keyboard-accessible category arrows only when reduced motion is enabled", () => {
@@ -205,7 +220,8 @@ describe("CategoryManageDialog", () => {
 
   it("saves a pinned-order-only change without rewriting categories", async () => {
     storeState.pinnedCategoryIds = ["category-alpha", "category-beta"];
-    renderDialog();
+    const onClose = vi.fn();
+    renderDialog(onClose);
 
     const pinnedSection = screen.getByRole("heading", { name: "Pinned category order" }).closest("section") as HTMLElement;
     fireEvent.keyDown(within(pinnedSection).getByRole("button", { name: "Reorder Alpha" }), { key: "ArrowDown" });
@@ -216,17 +232,20 @@ describe("CategoryManageDialog", () => {
       "category-alpha",
     ]));
     expect(storeState.updateCategories).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("retains the category draft and shows the existing save error when persistence fails", async () => {
     storeState.updateCategories.mockRejectedValueOnce(new Error("write failed"));
-    renderDialog();
+    const onClose = vi.fn();
+    renderDialog(onClose);
 
     act(() => reorderHandlers.handlers[reorderHandlers.handlers.length - 1]?.(["category-beta", "category-alpha"]));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect((await screen.findByRole("alert")).textContent).toContain("Changes could not be saved. Try again.");
     expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it("shows orphan stock count before removing a category", async () => {

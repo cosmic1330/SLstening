@@ -1,7 +1,6 @@
 import AddIcon from "@mui/icons-material/Add";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
-import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -14,7 +13,6 @@ import {
   Button,
   CircularProgress,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
@@ -364,8 +362,12 @@ export default function CategoryManageDialog({
     }
   };
 
-  const applyDraftOrders = async () => {
+  const saveDraftOrdersAndClose = async () => {
     if (pending) return;
+    if (!isDraftDirty) {
+      onClose();
+      return;
+    }
     setPending(true);
     setError("");
     try {
@@ -373,6 +375,7 @@ export default function CategoryManageDialog({
       if (pinnedOrderDirty) await reorderPinnedCategories(pinnedDraft);
       setCategoryBaselineIds(categoryDraftIds);
       setPinnedBaselineIds(pinnedDraft);
+      onClose();
     } catch {
       setError(t("watchlist.saveFailed"));
     } finally {
@@ -454,18 +457,19 @@ export default function CategoryManageDialog({
               </Typography>
             </Box>
           </Stack>
-          <IconButton
+          <Button
             disabled={pending}
-            aria-label={t("watchlist.close")}
-            onClick={close}
+            type="button"
+            onClick={() => void saveDraftOrdersAndClose()}
             sx={{
-              ...playfulIconButtonSx(),
-              bgcolor: playfulPalette.yellow,
-              "&:hover": { bgcolor: playfulPalette.yellow },
+              ...playfulButtonSx(playfulPalette.blue),
+              flexShrink: 0,
+              minWidth: 0,
+              px: { xs: 1.25, sm: 1.5 },
             }}
           >
-            <CloseIcon aria-hidden="true" />
-          </IconButton>
+            {t("watchlist.save")}
+          </Button>
         </Stack>
       </DialogTitle>
       <DialogContent sx={playfulDialogContentSx} aria-busy={pending}>
@@ -562,6 +566,32 @@ export default function CategoryManageDialog({
                 >
                   {t("watchlist.deleteMessage", { count: orphanCount })}
                 </Typography>
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  spacing={1}
+                  mt={1.5}
+                >
+                  <Button
+                    disabled={pending}
+                    type="button"
+                    onClick={() => setDeleteCandidate(null)}
+                    sx={playfulButtonSx(playfulPalette.white)}
+                  >
+                    {t("watchlist.cancel")}
+                  </Button>
+                  <Button
+                    disabled={pending}
+                    type="button"
+                    onClick={() => void confirmDelete()}
+                    sx={{
+                      ...playfulButtonSx(playfulPalette.dangerSoft),
+                      color: playfulPalette.dangerText,
+                    }}
+                  >
+                    {t("watchlist.confirmDelete")}
+                  </Button>
+                </Stack>
               </Box>
             </Stack>
           </Box>
@@ -873,74 +903,6 @@ export default function CategoryManageDialog({
           </>
         )}
       </DialogContent>
-      <DialogActions
-        sx={{
-          position: "sticky",
-          bottom: 0,
-          flexShrink: 0,
-          zIndex: 1,
-          gap: 1,
-          px: { xs: 2, sm: 3 },
-          py: { xs: 1.5, sm: 2 },
-          borderTop: `2px solid ${playfulPalette.outline}`,
-          bgcolor: "rgba(255, 253, 248, 0.96)",
-          flexWrap: "wrap",
-        }}
-      >
-        {deleteCandidate ? (
-          <>
-            <Button
-              disabled={pending}
-              type="button"
-              onClick={() => setDeleteCandidate(null)}
-              sx={{
-                
-                ...playfulButtonSx(playfulPalette.white),
-                flex: { xs: 1, sm: "initial" },
-              }}
-            >
-              {t("watchlist.cancel")}
-            </Button>
-            <Button
-              disabled={pending}
-              type="button"
-              onClick={() => void confirmDelete()}
-              sx={{
-                ...playfulButtonSx(playfulPalette.dangerSoft),
-                color: playfulPalette.dangerText,
-                flex: { xs: 1, sm: "initial" },
-              }}
-            >
-              {t("watchlist.confirmDelete")}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              disabled={pending}
-              type="button"
-              onClick={close}
-              sx={{
-                ...playfulButtonSx(playfulPalette.white),
-                flex: { xs: 1, sm: "initial" },
-              }}
-            >
-              {t("watchlist.close")}
-            </Button>
-            <Button
-              disabled={pending || !isDraftDirty}
-              type="button"
-              onClick={() => void applyDraftOrders()}
-              sx={{
-                ...playfulButtonSx(playfulPalette.blue),
-                flex: { xs: 1, sm: "initial" },
-              }}
-            >
-              {t("watchlist.save")}
-            </Button>
-          </>
-        )}
-      </DialogActions>
     </Dialog>
   );
 }

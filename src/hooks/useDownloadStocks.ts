@@ -63,10 +63,11 @@ export default function useDownloadStocks() {
       const OTC_data = await queryStocks(QueryStockType.OTC);
       TWSE_data.push(...OTC_data);
       await update_menu(TWSE_data);
-      setDisable(false);
       sendNotification({ title: "Menu", body: "Update Success!" });
     } catch (e) {
       error(`Error updating menu: ${e}`);
+    } finally {
+      setDisable(false);
     }
   }, []);
 

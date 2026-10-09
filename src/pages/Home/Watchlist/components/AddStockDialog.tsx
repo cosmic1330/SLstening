@@ -2,13 +2,16 @@ import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DownloadIcon from "@mui/icons-material/Download";
 import DragIndicatorIcon from "@mui/icons-material/DragIndicator";
 import SearchIcon from "@mui/icons-material/Search";
 import {
   Alert,
   Autocomplete,
   Box,
+  Button,
   CircularProgress,
+  createFilterOptions,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -21,12 +24,15 @@ import {
   useTheme,
 } from "@mui/material";
 import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type SyntheticEvent, type UIEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { AutocompleteInputChangeReason } from "@mui/material/Autocomplete";
 import { WATCHLIST_RADIUS } from "../../../../components/StockBox/constants";
+import useDownloadStocks from "../../../../hooks/useDownloadStocks";
 import useStocksStore from "../../../../store/Stock.store";
 import { StockStoreType } from "../../../../types";
 import {
+  playfulButtonSx,
   playfulDialogContentSx,
   playfulDialogPaperSx,
   playfulDialogTitleSx,
@@ -93,7 +99,13 @@ function SortableStockRow({
         }}
       >
         {reduceMotion ? (
-          <Stack direction="row" spacing={0.25} sx={{ flexShrink: 0 }}>
+          <Stack
+            direction="row"
+            spacing={0.25}
+            sx={{
+              flexShrink: 0,
+            }}
+          >
             <IconButton
               disabled={pending || index === 0}
               aria-label={t("watchlist.moveUp", { name: stock.name })}
@@ -133,13 +145,25 @@ function SortableStockRow({
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography
             fontWeight={800}
-            sx={{ overflowWrap: "anywhere", lineHeight: 1.25, fontFamily: '"Roboto Mono", "SFMono-Regular", Consolas, monospace', fontVariantNumeric: "tabular-nums" }}
+            sx={{
+              pl: 1.5,
+              overflowWrap: "anywhere",
+              lineHeight: 1.25,
+              fontFamily:
+                '"Roboto Mono", "SFMono-Regular", Consolas, monospace',
+              fontVariantNumeric: "tabular-nums",
+            }}
           >
             {stock.id}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ display: "block", color: playfulPalette.muted, overflowWrap: "anywhere" }}
+            sx={{
+              pl: 1.5,
+              display: "block",
+              color: playfulPalette.muted,
+              overflowWrap: "anywhere",
+            }}
           >
             {stock.name}
           </Typography>
@@ -160,7 +184,11 @@ function SortableStockRow({
 }
 
 const sameOrder = (left: string[], right: string[]) =>
-  left.length === right.length && left.every((id, index) => id === right[index]);
+  left.length === right.length &&
+  left.every((id, index) => id === right[index]);
+
+const CATALOG_PAGE_SIZE = 100;
+const CATALOG_SCROLL_THRESHOLD = 32;
 
 export default function AddStockDialog({
   open,
@@ -173,12 +201,19 @@ export default function AddStockDialog({
   const categories = useStocksStore((state) => state.categories);
   const menu = useStocksStore((state) => state.menu);
   const stocks = useStocksStore((state) => state.stocks);
-  const addStockToCategory = useStocksStore((state) => state.addStockToCategory);
-  const removeStockFromCategory = useStocksStore((state) => state.removeStockFromCategory);
+  const addStockToCategory = useStocksStore(
+    (state) => state.addStockToCategory,
+  );
+  const removeStockFromCategory = useStocksStore(
+    (state) => state.removeStockFromCategory,
+  );
   const updateStockOrder = useStocksStore((state) => state.updateStockOrder);
+  const { handleDownloadMenu, disable: catalogUpdating } = useDownloadStocks();
 
   const [draftIds, setDraftIds] = useState<string[]>([]);
   const [searchInput, setSearchInput] = useState("");
+  const [catalogOptionLimit, setCatalogOptionLimit] =
+    useState(CATALOG_PAGE_SIZE);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const draftIdsRef = useRef<string[]>([]);
@@ -203,7 +238,12 @@ export default function AddStockDialog({
     [draftIds, stockById],
   );
   const options = useMemo(() => [...stockById.values()], [stockById]);
-  const activeCategoryName = activeCategory?.name ?? t("watchlist.noCategorySelected");
+  const catalogFilter = useMemo(
+    () => createFilterOptions<StockStoreType>({ limit: catalogOptionLimit }),
+    [catalogOptionLimit],
+  );
+  const activeCategoryName =
+    activeCategory?.name ?? t("watchlist.noCategorySelected");
 
   useEffect(() => {
     if (!open) return;
@@ -211,6 +251,7 @@ export default function AddStockDialog({
     draftIdsRef.current = next;
     setDraftIds(next);
     setSearchInput("");
+    setCatalogOptionLimit(CATALOG_PAGE_SIZE);
     setError("");
     dragBeforeRef.current = null;
   }, [activeCategoryId, open]);
@@ -315,6 +356,29 @@ export default function AddStockDialog({
     }
   };
 
+  const handleCatalogInputChange = (
+    _: SyntheticEvent,
+    value: string,
+    reason: AutocompleteInputChangeReason,
+  ) => {
+    setSearchInput(value);
+    if (reason === "input" || reason === "clear") {
+      setCatalogOptionLimit(CATALOG_PAGE_SIZE);
+    }
+  };
+
+  const handleCatalogScroll = (event: UIEvent<HTMLUListElement>) => {
+    const listbox = event.currentTarget;
+    if (
+      listbox.scrollHeight - listbox.scrollTop - listbox.clientHeight >
+      CATALOG_SCROLL_THRESHOLD
+    )
+      return;
+    setCatalogOptionLimit((previous) =>
+      Math.min(previous + CATALOG_PAGE_SIZE, options.length),
+    );
+  };
+
   const resetAndClose = () => {
     if (pendingRef.current) return;
     setSearchInput("");
@@ -333,21 +397,82 @@ export default function AddStockDialog({
       slotProps={{ paper: { sx: playfulDialogPaperSx } }}
     >
       <DialogTitle component="div" sx={playfulDialogTitleSx}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between" spacing={1.5}>
+        <Stack
+          direction="row"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          spacing={1.5}
+        >
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-              <Box aria-hidden="true" sx={{ width: 38, height: 38, flexShrink: 0, display: "grid", placeItems: "center", border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.blue, boxShadow: `2px 2px 0 ${playfulPalette.outline}` }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ minWidth: 0 }}
+            >
+              <Box
+                aria-hidden="true"
+                sx={{
+                  width: 38,
+                  height: 38,
+                  flexShrink: 0,
+                  display: "grid",
+                  placeItems: "center",
+                  border: `2px solid ${playfulPalette.outline}`,
+                  borderRadius: WATCHLIST_RADIUS,
+                  bgcolor: playfulPalette.blue,
+                  boxShadow: `2px 2px 0 ${playfulPalette.outline}`,
+                }}
+              >
                 <SearchIcon fontSize="small" />
               </Box>
-              <Typography component="h2" sx={{ minWidth: 0, color: playfulPalette.ink, fontSize: { xs: "1.25rem", sm: "1.4rem" }, fontWeight: 950, lineHeight: 1.15, overflowWrap: "anywhere" }}>
+              <Typography
+                component="h2"
+                sx={{
+                  minWidth: 0,
+                  color: playfulPalette.ink,
+                  fontSize: { xs: "1.25rem", sm: "1.4rem" },
+                  fontWeight: 950,
+                  lineHeight: 1.15,
+                  overflowWrap: "anywhere",
+                }}
+              >
                 {t("watchlist.manageStocks")}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1, flexWrap: "wrap" }}>
-              <Typography component="span" sx={{ color: playfulPalette.muted, fontSize: "0.78rem", fontWeight: 700, overflowWrap: "anywhere" }}>
-                {t("watchlist.currentCategoryName", { name: activeCategoryName })}
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ mt: 1, flexWrap: "wrap" }}
+            >
+              <Typography
+                component="span"
+                sx={{
+                  color: playfulPalette.muted,
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {t("watchlist.currentCategoryName", {
+                  name: activeCategoryName,
+                })}
               </Typography>
-              <Typography component="span" sx={{ px: 0.9, py: 0.35, border: `1.5px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.yellow, color: playfulPalette.ink, fontSize: "0.7rem", fontWeight: 900, fontVariantNumeric: "tabular-nums" }}>
+              <Typography
+                component="span"
+                sx={{
+                  px: 0.9,
+                  py: 0.35,
+                  border: `1.5px solid ${playfulPalette.outline}`,
+                  borderRadius: WATCHLIST_RADIUS,
+                  bgcolor: playfulPalette.yellow,
+                  color: playfulPalette.ink,
+                  fontSize: "0.7rem",
+                  fontWeight: 900,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {t("watchlist.stockCount", { count: currentStocks.length })}
               </Typography>
             </Stack>
@@ -356,7 +481,11 @@ export default function AddStockDialog({
             disabled={pending}
             aria-label={t("watchlist.close")}
             onClick={resetAndClose}
-            sx={{ ...playfulIconButtonSx(), bgcolor: playfulPalette.yellow, "&:hover": { bgcolor: playfulPalette.yellow } }}
+            sx={{
+              ...playfulIconButtonSx(),
+              bgcolor: playfulPalette.yellow,
+              "&:hover": { bgcolor: playfulPalette.yellow },
+            }}
           >
             <CloseIcon aria-hidden="true" />
           </IconButton>
@@ -371,14 +500,42 @@ export default function AddStockDialog({
         aria-busy={pending}
       >
         {error ? (
-          <Alert severity="error" role="alert" sx={{ mb: 1.5, flexShrink: 0, border: `2px solid ${playfulPalette.outline}`, borderRadius: WATCHLIST_RADIUS, bgcolor: playfulPalette.dangerSoft, color: playfulPalette.ink, fontWeight: 750 }}>
+          <Alert
+            severity="error"
+            role="alert"
+            sx={{
+              mb: 1.5,
+              flexShrink: 0,
+              border: `2px solid ${playfulPalette.outline}`,
+              borderRadius: WATCHLIST_RADIUS,
+              bgcolor: playfulPalette.dangerSoft,
+              color: playfulPalette.ink,
+              fontWeight: 750,
+            }}
+          >
             {error}
           </Alert>
         ) : null}
 
         {pending ? (
-          <Stack direction="row" spacing={0.75} alignItems="center" role="status" aria-live="polite" sx={{ mb: 1.25, color: playfulPalette.blueDark, fontSize: "0.78rem", fontWeight: 850 }}>
-            <CircularProgress size={15} sx={{ color: playfulPalette.blueDark }} aria-hidden="true" />
+          <Stack
+            direction="row"
+            spacing={0.75}
+            alignItems="center"
+            role="status"
+            aria-live="polite"
+            sx={{
+              mb: 1.25,
+              color: playfulPalette.blueDark,
+              fontSize: "0.78rem",
+              fontWeight: 850,
+            }}
+          >
+            <CircularProgress
+              size={15}
+              sx={{ color: playfulPalette.blueDark }}
+              aria-hidden="true"
+            />
             {t("watchlist.saving")}
           </Stack>
         ) : null}
@@ -386,103 +543,219 @@ export default function AddStockDialog({
         <Box
           component="section"
           aria-labelledby="search-add-stock-title"
-          sx={{ ...playfulPanelSx, mt:1.5, flexShrink: 0, bgcolor: "rgba(107, 183, 232, 0.20)" }}
+          sx={{
+            ...playfulPanelSx,
+            mt: 1.5,
+            flexShrink: 0,
+            bgcolor: "rgba(107, 183, 232, 0.20)",
+          }}
         >
           <Typography
             id="search-add-stock-title"
             component="h3"
-            sx={{ mb: 1.1, color: playfulPalette.ink, fontSize: "0.96rem", fontWeight: 950 }}
+            sx={{
+              mb: 1.1,
+              color: playfulPalette.ink,
+              fontSize: "0.96rem",
+              fontWeight: 950,
+            }}
           >
             {t("watchlist.searchAddStock")}
           </Typography>
-          <Autocomplete
-            options={options}
-            value={null}
-            inputValue={searchInput}
-            disabled={pending}
-            onInputChange={(_, value) => setSearchInput(value)}
-            onChange={(_, value) => void handleStockSelect(value)}
-            getOptionLabel={(item) => `${item.id} ${item.name}`}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            noOptionsText={t("watchlist.noStockMatches")}
-            slotProps={{
-              paper: {
-                sx: {
-                  mt: 0.75,
-                  border: `2px solid ${playfulPalette.outline}`,
-                  borderRadius: WATCHLIST_RADIUS,
-                  bgcolor: playfulPalette.paper,
+          {menu.length === 0 ? (
+            <Stack
+              spacing={1}
+              alignItems="flex-start"
+              aria-live="polite"
+              sx={{ py: 0.25, minWidth: 0 }}
+            >
+              <Typography
+                component="p"
+                sx={{
+                  m: 0,
                   color: playfulPalette.ink,
-                  boxShadow: `4px 5px 0 ${playfulPalette.outline}`,
-                  "& .MuiAutocomplete-noOptions": {
-                    color: playfulPalette.muted,
-                  },
-                  "& .MuiAutocomplete-option": {
-                    color: playfulPalette.ink,
-                  },
-                  "& .MuiAutocomplete-option.Mui-focused": {
-                    bgcolor: "rgba(107, 183, 232, 0.28)",
-                    boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
-                    color: playfulPalette.ink,
-                  },
-                  "& .MuiAutocomplete-option[aria-selected=\"true\"]": {
-                    bgcolor: "rgba(201, 189, 242, 0.32)",
-                    color: playfulPalette.ink,
-                  },
-                },
-              },
-              listbox: {
-                sx: {
-                  color: playfulPalette.ink,
-                  "& .MuiAutocomplete-option": {
-                    color: playfulPalette.ink,
-                  },
-                  "& .MuiAutocomplete-option.Mui-focused": {
-                    bgcolor: "rgba(107, 183, 232, 0.28)",
-                    boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
-                    color: playfulPalette.ink,
-                  },
-                },
-              },
-            }}
-            renderOption={(props, option) => {
-              const isCurrent = draftIds.includes(option.id);
-              return (
-                <Box component="li" {...props} sx={{ minHeight: 56, minWidth: 0, borderBottom: "1px solid rgba(25, 25, 25, 0.12)", borderRadius: WATCHLIST_RADIUS, color: playfulPalette.ink, "&:hover": { bgcolor: "rgba(107, 183, 232, 0.15)" }, "&.Mui-focused": { bgcolor: "rgba(107, 183, 232, 0.28)", boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}` }, "&[aria-selected=\"true\"]": { bgcolor: "rgba(201, 189, 242, 0.32)" } }}>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ width: "100%", minWidth: 0 }}>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography fontWeight={900} sx={{ overflowWrap: "anywhere", fontFamily: '"Roboto Mono", "SFMono-Regular", Consolas, monospace', fontVariantNumeric: "tabular-nums" }}>
-                        {option.id}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: playfulPalette.muted, overflowWrap: "anywhere" }}>
-                        {option.name}
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" sx={{ flexShrink: 0, textAlign: "right", color: playfulPalette.blueDark, fontWeight: 900 }}>
-                      {t(isCurrent ? "watchlist.moveToTop" : "watchlist.addToCurrent")}
-                    </Typography>
-                  </Stack>
-                </Box>
-              );
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                autoFocus
-                label={t("watchlist.stockSearch")}
-                placeholder={t("watchlist.searchAddStock")}
-                InputProps={{
-                  ...params.InputProps,
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon aria-hidden="true" />
-                    </InputAdornment>
-                  ),
+                  fontWeight: 850,
+                  overflowWrap: "anywhere",
                 }}
-                sx={playfulFieldSx}
-              />
-            )}
-          />
+              >
+                {t("watchlist.catalogUnavailableTitle")}
+              </Typography>
+              <Typography
+                component="p"
+                variant="body2"
+                sx={{
+                  m: 0,
+                  color: playfulPalette.muted,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {t("watchlist.catalogUnavailableDescription")}
+              </Typography>
+              <Button
+                type="button"
+                disabled={catalogUpdating}
+                aria-busy={catalogUpdating}
+                onClick={() => void handleDownloadMenu()}
+                startIcon={
+                  catalogUpdating ? (
+                    <CircularProgress
+                      size={16}
+                      color="inherit"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <DownloadIcon aria-hidden="true" />
+                  )
+                }
+                sx={playfulButtonSx(playfulPalette.yellow)}
+              >
+                {catalogUpdating
+                  ? t("settings.updating")
+                  : t("settings.updateStocks")}
+              </Button>
+            </Stack>
+          ) : (
+            <Autocomplete
+              openOnFocus
+              filterOptions={catalogFilter}
+              options={options}
+              value={null}
+              inputValue={searchInput}
+              disabled={pending}
+              onInputChange={handleCatalogInputChange}
+              onChange={(_, value) => void handleStockSelect(value)}
+              getOptionLabel={(item) => `${item.id} ${item.name}`}
+              isOptionEqualToValue={(option, value) => option.id === value.id}
+              noOptionsText={t("watchlist.noStockMatches")}
+              slotProps={{
+                paper: {
+                  sx: {
+                    mt: 0.75,
+                    border: `2px solid ${playfulPalette.outline}`,
+                    borderRadius: WATCHLIST_RADIUS,
+                    bgcolor: playfulPalette.paper,
+                    color: playfulPalette.ink,
+                    boxShadow: `4px 5px 0 ${playfulPalette.outline}`,
+                    "& .MuiAutocomplete-noOptions": {
+                      color: playfulPalette.muted,
+                    },
+                    "& .MuiAutocomplete-option": {
+                      color: playfulPalette.ink,
+                    },
+                    "& .MuiAutocomplete-option.Mui-focused": {
+                      bgcolor: "rgba(107, 183, 232, 0.28)",
+                      boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
+                      color: playfulPalette.ink,
+                    },
+                    '& .MuiAutocomplete-option[aria-selected="true"]': {
+                      bgcolor: "rgba(201, 189, 242, 0.32)",
+                      color: playfulPalette.ink,
+                    },
+                  },
+                },
+                listbox: {
+                  onScroll: handleCatalogScroll,
+                  sx: {
+                    color: playfulPalette.ink,
+                    "& .MuiAutocomplete-option": {
+                      color: playfulPalette.ink,
+                    },
+                    "& .MuiAutocomplete-option.Mui-focused": {
+                      bgcolor: "rgba(107, 183, 232, 0.28)",
+                      boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
+                      color: playfulPalette.ink,
+                    },
+                  },
+                },
+              }}
+              renderOption={(props, option) => {
+                const isCurrent = draftIds.includes(option.id);
+                return (
+                  <Box
+                    component="li"
+                    {...props}
+                    sx={{
+                      minHeight: 56,
+                      minWidth: 0,
+                      borderBottom: "1px solid rgba(25, 25, 25, 0.12)",
+                      borderRadius: WATCHLIST_RADIUS,
+                      color: playfulPalette.ink,
+                      "&:hover": { bgcolor: "rgba(107, 183, 232, 0.15)" },
+                      "&.Mui-focused": {
+                        bgcolor: "rgba(107, 183, 232, 0.28)",
+                        boxShadow: `inset 0 0 0 2px ${playfulPalette.blueDark}`,
+                      },
+                      '&[aria-selected="true"]': {
+                        bgcolor: "rgba(201, 189, 242, 0.32)",
+                      },
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                      sx={{ width: "100%", minWidth: 0 }}
+                    >
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography
+                          fontWeight={900}
+                          sx={{
+                            overflowWrap: "anywhere",
+                            fontFamily:
+                              '"Roboto Mono", "SFMono-Regular", Consolas, monospace',
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
+                          {option.id}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: playfulPalette.muted,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {option.name}
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          flexShrink: 0,
+                          textAlign: "right",
+                          color: playfulPalette.blueDark,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {t(
+                          isCurrent
+                            ? "watchlist.moveToTop"
+                            : "watchlist.addToCurrent",
+                        )}
+                      </Typography>
+                    </Stack>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  autoFocus
+                  label={t("watchlist.stockSearch")}
+                  placeholder={t("watchlist.addStockPlaceholder")}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon aria-hidden="true" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={playfulFieldSx}
+                />
+              )}
+            />
+          )}
         </Box>
 
         <Box
@@ -501,7 +774,13 @@ export default function AddStockDialog({
           <Typography
             id="current-category-stocks-title"
             component="h3"
-            sx={{ mb: 1, flexShrink: 0, color: playfulPalette.ink, fontSize: "0.96rem", fontWeight: 950 }}
+            sx={{
+              mb: 1,
+              flexShrink: 0,
+              color: playfulPalette.ink,
+              fontSize: "0.96rem",
+              fontWeight: 950,
+            }}
           >
             {t("watchlist.currentCategoryStocks")}
           </Typography>
@@ -547,7 +826,14 @@ export default function AddStockDialog({
                   py: 3,
                 }}
               >
-                <Typography sx={{ color: playfulPalette.muted, fontWeight: 700, textAlign: "center", maxWidth: 280 }}>
+                <Typography
+                  sx={{
+                    color: playfulPalette.muted,
+                    fontWeight: 700,
+                    textAlign: "center",
+                    maxWidth: 280,
+                  }}
+                >
                   {t("watchlist.currentCategoryEmpty")}
                 </Typography>
               </Box>

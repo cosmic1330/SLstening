@@ -274,15 +274,6 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
             )}
 
             <Divider sx={{ mb: 2, borderColor: "rgba(25, 25, 25, 0.18)" }} />
-            <TextField
-              fullWidth
-              value={query}
-              disabled={pending}
-              onChange={(event) => setQuery(event.target.value)}
-              label={t("watchlist.categorySearch")}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon aria-hidden="true" /></InputAdornment> }}
-              sx={{ ...playfulFieldSx, mb: 1.25 }}
-            />
             <Box component="section" aria-labelledby="custom-category-list-title">
               <Typography id="custom-category-list-title" component="h3" sx={{ mb: 0.75, color: playfulPalette.ink, fontSize: "0.9rem", fontWeight: 950 }}>
                 {t("watchlist.categories")}
@@ -374,7 +365,7 @@ export default function CategoryManageDialog({ open, onClose }: CategoryManageDi
               {t("watchlist.close")}
             </Button>
             <Button disabled={pending || !isDraftDirty} type="button" onClick={() => void applyPinnedOrder()} sx={{ ...playfulButtonSx(playfulPalette.blue), flex: { xs: 1, sm: "initial" } }}>
-              {t("watchlist.applyOrder")}
+              {t("watchlist.save")}
             </Button>
           </>
         )}

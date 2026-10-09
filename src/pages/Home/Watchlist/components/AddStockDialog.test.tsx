@@ -10,6 +10,10 @@ const reorderHandlers = vi.hoisted(() => ({
 }));
 
 const motionState = vi.hoisted(() => ({ reduced: false }));
+const downloadState = vi.hoisted(() => ({
+  disable: false,
+  handleDownloadMenu: vi.fn(),
+}));
 
 const storeState = vi.hoisted(() => ({
   categories: [
@@ -59,6 +63,9 @@ vi.mock("framer-motion", () => ({
 vi.mock("../../../../store/Stock.store", () => ({
   default: (selector: (state: typeof storeState) => unknown) => selector(storeState),
 }));
+vi.mock("../../../../hooks/useDownloadStocks", () => ({
+  default: () => downloadState,
+}));
 
 import AddStockDialog from "./AddStockDialog";
 
@@ -84,6 +91,11 @@ describe("AddStockDialog category stock management", () => {
     storeState.categories = [
       { id: "category-tech", name: "Tech", stockIds: ["2330", "2317"] },
     ];
+    storeState.menu = [
+      { id: "2330", name: "TSMC", group: "Semiconductor", type: "stock" },
+      { id: "2317", name: "Hon Hai", group: "Electronics", type: "stock" },
+      { id: "2454", name: "MediaTek", group: "Semiconductor", type: "stock" },
+    ];
     storeState.stocks = storeState.menu.filter((stock) => stock.id !== "2454");
     storeState.addStockToCategory.mockReset().mockResolvedValue(undefined);
     storeState.removeStockFromCategory.mockReset().mockResolvedValue(undefined);
@@ -91,13 +103,15 @@ describe("AddStockDialog category stock management", () => {
     reorderHandlers.onReorder = null;
     reorderHandlers.onDragEnd = null;
     motionState.reduced = false;
+    downloadState.disable = false;
+    downloadState.handleDownloadMenu.mockReset().mockResolvedValue(undefined);
   });
 
   it("renders the current category in stored order with the management title", () => {
     renderDialog();
 
     expect(screen.getByRole("heading", { name: "Manage category stocks" })).toBeTruthy();
-    const searchHeading = screen.getByRole("heading", { name: "Search and add a stock" });
+    const searchHeading = screen.getByRole("heading", { name: "Add stocks to this category" });
     const currentHeading = screen.getByRole("heading", { name: "Stocks in this category" });
     expect(
       searchHeading.compareDocumentPosition(currentHeading) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -107,6 +121,94 @@ describe("AddStockDialog category stock management", () => {
       expect.stringContaining("2330"),
       expect.stringContaining("2317"),
     ]);
+  });
+
+  it("opens the catalog options when the auto-focused search field receives focus", async () => {
+    renderDialog();
+
+    const search = screen.getByRole("combobox");
+    await waitFor(() => expect(document.activeElement).toBe(search));
+    expect(await screen.findByRole("option", { name: /2330.*TSMC.*Move to top/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /2454.*MediaTek.*Add to this category/ })).toBeTruthy();
+  });
+
+  it("reveals a long catalog monotonically, while a new query resets its page size", async () => {
+    storeState.menu = Array.from({ length: 250 }, (_, index) => ({
+      id: `CAT${String(index + 1).padStart(3, "0")}`,
+      name: `Long catalog ${index + 1}`,
+      group: "Test",
+      type: "stock",
+    }));
+    storeState.stocks = [];
+    renderDialog();
+
+    const search = screen.getByRole("combobox");
+    await waitFor(() => expect(document.activeElement).toBe(search));
+    expect((await screen.findAllByRole("option")).length).toBe(100);
+
+    const scrollToListboxBottom = () => {
+      const listbox = screen.getByRole("listbox");
+      Object.defineProperties(listbox, {
+        clientHeight: { configurable: true, value: 400 },
+        scrollHeight: { configurable: true, value: 800 },
+        scrollTop: { configurable: true, value: 400, writable: true },
+      });
+      fireEvent.scroll(listbox);
+    };
+
+    scrollToListboxBottom();
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(200));
+
+    scrollToListboxBottom();
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(250));
+
+    // MUI can emit a non-user `reset` input event while keyboard navigation
+    // updates the highlighted option. That event must not collapse a list the
+    // user has already progressively revealed.
+    fireEvent.keyDown(search, { key: "End" });
+    scrollToListboxBottom();
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(250));
+
+    fireEvent.change(search, { target: { value: "CAT" } });
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(100));
+  });
+
+  it("searches a stock beyond the initial catalog page directly", async () => {
+    storeState.menu = Array.from({ length: 250 }, (_, index) => ({
+      id: `CAT${String(index + 1).padStart(3, "0")}`,
+      name: `Long catalog ${index + 1}`,
+      group: "Test",
+      type: "stock",
+    }));
+    storeState.stocks = [];
+    renderDialog();
+
+    const search = screen.getByRole("combobox");
+    fireEvent.change(search, { target: { value: "CAT150" } });
+    expect(await screen.findByRole("option", { name: /CAT150.*Long catalog 150.*Add to this category/ })).toBeTruthy();
+  });
+
+  it("guides the user to update an empty catalog without hiding category management", () => {
+    storeState.menu = [];
+    renderDialog();
+
+    expect(screen.queryByRole("combobox")).toBeNull();
+    expect(screen.getByText("Update the stock list first")).toBeTruthy();
+    expect(screen.getByText("This device has no reference stock list yet. Update it to search and add stocks.")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Stocks in this category" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update stock list" }));
+    expect(downloadState.handleDownloadMenu).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows download progress as a disabled, busy update control", () => {
+    storeState.menu = [];
+    downloadState.disable = true;
+    renderDialog();
+
+    const update = screen.getByRole("button", { name: "Updating" });
+    expect((update as HTMLButtonElement).disabled).toBe(true);
+    expect(update.getAttribute("aria-busy")).toBe("true");
   });
 
   it("removes a stock from the active category immediately without confirmation", async () => {

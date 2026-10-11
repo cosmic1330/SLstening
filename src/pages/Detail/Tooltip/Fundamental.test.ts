@@ -147,7 +147,7 @@ describe("TDCC holder changes", () => {
 
     expect(await screen.findByText("Valuation")).toBeTruthy();
     expect(screen.queryByText("No financial data is available.")).toBeNull();
-    expect(errorSpy).toHaveBeenCalledWith("Error fetching TDCC holder data:", { message: "RLS denied" });
+    expect(errorSpy).toHaveBeenCalledWith("[fundamental_tdcc_fetch] FUNDAMENTAL_TDCC_FETCH_FAILED");
   });
 
   it("shows the empty fallback only when all three sources are absent", async () => {

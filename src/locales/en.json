@@ -213,6 +213,10 @@
     "deleteMessage": "This removes the category. {{count}} stocks used only here will also be deleted.",
     "confirmDelete": "Delete category"
   },
+  "diagnostics": {
+    "crashTitle": "The app encountered an unexpected error.",
+    "reload": "Reload"
+  },
   "settings": {
     "title": "Preferences",
     "eyebrow": "Your market desk",
@@ -227,6 +231,9 @@
     "updateStocksHint": "Manually refresh the Taiwan stock database",
     "update": "Update",
     "updating": "Updating",
+    "openLogFolder": "Open Log Folder",
+    "openLogFolderHint": "Open local diagnostic files when support asks for them.",
+    "openLogFolderFailed": "The log folder could not be opened. Please try again.",
     "cloudBackup": "Cloud backup",
     "cloudBackupEnabledHint": "Back up this account's watchlist when local changes are ready. Last backup: {{lastBackup}}.",
     "cloudBackupDisabledHint": "Keep this account on this device only. Last backup: {{lastBackup}}.",

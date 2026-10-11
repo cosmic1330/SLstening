@@ -213,6 +213,10 @@
     "deleteMessage": "分類將被移除；僅存在此分類的 {{count}} 檔股票也會一併刪除。",
     "confirmDelete": "刪除分類"
   },
+  "diagnostics": {
+    "crashTitle": "App 發生未預期的錯誤。",
+    "reload": "重新載入"
+  },
   "settings": {
     "title": "偏好設定",
     "eyebrow": "你的市場工作台",
@@ -227,6 +231,9 @@
     "updateStocksHint": "手動觸發台股資料庫更新",
     "update": "更新",
     "updating": "更新中",
+    "openLogFolder": "開啟記錄資料夾",
+    "openLogFolderHint": "客服要求時，可在此開啟本機診斷記錄檔。",
+    "openLogFolderFailed": "無法開啟記錄資料夾，請再試一次。",
     "cloudBackup": "雲端備份",
     "cloudBackupEnabledHint": "本機變更準備完成後會備份此帳號的追蹤清單。上次備份：{{lastBackup}}。",
     "cloudBackupDisabledHint": "此帳號資料僅保留在這台裝置。上次備份：{{lastBackup}}。",

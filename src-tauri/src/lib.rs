@@ -2,6 +2,7 @@ mod account;
 mod agent_gateway;
 mod commands;
 mod csv_processor;
+mod diagnostics;
 mod error;
 mod legacy_settings;
 mod local_preferences;
@@ -29,14 +30,15 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(
-            tauri_plugin_log::Builder::new()
-                .level(log::LevelFilter::Info)
-                .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
-                .build(),
-        )
+        // Keep the frontend plugin commands, while the native logger owns live
+        // size-based rotation (the plugin only checks size when it starts).
+        .plugin(tauri_plugin_log::Builder::new().skip_logger().build())
         .setup(|app| {
             let handle = app.handle().clone();
+            let log_dir = handle.path().app_log_dir()?;
+            diagnostics::init_local_logger(log_dir).map_err(std::io::Error::other)?;
+            let release = format!("slistening@{}", app.package_info().version);
+            diagnostics::init(&release);
 
             let account_manager =
                 account::AccountManager::new().map_err(|error| std::io::Error::other(error))?;
@@ -86,6 +88,7 @@ pub fn run() {
             commands::account::account_invalidate_session,
             commands::account::account_get_session,
             commands::account::agent_get_config,
+            commands::account::diagnostics_open_log_dir,
             commands::account::legacy_settings_status,
             commands::account::legacy_settings_keep,
             commands::account::legacy_settings_delete,

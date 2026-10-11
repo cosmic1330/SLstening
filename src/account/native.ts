@@ -115,3 +115,8 @@ export async function getAgentGatewayConfig(): Promise<AgentGatewayConfig | null
   if (!isNativeRuntime()) return null;
   return invoke<AgentGatewayConfig>("agent_get_config");
 }
+
+export async function openNativeLogDirectory(): Promise<void> {
+  if (!isNativeRuntime()) throw new Error("LOG_DIR_UNAVAILABLE");
+  await invoke("diagnostics_open_log_dir");
+}

@@ -1,7 +1,7 @@
 import { emit } from "@tauri-apps/api/event";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { error } from "@tauri-apps/plugin-log";
 import { useCallback } from "react";
+import { reportHandledError } from "../diagnostics";
 export default function useDetailWebviewWindow({
   id,
   name,
@@ -24,7 +24,7 @@ export default function useDetailWebviewWindow({
         await existingWindow.show();
         existingWindow.setFocus();
       } catch (e) {
-        error(`Error focusing window: ${e}`);
+        reportHandledError("detail_window_focus", e, "DETAIL_WINDOW_FOCUS_FAILED");
       }
       return;
     } else {
@@ -36,7 +36,7 @@ export default function useDetailWebviewWindow({
       });
       webview.once("tauri://created", function () {});
       webview.once("tauri://error", function (e) {
-        error(`Error creating window: ${e}`);
+        reportHandledError("detail_window_create", e, "DETAIL_WINDOW_CREATE_FAILED");
       });
     }
   }, [id, name, group]);

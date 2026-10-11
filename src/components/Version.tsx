@@ -1,14 +1,16 @@
 import { Stack, Typography } from "@mui/material";
 import { getVersion } from "@tauri-apps/api/app";
-import { error } from "@tauri-apps/plugin-log";
 import { useEffect, useState } from "react";
+import { reportHandledError } from "../diagnostics";
 
 
 export default function Version() {
   const [tauriVersion, setTauriVersion] = useState<string | null>(null);
 
   useEffect(() => {
-    getVersion().then(setTauriVersion).catch(error);
+    getVersion().then(setTauriVersion).catch((error) => {
+      reportHandledError("app_version_read", error, "APP_VERSION_READ_FAILED");
+    });
   }, []);
 
   return (

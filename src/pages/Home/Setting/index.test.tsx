@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
     handleDownloadMenu: vi.fn(),
   },
   setAlwaysOnTop: vi.fn(),
+  openLogDirectory: vi.fn().mockResolvedValue(undefined),
   user: {
     session: { user: { email: "person@example.com" } },
     signOut: vi.fn().mockResolvedValue(undefined),
@@ -64,6 +65,7 @@ vi.mock("../../../account/native", () => ({
   establishNativeSession: vi.fn(),
   invalidateNativeSession: vi.fn(),
   isNativeRuntime: vi.fn(() => false),
+  openNativeLogDirectory: mocks.openLogDirectory,
 }));
 
 vi.mock("@tauri-apps/api/window", () => ({
@@ -91,6 +93,8 @@ beforeEach(async () => {
   mocks.download.disable = false;
   mocks.download.handleDownloadMenu.mockReset();
   mocks.setAlwaysOnTop.mockReset();
+  mocks.openLogDirectory.mockReset();
+  mocks.openLogDirectory.mockResolvedValue(undefined);
   mocks.user.session = { user: { email: "person@example.com" } };
   mocks.user.signOut.mockReset();
   mocks.user.signOut.mockResolvedValue(undefined);
@@ -197,6 +201,27 @@ describe("Settings page", () => {
     const update = screen.getByRole("button", { name: /Updating/ });
     expect(update.getAttribute("aria-busy")).toBe("true");
     expect(update.textContent).toContain("Updating");
+  });
+
+  it("opens the local log folder from diagnostics", async () => {
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Log Folder" }));
+
+    await waitFor(() => expect(mocks.openLogDirectory).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/could not be opened/i)).toBeNull();
+  });
+
+  it("shows a localized safe error when the log folder cannot be opened", async () => {
+    mocks.openLogDirectory.mockRejectedValue(new Error("/Users/private/raw-path"));
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Log Folder" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("The log folder could not be opened. Please try again.");
+    expect(screen.queryByText(/raw-path/)).toBeNull();
   });
 
   it("offers an account-scoped cloud backup switch with a localized last-backup state", () => {

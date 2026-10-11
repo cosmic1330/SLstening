@@ -34,6 +34,10 @@ jobs:
     needs: changelog
     permissions:
       contents: write
+    env:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: e95e6391edf1
+      SENTRY_PROJECT: react-native
     strategy:
       fail-fast: false
       matrix:
@@ -91,6 +95,12 @@ jobs:
       - name: 📌 安裝依賴
         run: pnpm install
 
+      - name: 🏷️ 設定 Sentry release
+        shell: bash
+        run: |
+          APP_VERSION=$(node -p "require('./package.json').version")
+          echo "SENTRY_RELEASE=slistening@$APP_VERSION" >> "$GITHUB_ENV"
+
       - name: 🔨 構建 Tauri 應用程式
         uses: tauri-apps/tauri-action@v0
         env:
@@ -104,3 +114,11 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: 🧭 上傳原生除錯符號
+        if: ${{ env.SENTRY_AUTH_TOKEN != '' }}
+        run: pnpm exec sentry-cli debug-files upload --include-sources src-tauri/target
+
+      - name: ⚠️ Sentry 除錯符號未上傳
+        if: ${{ env.SENTRY_AUTH_TOKEN == '' }}
+        run: echo "::warning::SENTRY_AUTH_TOKEN is not configured; source maps and native debug symbols were skipped."

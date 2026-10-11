@@ -4,6 +4,7 @@ import { exchangeOAuthCallback, removeLegacyPasswordStorage, safeAuthErrorMessag
 import { useTauriOAuthCallback } from "../auth/useTauriOAuthCallback";
 import { supabase } from "../supabase";
 import { clearNativeSession, establishNativeSession, invalidateNativeSession, isNativeRuntime } from "../account/native";
+import { reportHandledError, setDiagnosticsUser } from "../diagnostics";
 import {
   nextSessionTransition,
   sanitizeNativeSessionError,
@@ -110,7 +111,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       .single()
       .then(({ data: profile, error }) => {
         if (!active) return;
-        if (error) console.error("Error fetching profile:", error);
+        if (error) reportHandledError("profile_fetch", error, "PROFILE_FETCH_FAILED");
         // Preserve the existing entitlement behavior until premium enforcement is in scope.
         setIsPaid(Boolean(profile) || !error);
       });
@@ -135,6 +136,11 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   // remains alive with a larger transition from before the reload.
   const sessionTransition = useRef(nextSessionTransition(0));
   const previousUserId = useRef<string | null>(null);
+
+  useEffect(() => {
+    setDiagnosticsUser(session?.user.id ?? null);
+  }, [session?.user.id]);
+
   const retryNativeSession = useCallback(() => {
     // Keep the error visible until the new native session has been
     // established. This lets AccountSyncNotice remain actionable while the
@@ -164,9 +170,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         } catch (error) {
           // A failed clear must still revoke the gateway session before the
           // logged-out projection is considered safe to expose.
-          console.error("Failed to clear native account session", error);
+          reportHandledError("native_session_clear", error, "NATIVE_SESSION_CLEAR_FAILED");
           try { await invalidateNativeSession(transition); } catch (invalidationError) {
-            console.error("Failed to invalidate native account session", invalidationError);
+            reportHandledError("native_session_invalidate", invalidationError, "NATIVE_SESSION_INVALIDATE_FAILED");
           }
         } finally {
           if (sessionTransition.current === transition) await useStocksStore.getState().clearAccountProjection();
@@ -191,10 +197,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         if (nativeSessionRetry > 0) setNativeSessionRetry(0);
       } catch (error) {
         if (sessionTransition.current === transition) {
-          console.error("Failed to establish native account session", error);
+          reportHandledError("native_session_establish", error, "NATIVE_SESSION_ESTABLISH_FAILED");
           const code = sanitizeNativeSessionError(error);
           try { await invalidateNativeSession(transition); } catch (invalidationError) {
-            console.error("Failed to invalidate native account session", invalidationError);
+            reportHandledError("native_session_invalidate", invalidationError, "NATIVE_SESSION_INVALIDATE_FAILED");
           }
           if (sessionTransition.current !== transition) return;
           await useStocksStore

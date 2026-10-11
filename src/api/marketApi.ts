@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { TickDealsType } from "../types";
 import { MarketEvent } from "../../src-tauri/bindings/MarketEvent";
+import { reportHandledError } from "../diagnostics";
 
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 export const validateTickPayload = (tick: any, symbol: string): TickDealsType => {
@@ -107,7 +108,7 @@ export const marketApi = {
       }
       throw new Error(`Unexpected market event for tick ${symbol}`);
     } catch (e) {
-      console.error(`[marketApi] Failed to get tick data for ${symbol}:`, e);
+      reportHandledError("market_tick_fetch", e, "MARKET_TICK_FETCH_FAILED");
       throw e;
     }
   },
@@ -123,7 +124,7 @@ export const marketApi = {
       }
       throw new Error(`Unexpected market event for history ${symbol}`);
     } catch (e) {
-      console.error(`[marketApi] Failed to get history data for ${symbol}:`, e);
+      reportHandledError("market_history_fetch", e, "MARKET_HISTORY_FETCH_FAILED");
       throw e;
     }
   },

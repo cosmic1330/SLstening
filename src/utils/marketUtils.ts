@@ -1,4 +1,5 @@
 import { DealTableType, FutureIds, TickDealsType } from "../types";
+import { reportHandledError } from "../diagnostics";
 
 /**
  * 判斷當前是否為台股交易時段 (09:00 - 13:30)
@@ -106,7 +107,7 @@ export const parseYahooTickData = (
       volume: quote.volume,
     };
   } catch (e) {
-    console.error(`[marketUtils] Error parsing yahoo tick data for ${id}:`, e);
+    reportHandledError("market_tick_parse", e, "MARKET_TICK_PARSE_FAILED");
     return null;
   }
 };
@@ -145,7 +146,7 @@ export const parseYahooHourlyData = (jsonStr: string) => {
 
     return { data: res, change: quote.change, price: quote.price };
   } catch (e) {
-    console.error(`[marketUtils] Error parsing yahoo hourly data:`, e);
+    reportHandledError("market_history_parse", e, "MARKET_HISTORY_PARSE_FAILED");
     return null;
   }
 };

@@ -76,6 +76,8 @@ impl Serialize for AppError {
             }
         };
 
+        crate::diagnostics::capture_code("native_command", code);
+
         ErrorResponse { code, message }.serialize(serializer)
     }
 }

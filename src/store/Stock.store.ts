@@ -26,6 +26,7 @@ import {
   cloudBackupPayloadBytes,
   sameCloudBackupData,
 } from "../account/cloudBackup";
+import { reportHandledError } from "../diagnostics";
 
 const ACCOUNT_STATE_FILE = "account-state.json";
 const CATALOG_FILE = "catalog.json";
@@ -426,6 +427,7 @@ const scheduleCloudWrite = (
           set({ cloudBackupLastSuccessAt: timestamp, syncStatus: after.cloudBackupEnabled && cloudSnapshotGenerations.get(key) === generation ? "synced" : "local", syncError: null });
         }
       } catch (error) {
+        reportHandledError("cloud_backup_write", error, "CLOUD_BACKUP_WRITE_FAILED");
         const after = get();
         if (after.accountUserId === userId && after.accountEpoch === epoch && after.cloudBackupEnabled) set({ syncStatus: "local", syncError: null });
       } finally {
@@ -520,7 +522,8 @@ const beginCloudComparison = async (
       syncStatus: "local",
       syncError: null,
     });
-  } catch {
+  } catch (error) {
+    reportHandledError("cloud_backup_compare", error, "CLOUD_BACKUP_COMPARE_FAILED");
     if (!comparisonIsCurrent()) return;
     try { await writeCloudBackupMetadata(userId, { enabled: false }); } catch { /* keep the local projection usable */ }
     const latest = get();
@@ -562,6 +565,7 @@ const persistLocal = (get: () => StocksState, set: (partial: Partial<StocksState
     if (latest.accountUserId !== userId || latest.accountEpoch !== epoch) return;
     await writeLocalProjection(latest);
   }, { invalidateHydration: false }).catch((error) => {
+    reportHandledError("account_local_persist", error, "ACCOUNT_LOCAL_PERSIST_FAILED");
     const latest = get();
     if (latest.accountUserId === userId && latest.accountEpoch === epoch) set({ syncStatus: "error", syncError: safeSyncError(error) });
   });
@@ -580,6 +584,7 @@ const persistIndicator = (
   if (!userId || epoch === null) return Promise.resolve();
   const operation = reset ? resetNativeIndicatorSettings(epoch) : updateNativeIndicatorSettings(epoch, patch ?? {}, base);
   void operation.catch((error) => {
+    reportHandledError("indicator_persist", error, "INDICATOR_PERSIST_FAILED");
     const latest = get();
     if (latest.accountUserId === userId && latest.accountEpoch === epoch) set({ syncStatus: "error", syncError: safeSyncError(error) });
   });
@@ -684,6 +689,7 @@ const commitSnapshot = async (
       set({ ...projected, accountUserId: userId, accountEpoch: epoch, cloudBackupEnabled: backupEnabled, cloudDataChangedAt: changedAt, cloudBackupChecking: false, hydrated: true, syncStatus: backupEnabled ? "loading" : "local", syncError: null });
       if (backupEnabled) scheduleCloudWrite(get, set, userId, epoch, normalized);
     } catch (error) {
+      reportHandledError("account_commit", error, "ACCOUNT_COMMIT_FAILED");
       if (isCurrent()) set({ syncStatus: "error", syncError: safeSyncError(error) });
       throw error;
     }
@@ -772,6 +778,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       reconcileIndicatorSettings(get, set, userId, epoch, snapshot.indicatorSettings);
       await get().checkLegacySettings();
     } catch (error) {
+      reportHandledError("account_cache_hydrate", error, "ACCOUNT_CACHE_HYDRATE_FAILED");
       const current = get();
       if (!isCurrentHydration() || current.accountUserId !== userId || current.accountEpoch !== epoch) return;
       set({ ...emptyAccountSnapshot(), accountUserId: userId, accountEpoch: epoch, hydrated: true, syncStatus: "error", syncError: safeSyncError(error) });
@@ -834,6 +841,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       void beginCloudComparison(get, set, userId, epoch, "startup", isCurrentHydration);
       await get().checkLegacySettings();
     } catch (error) {
+      reportHandledError("account_cloud_hydrate", error, "ACCOUNT_CLOUD_HYDRATE_FAILED");
       const current = get();
       if (!isCurrentHydration() || current.accountUserId !== userId || current.accountEpoch !== epoch) return;
       try { await writeCloudBackupMetadata(userId, { enabled: false }); } catch { /* remain local */ }
@@ -847,6 +855,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const status = await getLegacySettingsStatus();
       set({ legacySettingsPrompt: Boolean(status?.present), legacySettingsError: null });
     } catch (error) {
+      reportHandledError("legacy_settings_status", error, "LEGACY_SETTINGS_STATUS_FAILED");
       set({ legacySettingsError: safeSyncError(error) });
     }
   },
@@ -856,6 +865,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       set({ legacySettingsPrompt: false, legacySettingsError: null });
       if (status?.present) set({ legacySettingsPrompt: false });
     } catch (error) {
+      reportHandledError("legacy_settings_keep", error, "LEGACY_SETTINGS_KEEP_FAILED");
       set({ legacySettingsError: safeSyncError(error) });
       throw error;
     }
@@ -865,6 +875,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       await deleteLegacySettings();
       set({ legacySettingsPrompt: false, legacySettingsError: null });
     } catch (error) {
+      reportHandledError("legacy_settings_delete", error, "LEGACY_SETTINGS_DELETE_FAILED");
       set({ legacySettingsError: safeSyncError(error) });
       throw error;
     }

@@ -18,6 +18,7 @@ This page describes boundaries a change must preserve. It is not a component inv
 4. React invokes registered Tauri commands for native data and persistence work. Rust emits events back to the webview for streaming updates and operational warnings. The authenticated desktop session establishes a monotonic native account epoch; account state uses the PhoneApp `pull`/`sync` endpoint with `uuid` (Supabase `user.id`) and `email`. The cloud wire format is strictly the PhoneApp watchlist groups array; legacy desktop snapshots are rejected.
 5. Supabase authentication is initialized in the frontend. Durable stock/category membership state is projected by Zustand and persisted through native account commands; active/recent navigation plus desktop-only pinned and indicator preferences remain local because they are outside the shared groups wire format. High-frequency ticks remain in memory. PhoneApp cloud writes are last-write-wins and do not use revisions or operation IDs. A cached account projection may remain hydrated while a cloud refresh is loading or reports a recoverable sync error.
 6. While the desktop app is open, Rust owns an optional 127.0.0.1 MCP gateway and writes an owner-only discovery file. Startup failure leaves the Tauri app usable and exposes an unavailable status through `agent_get_config`; the gateway bounds accepted connections and isolates worker panics. After bearer/origin/rate checks pass and a JSON-RPC response is successfully written, the gateway records a shared epoch-millisecond `lastClientActivityAt`; rejected, malformed, or failed responses do not update it. The bundled stdio bridge forwards Codex JSON-RPC requests to the allowlisted gateway tools; no access token is exposed to MCP.
+7. Production builds initialize Sentry in both the React WebView and Rust process. Events share a release identifier and may carry only the Supabase account UUID plus stable operation/error codes and symbolication data. Request bodies, credentials, email/IP data, watchlists, stock/category data, breadcrumbs, screenshots, replay, tracing, and log attachments are outside this boundary. Development and tests never transmit diagnostics.
 
 MCP `add_stock` accepts an optional category ID, while `add_stocks` accepts up to 300 records and applies their first-occurrence, request-order membership to that category in one atomic account snapshot write. Without a category ID, both retain the active-category then first-category fallback.
 
@@ -44,6 +45,7 @@ Do not add a second router or bypass `RequireAuth` for protected screens. Keep r
 | Latest market ticks and freshness | `MarketData.store` | Memory only |
 | View-specific preferences | Feature hooks/components | Local storage or window state where implemented |
 | MCP gateway status | `mcp.store` fed by `agent_get_config` | In memory; BottomBar owns an immediate + 5-second poll while mounted |
+| Local diagnostics | `tauri-plugin-log` / native diagnostics module | App log directory; info/warn/error, 1 MiB per file, newest 7 SLstening files retained |
 
 Do not assume similarly named stores are interchangeable. Choose persistence from the lifetime and ownership of the data, then update [ADR 0002](../decisions/0002-separate-durable-and-live-state.md) if the strategy changes.
 
@@ -62,6 +64,8 @@ Tauri command names, arguments, return values, event names, and payload shapes a
 - [`src-tauri/src/account.rs`](../../src-tauri/src/account.rs)
 - [`scripts/phoneapp-sync.gs`](../../scripts/phoneapp-sync.gs)
 - [`src-tauri/src/agent_gateway.rs`](../../src-tauri/src/agent_gateway.rs)
+- [`src-tauri/src/diagnostics.rs`](../../src-tauri/src/diagnostics.rs)
+- [`src/diagnostics/index.tsx`](../../src/diagnostics/index.tsx)
 - [`src/store/mcp.store.ts`](../../src/store/mcp.store.ts)
 - [`src/pages/Home/Mcp/index.tsx`](../../src/pages/Home/Mcp/index.tsx)
 - [`scripts/slstening-agent-bridge.mjs`](../../scripts/slstening-agent-bridge.mjs)

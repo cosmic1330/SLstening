@@ -32,6 +32,7 @@ import useDebugStore from "../../../store/debug.store";
 import useUIStore from "../../../store/UI.store";
 import useStocksStore from "../../../store/Stock.store";
 import { CLOUD_BACKUP_MAX_BYTES, cloudBackupPayloadBytes } from "../../../account/cloudBackup";
+import { openNativeLogDirectory } from "../../../account/native";
 import IndicatorSettingsSection from "./IndicatorSettingsSection";
 // Important: Make sure this path is correct or hardcode the version
 import pkg from "../../../../package.json";
@@ -437,6 +438,7 @@ function Setting() {
   const [marketVisibility, setMarketVisibility] = useState<MarketVisibility>(readMarketVisibility);
   const [marketInfoOpen, setMarketInfoOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
+  const [logOpenError, setLogOpenError] = useState(false);
   const [indicatorOpen, setIndicatorOpen] = useState(false);
   const accountEmail = session?.user.email?.trim() || t("settings.accountUnknown");
 
@@ -684,6 +686,12 @@ function Setting() {
                     sx={SwitchStyles}
                   />
                 </SettingRow>
+                <SettingRow sx={{ alignItems: { xs: "flex-start", sm: "center" }, flexDirection: { xs: "column", sm: "row" } }}>
+                  <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.blue }} aria-hidden="true"><BugReportIcon fontSize="small" /></SectionIcon>
+                  <SettingRowText title={t("settings.openLogFolder")} hint={t("settings.openLogFolderHint")} />
+                  <FocusableButton type="button" onClick={() => void openNativeLogDirectory().then(() => setLogOpenError(false)).catch(() => setLogOpenError(true))} sx={{ width: { xs: "100%", sm: "auto" } }}>{t("settings.openLogFolder")}</FocusableButton>
+                </SettingRow>
+                {logOpenError ? <Alert severity="error">{t("settings.openLogFolderFailed")}</Alert> : null}
                 <Stack spacing={1}>
                   <SettingRow>
                     <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.blue }} aria-hidden="true">

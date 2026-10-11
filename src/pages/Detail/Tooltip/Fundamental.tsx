@@ -5,6 +5,7 @@ import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { normalizeLanguage } from "../../../i18n";
+import { reportHandledError } from "../../../diagnostics";
 import { supabase } from "../../../supabase";
 import { semanticTokens } from "../../../theme";
 import {
@@ -79,31 +80,25 @@ export default function Fundamental({ id }: { id: string | undefined }) {
         if (!isCurrentRequest) return;
 
         if (financialResult.error) {
-          console.error(
-            "Error fetching financial metrics:",
-            financialResult.error
-          );
+          reportHandledError("fundamental_financial_fetch", financialResult.error, "FUNDAMENTAL_FINANCIAL_FETCH_FAILED");
         } else {
           setFinancialMetrics(financialResult.data);
         }
 
         if (recentResult.error) {
-          console.error(
-            "Error fetching recent fundamental data:",
-            recentResult.error
-          );
+          reportHandledError("fundamental_recent_fetch", recentResult.error, "FUNDAMENTAL_RECENT_FETCH_FAILED");
         } else {
           setRecentFundamental(recentResult.data);
         }
 
         if (tdccResult.error) {
-          console.error("Error fetching TDCC holder data:", tdccResult.error);
+          reportHandledError("fundamental_tdcc_fetch", tdccResult.error, "FUNDAMENTAL_TDCC_FETCH_FAILED");
         } else {
           setTdccHolder(tdccResult.data as TdccHolderTableType | null);
         }
       } catch (error) {
         if (isCurrentRequest) {
-          console.error("Error fetching data:", error);
+          reportHandledError("fundamental_fetch", error, "FUNDAMENTAL_FETCH_FAILED");
         }
       } finally {
         if (isCurrentRequest) {

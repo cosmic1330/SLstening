@@ -7,6 +7,7 @@ use crate::legacy_settings::{LegacySettingsManager, LegacySettingsStatus};
 use crate::local_preferences::LocalPreferencesManager;
 use serde_json::{Map, Value};
 use std::time::{Duration, Instant};
+use tauri::Manager;
 use tauri::State;
 
 const LOCAL_PREFERENCES_COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
@@ -24,7 +25,12 @@ pub fn account_set_session(
     expires_at: Option<i64>,
     manager: State<'_, AccountManager>,
 ) -> Result<SessionResult, String> {
-    manager.set_session_for_transition(transition_id, access_token, user_id, email, expires_at)
+    let result =
+        manager.set_session_for_transition(transition_id, access_token, user_id, email, expires_at);
+    if let Ok(session) = &result {
+        crate::diagnostics::set_user(Some(&session.user_id));
+    }
+    result
 }
 
 #[tauri::command]
@@ -32,7 +38,11 @@ pub fn account_clear_session(
     transition_id: u64,
     manager: State<'_, AccountManager>,
 ) -> Result<(), String> {
-    manager.clear_session_for_transition(transition_id)
+    let result = manager.clear_session_for_transition(transition_id);
+    if result.is_ok() {
+        crate::diagnostics::set_user(None);
+    }
+    result
 }
 
 /// Idempotent fail-closed session invalidation used when a UI transition
@@ -42,7 +52,11 @@ pub fn account_invalidate_session(
     transition_id: u64,
     manager: State<'_, AccountManager>,
 ) -> Result<(), String> {
-    manager.invalidate_session_for_transition(transition_id)
+    let result = manager.invalidate_session_for_transition(transition_id);
+    if result.is_ok() {
+        crate::diagnostics::set_user(None);
+    }
+    result
 }
 
 #[tauri::command]
@@ -55,6 +69,17 @@ pub fn account_get_session(
 #[tauri::command]
 pub fn agent_get_config(gateway: State<'_, AgentGateway>) -> AgentGatewayConfig {
     gateway.config()
+}
+
+#[tauri::command]
+pub fn diagnostics_open_log_dir(app: tauri::AppHandle) -> Result<(), String> {
+    let path = app
+        .path()
+        .app_log_dir()
+        .map_err(|_| "LOG_DIR_UNAVAILABLE".to_string())?;
+    std::fs::create_dir_all(&path).map_err(|_| "LOG_DIR_UNAVAILABLE".to_string())?;
+    tauri_plugin_opener::open_path(path, None::<&str>)
+        .map_err(|_| "LOG_DIR_OPEN_FAILED".to_string())
 }
 
 #[tauri::command]

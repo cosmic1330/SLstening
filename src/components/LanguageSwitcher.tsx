@@ -2,6 +2,7 @@ import { IconButton } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import TranslateIcon from "@mui/icons-material/Translate";
 import { normalizeLanguage } from "../i18n";
+import { reportHandledError } from "../diagnostics";
 
 export default function LanguageSwitcher() {
   const { i18n, t } = useTranslation();
@@ -12,7 +13,7 @@ export default function LanguageSwitcher() {
     try {
       await i18n.changeLanguage(nextLanguage);
     } catch (error) {
-      console.error("Unable to change application language", error);
+      reportHandledError("language_change", error, "LANGUAGE_CHANGE_FAILED");
     }
   };
 

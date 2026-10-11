@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect } from "react";
+import { reportHandledError } from "../diagnostics";
 
 /**
  * Keep the scroll debounce short enough for a visible card to join the
@@ -28,7 +29,7 @@ export default function useMarketSubscriber(
         console.log(`[Subscriber] Subscribing to: ${id}`);
         isSubscribed = true;
         invoke("subscribe_stock", { symbol: id }).catch((err) => {
-          console.error(`Failed to subscribe to ${id}:`, err);
+          reportHandledError("market_subscribe", err, "MARKET_SUBSCRIBE_FAILED");
           isSubscribed = false;
         });
       }, MARKET_SUBSCRIPTION_DEBOUNCE_MS);
@@ -38,7 +39,7 @@ export default function useMarketSubscriber(
         if (isSubscribed) {
           console.log(`[Subscriber] Unsubscribing from: ${id}`);
           invoke("unsubscribe_stock", { symbol: id }).catch((err) => {
-            console.error(`Failed to unsubscribe from ${id}:`, err);
+            reportHandledError("market_unsubscribe", err, "MARKET_UNSUBSCRIBE_FAILED");
           });
         }
       };

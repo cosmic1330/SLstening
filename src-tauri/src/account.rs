@@ -392,7 +392,11 @@ impl AccountManager {
         }
         let session = self.session_for_epoch(expected_epoch)?;
         let response = self
-            .post_cloud(sync_request_body(&session.user_id, &session.email, serialized))
+            .post_cloud(sync_request_body(
+                &session.user_id,
+                &session.email,
+                serialized,
+            ))
             .await?;
         self.session_still_current(&session.user_id, session.epoch)?;
         Ok(AccountWriteResult {

@@ -1,10 +1,11 @@
-import { error, info, warn } from "@tauri-apps/plugin-log";
+import { info, warn } from "@tauri-apps/plugin-log";
 import { sendNotification } from "@tauri-apps/plugin-notification";
 import { load } from "cheerio";
 import { useCallback, useState } from "react";
 import { tauriFetcher, TauriFetcherType } from "../api/http_cache";
 import useStocksStore from "../store/Stock.store";
 import { StockStoreType } from "../types";
+import { reportHandledError } from "../diagnostics";
 
 enum QueryStockType {
   TWSE = 2,
@@ -51,7 +52,7 @@ export default function useDownloadStocks() {
         }
       }
     } catch (e) {
-      error(`Error fetching data: ${e}`);
+      reportHandledError("stock_catalog_fetch", e, "STOCK_CATALOG_FETCH_FAILED");
     }
     return data;
   }, []);
@@ -65,7 +66,7 @@ export default function useDownloadStocks() {
       await update_menu(TWSE_data);
       sendNotification({ title: "Menu", body: "Update Success!" });
     } catch (e) {
-      error(`Error updating menu: ${e}`);
+      reportHandledError("stock_catalog_update", e, "STOCK_CATALOG_UPDATE_FAILED");
     } finally {
       setDisable(false);
     }

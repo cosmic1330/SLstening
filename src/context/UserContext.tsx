@@ -14,7 +14,6 @@ import useStocksStore from "../store/Stock.store";
 type OAuthCallbackStatus = "idle" | "processing" | "error";
 
 interface UserContextType {
-  isPaid: boolean;
   session: Session | null;
   isLoading: boolean;
   initError: boolean;
@@ -32,7 +31,6 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isPaid, setIsPaid] = useState(false);
   const [oauthCallbackStatus, setOauthCallbackStatus] = useState<OAuthCallbackStatus>("idle");
   const [initError, setInitError] = useState(false);
   const [initializationAttempt, setInitializationAttempt] = useState(0);
@@ -97,28 +95,6 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     signOutInFlight.current = request;
     return request;
   }, []);
-
-  useEffect(() => {
-    if (!session?.user) {
-      setIsPaid(false);
-      return;
-    }
-    let active = true;
-    void supabase
-      .from("profiles")
-      .select("plan_tier")
-      .eq("user_id", session.user.id)
-      .single()
-      .then(({ data: profile, error }) => {
-        if (!active) return;
-        if (error) reportHandledError("profile_fetch", error, "PROFILE_FETCH_FAILED");
-        // Preserve the existing entitlement behavior until premium enforcement is in scope.
-        setIsPaid(Boolean(profile) || !error);
-      });
-    return () => {
-      active = false;
-    };
-  }, [session?.user.id]);
 
   const handleOAuthUrl = useCallback(async (url: string) => {
     setOauthCallbackStatus("processing");
@@ -222,7 +198,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
   }, [session?.access_token, session?.expires_at, session?.user.id, nativeSessionRetry]);
 
   return (
-    <UserContext.Provider value={{ isPaid, session, isLoading, initError, retrySessionInitialization, nativeSessionError, retryNativeSession, oauthCallbackStatus, signOut, isSigningOut, signOutError }}>
+    <UserContext.Provider value={{ session, isLoading, initError, retrySessionInitialization, nativeSessionError, retryNativeSession, oauthCallbackStatus, signOut, isSigningOut, signOutError }}>
       {children}
     </UserContext.Provider>
   );

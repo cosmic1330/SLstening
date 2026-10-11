@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   establishNativeSession: vi.fn(),
   invalidateNativeSession: vi.fn(),
   clearNativeSession: vi.fn(),
+  from: vi.fn(),
   stockState: {
     accountUserId: null as string | null,
     accountEpoch: null as number | null,
@@ -30,11 +31,7 @@ vi.mock("../../supabase", () => ({
       getSession: mocks.getSession,
       onAuthStateChange: mocks.onAuthStateChange,
     },
-    from: () => ({
-      select: () => ({
-        eq: () => ({ single: () => Promise.resolve({ data: {}, error: null }) }),
-      }),
-    }),
+    from: mocks.from,
   },
 }));
 vi.mock("../../auth/service", () => ({
@@ -76,6 +73,7 @@ function NativeErrorProbe() {
 describe("UserProvider native session transitions", () => {
   beforeEach(() => {
     mocks.authListener = undefined;
+    mocks.from.mockReset();
     mocks.getSession.mockReset();
     mocks.onAuthStateChange.mockReset().mockImplementation((listener) => {
       mocks.authListener = listener;
@@ -101,6 +99,14 @@ describe("UserProvider native session transitions", () => {
       mocks.stockState.accountEpoch = epoch;
     });
     mocks.stockState.setAccountSyncError.mockReset();
+  });
+
+  it("does not query profiles after an authenticated session initializes", async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: session("user-a") }, error: null });
+    mocks.establishNativeSession.mockResolvedValue({ userId: "user-a", epoch: 1 });
+    render(<UserProvider><NativeErrorProbe /></UserProvider>);
+    await waitFor(() => expect(mocks.establishNativeSession).toHaveBeenCalled());
+    expect(mocks.from).not.toHaveBeenCalled();
   });
 
   it("does not let a deferred failed session clear a newer account", async () => {

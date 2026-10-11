@@ -8,7 +8,7 @@ status: stable
 
 ## Session Lifecycle
 
-`UserProvider` initializes the Supabase session, subscribes to auth-state changes, and loads profile data such as `plan_tier`. Route guards wait for this initialization before deciding whether to show an authenticated screen or redirect.
+`UserProvider` initializes the Supabase session and subscribes to auth-state changes. Route guards wait for this initialization before deciding whether to show an authenticated screen or redirect.
 
 The Settings page exposes a local-device logout action. `UserContext.signOut` calls Supabase Auth with `scope: "local"`, so other devices stay signed in. Successful auth-state transition drives the existing native session teardown and account projection cleanup; cloud data is retained. Failures keep the session available for retry and expose a sanitized message to the UI. The obsolete settings-file choice is independent of sign-out and is persisted in the new account-state store.
 
@@ -18,7 +18,7 @@ Desktop native-session transitions are strictly increasing within a WebView and 
 
 Local account edits enforce structural validity at their commit boundary, while the PhoneApp payload capacity remains a cloud-write constraint. An oversized local snapshot stays dirty, automatically turns backup off, and remains editable so the user can reduce it; backup never resumes until the user enables it again. Legacy dirty caches repair stocks that no category references before retrying the cloud write; any remaining structural invalidity stays local and is not sent.
 
-Authentication state is not the same as authorization. The current `isPaid` behavior is intentionally permissive for compatibility and is not a trustworthy premium-access boundary.
+Authentication state is not the same as authorization. Future authorization must be enforced by its authoritative backend/RLS boundary rather than inferred from a client session.
 
 ## OAuth Across Browser and Desktop
 

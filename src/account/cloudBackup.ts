@@ -15,7 +15,7 @@ export class CloudBackupSizeError extends Error {
 }
 
 /**
- * Mirrors Rust's snapshot_to_phone_groups + serde_json serialization exactly.
+ * Mirrors Rust's compact snapshot_to_phone_groups serialization exactly.
  * Structural validation runs before writes, so every category member resolves
  * to a stock record here just as it does in the Rust HashMap lookup.
  */
@@ -29,7 +29,7 @@ export const cloudBackupPayload = (snapshot: CloudBackupData) => {
     stocks: category.stockIds.flatMap((id) => {
       const stock = byId.get(id);
       return stock
-        ? [{ symbol: stock.id, name: stock.name, price: "---", change: "0.0", isPositive: true }]
+        ? [{ symbol: stock.id, name: stock.name }]
         : [];
     }),
   }));

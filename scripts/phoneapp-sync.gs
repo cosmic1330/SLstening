@@ -179,11 +179,18 @@ function validatePhoneGroups_(groups) {
     groupIds[group.id] = true;
     var members = {};
     group.stocks.forEach(function(stock) {
-      requireExactKeys_(stock, ["symbol", "name", "price", "change", "isPositive"], "INVALID_STOCK");
+      var compactShape = hasExactKeys_(stock, ["symbol", "name"]);
+      var legacyShape = hasExactKeys_(stock, ["symbol", "name", "price", "change", "isPositive"]);
+      if (!compactShape && !legacyShape) {
+        throw apiError_("INVALID_STOCK", "Unexpected fields in PhoneApp data");
+      }
       if (typeof stock.symbol !== "string" || !stock.symbol.trim() || stock.symbol.length > 40 || members[stock.symbol]) {
         throw apiError_("INVALID_STOCK", "Stock symbol is missing or duplicated in a group");
       }
-      if (typeof stock.name !== "string" || stock.name.length > 200 || typeof stock.price !== "string" || typeof stock.change !== "string" || typeof stock.isPositive !== "boolean") {
+      if (typeof stock.name !== "string" || stock.name.length > 200) {
+        throw apiError_("INVALID_STOCK", "Invalid stock fields");
+      }
+      if (legacyShape && (typeof stock.price !== "string" || typeof stock.change !== "string" || typeof stock.isPositive !== "boolean")) {
         throw apiError_("INVALID_STOCK", "Invalid stock fields");
       }
       members[stock.symbol] = true;
@@ -197,12 +204,16 @@ function validatePhoneGroups_(groups) {
 }
 
 function requireExactKeys_(value, expected, code) {
-  if (!isPlainObject_(value)) throw apiError_(code, "Invalid object");
+  if (!hasExactKeys_(value, expected)) {
+    throw apiError_(code, isPlainObject_(value) ? "Unexpected fields in PhoneApp data" : "Invalid object");
+  }
+}
+
+function hasExactKeys_(value, expected) {
+  if (!isPlainObject_(value)) return false;
   var actual = Object.keys(value).sort();
   var wanted = expected.slice().sort();
-  if (actual.length !== wanted.length || actual.some(function(key, index) { return key !== wanted[index]; })) {
-    throw apiError_(code, "Unexpected fields in PhoneApp data");
-  }
+  return actual.length === wanted.length && !actual.some(function(key, index) { return key !== wanted[index]; });
 }
 
 function getDataSheet_() {

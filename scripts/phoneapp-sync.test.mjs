@@ -8,6 +8,12 @@ const source = await readFile(new URL("./phoneapp-sync.gs", import.meta.url), "u
 const validGroups = [{
   id: "group-1",
   name: "追蹤",
+  stocks: [{ symbol: "2330", name: "台積電" }],
+}];
+
+const legacyGroups = [{
+  id: "group-1",
+  name: "追蹤",
   stocks: [{ symbol: "2330", name: "台積電", price: "---", change: "0.0", isPositive: true }],
 }];
 
@@ -59,15 +65,24 @@ const loadScript = ({ row = null, throwOnSet = false } = {}) => {
   return context;
 };
 
-test("PhoneApp data validator accepts the exact groups shape and rejects desktop fields", () => {
+test("validator accepts compact Desktop and legacy PhoneApp stocks but rejects mixed shapes", () => {
   const script = loadScript();
   assert.equal(script.normalizePhoneData_(JSON.stringify(validGroups)), JSON.stringify(validGroups));
+  assert.equal(script.normalizePhoneData_(JSON.stringify(legacyGroups)), JSON.stringify(legacyGroups));
   assert.throws(
     () => script.normalizePhoneData_(JSON.stringify([{ ...validGroups[0], marketGroup: "TW" }])),
     (error) => error.code === "INVALID_GROUP",
   );
   assert.throws(
     () => script.normalizePhoneData_(JSON.stringify([{ ...validGroups[0], stocks: [{ ...validGroups[0].stocks[0], marketType: "stock" }] }])),
+    (error) => error.code === "INVALID_STOCK",
+  );
+  assert.throws(
+    () => script.normalizePhoneData_(JSON.stringify([{ ...validGroups[0], stocks: [{ ...validGroups[0].stocks[0], price: "---" }] }])),
+    (error) => error.code === "INVALID_STOCK",
+  );
+  assert.throws(
+    () => script.normalizePhoneData_(JSON.stringify([{ ...legacyGroups[0], stocks: [{ ...legacyGroups[0].stocks[0], isPositive: "yes" }] }])),
     (error) => error.code === "INVALID_STOCK",
   );
 });
@@ -116,6 +131,10 @@ test("sync inserts and updates one serialized groups string and releases the loc
   assert.equal(script.__lockState.tryCount, 2);
   assert.equal(script.__lockState.releaseCount, 2);
 
+  const legacyData = JSON.stringify(legacyGroups);
+  script.handleSync_("user-2", "phone@example.com", legacyData, "Mobile");
+  assert.equal(script.__rows[2][2], legacyData);
+
   const failing = loadScript({
     row: ["user-1", "user@example.com", firstData, "created", "updated", "Mobile"],
     throwOnSet: true,
@@ -148,7 +167,7 @@ test("sync validation enforces the character, group, and unique-stock limits", (
   const tooManyStocks = [{
     id: "group-1",
     name: "追蹤",
-    stocks: Array.from({ length: 301 }, (_, index) => ({ symbol: `US${index}`, name: "Stock", price: "---", change: "0.0", isPositive: true })),
+    stocks: Array.from({ length: 301 }, (_, index) => ({ symbol: `US${index}`, name: "Stock" })),
   }];
   assert.throws(
     () => script.normalizePhoneData_(JSON.stringify(tooManyStocks)),

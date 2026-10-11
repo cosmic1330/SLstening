@@ -20,16 +20,26 @@ const snapshot = (name: string): AccountSnapshot => ({
 });
 
 describe("cloud backup payload", () => {
-  it("matches the PhoneApp wire fields and UTF-8 byte length", () => {
+  it("matches the compact Desktop wire fields and UTF-8 byte length", () => {
     const value = snapshot("台積電");
     expect(cloudBackupPayload(value)).toEqual([{
       id: "group-a",
       name: "Watch",
-      stocks: [{ symbol: "2330", name: "台積電", price: "---", change: "0.0", isPositive: true }],
+      stocks: [{ symbol: "2330", name: "台積電" }],
     }]);
     expect(cloudBackupPayloadBytes(value)).toBe(
       new TextEncoder().encode(JSON.stringify(cloudBackupPayload(value))).length,
     );
+  });
+
+  it("saves 47 UTF-8 bytes per category membership versus the legacy shape", () => {
+    const value = snapshot("台積電");
+    const compact = JSON.stringify(cloudBackupPayload(value));
+    const legacy = compact.replace(
+      '"name":"台積電"',
+      '"name":"台積電","price":"---","change":"0.0","isPositive":true',
+    );
+    expect(new TextEncoder().encode(legacy).length - cloudBackupPayloadBytes(value)).toBe(47);
   });
 
   it("measures oversized Unicode payloads above the Rust capacity", () => {

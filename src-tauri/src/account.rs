@@ -77,16 +77,39 @@ pub struct AccountSnapshot {
     pub indicator_settings: IndicatorSettings,
 }
 
-/// Exact PhoneApp stock shape. Unknown fields are rejected so a legacy
-/// desktop snapshot cannot be mistaken for a PhoneApp payload.
+/// Desktop backups now use the compact shape. The legacy PhoneApp shape stays
+/// readable so existing Mobile rows and older Desktop backups remain valid.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(untagged)]
+enum PhoneStockWire {
+    Compact(CompactPhoneStockWire),
+    Legacy(LegacyPhoneStockWire),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct PhoneStockWire {
+struct CompactPhoneStockWire {
+    symbol: String,
+    name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacyPhoneStockWire {
     symbol: String,
     name: String,
     price: String,
     change: String,
     is_positive: bool,
+}
+
+impl PhoneStockWire {
+    fn into_identity(self) -> (String, String) {
+        match self {
+            Self::Compact(stock) => (stock.symbol, stock.name),
+            Self::Legacy(stock) => (stock.symbol, stock.name),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -529,8 +552,9 @@ fn phone_groups_to_snapshot(
         }
         let mut stock_ids = Vec::new();
         for stock in group.stocks {
-            let symbol = stock.symbol.trim().to_string();
-            if symbol.is_empty() || symbol.len() > 40 || stock.name.len() > 200 {
+            let (raw_symbol, raw_name) = stock.into_identity();
+            let symbol = raw_symbol.trim().to_string();
+            if symbol.is_empty() || symbol.len() > 40 || raw_name.len() > 200 {
                 return Err("CORRUPT_STORED_DATA".to_string());
             }
             if !stock_ids.iter().any(|id| id == &symbol) {
@@ -544,7 +568,7 @@ fn phone_groups_to_snapshot(
                 }
                 stocks.push(StockRecord {
                     id: symbol.clone(),
-                    name: stock.name.trim().to_string(),
+                    name: raw_name.trim().to_string(),
                     group: infer_market_group(&symbol),
                     stock_type: "stock".to_string(),
                 });
@@ -590,12 +614,11 @@ fn snapshot_to_phone_groups(snapshot: &AccountSnapshot) -> Vec<PhoneWatchlistGro
                 .stock_ids
                 .iter()
                 .filter_map(|stock_id| stocks_by_id.get(stock_id.as_str()))
-                .map(|stock| PhoneStockWire {
-                    symbol: stock.id.clone(),
-                    name: stock.name.clone(),
-                    price: "---".to_string(),
-                    change: "0.0".to_string(),
-                    is_positive: true,
+                .map(|stock| {
+                    PhoneStockWire::Compact(CompactPhoneStockWire {
+                        symbol: stock.id.clone(),
+                        name: stock.name.clone(),
+                    })
                 })
                 .collect(),
         })
@@ -786,17 +809,40 @@ mod tests {
     }
 
     #[test]
-    fn outbound_shape_has_exact_phone_fields_and_defaults() {
+    fn outbound_shape_has_only_compact_identity_fields() {
         let snapshot = decode_phone_groups(&groups()).expect("groups");
         let payload = build_update_state_data(&snapshot).expect("payload");
         let value: Value = serde_json::from_str(&payload).expect("json");
         let stock = &value[0]["stocks"][0];
-        assert_eq!(
-            stock,
-            &json!({"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true})
-        );
+        assert_eq!(stock, &json!({"symbol":"3010","name":"華立"}));
         assert!(stock.get("marketGroup").is_none());
         assert!(stock.get("marketType").is_none());
+    }
+
+    #[test]
+    fn compact_and_legacy_stock_shapes_decode_to_the_same_snapshot() {
+        let compact = json!([{
+            "id":"group-1","name":"追蹤",
+            "stocks":[{"symbol":"3010","name":"華立"}]
+        }]);
+        assert_eq!(
+            decode_phone_groups(&compact).expect("compact"),
+            decode_phone_groups(&groups()).expect("legacy")
+        );
+    }
+
+    #[test]
+    fn partial_legacy_and_unknown_stock_fields_are_rejected() {
+        for stock in [
+            json!({"symbol":"3010","name":"華立","price":"---"}),
+            json!({"symbol":"3010","name":"華立","marketGroup":"TW"}),
+            json!({"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":"yes"}),
+        ] {
+            assert_eq!(
+                decode_phone_groups(&json!([{"id":"group-1","name":"追蹤","stocks":[stock]}])),
+                Err("CORRUPT_STORED_DATA".to_string())
+            );
+        }
     }
 
     #[test]

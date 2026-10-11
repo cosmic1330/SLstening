@@ -79,9 +79,6 @@ const phonePayloadBytes = (account: AccountSnapshot) => {
       return {
         symbol: stock.id,
         name: stock.name,
-        price: "---",
-        change: "0.0",
-        isPositive: true,
       };
     }),
   }));

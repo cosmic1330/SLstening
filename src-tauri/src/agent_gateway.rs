@@ -71,7 +71,7 @@ impl AgentGateway {
             .ok()
             .map(|path| path.join("slstening-agent.json"))
             .unwrap_or_default();
-        let bridge_path = resolve_bridge_path(app);
+        let bridge_path = resolve_bridge_path(app).unwrap_or_default();
         if !discovery_path.as_os_str().is_empty() {
             cleanup_discovery(&discovery_path);
         }
@@ -197,6 +197,8 @@ pub fn start(
     // A previous process may have exited without running Drop. Never leave a
     // stale bearer token for the bridge to discover before this run is ready.
     cleanup_discovery(&discovery_path);
+    let bridge_path = resolve_bridge_path(app)
+        .ok_or_else(|| sanitize_gateway_error("AGENT_BRIDGE_UNAVAILABLE"))?;
     let listener = TcpListener::bind(("127.0.0.1", 0))
         .map_err(|error| sanitize_gateway_error(&format!("AGENT_BIND:{error}")))?;
     listener
@@ -207,7 +209,6 @@ pub fn start(
         .map_err(|error| sanitize_gateway_error(&error.to_string()))?
         .port();
     let token = random_token();
-    let bridge_path = resolve_bridge_path(app);
     if let Err(error) = write_discovery(&discovery_path, port, &token, &bridge_path) {
         cleanup_discovery(&discovery_path);
         return Err(sanitize_gateway_error(&error));
@@ -311,6 +312,7 @@ fn sanitize_gateway_error(error: &str) -> String {
         "AGENT_BIND_FAILED"
             | "AGENT_START_FAILED"
             | "AGENT_PERMISSION_DENIED"
+            | "AGENT_BRIDGE_UNAVAILABLE"
             | "AGENT_UNAVAILABLE"
     ) {
         return error.to_string();
@@ -319,6 +321,8 @@ fn sanitize_gateway_error(error: &str) -> String {
         "AGENT_BIND_FAILED"
     } else if error.contains("AGENT_START") {
         "AGENT_START_FAILED"
+    } else if error.contains("AGENT_BRIDGE") {
+        "AGENT_BRIDGE_UNAVAILABLE"
     } else if error.contains("permission") || error.contains("Permission") {
         "AGENT_PERMISSION_DENIED"
     } else {
@@ -345,18 +349,30 @@ fn is_normal_connection_error(error: &str) -> bool {
     .any(|needle| lower.contains(needle))
 }
 
-fn resolve_bridge_path(app: &AppHandle) -> PathBuf {
-    let resource = app
-        .path()
-        .resource_dir()
-        .ok()
-        .map(|path| path.join("scripts/slstening-agent-bridge.mjs"));
-    if let Some(path) = resource.filter(|path| path.exists()) {
-        return path;
-    }
-    std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("scripts/slstening-agent-bridge.mjs")
+fn resolve_bridge_path(app: &AppHandle) -> Option<PathBuf> {
+    let resource_dir = app.path().resource_dir().ok();
+    #[cfg(debug_assertions)]
+    let development_bridge =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/slstening-agent-bridge.mjs");
+    #[cfg(debug_assertions)]
+    let development_bridge = Some(development_bridge.as_path());
+    #[cfg(not(debug_assertions))]
+    let development_bridge = None;
+    select_bridge_path(resource_dir.as_deref(), development_bridge)
+}
+
+fn select_bridge_path(
+    resource_dir: Option<&Path>,
+    development_bridge: Option<&Path>,
+) -> Option<PathBuf> {
+    resource_dir
+        .map(|path| path.join("scripts/slstening-agent-bridge.mjs"))
+        .filter(|path| path.is_file())
+        .or_else(|| {
+            development_bridge
+                .filter(|path| path.is_file())
+                .map(Path::to_path_buf)
+        })
 }
 
 fn write_discovery(path: &Path, port: u16, token: &str, bridge_path: &Path) -> Result<(), String> {
@@ -2716,6 +2732,56 @@ mod tests {
         assert!(serialized["lastClientActivityAt"].is_null());
         assert!(serialized.get("token").is_none());
         assert!(!config.endpoint.contains("token"));
+    }
+
+    #[test]
+    fn bridge_resolution_prefers_bundled_resource_and_never_uses_cwd() {
+        let resource_dir = tempfile::tempdir().unwrap();
+        let resource_scripts = resource_dir.path().join("scripts");
+        fs::create_dir_all(&resource_scripts).unwrap();
+        let bundled = resource_scripts.join("slstening-agent-bridge.mjs");
+        fs::write(&bundled, "// bundled").unwrap();
+
+        let development_dir = tempfile::tempdir().unwrap();
+        let development = development_dir.path().join("bridge with spaces.mjs");
+        fs::write(&development, "// development").unwrap();
+
+        assert_eq!(
+            select_bridge_path(Some(resource_dir.path()), Some(&development)),
+            Some(bundled)
+        );
+        assert_eq!(
+            select_bridge_path(None, Some(&development)),
+            Some(development)
+        );
+        assert_eq!(
+            select_bridge_path(None, Some(Path::new("missing.mjs"))),
+            None
+        );
+    }
+
+    #[test]
+    fn discovery_serializes_windows_bridge_paths_without_exposing_token_elsewhere() {
+        let directory = tempfile::tempdir().unwrap();
+        let discovery = directory.path().join("slstening-agent.json");
+        let bridge =
+            Path::new(r"C:\Program Files\SLstening\resources\scripts\slstening-agent-bridge.mjs");
+
+        write_discovery(&discovery, 43123, "owner-only-token", bridge).unwrap();
+
+        let value: Value = serde_json::from_slice(&fs::read(&discovery).unwrap()).unwrap();
+        assert_eq!(value["bridgePath"].as_str(), bridge.to_str());
+        assert_eq!(value["endpoint"], "http://127.0.0.1:43123/mcp");
+        assert_eq!(value["protocolVersion"], MCP_PROTOCOL_VERSION);
+        assert!(value.get("accountToken").is_none());
+    }
+
+    #[test]
+    fn bridge_failures_use_a_stable_path_free_error_code() {
+        assert_eq!(
+            sanitize_gateway_error("AGENT_BRIDGE_UNAVAILABLE: /private/build/path"),
+            "AGENT_BRIDGE_UNAVAILABLE"
+        );
     }
 
     #[test]

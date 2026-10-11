@@ -27,6 +27,8 @@ The main CI workflow uses Node 22 and pnpm 10 for linting, type checking, and fr
 
 The release workflow builds signed Tauri bundles for macOS, Linux, and Windows from the `release` branch and prepares updater artifacts in a draft release. The application updater reads its endpoint and public key from `src-tauri/tauri.conf.json`. Changes to release targets, signing, updater metadata, or branch policy are architecture changes and must update this page.
 
+The MCP stdio bridge is bundled through an explicit source-to-target resource mapping. Every desktop bundle installs it as `scripts/slstening-agent-bridge.mjs` beneath Tauri's platform resource directory, so discovery can publish a valid absolute path on macOS, Windows, and Linux without depending on the launch working directory. Node.js 18 or newer remains an external MCP client requirement.
+
 Production diagnostics use one `slistening@<app-version>` release across the WebView and Rust SDKs. The release workflow passes `SENTRY_RELEASE` into the Tauri build, lets the Vite plugin upload hidden browser source maps, deletes uploaded map files from the packaged frontend, and uploads native debug files after each platform build. Configure the repository Actions secret `SENTRY_AUTH_TOKEN` with release/debug-file upload access. The organization (`e95e6391edf1`), project (`react-native`), and public DSN are not secrets. If the token is absent, packaging remains available but the workflow emits a warning and skips symbol uploads.
 
 ## Environment Boundaries
@@ -38,7 +40,7 @@ Production diagnostics use one `slistening@<app-version>` release across the Web
 
 ## Known Verification Point
 
-The JavaScript/Tauri app version is `0.0.62`, while `src-tauri/Cargo.toml` declares package version `0.0.28`. The repository does not establish whether this mismatch is intentional; verify release policy before synchronizing versions.
+The packaged application version comes from `src-tauri/tauri.conf.json` and is kept aligned with `package.json`; the Rust crate version in `src-tauri/Cargo.toml` is independent build metadata. Sentry release identity uses the packaged application version.
 
 ## Source Anchors
 

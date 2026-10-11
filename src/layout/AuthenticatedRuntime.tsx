@@ -8,7 +8,7 @@ import useStocksStore from "../store/Stock.store";
 import useDebugStore from "../store/debug.store";
 import { getNativeIndicatorSettings, isNativeRuntime } from "../account/native";
 import { sanitizeNativeSessionError } from "../account/sessionTransition";
-import type { IndicatorSettings } from "../account/types";
+import type { AccountStateUpdatedEvent, IndicatorSettings } from "../account/types";
 import { useOptionalUser } from "../context/UserContext";
 
 function AccountSyncNotice() {
@@ -103,6 +103,7 @@ function CloudBackupConflictDialog() {
 
 export default function AuthenticatedRuntime() {
   const reload = useStocksStore((state) => state.reload);
+  const applyMcpAccountCommit = useStocksStore((state) => state.applyMcpAccountCommit);
   useMarketWatcher();
 
   useEffect(() => {
@@ -115,9 +116,10 @@ export default function AuthenticatedRuntime() {
     if (isNativeRuntime()) {
       void import("@tauri-apps/api/event").then(async ({ listen }) => {
         let preferenceEventVersion = 0;
-        const stateCleanup = await listen<{ userId: string; epoch: number }>("account-state-updated", (event) => {
+        const stateCleanup = await listen<AccountStateUpdatedEvent>("account-state-updated", (event) => {
           const current = useStocksStore.getState();
-          if (current.accountUserId === event.payload.userId && current.accountEpoch === event.payload.epoch) runReload();
+          if (current.accountUserId !== event.payload.userId || current.accountEpoch !== event.payload.epoch) return;
+          try { void Promise.resolve(current.applyMcpAccountCommit(event.payload)).catch(() => undefined); } catch { /* event is advisory */ }
         });
         const preferenceCleanup = await listen<{ userId: string; epoch: number; indicatorSettings: IndicatorSettings }>("account-local-preferences-updated", (event) => {
           const current = useStocksStore.getState();
@@ -143,7 +145,7 @@ export default function AuthenticatedRuntime() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => { disposed = true; window.removeEventListener("keydown", handleKeyDown); unlisten?.(); };
-  }, [reload]);
+  }, [reload, applyMcpAccountCommit]);
 
   return <><AccountSyncNotice /><CloudBackupConflictDialog /><LegacySettingsDialog /><Outlet /><DebugInfo /></>;
 }

@@ -960,85 +960,113 @@ fn execute_tool(
             let stock: StockRecord = serde_json::from_value(stock_value)
                 .map_err(|_| (-32602, "invalid stock".to_string()))?;
             let category_id = optional_category_id(args)?;
-            mutate(context, session.epoch, deadline, |data| {
-                add_stocks_to_category(data, vec![stock], category_id)
+            mutate(context, session.epoch, deadline, "add_stock", |data| {
+                let ids = vec![stock.id.clone()];
+                let category_id = add_stocks_to_category(data, vec![stock], category_id)?;
+                Ok(json!({"kind":"addStocks","categoryId":category_id,"stockIds":ids}))
             })
         }
         "add_stocks" => {
             let stocks = parse_stocks_argument(args)?;
             let category_id = optional_category_id(args)?;
-            mutate(context, session.epoch, deadline, |data| {
-                add_stocks_to_category(data, stocks, category_id)
+            mutate(context, session.epoch, deadline, "add_stocks", |data| {
+                let ids = stocks
+                    .iter()
+                    .map(|stock| stock.id.clone())
+                    .collect::<Vec<_>>();
+                let category_id = add_stocks_to_category(data, stocks, category_id)?;
+                Ok(json!({"kind":"addStocks","categoryId":category_id,"stockIds":ids}))
             })
         }
         "remove_stock" => {
             let symbol = string_arg(args, "symbol")?.to_string();
-            mutate(context, session.epoch, deadline, |data| {
+            mutate(context, session.epoch, deadline, "remove_stock", |data| {
                 data.stocks.retain(|stock| stock.id != symbol);
                 for category in &mut data.categories {
                     category.stock_ids.retain(|id| id != &symbol);
                 }
-                Ok(())
+                Ok(json!({"kind":"removeStock","symbol":symbol}))
             })
         }
         "create_category" => {
             let name = trimmed_category_name(string_arg(args, "name")?)
                 .map_err(|error| (-32602, error))?;
-            mutate(context, session.epoch, deadline, |data| {
-                if data
-                    .categories
-                    .iter()
-                    .any(|category| category.name.trim().eq_ignore_ascii_case(&name))
-                {
-                    return Err("DUPLICATE_CATEGORY_NAME".to_string());
-                }
-                data.categories.push(CategoryRecord {
-                    id: random_identifier("category"),
-                    name,
-                    stock_ids: vec![],
-                });
-                Ok(())
-            })
+            mutate(
+                context,
+                session.epoch,
+                deadline,
+                "create_category",
+                |data| {
+                    if data
+                        .categories
+                        .iter()
+                        .any(|category| category.name.trim().eq_ignore_ascii_case(&name))
+                    {
+                        return Err("DUPLICATE_CATEGORY_NAME".to_string());
+                    }
+                    data.categories.push(CategoryRecord {
+                        id: random_identifier("category"),
+                        name,
+                        stock_ids: vec![],
+                    });
+                    let category = data.categories.last().ok_or("CATEGORY_REQUIRED")?;
+                    Ok(
+                        json!({"kind":"createCategory","categoryId":category.id,"name":category.name}),
+                    )
+                },
+            )
         }
         "rename_category" => {
             let id = string_arg(args, "categoryId")?.to_string();
             let name = trimmed_category_name(string_arg(args, "name")?)
                 .map_err(|error| (-32602, error))?;
-            mutate(context, session.epoch, deadline, |data| {
-                if data.categories.iter().any(|category| {
-                    category.id != id && category.name.trim().eq_ignore_ascii_case(&name)
-                }) {
-                    return Err("DUPLICATE_CATEGORY_NAME".to_string());
-                }
-                data.categories
-                    .iter_mut()
-                    .find(|category| category.id == id)
-                    .ok_or("CATEGORY_NOT_FOUND")?
-                    .name = name;
-                Ok(())
-            })
+            mutate(
+                context,
+                session.epoch,
+                deadline,
+                "rename_category",
+                |data| {
+                    if data.categories.iter().any(|category| {
+                        category.id != id && category.name.trim().eq_ignore_ascii_case(&name)
+                    }) {
+                        return Err("DUPLICATE_CATEGORY_NAME".to_string());
+                    }
+                    data.categories
+                        .iter_mut()
+                        .find(|category| category.id == id)
+                        .ok_or("CATEGORY_NOT_FOUND")?
+                        .name = name.clone();
+                    Ok(json!({"kind":"renameCategory","categoryId":id,"name":name}))
+                },
+            )
         }
         "delete_category" => {
             let id = string_arg(args, "categoryId")?.to_string();
-            mutate(context, session.epoch, deadline, |data| {
-                data.categories.retain(|category| category.id != id);
-                data.pinned_category_ids.retain(|value| value != &id);
-                data.recent_category_ids.retain(|value| value != &id);
-                if data.active_category_id == id {
-                    data.active_category_id = data
+            mutate(
+                context,
+                session.epoch,
+                deadline,
+                "delete_category",
+                |data| {
+                    data.categories.retain(|category| category.id != id);
+                    data.pinned_category_ids.retain(|value| value != &id);
+                    data.recent_category_ids.retain(|value| value != &id);
+                    if data.active_category_id == id {
+                        data.active_category_id = data
+                            .categories
+                            .first()
+                            .map(|category| category.id.clone())
+                            .unwrap_or_default();
+                    }
+                    let memberships: std::collections::HashSet<String> = data
                         .categories
-                        .first()
-                        .map(|category| category.id.clone())
-                        .unwrap_or_default();
-                }
-                let memberships: std::collections::HashSet<String> = data
-                    .categories
-                    .iter()
-                    .flat_map(|category| category.stock_ids.iter().cloned())
-                    .collect();
-                data.stocks.retain(|stock| memberships.contains(&stock.id));
-                Ok(())
-            })
+                        .iter()
+                        .flat_map(|category| category.stock_ids.iter().cloned())
+                        .collect();
+                    data.stocks.retain(|stock| memberships.contains(&stock.id));
+                    Ok(json!({"kind":"deleteCategory","categoryId":id}))
+                },
+            )
         }
         "set_category_members" | "reorder_category" => {
             let id = string_arg(args, "categoryId")?.to_string();
@@ -1054,7 +1082,7 @@ fn execute_tool(
                         .ok_or((-32602, "stockIds must be strings".to_string()))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            mutate(context, session.epoch, deadline, |data| {
+            mutate(context, session.epoch, deadline, name, |data| {
                 let known: std::collections::HashSet<String> =
                     data.stocks.iter().map(|stock| stock.id.clone()).collect();
                 if ids.iter().any(|id| !known.contains(id)) || {
@@ -1083,7 +1111,9 @@ fn execute_tool(
                     .flat_map(|category| category.stock_ids.iter().cloned())
                     .collect();
                 data.stocks.retain(|stock| memberships.contains(&stock.id));
-                Ok(())
+                Ok(
+                    json!({"kind": if name == "reorder_category" { "reorderMembers" } else { "setMembers" }, "categoryId":id,"stockIds":ids}),
+                )
             })
         }
         "update_indicator_settings" => {
@@ -1125,21 +1155,38 @@ fn mutate<F>(
     context: &GatewayContext,
     epoch: u64,
     deadline: Instant,
+    operation_name: &str,
     operation: F,
 ) -> Result<(Vec<Value>, Value), (i64, String)>
 where
-    F: FnOnce(&mut AccountSnapshot) -> Result<(), String>,
+    F: FnOnce(&mut AccountSnapshot) -> Result<Value, String>,
 {
     let state = block_on_state(context, epoch, deadline).map_err(internal_error)?;
     let mut data = account_snapshot_or_empty(&state).map_err(internal_error)?;
-    operation(&mut data).map_err(|error| (-32602, error))?;
+    let mutation = operation(&mut data).map_err(|error| (-32602, error))?;
     validate_snapshot(&data).map_err(internal_error)?;
     let result = block_on_write(context, epoch, data.clone(), deadline).map_err(internal_error)?;
     let _ = context.app.emit(
         "account-state-updated",
-        json!({"userId":result.user_id,"epoch":result.epoch}),
+        account_state_updated_payload(&result, &data, operation_name, &mutation),
     );
     Ok((vec![], envelope(epoch, json!({"data":data,"epoch":epoch}))))
+}
+
+fn account_state_updated_payload(
+    result: &crate::account::AccountWriteResult,
+    data: &AccountSnapshot,
+    operation: &str,
+    mutation: &Value,
+) -> Value {
+    json!({
+        "userId": result.user_id,
+        "epoch": result.epoch,
+        "data": data,
+        "updatedAt": result.updated_at,
+        "operation": operation,
+        "mutation": mutation,
+    })
 }
 
 fn block_on_state(
@@ -2483,7 +2530,7 @@ fn add_stocks_to_category(
     data: &mut AccountSnapshot,
     stocks: Vec<StockRecord>,
     category_id: Option<&str>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let category_index = category_index_for_addition(data, category_id)?;
     let mut requested_ids = HashSet::new();
     let requested = stocks
@@ -2513,7 +2560,7 @@ fn add_stocks_to_category(
         .map(|stock| stock.id.clone())
         .collect::<Vec<_>>();
     category.stock_ids.splice(0..0, new_members);
-    Ok(())
+    Ok(category.id.clone())
 }
 
 fn string_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str, (i64, String)> {
@@ -3197,6 +3244,33 @@ mod tests {
         assert!(requested_symbols(&json!({}), &state)
             .expect("empty requested symbols")
             .is_empty());
+    }
+
+    #[test]
+    fn successful_mutation_event_contains_the_exact_snapshot_and_cloud_timestamp() {
+        let data = test_snapshot();
+        let result = crate::account::AccountWriteResult {
+            user_id: "user-a".to_string(),
+            epoch: 7,
+            updated_at: Some("2026-10-11T08:00:00.000Z".to_string()),
+        };
+
+        let event = account_state_updated_payload(
+            &result,
+            &data,
+            "add_stocks",
+            &json!({"kind":"addStocks","categoryId":"group-a","stockIds":["2330"]}),
+        );
+
+        assert_eq!(event["userId"], "user-a");
+        assert_eq!(event["epoch"], 7);
+        assert_eq!(event["updatedAt"], "2026-10-11T08:00:00.000Z");
+        assert_eq!(event["operation"], "add_stocks");
+        assert_eq!(event["mutation"]["kind"], "addStocks");
+        assert_eq!(
+            event["data"],
+            serde_json::to_value(&data).expect("serializable snapshot")
+        );
     }
 
     #[test]

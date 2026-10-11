@@ -15,6 +15,8 @@ const runtimeSpies = vi.hoisted(() => ({
   nativeSessionError: null as string | null,
   retryNativeSession: vi.fn(),
   resolveCloudBackupConflict: vi.fn(),
+  applyMcpAccountCommit: vi.fn(),
+  accountStateListener: null as null | ((event: { payload: Record<string, unknown> }) => void),
   syncState: {
     syncStatus: "local",
     syncError: null as string | null,
@@ -36,15 +38,27 @@ vi.mock("../../hooks/useMarketWatcher", () => ({
   default: runtimeSpies.watchMarket,
 }));
 vi.mock("../../store/Stock.store", () => ({
-  default: (selector: (state: Record<string, unknown>) => unknown) => selector({
+  default: Object.assign((selector: (state: Record<string, unknown>) => unknown) => selector({
     ...runtimeSpies.syncState,
     reload: runtimeSpies.reload,
     keepLegacySettings: runtimeSpies.keepLegacySettings,
     deleteLegacySettings: runtimeSpies.deleteLegacySettings,
     resolveCloudBackupConflict: runtimeSpies.resolveCloudBackupConflict,
+    applyMcpAccountCommit: runtimeSpies.applyMcpAccountCommit,
     applyIndicatorSettings: vi.fn(),
     accountUserId: null,
     accountEpoch: null,
+  }), { getState: () => ({
+    accountUserId: "user-a",
+    accountEpoch: 7,
+    applyMcpAccountCommit: runtimeSpies.applyMcpAccountCommit,
+    applyIndicatorSettings: vi.fn(),
+  }) }),
+}));
+vi.mock("@tauri-apps/api/event", () => ({
+  listen: vi.fn(async (name: string, handler: (event: { payload: Record<string, unknown> }) => void) => {
+    if (name === "account-state-updated") runtimeSpies.accountStateListener = handler;
+    return () => undefined;
   }),
 }));
 vi.mock("../../store/debug.store", () => ({
@@ -93,6 +107,8 @@ describe("AuthenticatedRuntime", () => {
     runtimeSpies.nativeSessionError = null;
     runtimeSpies.retryNativeSession.mockReset();
     runtimeSpies.resolveCloudBackupConflict.mockReset().mockResolvedValue(undefined);
+    runtimeSpies.applyMcpAccountCommit.mockReset().mockResolvedValue(undefined);
+    runtimeSpies.accountStateListener = null;
     Object.assign(runtimeSpies.syncState, {
       syncStatus: "local",
       syncError: null,
@@ -199,5 +215,17 @@ describe("AuthenticatedRuntime", () => {
     );
     expect(notice.textContent).not.toContain("token=private");
     view.unmount();
+  });
+
+  it("applies a matching MCP commit instead of requesting a generic reload", async () => {
+    runtimeSpies.nativeRuntime = true;
+    renderRuntime();
+    await waitFor(() => expect(runtimeSpies.accountStateListener).not.toBeNull());
+
+    runtimeSpies.accountStateListener?.({ payload: {
+      userId: "user-a", epoch: 7, data: {}, updatedAt: "2026-10-11T08:00:00.000Z", operation: "add_stock", mutation: { kind: "addStocks", categoryId: "group-a", stockIds: [] },
+    } });
+    await waitFor(() => expect(runtimeSpies.applyMcpAccountCommit).toHaveBeenCalledTimes(1));
+    expect(runtimeSpies.reload).not.toHaveBeenCalled();
   });
 });

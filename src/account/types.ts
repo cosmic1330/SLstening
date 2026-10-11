@@ -50,6 +50,24 @@ export interface NativeAccountWriteResult {
   updatedAt: string | null;
 }
 
+/** A successful cloud commit made through the app's local MCP gateway. */
+export interface AccountStateUpdatedEvent {
+  userId: string;
+  epoch: number;
+  data: AccountSnapshot;
+  updatedAt: string | null;
+  operation: string;
+  mutation: McpAccountMutation;
+}
+
+export type McpAccountMutation =
+  | { kind: "addStocks"; categoryId: string; stockIds: string[] }
+  | { kind: "removeStock"; symbol: string }
+  | { kind: "createCategory"; categoryId: string; name: string }
+  | { kind: "deleteCategory"; categoryId: string }
+  | { kind: "renameCategory"; categoryId: string; name: string }
+  | { kind: "setMembers" | "reorderMembers"; categoryId: string; stockIds: string[] };
+
 export interface LegacySettingsStatus {
   present: boolean;
   disposition: "keep" | "delete" | null;

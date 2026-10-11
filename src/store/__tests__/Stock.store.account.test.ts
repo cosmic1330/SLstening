@@ -274,6 +274,209 @@ describe("account-scoped stock projection", () => {
     expect(persisted.get("account:user-a:dirty")).toBe(true);
   });
 
+  it("replays an MCP add without reviving locally removed members or reverting the local category name", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const cloud: AccountSnapshot = {
+      ...snapshot("2330"),
+      stocks: [
+        { id: "8299", name: "Phison", group: "TW", type: "stock" },
+        { id: "2330", name: "TSMC", group: "TW", type: "stock" },
+        { id: "2454", name: "MediaTek", group: "TW", type: "stock" },
+      ],
+      categories: [{ id: "group-a", name: "Cloud name", stockIds: ["8299", "2330", "2454"] }],
+    };
+    installDirtyProjection({
+      ...cloud,
+      stocks: cloud.stocks.filter((stock) => stock.id === "2330"),
+      categories: [{ id: "group-a", name: "Local name", stockIds: ["2330"] }],
+    });
+
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: cloud,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["8299"] },
+    });
+
+    expect(useStocksStore.getState().categories).toEqual([
+      expect.objectContaining({ id: "group-a", name: "Local name", stockIds: ["8299", "2330"] }),
+    ]);
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330", "8299"]);
+  });
+
+  it("keeps local member order when an MCP add is a no-op for an existing stock", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const cloud: AccountSnapshot = {
+      ...snapshot("2330"),
+      stocks: [
+        { id: "2330", name: "TSMC", group: "TW", type: "stock" },
+        { id: "2454", name: "MediaTek", group: "TW", type: "stock" },
+      ],
+      categories: [{ id: "group-a", name: "A", stockIds: ["2330", "2454"] }],
+    };
+    installDirtyProjection({
+      ...cloud,
+      categories: [{ id: "group-a", name: "A", stockIds: ["2454", "2330"] }],
+    });
+
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: cloud,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2330"] },
+    });
+
+    expect(useStocksStore.getState().categories[0].stockIds).toEqual(["2454", "2330"]);
+  });
+
+  it("replays an MCP rename without removing locally added members from the same category", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const cloud = snapshot("2330");
+    cloud.categories[0].name = "MCP name";
+    installDirtyProjection({
+      ...cloud,
+      stocks: [...cloud.stocks, { id: "2454", name: "MediaTek", group: "TW", type: "stock" }],
+      categories: [{ id: "group-a", name: "Local name", stockIds: ["2454", "2330"] }],
+    });
+
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: cloud,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "rename_category",
+      mutation: { kind: "renameCategory", categoryId: "group-a", name: "MCP name" },
+    });
+
+    expect(useStocksStore.getState().categories[0]).toEqual(expect.objectContaining({
+      name: "MCP name",
+      stockIds: ["2454", "2330"],
+    }));
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330", "2454"]);
+  });
+
+  it("does not let an older upload acknowledge a newer MCP union while backup is off", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let acknowledgeUpload!: (value: unknown) => void;
+    const pendingUpload = new Promise((resolve) => { acknowledgeUpload = resolve; });
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") return pendingUpload;
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+    });
+
+    await useStocksStore.getState().addCategory("Local pending");
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
+    await useStocksStore.getState().setCloudBackupEnabled(false);
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: snapshot("2454"),
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2454"] },
+    });
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    acknowledgeUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T08:01:00.000Z" });
+    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupLastSuccessAt).toBe("2026-10-11T08:01:00.000Z"));
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+  });
+
+  it("preserves navigation changed while the MCP cache commit is pending", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const base = multiCategorySnapshot();
+    installDirtyProjection(base);
+    let releaseSave!: () => void;
+    const saveGate = new Promise<void>((resolve) => { releaseSave = resolve; });
+    let signalSaveStarted!: () => void;
+    const saveStarted = new Promise<void>((resolve) => { signalSaveStarted = resolve; });
+    storeControl.saveGates = [saveGate, Promise.resolve(), Promise.resolve()];
+    storeControl.saveStartedCallbacks = [signalSaveStarted];
+    const cloud = {
+      ...base,
+      categories: base.categories.map((category) => category.id === "group-a"
+        ? { ...category, name: "MCP name" }
+        : category),
+    };
+
+    const commit = useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: cloud,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "rename_category",
+      mutation: { kind: "renameCategory", categoryId: "group-a", name: "MCP name" },
+    });
+    await saveStarted;
+    await useStocksStore.getState().setActiveCategory("group-b");
+    await useStocksStore.getState().togglePinnedCategory("group-b");
+    releaseSave();
+    await commit;
+
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      activeCategoryId: "group-b",
+      pinnedCategoryIds: ["group-b"],
+    }));
+    expect(useStocksStore.getState()).toMatchObject({
+      activeCategoryId: "group-b",
+      pinnedCategoryIds: ["group-b"],
+    });
+  });
+
+  it("preserves navigation changed while an oversized MCP union disables backup", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const oversized = oversizedSnapshot();
+    installDirtyProjection({
+      ...oversized,
+      categories: oversized.categories.map((category) => category.id === "group-1"
+        ? { ...category, name: "Local name" }
+        : category),
+    });
+    useStocksStore.setState({ cloudBackupEnabled: true });
+    let releaseMetadata!: () => void;
+    const metadataGate = new Promise<void>((resolve) => { releaseMetadata = resolve; });
+    let signalMetadataStarted!: () => void;
+    const metadataStarted = new Promise<void>((resolve) => { signalMetadataStarted = resolve; });
+    storeControl.saveGates = [Promise.resolve(), metadataGate, Promise.resolve()];
+    storeControl.saveStartedCallbacks = [() => undefined, signalMetadataStarted];
+    const cloud = {
+      ...oversized,
+      categories: oversized.categories.map((category) => category.id === "group-0"
+        ? { ...category, name: "MCP name" }
+        : category),
+    };
+
+    const commit = useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: cloud,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "rename_category",
+      mutation: { kind: "renameCategory", categoryId: "group-0", name: "MCP name" },
+    });
+    await metadataStarted;
+    await useStocksStore.getState().setActiveCategory("group-1");
+    await useStocksStore.getState().togglePinnedCategory("group-1");
+    releaseMetadata();
+    await commit;
+
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      activeCategoryId: "group-1",
+      pinnedCategoryIds: ["group-1"],
+    }));
+    expect(useStocksStore.getState()).toMatchObject({
+      activeCategoryId: "group-1",
+      pinnedCategoryIds: ["group-1"],
+      cloudBackupEnabled: false,
+    });
+  });
+
   it("keeps both deletions when MCP deletes A while local state already deleted B", async () => {
     await useStocksStore.getState().hydrateAccount("user-a", 1);
     const base = multiCategorySnapshot();
@@ -450,6 +653,55 @@ describe("account-scoped stock projection", () => {
     expect(persisted.get("account:user-a:snapshot")).toMatchObject({
       stocks: [expect.objectContaining({ id: "2330" })],
     });
+  });
+
+  it("ignores a malformed MCP snapshot before normalization can empty local data", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: {} as AccountSnapshot,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2454"] },
+    });
+
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
+    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      stocks: [expect.objectContaining({ id: "2330" })],
+    });
+  });
+
+  it("does not cancel a pending valid comparison when a malformed MCP event arrives", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let resolvePull!: (value: unknown) => void;
+    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number; data?: unknown }) => {
+      if (command === "account_get_state") return pendingPull;
+      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T08:01:00.000Z" });
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.reject(new Error(`unexpected invoke ${command}`));
+    });
+
+    await useStocksStore.getState().setCloudBackupEnabled(true);
+    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupChecking).toBe(true));
+    await useStocksStore.getState().applyMcpAccountCommit({
+      userId: "user-a",
+      epoch: 1,
+      data: {} as AccountSnapshot,
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2454"] },
+    });
+    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: null, updatedAt: null });
+
+    await vi.waitFor(() => expect(useStocksStore.getState()).toMatchObject({
+      cloudBackupChecking: false,
+      cloudBackupEnabled: true,
+    }));
   });
 
   it("ignores an MCP commit for another account or native epoch", async () => {

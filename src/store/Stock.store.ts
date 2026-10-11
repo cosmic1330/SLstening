@@ -67,12 +67,31 @@ const validMcpMutation = (value: McpAccountMutation): boolean => {
       || ((value.kind === "setMembers" || value.kind === "reorderMembers") && typeof value.categoryId === "string" && ids(value.stockIds)));
 };
 
+const validateMcpMutationSnapshot = (cloud: AccountSnapshot, mutation: McpAccountMutation) => {
+  if (!validMcpMutation(mutation)) throw new Error("INVALID_MCP_MUTATION");
+  const stocks = new Set(cloud.stocks.map((stock) => stock.id));
+  const category = "categoryId" in mutation
+    ? cloud.categories.find((candidate) => candidate.id === mutation.categoryId)
+    : null;
+  if (mutation.kind === "addStocks") {
+    if (!category || mutation.stockIds.some((id) => !stocks.has(id) || !category.stockIds.includes(id))) throw new Error("INVALID_MCP_MUTATION");
+  } else if (mutation.kind === "removeStock") {
+    if (stocks.has(mutation.symbol) || cloud.categories.some((candidate) => candidate.stockIds.includes(mutation.symbol))) throw new Error("INVALID_MCP_MUTATION");
+  } else if (mutation.kind === "deleteCategory") {
+    if (category) throw new Error("INVALID_MCP_MUTATION");
+  } else if (mutation.kind === "createCategory" || mutation.kind === "renameCategory") {
+    if (!category || category.name !== mutation.name) throw new Error("INVALID_MCP_MUTATION");
+  } else if (!category || !sameJson(category.stockIds, mutation.stockIds) || mutation.stockIds.some((id) => !stocks.has(id))) {
+    throw new Error("INVALID_MCP_MUTATION");
+  }
+};
+
 const replayMcpMutation = (
   cloud: AccountSnapshot,
   local: AccountSnapshot,
   mutation: McpAccountMutation,
 ) => {
-  if (!validMcpMutation(mutation)) throw new Error("INVALID_MCP_MUTATION");
+  validateMcpMutationSnapshot(cloud, mutation);
   const cloudStocks = new Map(cloud.stocks.map((stock) => [stock.id, stock]));
   const cloudCategories = new Map(cloud.categories.map((category) => [category.id, category]));
   let stocks = [...local.stocks];
@@ -90,11 +109,17 @@ const replayMcpMutation = (
     const target = cloudCategory(mutation.categoryId);
     if (!target) throw new Error("INVALID_MCP_MUTATION");
     const index = categories.findIndex((category) => category.id === target.id);
-    const localIds = index >= 0 ? categories[index].stockIds : [];
+    const localTarget = index >= 0 ? categories[index] : null;
+    const additions = localTarget
+      ? mutation.stockIds.filter((id) => !localTarget.stockIds.includes(id))
+      : mutation.stockIds;
+    const replacement = localTarget
+      ? { ...localTarget, stockIds: [...additions, ...localTarget.stockIds] }
+      : { ...target, stockIds: [...target.stockIds] };
     categories = index >= 0 ? categories.map((category, item) => item === index
-      ? { ...target, stockIds: [...target.stockIds, ...localIds.filter((id) => !target.stockIds.includes(id))] }
-      : category) : [...categories, { ...target }];
-    ensureStocks(categories.find((category) => category.id === target.id)?.stockIds ?? []);
+      ? replacement
+      : category) : [...categories, replacement];
+    ensureStocks(localTarget ? additions : replacement.stockIds);
   } else if (mutation.kind === "removeStock") {
     stocks = stocks.filter((stock) => stock.id !== mutation.symbol);
     categories = categories.map((category) => ({ ...category, stockIds: category.stockIds.filter((id) => id !== mutation.symbol) }));
@@ -103,12 +128,16 @@ const replayMcpMutation = (
   } else {
     const target = cloudCategory(mutation.categoryId);
     if (!target) throw new Error("INVALID_MCP_MUTATION");
-    const replacement = { ...target };
-    if (mutation.kind === "renameCategory") replacement.name = mutation.name;
-    if (mutation.kind === "setMembers" || mutation.kind === "reorderMembers") replacement.stockIds = [...mutation.stockIds];
     const index = categories.findIndex((category) => category.id === target.id);
+    const localTarget = index >= 0 ? categories[index] : null;
+    let replacement = { ...target, stockIds: [...target.stockIds] };
+    if (mutation.kind === "renameCategory") {
+      replacement = localTarget ? { ...localTarget, name: mutation.name } : { ...replacement, name: mutation.name };
+    } else if (mutation.kind === "setMembers" || mutation.kind === "reorderMembers") {
+      replacement = localTarget ? { ...localTarget, stockIds: [...mutation.stockIds] } : { ...replacement, stockIds: [...mutation.stockIds] };
+    }
     categories = index < 0 ? [...categories, replacement] : categories.map((category, item) => item === index ? replacement : category);
-    ensureStocks(replacement.stockIds);
+    if (!localTarget || mutation.kind === "createCategory" || mutation.kind === "setMembers" || mutation.kind === "reorderMembers") ensureStocks(replacement.stockIds);
   }
   const referenced = new Set(categories.flatMap((category) => category.stockIds));
   return normalizeAccountSnapshot({ ...local, stocks: stocks.filter((stock) => referenced.has(stock.id)), categories });
@@ -1114,15 +1143,18 @@ const useStocksStore = create<StocksState>((set, get) => ({
       || current.accountUserId !== event.userId
       || current.accountEpoch !== event.epoch) return;
 
-    // Cancel any pull/compare started before this known-good cloud commit.
-    // A later response must not recreate a conflict against the stale cache.
-    advanceCloudComparisonGeneration(event.userId);
     let normalized: AccountSnapshot;
     let dirty: boolean;
     try {
       if (!validMcpMutation(event.mutation)) throw new Error("INVALID_MCP_MUTATION");
+      // Validate the wire payload before normalization. Normalization is
+      // intentionally forgiving for legacy/local data and must not turn a
+      // malformed MCP event (for example `{}`) into an authoritative empty
+      // account snapshot.
+      __validateSnapshotForLocal(event.data);
       normalized = normalizeAccountSnapshot(event.data);
       __validateSnapshotForLocal(normalized);
+      validateMcpMutationSnapshot(normalized, event.mutation);
       dirty = await readAccountDirty(event.userId);
     } catch (error) {
       reportHandledError("mcp_account_event", error, "MCP_ACCOUNT_EVENT_INVALID");
@@ -1130,6 +1162,9 @@ const useStocksStore = create<StocksState>((set, get) => ({
     }
     const latest = get();
     if (latest.accountUserId !== event.userId || latest.accountEpoch !== event.epoch) return;
+    // Cancel an older pull/compare only after the event is proven valid. A
+    // malformed local event must have no effect on a legitimate comparison.
+    advanceCloudComparisonGeneration(event.userId);
     const timestamp = validTimestamp(event.updatedAt) ?? new Date().toISOString();
     let cloudRepresented: AccountSnapshot;
     try {
@@ -1141,14 +1176,19 @@ const useStocksStore = create<StocksState>((set, get) => ({
       reportHandledError("mcp_account_merge", error, "MCP_ACCOUNT_MERGE_FAILED");
       return;
     }
-    const projected = localNavigation(cloudRepresented, latest);
     const matchesCloud = sameCloudBackupData(cloudRepresented, normalized);
     const changedAt = matchesCloud ? timestamp : new Date().toISOString();
     try {
       const committed = await enqueueAccountCacheOperation(async () => {
         const beforeWrite = get();
         if (beforeWrite.accountUserId !== event.userId || beforeWrite.accountEpoch !== event.epoch) return false;
-        await writeMcpAccountCommit(event.userId, projected, timestamp, changedAt, !matchesCloud);
+        const persistedProjection = localNavigation(cloudRepresented, beforeWrite);
+        await writeMcpAccountCommit(event.userId, persistedProjection, timestamp, changedAt, !matchesCloud);
+        // Invalidate an older in-flight upload only after this MCP projection
+        // is durable. An ACK queued before us may clear the old dirty marker;
+        // this transaction then writes the correct marker back. Any ACK queued
+        // after us observes the new generation and cannot acknowledge it.
+        markCloudSnapshotChanged(event.userId);
         return true;
       });
       if (!committed) return;
@@ -1162,6 +1202,9 @@ const useStocksStore = create<StocksState>((set, get) => ({
     }
     const after = get();
     if (after.accountUserId !== event.userId || after.accountEpoch !== event.epoch) return;
+    // Navigation and indicator preferences are local-only. Re-read them after
+    // the async cache save so UI changes made while it was pending survive.
+    let projected = localNavigation(cloudRepresented, after);
     if (matchesCloud) markCloudCommit(event.userId, event.epoch);
     let backupEnabled = after.cloudBackupEnabled;
     if (!matchesCloud && backupEnabled && cloudBackupPayloadBytes(projected) > CLOUD_BACKUP_MAX_BYTES) {
@@ -1169,6 +1212,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       try { await writeCloudBackupMetadata(event.userId, { enabled: false }); } catch { /* Local union remains durable. */ }
       const afterMetadata = get();
       if (afterMetadata.accountUserId !== event.userId || afterMetadata.accountEpoch !== event.epoch) return;
+      projected = localNavigation(cloudRepresented, afterMetadata);
     }
     set({
       ...projected,

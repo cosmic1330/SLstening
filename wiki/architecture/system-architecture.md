@@ -19,6 +19,8 @@ This page describes boundaries a change must preserve. It is not a component inv
 5. Supabase authentication is initialized in the frontend. Durable stock/category membership state is projected by Zustand and persisted through native account commands; active/recent navigation plus desktop-only pinned and indicator preferences remain local because they are outside the shared groups wire format. High-frequency ticks remain in memory. PhoneApp cloud writes are last-write-wins and do not use revisions or operation IDs. A cached account projection may remain hydrated while a cloud refresh is loading or reports a recoverable sync error.
 6. While the desktop app is open, Rust owns an optional 127.0.0.1 MCP gateway and writes an owner-only discovery file. Startup failure leaves the Tauri app usable and exposes an unavailable status through `agent_get_config`; the gateway bounds accepted connections and isolates worker panics. After bearer/origin/rate checks pass and a JSON-RPC response is successfully written, the gateway records a shared epoch-millisecond `lastClientActivityAt`; rejected, malformed, or failed responses do not update it. The bundled stdio bridge forwards Codex JSON-RPC requests to the allowlisted gateway tools; no access token is exposed to MCP.
 
+MCP `add_stock` accepts an optional category ID, while `add_stocks` accepts up to 300 records and applies their first-occurrence, request-order membership to that category in one atomic account snapshot write. Without a category ID, both retain the active-category then first-category fallback.
+
 ## Route Boundaries
 
 | Route | Boundary |
@@ -35,7 +37,7 @@ Do not add a second router or bypass `RequireAuth` for protected screens. Keep r
 | Concern | Owner | Persistence |
 | --- | --- | --- |
 | Supabase session and profile | `UserContext` | Supabase client session storage |
-| Tracked stocks, categories, memberships | `Stock.store` projection | PhoneApp-compatible groups in the PhoneApp Google Sheet through native account commands; `account-state.json` cache |
+| Tracked stocks, categories, memberships | `Stock.store` projection | `account-state.json` local-first cache; account-scoped, capacity-bounded PhoneApp-compatible cloud backup (enabled by default) |
 | Active/recent navigation, pinned IDs | `Stock.store` projection | `account-state.json` account-scoped cache |
 | Indicator settings | `Stock.store` / native preference manager | `preferences.json` account-scoped cache |
 | Shared catalog/menu | `Stock.store` | `catalog.json` device-scoped cache |

@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../i18n";
 import useUIStore from "../../../store/UI.store";
+import type { CategoryType, StockStoreType } from "../../../types";
 
 const mocks = vi.hoisted(() => ({
   stockState: {
@@ -13,6 +14,13 @@ const mocks = vi.hoisted(() => ({
     updateIndicatorSetting: vi.fn(),
     resetIndicatorSettings: vi.fn(),
     update_menu: vi.fn(),
+    cloudBackupEnabled: false,
+    cloudBackupLastSuccessAt: null as string | null,
+    cloudBackupChecking: false,
+    cloudBackupConflict: null,
+    stocks: [] as StockStoreType[],
+    categories: [] as CategoryType[],
+    setCloudBackupEnabled: vi.fn().mockResolvedValue(undefined),
   },
   stockStore: vi.fn(),
   download: {
@@ -88,6 +96,15 @@ beforeEach(async () => {
   mocks.user.signOut.mockResolvedValue(undefined);
   mocks.user.isSigningOut = false;
   mocks.user.signOutError = null;
+  mocks.stockState.cloudBackupEnabled = false;
+  mocks.stockState.cloudBackupLastSuccessAt = null;
+  mocks.stockState.cloudBackupChecking = false;
+  mocks.stockState.cloudBackupConflict = null;
+  mocks.stockState.stocks = [];
+  mocks.stockState.categories = [];
+  mocks.stockState.hydrated = true;
+  mocks.stockState.setCloudBackupEnabled.mockReset();
+  mocks.stockState.setCloudBackupEnabled.mockResolvedValue(undefined);
   await i18n.changeLanguage("en");
 });
 
@@ -180,6 +197,26 @@ describe("Settings page", () => {
     const update = screen.getByRole("button", { name: /Updating/ });
     expect(update.getAttribute("aria-busy")).toBe("true");
     expect(update.textContent).toContain("Updating");
+  });
+
+  it("offers an account-scoped cloud backup switch with a localized last-backup state", () => {
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    expect(screen.getByLabelText("Cloud backup")).toBeTruthy();
+    expect(screen.getByText(/Never backed up/)).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Cloud backup"));
+    expect(mocks.stockState.setCloudBackupEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it("keeps the capacity alert visible while the local backup is oversized", () => {
+    mocks.stockState.stocks = [{ id: "2330", name: "台".repeat(15_000), group: "TW", type: "stock" }];
+    mocks.stockState.categories = [{ id: "group-a", name: "A", stockIds: ["2330"] }];
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    expect(screen.getByRole("alert").textContent).toContain("45000");
+    expect((screen.getByLabelText("Cloud backup") as HTMLInputElement).disabled).toBe(true);
   });
 
   it("shows the signed-in account and starts local sign-out", () => {

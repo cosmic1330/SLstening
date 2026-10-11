@@ -12,7 +12,11 @@ status: stable
 
 The Settings page exposes a local-device logout action. `UserContext.signOut` calls Supabase Auth with `scope: "local"`, so other devices stay signed in. Successful auth-state transition drives the existing native session teardown and account projection cleanup; cloud data is retained. Failures keep the session available for retry and expose a sanitized message to the UI. The obsolete settings-file choice is independent of sign-out and is persisted in the new account-state store.
 
-On desktop startup, the established native session claims the matching `account:<userId>:snapshot` cache before requesting PhoneApp cloud state. The cached projection is available while the cloud refresh runs in the background; a refresh failure stays in `Stock.store` sync state for retry and does not invalidate the established native session. Cloud requests use `uuid`/`email` and do not send an access token.
+On desktop startup, the established native session claims the matching `account:<userId>:snapshot` cache before any PhoneApp request. When cloud backup is off, startup performs no cloud read or write. When it is on, a dirty cache wins and uploads immediately; a clean cache is compared with the cloud and differing cloud-represented data requires an explicit local-versus-cloud choice. A comparison/read failure silently keeps the local projection and turns backup off without invalidating the established native session. Cloud requests use `uuid`/`email` and do not send an access token.
+
+Desktop native-session transitions are strictly increasing within a WebView and begin at the current epoch for every WebView reload, so a surviving native `AccountManager` cannot reject a fresh UI as a stale transition. Native session failures shown in the retry notice are allowlisted diagnostic codes only; they are distinct from recoverable cloud-sync errors, which remain owned by `Stock.store`.
+
+Local account edits enforce structural validity at their commit boundary, while the PhoneApp payload capacity remains a cloud-write constraint. An oversized local snapshot stays dirty, automatically turns backup off, and remains editable so the user can reduce it; backup never resumes until the user enables it again. Legacy dirty caches repair stocks that no category references before retrying the cloud write; any remaining structural invalidity stays local and is not sent.
 
 Authentication state is not the same as authorization. The current `isPaid` behavior is intentionally permissive for compatibility and is not a trustworthy premium-access boundary.
 

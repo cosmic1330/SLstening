@@ -48,7 +48,7 @@ pub fn run() {
             // 監聽更新
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = updater::update(handle).await {
-                    log::error!("Update check failed: {:?}", e);
+                    log::warn!("Update check failed: {:?}", e);
                 }
             });
 
@@ -71,7 +71,7 @@ pub fn run() {
                     // thread failure must not prevent the stock app from
                     // starting, and the command remains available so clients
                     // can see a safe unavailable status.
-                    log::error!("SLstening Agent gateway unavailable: {error}");
+                    log::warn!("SLstening Agent gateway unavailable: {error}");
                     agent_gateway::AgentGateway::unavailable(app.handle(), error)
                 }
             };

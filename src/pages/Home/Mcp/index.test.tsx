@@ -61,7 +61,7 @@ describe("MCP setup page", () => {
     const manageTools = MCP_TOOL_GROUPS.find((group) => group.id === "manage")?.tools;
     const allTools = [...(readTools ?? []), ...(manageTools ?? [])];
     expect(readTools).toHaveLength(7);
-    expect(manageTools).toHaveLength(9);
+    expect(manageTools).toHaveLength(10);
     expect(allTools).toEqual([
       "get_context",
       "list_watchlists",
@@ -71,6 +71,7 @@ describe("MCP setup page", () => {
       "get_chip_analysis",
       "get_analysis_snapshot",
       "add_stock",
+      "add_stocks",
       "remove_stock",
       "create_category",
       "rename_category",
@@ -85,7 +86,7 @@ describe("MCP setup page", () => {
     expect(screen.getByRole("heading", { level: 3, name: "mcp.tools.manage.title" })).toBeTruthy();
     for (const tool of allTools) expect(screen.getByText(tool)).toBeTruthy();
     expect(screen.getByText("mcp.tools.read.count:7")).toBeTruthy();
-    expect(screen.getByText("mcp.tools.manage.count:9")).toBeTruthy();
+    expect(screen.getByText("mcp.tools.manage.count:10")).toBeTruthy();
   });
 
   it("hides low-value bridge implementation details while keeping client config", () => {

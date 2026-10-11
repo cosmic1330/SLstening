@@ -8,7 +8,7 @@ use crate::market_watcher::{is_global_symbol, HistoryPoint, MarketManager, Marke
 use rand::{rngs::OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
@@ -617,8 +617,13 @@ fn tool_definitions() -> Vec<Value> {
         ),
         tool(
             "add_stock",
-            "Add a stock to the active category, or the first real category when no category is active. Returns CATEGORY_REQUIRED when the account has no categories.",
-            json!({"type":"object","properties":{"stock":{"type":"object","properties":{"id":{"type":"string"},"name":{"type":"string"},"group":{"type":"string"},"type":{"type":"string"}},"required":["id","name","group","type"]}},"required":["stock"],"additionalProperties":false}),
+            "Add a stock to a specified category, or the active category and then the first category when categoryId is omitted. Returns CATEGORY_REQUIRED when the account has no categories.",
+            json!({"type":"object","properties":{"stock":stock_record_schema(),"categoryId":{"type":"string","minLength":1}},"required":["stock"],"additionalProperties":false}),
+        ),
+        tool(
+            "add_stocks",
+            "Atomically add up to 300 stocks to a specified category, or the active category and then the first category when categoryId is omitted.",
+            json!({"type":"object","properties":{"stocks":{"type":"array","items":stock_record_schema(),"minItems":1,"maxItems":300},"categoryId":{"type":"string","minLength":1}},"required":["stocks"],"additionalProperties":false}),
         ),
         tool(
             "remove_stock",
@@ -661,6 +666,20 @@ fn tool_definitions() -> Vec<Value> {
             json!({"type":"object","properties":{},"additionalProperties":false}),
         ),
     ]
+}
+
+fn stock_record_schema() -> Value {
+    json!({
+        "type":"object",
+        "properties":{
+            "id":{"type":"string"},
+            "name":{"type":"string"},
+            "group":{"type":"string"},
+            "type":{"type":"string"}
+        },
+        "required":["id","name","group","type"],
+        "additionalProperties":false
+    })
 }
 
 fn tool(name: &str, description: &str, input_schema: Value) -> Value {
@@ -924,24 +943,16 @@ fn execute_tool(
                 .ok_or((-32602, "stock is required".to_string()))?;
             let stock: StockRecord = serde_json::from_value(stock_value)
                 .map_err(|_| (-32602, "invalid stock".to_string()))?;
+            let category_id = optional_category_id(args)?;
             mutate(context, session.epoch, deadline, |data| {
-                if !data.stocks.iter().any(|item| item.id == stock.id) {
-                    data.stocks.insert(0, stock.clone());
-                }
-                let category_index = data
-                    .categories
-                    .iter()
-                    .position(|category| category.id == data.active_category_id)
-                    .or_else(|| (!data.categories.is_empty()).then_some(0))
-                    .ok_or("CATEGORY_REQUIRED")?;
-                let category = data
-                    .categories
-                    .get_mut(category_index)
-                    .ok_or("CATEGORY_REQUIRED")?;
-                if !category.stock_ids.contains(&stock.id) {
-                    category.stock_ids.insert(0, stock.id.clone());
-                }
-                Ok(())
+                add_stocks_to_category(data, vec![stock], category_id)
+            })
+        }
+        "add_stocks" => {
+            let stocks = parse_stocks_argument(args)?;
+            let category_id = optional_category_id(args)?;
+            mutate(context, session.epoch, deadline, |data| {
+                add_stocks_to_category(data, stocks, category_id)
             })
         }
         "remove_stock" => {
@@ -2402,6 +2413,93 @@ fn supertrend(
     (latest_value, latest_atr)
 }
 
+fn optional_category_id(args: &Value) -> Result<Option<&str>, (i64, String)> {
+    match args.get("categoryId") {
+        None => Ok(None),
+        Some(Value::String(id)) if !id.is_empty() => Ok(Some(id)),
+        _ => Err((-32602, "categoryId must be a non-empty string".to_string())),
+    }
+}
+
+fn parse_stocks_argument(args: &Value) -> Result<Vec<StockRecord>, (i64, String)> {
+    let values = args
+        .get("stocks")
+        .and_then(Value::as_array)
+        .filter(|stocks| !stocks.is_empty() && stocks.len() <= 300)
+        .ok_or((
+            -32602,
+            "stocks must be a non-empty array with at most 300 items".to_string(),
+        ))?;
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            serde_json::from_value(value.clone())
+                .map_err(|_| (-32602, format!("invalid stock at index {index}")))
+        })
+        .collect()
+}
+
+fn category_index_for_addition(
+    data: &AccountSnapshot,
+    category_id: Option<&str>,
+) -> Result<usize, String> {
+    match category_id {
+        Some(id) => data
+            .categories
+            .iter()
+            .position(|category| category.id == id)
+            .ok_or("CATEGORY_NOT_FOUND".to_string()),
+        None => data
+            .categories
+            .iter()
+            .position(|category| category.id == data.active_category_id)
+            .or_else(|| (!data.categories.is_empty()).then_some(0))
+            .ok_or("CATEGORY_REQUIRED".to_string()),
+    }
+}
+
+/// Apply one or more requested stocks as one snapshot mutation. The first
+/// record for each ID wins within the request; existing master metadata is
+/// deliberately retained. Only requested IDs absent from the target category
+/// are prepended in request order, so existing memberships are never moved.
+fn add_stocks_to_category(
+    data: &mut AccountSnapshot,
+    stocks: Vec<StockRecord>,
+    category_id: Option<&str>,
+) -> Result<(), String> {
+    let category_index = category_index_for_addition(data, category_id)?;
+    let mut requested_ids = HashSet::new();
+    let requested = stocks
+        .into_iter()
+        .filter(|stock| requested_ids.insert(stock.id.clone()))
+        .collect::<Vec<_>>();
+
+    let known_ids = data
+        .stocks
+        .iter()
+        .map(|stock| stock.id.as_str())
+        .collect::<HashSet<_>>();
+    let new_stocks = requested
+        .iter()
+        .filter(|stock| !known_ids.contains(stock.id.as_str()))
+        .cloned()
+        .collect::<Vec<_>>();
+    data.stocks.splice(0..0, new_stocks);
+
+    let category = data
+        .categories
+        .get_mut(category_index)
+        .ok_or("CATEGORY_REQUIRED")?;
+    let new_members = requested
+        .iter()
+        .filter(|stock| !category.stock_ids.contains(&stock.id))
+        .map(|stock| stock.id.clone())
+        .collect::<Vec<_>>();
+    category.stock_ids.splice(0..0, new_members);
+    Ok(())
+}
+
 fn string_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str, (i64, String)> {
     args.get(key)
         .and_then(Value::as_str)
@@ -2739,6 +2837,203 @@ mod tests {
             trimmed_category_name(" \t\n "),
             Err("name is required".to_string())
         );
+    }
+
+    fn test_stock(id: &str, name: &str) -> StockRecord {
+        StockRecord {
+            id: id.to_string(),
+            name: name.to_string(),
+            group: "TW".to_string(),
+            stock_type: "stock".to_string(),
+        }
+    }
+
+    fn test_snapshot() -> AccountSnapshot {
+        AccountSnapshot {
+            stocks: vec![],
+            categories: vec![
+                CategoryRecord {
+                    id: "active".to_string(),
+                    name: "Active".to_string(),
+                    stock_ids: vec![],
+                },
+                CategoryRecord {
+                    id: "target".to_string(),
+                    name: "Target".to_string(),
+                    stock_ids: vec![],
+                },
+            ],
+            active_category_id: "active".to_string(),
+            pinned_category_ids: vec![],
+            recent_category_ids: vec![],
+            indicator_settings: default_indicator_settings(),
+        }
+    }
+
+    #[test]
+    fn add_stock_schemas_expose_an_optional_category_and_bounded_batch() {
+        let tools = tool_definitions();
+        assert_eq!(tools.len(), 17);
+        let add_stock = tools
+            .iter()
+            .find(|tool| tool["name"] == "add_stock")
+            .expect("add_stock schema");
+        let add_stocks = tools
+            .iter()
+            .find(|tool| tool["name"] == "add_stocks")
+            .expect("add_stocks schema");
+
+        assert_eq!(add_stock["inputSchema"]["additionalProperties"], false);
+        assert_eq!(
+            add_stock["inputSchema"]["properties"]["categoryId"]["type"],
+            "string"
+        );
+        assert_eq!(
+            add_stock["inputSchema"]["properties"]["stock"]["additionalProperties"],
+            false
+        );
+        assert_eq!(add_stocks["inputSchema"]["additionalProperties"], false);
+        assert_eq!(
+            add_stocks["inputSchema"]["properties"]["stocks"]["minItems"],
+            1
+        );
+        assert_eq!(
+            add_stocks["inputSchema"]["properties"]["stocks"]["maxItems"],
+            300
+        );
+        assert_eq!(
+            add_stocks["inputSchema"]["properties"]["stocks"]["items"]["additionalProperties"],
+            false
+        );
+    }
+
+    #[test]
+    fn batch_arguments_require_a_non_empty_bounded_stock_array() {
+        assert!(matches!(
+            parse_stocks_argument(&json!({})),
+            Err((-32602, message)) if message == "stocks must be a non-empty array with at most 300 items"
+        ));
+        assert!(matches!(
+            parse_stocks_argument(&json!({"stocks":[]})),
+            Err((-32602, message)) if message == "stocks must be a non-empty array with at most 300 items"
+        ));
+        assert!(matches!(
+            parse_stocks_argument(&json!({"stocks":[{"id":"2330"}]})),
+            Err((-32602, message)) if message == "invalid stock at index 0"
+        ));
+        assert!(matches!(
+            optional_category_id(&json!({"categoryId":false})),
+            Err((-32602, message)) if message == "categoryId must be a non-empty string"
+        ));
+    }
+
+    #[test]
+    fn additions_target_explicit_or_fallback_categories_without_changing_active() {
+        let mut explicit = test_snapshot();
+        add_stocks_to_category(
+            &mut explicit,
+            vec![test_stock("2330", "TSMC")],
+            Some("target"),
+        )
+        .expect("explicit category");
+        assert_eq!(explicit.active_category_id, "active");
+        assert!(explicit.categories[0].stock_ids.is_empty());
+        assert_eq!(explicit.categories[1].stock_ids, ["2330"]);
+
+        let mut fallback = test_snapshot();
+        fallback.active_category_id = "missing".to_string();
+        add_stocks_to_category(&mut fallback, vec![test_stock("2454", "MediaTek")], None)
+            .expect("first category fallback");
+        assert_eq!(fallback.categories[0].stock_ids, ["2454"]);
+
+        let before = fallback.clone();
+        assert_eq!(
+            add_stocks_to_category(
+                &mut fallback,
+                vec![test_stock("2317", "Hon Hai")],
+                Some("missing"),
+            ),
+            Err("CATEGORY_NOT_FOUND".to_string())
+        );
+        assert_eq!(fallback, before);
+
+        let mut no_categories = empty_account_snapshot();
+        assert_eq!(
+            add_stocks_to_category(&mut no_categories, vec![test_stock("2330", "TSMC")], None,),
+            Err("CATEGORY_REQUIRED".to_string())
+        );
+    }
+
+    #[test]
+    fn batch_additions_dedupe_in_request_order_and_preserve_existing_metadata() {
+        let mut snapshot = test_snapshot();
+        snapshot.stocks = vec![
+            test_stock("existing-target", "Original target metadata"),
+            test_stock("existing-master", "Original master metadata"),
+            test_stock("base", "Base"),
+        ];
+        snapshot.categories[1].stock_ids = vec!["base".to_string(), "existing-target".to_string()];
+
+        add_stocks_to_category(
+            &mut snapshot,
+            vec![
+                test_stock("existing-target", "Attempted target overwrite"),
+                test_stock("new-a", "First new"),
+                test_stock("existing-master", "Attempted master overwrite"),
+                test_stock("new-b", "Second new"),
+                test_stock("new-a", "Ignored duplicate"),
+            ],
+            Some("target"),
+        )
+        .expect("batch apply");
+
+        assert_eq!(
+            snapshot
+                .stocks
+                .iter()
+                .map(|stock| stock.id.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "new-a",
+                "new-b",
+                "existing-target",
+                "existing-master",
+                "base"
+            ]
+        );
+        assert_eq!(snapshot.stocks[2].name, "Original target metadata");
+        assert_eq!(snapshot.stocks[3].name, "Original master metadata");
+        assert_eq!(
+            snapshot.categories[1].stock_ids,
+            [
+                "new-a",
+                "existing-master",
+                "new-b",
+                "base",
+                "existing-target"
+            ]
+        );
+    }
+
+    #[test]
+    fn adding_an_existing_target_member_is_a_strict_no_op() {
+        let mut snapshot = test_snapshot();
+        snapshot.stocks = vec![
+            test_stock("2330", "TSMC"),
+            test_stock("target-stock", "Target stock"),
+        ];
+        snapshot.categories[0].stock_ids = vec!["2330".to_string()];
+        snapshot.categories[1].stock_ids = vec!["target-stock".to_string()];
+        let before = snapshot.clone();
+
+        add_stocks_to_category(
+            &mut snapshot,
+            vec![test_stock("2330", "Attempted overwrite")],
+            Some("active"),
+        )
+        .expect("existing member is valid");
+
+        assert_eq!(snapshot, before);
     }
 
     #[test]

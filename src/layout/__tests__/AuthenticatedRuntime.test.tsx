@@ -11,11 +11,21 @@ const runtimeSpies = vi.hoisted(() => ({
   deleteLegacySettings: vi.fn(),
   toggleDebug: vi.fn(),
   watchMarket: vi.fn(),
+  nativeRuntime: false,
+  nativeSessionError: null as string | null,
+  retryNativeSession: vi.fn(),
+  resolveCloudBackupConflict: vi.fn(),
   syncState: {
     syncStatus: "local",
     syncError: null as string | null,
     legacySettingsPrompt: false,
     legacySettingsError: null as string | null,
+    cloudBackupConflict: null as null | {
+      cloudSnapshot: Record<string, unknown>;
+      cloudUpdatedAt: string | null;
+      localChangedAt: string | null;
+      source: "startup" | "enable";
+    },
   },
 }));
 
@@ -31,6 +41,7 @@ vi.mock("../../store/Stock.store", () => ({
     reload: runtimeSpies.reload,
     keepLegacySettings: runtimeSpies.keepLegacySettings,
     deleteLegacySettings: runtimeSpies.deleteLegacySettings,
+    resolveCloudBackupConflict: runtimeSpies.resolveCloudBackupConflict,
     applyIndicatorSettings: vi.fn(),
     accountUserId: null,
     accountEpoch: null,
@@ -41,8 +52,22 @@ vi.mock("../../store/debug.store", () => ({
     getState: () => ({ toggleVisibility: runtimeSpies.toggleDebug }),
   },
 }));
+vi.mock("../../account/native", () => ({
+  isNativeRuntime: () => runtimeSpies.nativeRuntime,
+  getNativeIndicatorSettings: vi.fn(),
+}));
+vi.mock("../../context/UserContext", () => ({
+  useOptionalUser: () => ({
+    nativeSessionError: runtimeSpies.nativeSessionError,
+    retryNativeSession: runtimeSpies.retryNativeSession,
+  }),
+}));
 vi.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en", resolvedLanguage: "en" } }),
+  useTranslation: () => ({
+    t: (key: string, options?: { error?: string }) =>
+      options?.error ? `${key}:${options.error}` : key,
+    i18n: { language: "en", resolvedLanguage: "en" },
+  }),
 }));
 
 import AuthenticatedRuntime from "../AuthenticatedRuntime";
@@ -64,11 +89,16 @@ describe("AuthenticatedRuntime", () => {
     runtimeSpies.deleteLegacySettings.mockReset().mockResolvedValue(undefined);
     runtimeSpies.toggleDebug.mockReset();
     runtimeSpies.watchMarket.mockReset();
+    runtimeSpies.nativeRuntime = false;
+    runtimeSpies.nativeSessionError = null;
+    runtimeSpies.retryNativeSession.mockReset();
+    runtimeSpies.resolveCloudBackupConflict.mockReset().mockResolvedValue(undefined);
     Object.assign(runtimeSpies.syncState, {
       syncStatus: "local",
       syncError: null,
       legacySettingsPrompt: false,
       legacySettingsError: null,
+      cloudBackupConflict: null,
     });
   });
 
@@ -118,13 +148,56 @@ describe("AuthenticatedRuntime", () => {
     view.unmount();
   });
 
-  it("shows a retryable sync error", async () => {
+  it("does not surface a cloud sync error globally", async () => {
     Object.assign(runtimeSpies.syncState, { syncStatus: "error", syncError: "CLOUD_UNAVAILABLE" });
     const view = renderRuntime();
 
-    expect(screen.getByTestId("account-sync-inline-notice")).toBeTruthy();
+    expect(screen.queryByTestId("account-sync-inline-notice")).toBeNull();
+    expect(runtimeSpies.reload).toHaveBeenCalledTimes(1);
+    view.unmount();
+  });
+
+  it("blocks dismissal until the user chooses local or cloud data", async () => {
+    Object.assign(runtimeSpies.syncState, {
+      cloudBackupConflict: {
+        cloudSnapshot: {},
+        cloudUpdatedAt: "2026-10-11T02:00:00.000Z",
+        localChangedAt: "2026-10-11T01:00:00.000Z",
+        source: "startup",
+      },
+    });
+    renderRuntime();
+
+    const dialog = screen.getByRole("dialog");
+    fireEvent.keyDown(dialog, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "accountSync.useLocalData" }));
+    await waitFor(() => expect(runtimeSpies.resolveCloudBackupConflict).toHaveBeenCalledWith("local"));
+  });
+
+  it("shows only a safe native session code and retries the native session", async () => {
+    runtimeSpies.nativeRuntime = true;
+    runtimeSpies.nativeSessionError = "STALE_SESSION_TRANSITION";
+    const view = renderRuntime();
+
+    expect(screen.getByTestId("account-sync-inline-notice").textContent).toContain(
+      "accountSync.nativeError:STALE_SESSION_TRANSITION",
+    );
     fireEvent.click(screen.getByRole("button", { name: "accountSync.retry" }));
-    await waitFor(() => expect(runtimeSpies.reload).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(runtimeSpies.retryNativeSession).toHaveBeenCalledTimes(1));
+    view.unmount();
+  });
+
+  it("does not expose an arbitrary native session error", () => {
+    runtimeSpies.nativeRuntime = true;
+    runtimeSpies.nativeSessionError = "token=private C:\\Users\\secret";
+    const view = renderRuntime();
+
+    const notice = screen.getByTestId("account-sync-inline-notice");
+    expect(notice.textContent).toContain(
+      "accountSync.nativeError:UNKNOWN_NATIVE_SESSION_ERROR",
+    );
+    expect(notice.textContent).not.toContain("token=private");
     view.unmount();
   });
 });

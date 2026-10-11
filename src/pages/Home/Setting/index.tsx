@@ -2,6 +2,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import ChartIcon from "@mui/icons-material/BarChart";
 import BugReportIcon from "@mui/icons-material/BugReport";
 import DownloadIcon from "@mui/icons-material/CloudDownload";
+import BackupIcon from "@mui/icons-material/CloudUpload";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import TopIcon from "@mui/icons-material/Layers";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -22,13 +23,15 @@ import {
   Typography,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { useUser } from "../../../context/UserContext";
 import useDownloadStocks from "../../../hooks/useDownloadStocks";
 import useDebugStore from "../../../store/debug.store";
 import useUIStore from "../../../store/UI.store";
+import useStocksStore from "../../../store/Stock.store";
+import { CLOUD_BACKUP_MAX_BYTES, cloudBackupPayloadBytes } from "../../../account/cloudBackup";
 import IndicatorSettingsSection from "./IndicatorSettingsSection";
 // Important: Make sure this path is correct or hardcode the version
 import pkg from "../../../../package.json";
@@ -405,6 +408,14 @@ function Setting() {
   const navigate = useNavigate();
   const stockBoxChartType = useUIStore((state) => state.stockBoxChartType);
   const setStockBoxChartType = useUIStore((state) => state.setStockBoxChartType);
+  const cloudBackupEnabled = useStocksStore((state) => state.cloudBackupEnabled);
+  const cloudBackupLastSuccessAt = useStocksStore((state) => state.cloudBackupLastSuccessAt);
+  const cloudBackupChecking = useStocksStore((state) => state.cloudBackupChecking);
+  const cloudBackupConflict = useStocksStore((state) => state.cloudBackupConflict);
+  const stocks = useStocksStore((state) => state.stocks);
+  const categories = useStocksStore((state) => state.categories);
+  const accountHydrated = useStocksStore((state) => state.hydrated);
+  const setCloudBackupEnabled = useStocksStore((state) => state.setCloudBackupEnabled);
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
@@ -453,6 +464,20 @@ function Setting() {
     },
     [],
   );
+
+  const handleCloudBackupChange = useCallback((checked: boolean) => {
+    void setCloudBackupEnabled(checked).catch(() => undefined);
+  }, [setCloudBackupEnabled]);
+
+  const backupBytes = useMemo(
+    () => cloudBackupPayloadBytes({ stocks, categories }),
+    [stocks, categories],
+  );
+  const backupOverLimit = backupBytes > CLOUD_BACKUP_MAX_BYTES;
+
+  const lastBackupLabel = cloudBackupLastSuccessAt
+    ? new Intl.DateTimeFormat(i18n.resolvedLanguage?.startsWith("zh") ? "zh-TW" : "en", { dateStyle: "medium", timeStyle: "short" }).format(new Date(cloudBackupLastSuccessAt))
+    : t("settings.cloudBackupNever");
 
   const activeLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith("zh") ? "zh-TW" : "en";
 
@@ -659,6 +684,30 @@ function Setting() {
                     sx={SwitchStyles}
                   />
                 </SettingRow>
+                <Stack spacing={1}>
+                  <SettingRow>
+                    <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.blue }} aria-hidden="true">
+                      <BackupIcon fontSize="small" />
+                    </SectionIcon>
+                    <SettingRowText
+                      title={t("settings.cloudBackup")}
+                      hint={t(cloudBackupEnabled ? "settings.cloudBackupEnabledHint" : "settings.cloudBackupDisabledHint", { lastBackup: lastBackupLabel })}
+                    />
+                    {cloudBackupChecking ? <CircularProgress size={22} aria-label={t("settings.cloudBackupChecking")} /> : null}
+                    <Switch
+                      checked={cloudBackupEnabled}
+                      disabled={!accountHydrated || cloudBackupChecking || Boolean(cloudBackupConflict) || (backupOverLimit && !cloudBackupEnabled)}
+                      onChange={(event) => handleCloudBackupChange(event.target.checked)}
+                      slotProps={{ input: { "aria-label": t("settings.cloudBackup") } }}
+                      sx={SwitchStyles}
+                    />
+                  </SettingRow>
+                  {backupOverLimit ? (
+                    <Alert severity="warning" role="alert">
+                      {t("settings.cloudBackupSizeLimit", { bytes: backupBytes, limit: CLOUD_BACKUP_MAX_BYTES })}
+                    </Alert>
+                  ) : null}
+                </Stack>
               </Stack>
             </DisclosureCard>
 

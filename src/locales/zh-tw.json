@@ -4,12 +4,19 @@
   "accountSync": {
     "retry": "重新載入",
     "error": "帳號資料同步失敗：{{error}}",
-    "nativeError": "App 無法連線目前帳號，請重試。",
+    "nativeError": "App 無法連線目前帳號，請重試。診斷碼：{{error}}。",
     "legacySettingsTitle": "發現舊設定檔",
     "legacySettingsMessage": "此版本之後不再使用舊的 settings.json。你可以保留它作為備份，或刪除整個舊檔案。",
     "keepLegacySettings": "保留舊檔",
     "deleteLegacySettings": "刪除舊檔",
-    "legacySettingsDeleteFailed": "舊檔案刪除失敗（{{error}}），請重試或選擇保留。"
+    "legacySettingsDeleteFailed": "舊檔案刪除失敗（{{error}}），請重試或選擇保留。",
+    "cloudConflictTitle": "選擇要保留的追蹤清單",
+    "cloudConflictMessage": "這台裝置與雲端的追蹤清單不同。選擇其中一份後才會繼續雲端備份。",
+    "localChangedAt": "本機變更時間：{{time}}",
+    "cloudChangedAt": "雲端變更時間：{{time}}",
+    "backupTimeUnknown": "未知",
+    "useLocalData": "使用本機資料",
+    "useCloudData": "使用雲端資料"
   },
   "a11y": {
     "switchLanguage": "切換語言為{{language}}",
@@ -62,7 +69,7 @@
     "desktopOnly": "MCP 設定只在桌面 App 執行時提供。請先啟動 App 並登入，再複製用戶端設定。",
     "tools": {
       "title": "可用工具",
-      "description": "本機 Gateway 提供 16 個受限工具。讀取工具可檢視帳戶與市場資料；管理工具可變更自選資料或技術指標設定。",
+      "description": "本機 Gateway 提供 17 個受限工具。讀取工具可檢視帳戶與市場資料；管理工具可變更自選資料或技術指標設定。",
       "read": {
         "title": "讀取與查詢",
         "description": "檢視連線狀態、自選清單、市場資料與分析結果，不會變更已儲存的帳戶資料。",
@@ -81,7 +88,8 @@
         "get_technical_indicators": "依帳戶設定讀取技術指標。",
         "get_chip_analysis": "讀取台股法人與融資融券分析。",
         "get_analysis_snapshot": "讀取追蹤股票的一份受限分析快照。",
-        "add_stock": "將股票加入目前作用中的分類。",
+        "add_stock": "將股票加入指定分類；省略時加入目前作用中的分類。",
+        "add_stocks": "以單次原子操作將多檔股票加入指定分類。",
         "remove_stock": "從帳戶與所有分類移除股票。",
         "create_category": "建立自選分類。",
         "rename_category": "重新命名自選分類。",
@@ -219,6 +227,12 @@
     "updateStocksHint": "手動觸發台股資料庫更新",
     "update": "更新",
     "updating": "更新中",
+    "cloudBackup": "雲端備份",
+    "cloudBackupEnabledHint": "本機變更準備完成後會備份此帳號的追蹤清單。上次備份：{{lastBackup}}。",
+    "cloudBackupDisabledHint": "此帳號資料僅保留在這台裝置。上次備份：{{lastBackup}}。",
+    "cloudBackupNever": "尚未備份",
+    "cloudBackupChecking": "正在比較本機與雲端資料",
+    "cloudBackupSizeLimit": "目前追蹤清單為 {{bytes}} bytes，超過 {{limit}} bytes 雲端備份上限。請移除部分資料後再試。",
     "alwaysOnTop": "視窗置頂",
     "alwaysOnTopHint": "保持視窗顯示在最前方",
     "cardChart": "卡片圖表顯示",

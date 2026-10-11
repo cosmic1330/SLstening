@@ -48,4 +48,4 @@ Choose a boundary from data lifetime and ownership; do not merge stores merely b
 
 ## Local-first cloud outbox
 
-Account snapshots are durable locally before cloud synchronization. The per-account dirty marker prevents stale pulls from replacing unsynced edits, and cloud writes run FIFO with last-generation status guards.
+Account snapshots are durable locally before cloud synchronization. The per-account dirty marker prevents stale pulls from replacing unsynced edits. Cloud backup is account-scoped and enabled by default; local metadata records the switch, last successful backup, and last cloud-represented local change. A 30-second runtime-only start-to-start gate drops overlapping or early attempts without scheduling a retry. Disabling backup stops new cloud reads and writes, never deletes cloud data, and never blocks local edits.

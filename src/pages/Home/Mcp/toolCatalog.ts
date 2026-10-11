@@ -15,6 +15,7 @@ export const MCP_TOOL_GROUPS = [
     id: "manage",
     tools: [
       "add_stock",
+      "add_stocks",
       "remove_stock",
       "create_category",
       "rename_category",

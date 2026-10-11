@@ -4,12 +4,19 @@
   "accountSync": {
     "retry": "Reload",
     "error": "Account sync failed: {{error}}",
-    "nativeError": "The app could not connect this account. Try again.",
+    "nativeError": "The app could not connect this account. Try again. Diagnostic code: {{error}}.",
     "legacySettingsTitle": "Old settings file found",
     "legacySettingsMessage": "This version no longer uses the old settings.json file. Choose whether to keep it as a backup or delete it.",
     "keepLegacySettings": "Keep old file",
     "deleteLegacySettings": "Delete old file",
-    "legacySettingsDeleteFailed": "The old file could not be deleted ({{error}}). Try again or keep the file."
+    "legacySettingsDeleteFailed": "The old file could not be deleted ({{error}}). Try again or keep the file.",
+    "cloudConflictTitle": "Choose which watchlist to keep",
+    "cloudConflictMessage": "This device and the cloud have different watchlists. Choose one before cloud backup continues.",
+    "localChangedAt": "Local change: {{time}}",
+    "cloudChangedAt": "Cloud change: {{time}}",
+    "backupTimeUnknown": "Unknown",
+    "useLocalData": "Use local data",
+    "useCloudData": "Use cloud data"
   },
   "a11y": {
     "switchLanguage": "Switch language to {{language}}",
@@ -62,7 +69,7 @@
     "desktopOnly": "MCP setup is available while the desktop App is running. Start the App and sign in before copying a client configuration.",
     "tools": {
       "title": "Available tools",
-      "description": "This local gateway exposes 16 bounded tools. Read tools inspect account and market data; manage tools change your tracked data or indicator settings.",
+      "description": "This local gateway exposes 17 bounded tools. Read tools inspect account and market data; manage tools change your tracked data or indicator settings.",
       "read": {
         "title": "Read and query",
         "description": "Inspect session context, watchlists, market data, and analysis without changing saved account data.",
@@ -81,7 +88,8 @@
         "get_technical_indicators": "Read technical indicators using your account settings.",
         "get_chip_analysis": "Read Taiwan institutional and margin analysis.",
         "get_analysis_snapshot": "Read one bounded analysis snapshot for tracked stocks.",
-        "add_stock": "Add a stock to the active category.",
+        "add_stock": "Add a stock to a specified category, or the active category when omitted.",
+        "add_stocks": "Atomically add multiple stocks to a specified category.",
         "remove_stock": "Remove a stock from your account and categories.",
         "create_category": "Create a watchlist category.",
         "rename_category": "Rename a watchlist category.",
@@ -219,6 +227,12 @@
     "updateStocksHint": "Manually refresh the Taiwan stock database",
     "update": "Update",
     "updating": "Updating",
+    "cloudBackup": "Cloud backup",
+    "cloudBackupEnabledHint": "Back up this account's watchlist when local changes are ready. Last backup: {{lastBackup}}.",
+    "cloudBackupDisabledHint": "Keep this account on this device only. Last backup: {{lastBackup}}.",
+    "cloudBackupNever": "Never backed up",
+    "cloudBackupChecking": "Comparing local and cloud data",
+    "cloudBackupSizeLimit": "This watchlist is {{bytes}} bytes, above the {{limit}}-byte cloud backup limit. Remove some data, then try again.",
     "alwaysOnTop": "Always on top",
     "alwaysOnTopHint": "Keep the window above other windows",
     "cardChart": "Card chart",

@@ -54,12 +54,14 @@ describe("MarketDataStatus", () => {
       </div>,
     );
 
-    expect(screen.getByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getByText("Refreshing…")).toBeTruthy();
     expect(screen.getByText("Update failed. Showing the last available data.")).toBeTruthy();
+    expect(screen.getByLabelText("Update failed. Showing the last available data.")).toBeTruthy();
     expect(screen.queryByText("Market closed")).toBeNull();
     expect(screen.queryByText(/Updated/)).toBeNull();
-    expect(getComputedStyle(screen.getByRole("alert")).zIndex).toBe("30");
+    expect(getComputedStyle(screen.getByRole("status")).zIndex).toBe("30");
 
     expect(screen.getByRole("progressbar", { name: "Loading market data…" })).toBeTruthy();
     const retryButton = screen.getByRole("button", { name: "Retry" });
@@ -91,6 +93,7 @@ describe("MarketDataStatus", () => {
 
     view.rerender(<MarketDataStatus state={state({ phase: "error", freshness: "unknown", error: new Error("offline") })} retry={vi.fn()} />);
     expect(screen.getByRole("alert").textContent).toContain("Market data could not be updated.");
+    expect(screen.getByLabelText("Market data could not be updated.")).toBeTruthy();
   });
 
   it("retries an empty resource without propagating the click", () => {

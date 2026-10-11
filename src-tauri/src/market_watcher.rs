@@ -483,8 +483,20 @@ impl MarketManager {
 
     /// 標記進入冷卻期
     pub fn enter_cooldown(&self) {
-        if let Ok(mut last) = self.last_blocked_at.lock() {
-            *last = Some(std::time::Instant::now());
+        let now = std::time::Instant::now();
+        let entered_new_episode = self
+            .last_blocked_at
+            .lock()
+            .map(|mut last| {
+                let entered_new_episode = last
+                    .map(|previous| previous.elapsed() >= Duration::from_secs(300))
+                    .unwrap_or(true);
+                *last = Some(now);
+                entered_new_episode
+            })
+            .unwrap_or(false);
+        if entered_new_episode {
+            log::warn!("Yahoo provider entered cooldown for 300 seconds");
         }
     }
 
@@ -1053,7 +1065,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
 
             // 檢查是否處於熔斷冷卻期
             if manager_clone.is_in_cooldown() {
-                log::warn!("System is in cooldown, skipping update cycle...");
+                log::debug!("System is in cooldown, skipping update cycle...");
                 continue;
             }
 
@@ -1091,7 +1103,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 let sym = symbol.clone();
 
                 tauri::async_runtime::spawn(async move {
-                    log::info!("Updating market index: {}", sym);
+                    log::debug!("Updating market index: {}", sym);
                     match m.fetch_ticks_gated(&[sym.clone()]).await {
                         Ok(ticks) => {
                             for tick in ticks {
@@ -1116,7 +1128,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
                 let m = Arc::clone(&manager_clone);
 
                 tauri::async_runtime::spawn(async move {
-                    log::info!(
+                    log::debug!(
                         "Fetching batch of {} symbols: {:?}",
                         symbols_to_fetch.len(),
                         symbols_to_fetch

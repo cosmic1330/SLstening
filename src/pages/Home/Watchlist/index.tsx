@@ -149,7 +149,7 @@ export default function Watchlist() {
           autoHideDuration={6000}
           onClose={() => setBlocked(false)}
         >
-          <Alert severity="error" sx={{ borderRadius: WATCHLIST_RADIUS }}>{t("home.yahooRateLimited")}</Alert>
+          <Alert severity="warning" sx={{ borderRadius: WATCHLIST_RADIUS }}>{t("home.yahooRateLimited")}</Alert>
         </Snackbar>
       </Box>
     </ThemeProvider>

@@ -4,6 +4,10 @@ import { exchangeOAuthCallback, removeLegacyPasswordStorage, safeAuthErrorMessag
 import { useTauriOAuthCallback } from "../auth/useTauriOAuthCallback";
 import { supabase } from "../supabase";
 import { clearNativeSession, establishNativeSession, invalidateNativeSession, isNativeRuntime } from "../account/native";
+import {
+  nextSessionTransition,
+  sanitizeNativeSessionError,
+} from "../account/sessionTransition";
 import useStocksStore from "../store/Stock.store";
 
 type OAuthCallbackStatus = "idle" | "processing" | "error";
@@ -127,12 +131,15 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   useTauriOAuthCallback(handleOAuthUrl);
 
-  const sessionTransition = useRef(0);
+  // A new WebView must not restart at zero while the native AccountManager
+  // remains alive with a larger transition from before the reload.
+  const sessionTransition = useRef(nextSessionTransition(0));
   const previousUserId = useRef<string | null>(null);
   const retryNativeSession = useCallback(() => {
     // Keep the error visible until the new native session has been
     // established. This lets AccountSyncNotice remain actionable while the
     // retry is in flight.
+    sessionTransition.current = nextSessionTransition(sessionTransition.current);
     setNativeSessionRetry((attempt) => attempt + 1);
   }, []);
 
@@ -142,7 +149,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     const userChanged = previousUserId.current !== userId;
     previousUserId.current = userId;
     if (userChanged) {
-      sessionTransition.current += 1;
+      sessionTransition.current = nextSessionTransition(
+        sessionTransition.current,
+      );
       setNativeSessionError(null);
       void useStocksStore.getState().clearAccountProjection();
     }
@@ -183,20 +192,26 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         if (sessionTransition.current === transition) {
           console.error("Failed to establish native account session", error);
-          const message = error instanceof Error ? error.message : String(error);
+          const code = sanitizeNativeSessionError(error);
           try { await invalidateNativeSession(transition); } catch (invalidationError) {
             console.error("Failed to invalidate native account session", invalidationError);
           }
-          await useStocksStore.getState().clearAccountProjection();
-          useStocksStore.getState().setAccountSyncError(message);
-          setNativeSessionError(message);
+          if (sessionTransition.current !== transition) return;
+          await useStocksStore
+            .getState()
+            .clearAccountProjectionIfCurrentUser(session.user.id);
+          if (sessionTransition.current !== transition) return;
+          useStocksStore.getState().setAccountSyncError(code);
+          setNativeSessionError(code);
         }
       }
     })();
     return userChanged || nativeSessionRetry > 0 ? () => {
       // Incrementing before the next effect body prevents a delayed token
       // verification or hydration from publishing into the next account.
-      sessionTransition.current += 1;
+      sessionTransition.current = nextSessionTransition(
+        sessionTransition.current,
+      );
     } : undefined;
   }, [session?.access_token, session?.expires_at, session?.user.id, nativeSessionRetry]);
 

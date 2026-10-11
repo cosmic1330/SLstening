@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Outlet } from "react-router";
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import useMarketWatcher from "../hooks/useMarketWatcher";
 import useStocksStore from "../store/Stock.store";
 import useDebugStore from "../store/debug.store";
 import { getNativeIndicatorSettings, isNativeRuntime } from "../account/native";
+import { sanitizeNativeSessionError } from "../account/sessionTransition";
 import type { IndicatorSettings } from "../account/types";
 import { useOptionalUser } from "../context/UserContext";
 
@@ -14,20 +15,20 @@ function AccountSyncNotice() {
   const { t } = useTranslation();
   const user = useOptionalUser();
   const nativeSessionError = user?.nativeSessionError ?? null;
+  const nativeErrorCode = nativeSessionError
+    ? sanitizeNativeSessionError(nativeSessionError)
+    : null;
   const retryNativeSession = user?.retryNativeSession ?? (() => undefined);
-  const syncStatus = useStocksStore((state) => state.syncStatus);
-  const syncError = useStocksStore((state) => state.syncError);
-  const reload = useStocksStore((state) => state.reload);
-  const nativeRetry = isNativeRuntime() && Boolean(nativeSessionError);
-  if (!nativeRetry && syncStatus !== "error") return null;
+  const nativeRetry = isNativeRuntime() && Boolean(nativeErrorCode);
+  if (!nativeRetry) return null;
   const retry = () => {
-    try { void Promise.resolve(nativeRetry ? retryNativeSession() : reload()).catch(() => undefined); } catch { /* visible state owns the error */ }
+    try { void Promise.resolve(retryNativeSession()).catch(() => undefined); } catch { /* visible state owns the error */ }
   };
   return (
     <Box data-testid="account-sync-inline-notice" sx={{ width: "100%", maxWidth: 640, mx: "auto", px: 1, pt: 1 }}>
       <Alert severity="error" sx={{ alignItems: "flex-start" }}>
         <Box sx={{ width: "100%" }}>
-          <Typography>{nativeRetry ? t("accountSync.nativeError", { error: nativeSessionError }) : t("accountSync.error", { error: syncError ?? "UNKNOWN_ERROR" })}</Typography>
+          <Typography>{t("accountSync.nativeError", { error: nativeErrorCode })}</Typography>
           <Button color="inherit" size="small" onClick={retry} aria-label={t("accountSync.retry")}>{t("accountSync.retry")}</Button>
         </Box>
       </Alert>
@@ -54,6 +55,47 @@ function LegacySettingsDialog() {
       <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
         <Button onClick={() => run(keep)} aria-label={t("accountSync.keepLegacySettings")}>{t("accountSync.keepLegacySettings")}</Button>
         <Button color="error" onClick={() => run(remove)} aria-label={t("accountSync.deleteLegacySettings")}>{t("accountSync.deleteLegacySettings")}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function CloudBackupConflictDialog() {
+  const { t, i18n } = useTranslation();
+  const conflict = useStocksStore((state) => state.cloudBackupConflict);
+  const resolve = useStocksStore((state) => state.resolveCloudBackupConflict);
+  const [resolving, setResolving] = useState<"local" | "cloud" | null>(null);
+  const locale = i18n.resolvedLanguage?.toLowerCase().startsWith("zh") ? "zh-TW" : "en";
+  const formatTime = (value: string | null | undefined) => {
+    if (!value || Number.isNaN(Date.parse(value))) return t("accountSync.backupTimeUnknown");
+    return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  };
+  const choose = (choice: "local" | "cloud") => {
+    setResolving(choice);
+    void resolve(choice).catch(() => undefined).finally(() => setResolving(null));
+  };
+
+  return (
+    <Dialog
+      open={Boolean(conflict)}
+      fullWidth
+      maxWidth="xs"
+      disableEscapeKeyDown
+      onClose={() => undefined}
+      aria-labelledby="cloud-backup-conflict-title"
+      aria-describedby="cloud-backup-conflict-description"
+    >
+      <DialogTitle id="cloud-backup-conflict-title">{t("accountSync.cloudConflictTitle")}</DialogTitle>
+      <DialogContent dividers>
+        <Typography id="cloud-backup-conflict-description">{t("accountSync.cloudConflictMessage")}</Typography>
+        <Box sx={{ mt: 2, display: "grid", gap: 1 }}>
+          <Typography variant="body2">{t("accountSync.localChangedAt", { time: formatTime(conflict?.localChangedAt) })}</Typography>
+          <Typography variant="body2">{t("accountSync.cloudChangedAt", { time: formatTime(conflict?.cloudUpdatedAt) })}</Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
+        <Button disabled={resolving !== null} onClick={() => choose("local")}>{t("accountSync.useLocalData")}</Button>
+        <Button disabled={resolving !== null} variant="contained" onClick={() => choose("cloud")}>{t("accountSync.useCloudData")}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -103,5 +145,5 @@ export default function AuthenticatedRuntime() {
     return () => { disposed = true; window.removeEventListener("keydown", handleKeyDown); unlisten?.(); };
   }, [reload]);
 
-  return <><AccountSyncNotice /><LegacySettingsDialog /><Outlet /><DebugInfo /></>;
+  return <><AccountSyncNotice /><CloudBackupConflictDialog /><LegacySettingsDialog /><Outlet /><DebugInfo /></>;
 }

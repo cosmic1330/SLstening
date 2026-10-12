@@ -8,10 +8,15 @@ import useMarketWatcher from "../useMarketWatcher";
 
 const listenMock = vi.hoisted(() => vi.fn());
 const unlistenMock = vi.hoisted(() => vi.fn());
+const frontendSubscriberCountMock = vi.hoisted(() => vi.fn());
 let marketUpdateHandler: ((event: any) => void) | undefined;
 
 vi.mock("@tauri-apps/api/event", () => ({
   listen: listenMock,
+}));
+
+vi.mock("../useMarketSubscriber", () => ({
+  getFrontendSubscriberCount: frontendSubscriberCountMock,
 }));
 
 describe("useMarketWatcher", () => {
@@ -23,6 +28,7 @@ describe("useMarketWatcher", () => {
       ticks: new Map(),
       tickUpdatedAt: new Map(),
     });
+    frontendSubscriberCountMock.mockReturnValue(1);
 
     listenMock.mockImplementation(
       (_eventName: string, handler: (event: any) => void) => {
@@ -98,6 +104,56 @@ describe("useMarketWatcher", () => {
     });
 
     expect(unlistenMock).toHaveBeenCalledOnce();
+  });
+
+  it("ignores delayed native ticks after the final frontend subscriber leaves", async () => {
+    const { unmount } = renderHook(() => useMarketWatcher());
+
+    await waitFor(() => {
+      expect(listenMock).toHaveBeenCalledOnce();
+    });
+
+    useMarketDataStore.getState().updateTick({
+      id: "2330", name: "台積電", price: 999, changePercent: 0, ts: 1,
+      closes: [], avgPrices: [], previousClose: 999, timestamps: [],
+    });
+    useMarketDataStore.getState().clearTick("2330");
+    frontendSubscriberCountMock.mockReturnValue(0);
+
+    act(() => {
+      marketUpdateHandler?.({
+        payload: {
+          type: "Tick",
+          payload: { id: "2330", price: 1_001 },
+        },
+      });
+    });
+
+    expect(useMarketDataStore.getState().getTick("2330")).toBeUndefined();
+    unmount();
+  });
+
+  it("writes an event while a frontend subscriber still owns the symbol", async () => {
+    renderHook(() => useMarketWatcher());
+
+    await waitFor(() => {
+      expect(listenMock).toHaveBeenCalledOnce();
+    });
+    frontendSubscriberCountMock.mockReturnValue(1);
+
+    act(() => {
+      marketUpdateHandler?.({
+        payload: {
+          type: "Tick",
+          payload: {
+            id: "2330", price: 1_000, change_percent: 2.5, refreshed_ts: 1,
+            closes: [], avg_prices: [], previous_close: 975, timestamps: [],
+          },
+        },
+      });
+    });
+
+    expect(useMarketDataStore.getState().getTick("2330")?.price).toBe(1_000);
   });
 
   it("absorbs native listener registration failures", async () => {

@@ -9,9 +9,9 @@ import {
 
 describe("conditional market request policy", () => {
   it("keeps daily history polling and retry policy bounded", () => {
-    expect(HISTORY_REFRESH_INTERVAL_MS).toBe(60_000);
-    expect(HISTORY_DEDUPE_INTERVAL_OPEN_MS).toBe(60_000);
-    expect(HISTORY_DEDUPE_INTERVAL_CLOSED_MS).toBe(300_000);
+    expect(HISTORY_REFRESH_INTERVAL_MS).toBeGreaterThanOrEqual(15 * 60_000);
+    expect(HISTORY_DEDUPE_INTERVAL_OPEN_MS).toBe(HISTORY_REFRESH_INTERVAL_MS);
+    expect(HISTORY_DEDUPE_INTERVAL_CLOSED_MS).toBe(HISTORY_REFRESH_INTERVAL_MS);
     expect(CONDITIONAL_SWR_POLICY).toMatchObject({
       shouldRetryOnError: false,
       refreshWhenHidden: false,

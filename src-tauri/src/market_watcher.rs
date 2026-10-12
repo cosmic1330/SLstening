@@ -28,6 +28,10 @@ pub const MIN_REQUEST_START_SPACING_MS: u64 = 300;
 /// Number of transient warm-up retries after the initial attempt.
 pub const WARMUP_MAX_RETRY_ATTEMPTS: usize = 3;
 pub const WARMUP_RETRY_BASE_DELAY_MS: u64 = 500;
+/// Hard upper bounds keep long-running sessions from retaining every symbol
+/// ever viewed. Expired entries are removed on lookup before capacity eviction.
+pub const TICK_CACHE_CAPACITY: usize = 512;
+pub const HISTORY_CACHE_CAPACITY: usize = 256;
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[ts(export)]
@@ -305,6 +309,8 @@ pub struct MarketManager {
     pub history_cache: DashMap<(String, String), MarketHistoryCacheItem>,
     // 正在進行中的歷史資料請求，避免重複發送
     pub in_flight_history: Arc<DashSet<(String, String)>>,
+    /// Reuse one connection pool for all provider calls owned by this manager.
+    pub(crate) client: reqwest::Client,
     /// A single permit serializes every Yahoo request issued by this manager.
     pub request_gate: Arc<Semaphore>,
     /// Reserved request-start slots shared by tick and history requests.
@@ -312,6 +318,18 @@ pub struct MarketManager {
     /// Symbols waiting for the initial visible-card warm-up request.
     warmup_queue: std::sync::Mutex<WarmupQueue>,
     warmup_notify: Arc<Notify>,
+}
+
+fn build_market_client() -> reqwest::Client {
+    let builder = reqwest::Client::builder()
+        .user_agent("SLstening/market-data")
+        .timeout(Duration::from_secs(10));
+    // The headless unit-test environment does not expose the platform proxy
+    // configuration API. Keep the production client's existing proxy
+    // behavior while avoiding that lookup only for tests.
+    #[cfg(test)]
+    let builder = builder.no_proxy();
+    builder.build().expect("market HTTP client should build")
 }
 
 impl MarketManager {
@@ -325,6 +343,7 @@ impl MarketManager {
             in_flight: Arc::new(DashSet::new()),
             history_cache: DashMap::new(),
             in_flight_history: Arc::new(DashSet::new()),
+            client: build_market_client(),
             request_gate: Arc::new(Semaphore::new(1)),
             request_next_allowed_at: std::sync::Mutex::new(None),
             warmup_queue: std::sync::Mutex::new(WarmupQueue::default()),
@@ -507,11 +526,16 @@ impl MarketManager {
     }
 
     pub fn get_from_cache_with_fetched_at(&self, symbol: &str) -> Option<(MarketTick, i64)> {
-        if let Some(item) = self.cache.get(symbol) {
-            if item.timestamp.elapsed() < Duration::from_secs(10) {
-                return Some((item.tick.clone(), item.fetched_at));
-            }
+        let item = self.cache.get(symbol)?;
+        if item.timestamp.elapsed() < Duration::from_secs(10) {
+            return Some((item.tick.clone(), item.fetched_at));
         }
+        let timestamp = item.timestamp;
+        drop(item);
+        // Only remove the entry that was observed as expired; a concurrent
+        // refresh may already have replaced it with a newer response.
+        self.cache
+            .remove_if(symbol, |_, current| current.timestamp == timestamp);
         None
     }
 
@@ -525,6 +549,7 @@ impl MarketManager {
                 fetched_at: wall_clock_millis(),
             },
         );
+        self.evict_oldest_tick_cache();
     }
 
     /// 從快取中獲取歷史資料 (盤中 60 秒有效，盤後 300 秒有效)
@@ -539,17 +564,20 @@ impl MarketManager {
         period: &str,
     ) -> Option<(MarketHistory, i64)> {
         let key = (symbol.to_string(), period.to_string());
-        if let Some(item) = self.history_cache.get(&key) {
-            let is_open = is_any_market_open_for_symbol(symbol);
-            let lifetime = if is_open {
-                Duration::from_secs(60)
-            } else {
-                Duration::from_secs(300)
-            };
-            if item.timestamp.elapsed() < lifetime {
-                return Some((item.history.clone(), item.fetched_at));
-            }
+        let item = self.history_cache.get(&key)?;
+        let is_open = is_any_market_open_for_symbol(symbol);
+        let lifetime = if is_open {
+            Duration::from_secs(60)
+        } else {
+            Duration::from_secs(300)
+        };
+        if item.timestamp.elapsed() < lifetime {
+            return Some((item.history.clone(), item.fetched_at));
         }
+        let timestamp = item.timestamp;
+        drop(item);
+        self.history_cache
+            .remove_if(&key, |_, current| current.timestamp == timestamp);
         None
     }
 
@@ -564,6 +592,49 @@ impl MarketManager {
                 fetched_at: wall_clock_millis(),
             },
         );
+        self.evict_oldest_history_cache();
+    }
+
+    fn evict_oldest_tick_cache(&self) {
+        while self.cache.len() > TICK_CACHE_CAPACITY {
+            let oldest = self
+                .cache
+                .iter()
+                .min_by(|left, right| {
+                    left.value()
+                        .timestamp
+                        .cmp(&right.value().timestamp)
+                        .then_with(|| left.key().cmp(right.key()))
+                })
+                .map(|entry| entry.key().clone());
+            match oldest {
+                Some(symbol) => {
+                    self.cache.remove(&symbol);
+                }
+                None => break,
+            }
+        }
+    }
+
+    fn evict_oldest_history_cache(&self) {
+        while self.history_cache.len() > HISTORY_CACHE_CAPACITY {
+            let oldest = self
+                .history_cache
+                .iter()
+                .min_by(|left, right| {
+                    left.value()
+                        .timestamp
+                        .cmp(&right.value().timestamp)
+                        .then_with(|| left.key().cmp(right.key()))
+                })
+                .map(|entry| entry.key().clone());
+            match oldest {
+                Some(key) => {
+                    self.history_cache.remove(&key);
+                }
+                None => break,
+            }
+        }
     }
 
     fn claim_tick_symbols(
@@ -669,7 +740,7 @@ impl MarketManager {
                 .map(|ticks| (ticks, false));
         }
 
-        let result = fetch_ticks_batched(&still_to_fetch).await;
+        let result = fetch_ticks_batched(&self.client, &still_to_fetch).await;
 
         match result {
             Ok(ticks) => {
@@ -786,7 +857,7 @@ impl MarketManager {
             return Ok((history, false));
         }
 
-        let result = fetch_history_data(symbol, period).await;
+        let result = fetch_history_data(&self.client, symbol, period).await;
         match result {
             Ok(history) => {
                 self.update_history_cache(symbol, period, history.clone());
@@ -1156,6 +1227,7 @@ pub fn init(app: AppHandle) -> Arc<MarketManager> {
 }
 
 pub(crate) async fn fetch_history_data(
+    client: &reqwest::Client,
     symbol: &str,
     period: &str,
 ) -> Result<MarketHistory, AppError> {
@@ -1190,11 +1262,6 @@ pub(crate) async fn fetch_history_data(
             encoded_symbol, interval, range
         )
     };
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
 
     let res = client.get(&url)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -1362,7 +1429,10 @@ fn wall_clock_millis() -> i64 {
         .unwrap_or(0)
 }
 
-pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<MarketTick>, AppError> {
+pub(crate) async fn fetch_ticks_batched(
+    client: &reqwest::Client,
+    symbols: &[String],
+) -> Result<Vec<MarketTick>, AppError> {
     if symbols.is_empty() {
         return Ok(Vec::new());
     }
@@ -1375,10 +1445,12 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
     if (global_symbols.len() + taiwan_symbols.len()) > 1 && !global_symbols.is_empty() {
         let mut ticks = Vec::new();
         if !taiwan_symbols.is_empty() {
-            ticks.extend(Box::pin(fetch_ticks_batched(&taiwan_symbols)).await?);
+            ticks.extend(Box::pin(fetch_ticks_batched(client, &taiwan_symbols)).await?);
         }
         for symbol in global_symbols {
-            ticks.extend(Box::pin(fetch_ticks_batched(std::slice::from_ref(&symbol))).await?);
+            ticks.extend(
+                Box::pin(fetch_ticks_batched(client, std::slice::from_ref(&symbol))).await?,
+            );
         }
         return Ok(ticks);
     }
@@ -1412,11 +1484,6 @@ pub(crate) async fn fetch_ticks_batched(symbols: &[String]) -> Result<Vec<Market
             .join(",");
         format!("https://tw.stock.yahoo.com/_td-stock/api/resource/FinanceChartService.ApacLibraCharts;symbols=[{}];type=tick", symbols_str)
     };
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .map_err(|e| AppError::Unknown(e.to_string()))?;
 
     let res = client.get(&url)
         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -1590,9 +1657,10 @@ fn split_provider_symbols(symbols: &[String]) -> (Vec<String>, Vec<String>) {
 mod tests {
     use super::{
         classify_warmup_symbols, is_global_symbol, provider_symbol, request_spacing_decision,
-        split_provider_symbols, warmup_retry_delay, InFlightGuard, MarketManager, MarketTick,
-        WarmupQueue, WarmupRetryState, MIN_REQUEST_START_SPACING_MS, WARMUP_MAX_RETRY_ATTEMPTS,
-        WARMUP_RETRY_BASE_DELAY_MS, WARMUP_TAIWAN_BATCH_SIZE,
+        split_provider_symbols, warmup_retry_delay, InFlightGuard, MarketCacheItem, MarketHistory,
+        MarketHistoryCacheItem, MarketManager, MarketTick, WarmupQueue, WarmupRetryState,
+        HISTORY_CACHE_CAPACITY, MIN_REQUEST_START_SPACING_MS, TICK_CACHE_CAPACITY,
+        WARMUP_MAX_RETRY_ATTEMPTS, WARMUP_RETRY_BASE_DELAY_MS, WARMUP_TAIWAN_BATCH_SIZE,
     };
     use std::time::{Duration, Instant};
 
@@ -1916,5 +1984,70 @@ mod tests {
         assert!(manager.in_flight.contains("2330"));
         ownership.release();
         assert!(!manager.in_flight.contains("2330"));
+    }
+
+    #[test]
+    fn expired_cache_entries_are_removed_when_observed() {
+        let manager = MarketManager::new();
+        manager.cache.insert(
+            "expired".to_string(),
+            MarketCacheItem {
+                tick: tick("expired"),
+                timestamp: Instant::now() - Duration::from_secs(11),
+                fetched_at: 0,
+            },
+        );
+        assert!(manager.get_from_cache("expired").is_none());
+        assert!(!manager.cache.contains_key("expired"));
+
+        manager.history_cache.insert(
+            ("expired".to_string(), "d".to_string()),
+            MarketHistoryCacheItem {
+                history: MarketHistory {
+                    id: "expired".to_string(),
+                    name: None,
+                    data: Vec::new(),
+                    price: 0.0,
+                    change: None,
+                },
+                timestamp: Instant::now() - Duration::from_secs(301),
+                fetched_at: 0,
+            },
+        );
+        assert!(manager.get_history_from_cache("expired", "d").is_none());
+        assert!(!manager
+            .history_cache
+            .contains_key(&("expired".to_string(), "d".to_string())));
+    }
+
+    #[test]
+    fn cache_updates_evict_oldest_entries_at_hard_capacity() {
+        let manager = MarketManager::new();
+        for index in 0..=TICK_CACHE_CAPACITY {
+            manager.update_cache(tick(&format!("tick-{index:04}")));
+        }
+        assert_eq!(manager.cache.len(), TICK_CACHE_CAPACITY);
+        assert!(!manager.cache.contains_key("tick-0000"));
+        assert!(manager
+            .cache
+            .contains_key(&format!("tick-{TICK_CACHE_CAPACITY:04}")));
+
+        for index in 0..=HISTORY_CACHE_CAPACITY {
+            manager.update_history_cache(
+                &format!("history-{index:04}"),
+                "d",
+                MarketHistory {
+                    id: format!("history-{index:04}"),
+                    name: None,
+                    data: Vec::new(),
+                    price: 0.0,
+                    change: None,
+                },
+            );
+        }
+        assert_eq!(manager.history_cache.len(), HISTORY_CACHE_CAPACITY);
+        assert!(!manager
+            .history_cache
+            .contains_key(&("history-0000".to_string(), "d".to_string())));
     }
 }

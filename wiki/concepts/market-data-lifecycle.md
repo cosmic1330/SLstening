@@ -8,7 +8,7 @@ status: stable
 
 ## End-to-End Flow
 
-1. A visible, enabled stock card requests `subscribe_stock` after a short frontend debounce; hiding or unmounting it cancels a pending request or unsubscribes an active one.
+1. A visible, enabled stock card requests `subscribe_stock` after a short frontend debounce; hiding the document or unmounting it cancels a pending request or unsubscribes an active one.
 2. Rust tracks subscriptions and performs coalesced, batched, paced requests with retry and cache behavior appropriate to provider limits.
 3. Rust emits `market-update` payloads for subscribed symbols.
 4. The single authenticated runtime listener converts the native payload to the frontend tick type and updates `MarketData.store`.
@@ -26,7 +26,9 @@ status: stable
 
 - Keep one event listener for the authenticated application runtime rather than one listener per card.
 - Keep live ticks in the in-memory market store; do not write each update to durable storage.
-- Maintain visibility-aware subscriptions and stable list keys.
+- Maintain document-visibility-aware subscriptions and stable list keys. Native subscriptions are released while the app is backgrounded and the frontend tick cache entry is cleared when the final same-symbol consumer leaves.
+- Daily history is fetched on the first visible request and refreshed no more than every 15 minutes while the relevant exchange is open. Closed markets and hidden documents do not schedule refreshes; the last response remains renderable with freshness state.
+- The native manager reuses one HTTP client and bounds tick/history caches. Expired entries are removed on observation and oldest entries are evicted at fixed capacities.
 - Treat native pacing, batching, coalescing, retries, and cache behavior as correctness constraints, not incidental constants.
 
 ## Change Checklist

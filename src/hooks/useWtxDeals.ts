@@ -1,43 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
 import { FutureIds } from "../types";
-import { isWtxMarketOpen } from "../utils/marketUtils";
 import { deriveMarketResourceState } from "../utils/marketResourceState";
-import { useFreshnessNow, useMarketSession } from "./useMarketSession";
+import { useDocumentVisibility, useFreshnessNow, useMarketSession } from "./useMarketSession";
+import { MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, MARKET_OVERVIEW_SWR_POLICY } from "./marketOverviewPolicy";
 
 export default function useWtxDeals(isVisible: boolean = true) {
+  const documentVisible = useDocumentVisibility();
+  const shouldFetch = isVisible && documentVisible;
+  const marketSession = useMarketSession(FutureIds.WTX);
   const {
     data: historyData,
-    mutate: mutateHourlyDeals,
     isValidating: isHourlyValidating, isLoading, error, mutate,
   } = useSWR(
-    isVisible ? `market/history/${FutureIds.WTX}` : null,
+    shouldFetch ? `market/history/${FutureIds.WTX}` : null,
     async () => {
       useDebugStore.getState().increment("wtx");
       return await marketApi.getHistoryData(FutureIds.WTX, "d");
     },
     {
-      isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (isWtxMarketOpen() ? 30000 : 0),
-      dedupingInterval: 10000,
+      ...MARKET_OVERVIEW_SWR_POLICY,
+      refreshInterval: () => shouldFetch && marketSession === "open" ? MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS : 0,
+      dedupingInterval: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS,
       onSuccess: () => setUpdatedAt(Date.now()),
     },
   );
 
-  const hasFetched = useRef(false);
   const [updatedAt, setUpdatedAt] = useState<number>();
-  useEffect(() => {
-    if (isVisible && !hasFetched.current) {
-      if (!isHourlyValidating) mutateHourlyDeals();
-    }
-
-    if (historyData) {
-      hasFetched.current = true;
-    }
-  }, [isVisible, mutateHourlyDeals, historyData, isHourlyValidating]);
-
   const deals = useMemo(() => {
     if (!historyData) return null;
     
@@ -63,8 +54,7 @@ export default function useWtxDeals(isVisible: boolean = true) {
     };
   }, [historyData]);
 
-  const marketSession = useMarketSession(FutureIds.WTX);
-  const now = useFreshnessNow(updatedAt, 30_000, marketSession);
-  const state = useMemo(() => deriveMarketResourceState({ enabled: isVisible, hasData: Boolean(deals?.data?.length), resolved: historyData !== undefined, isLoading, isValidating: isHourlyValidating, error, updatedAt, marketSession, staleAfterMs: 30_000, now }), [isVisible, deals, historyData, isLoading, isHourlyValidating, error, updatedAt, marketSession, now]);
+  const now = useFreshnessNow(updatedAt, MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, marketSession);
+  const state = useMemo(() => deriveMarketResourceState({ enabled: isVisible, hasData: Boolean(deals?.data?.length), resolved: historyData !== undefined, isLoading, isValidating: isHourlyValidating, error, updatedAt, marketSession, staleAfterMs: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, now }), [isVisible, deals, historyData, isLoading, isHourlyValidating, error, updatedAt, marketSession, now]);
   return { deals, state, retry: mutate };
 }

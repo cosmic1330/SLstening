@@ -38,6 +38,7 @@ The old `settings.json` is never read for migration. If it exists, the app shows
 - Do not load or copy obsolete settings data; only present the one-time keep/delete choice when the exact legacy file exists.
 - Update every dependent reference when changing category identity or deletion behavior.
 - Keep list keys stable and selectors narrow so live quote updates do not rerender the full watchlist.
+- The stock-management dialog edits a local ordered draft. Add/remove/reorder changes are committed with one `setCategoryStockIds(categoryId, stockIds)` mutation; cancel and close discard the draft. The mutation validates the category and every stock ID before writing, deduplicates while preserving first order, retains shared memberships, and prunes only unreferenced durable stocks.
 - Run frontend tests and, for persistence or shared-contract changes, `npm run test:all`.
 
 ## Source Anchors

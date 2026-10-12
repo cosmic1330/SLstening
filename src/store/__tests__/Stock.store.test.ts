@@ -100,6 +100,48 @@ describe("Stock.store category memberships", () => {
     expect(useStocksStore.getState().categories[0].stockIds).toEqual(["2330", "2317"]);
   });
 
+  it("commits a category draft membership and order in one mutation", async () => {
+    await useStocksStore.getState().reload();
+    useStocksStore.setState({ menu: [stock("2330"), stock("2317")] });
+    await useStocksStore.getState().addCategory("Tech");
+    const categoryId = useStocksStore.getState().categories[0].id;
+    await useStocksStore.getState().setCategoryStockIds(categoryId, ["2330", "2317", "2330"]);
+    save.mockClear();
+
+    await useStocksStore.getState().setCategoryStockIds(categoryId, ["2317", "2330"]);
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(useStocksStore.getState().categories[0].stockIds).toEqual(["2317", "2330"]);
+    expect(useStocksStore.getState().stocks.map((item) => item.id)).toEqual(["2330", "2317"]);
+  });
+
+  it("keeps a shared stock when the draft removes it from only one category", async () => {
+    await useStocksStore.getState().reload();
+    useStocksStore.setState({ menu: [stock("2330"), stock("2317")] });
+    await useStocksStore.getState().addCategory("One");
+    await useStocksStore.getState().addCategory("Two");
+    const [one, two] = useStocksStore.getState().categories;
+    await useStocksStore.getState().setCategoryStockIds(one.id, ["2330", "2317"]);
+    await useStocksStore.getState().setCategoryStockIds(two.id, ["2330"]);
+
+    await useStocksStore.getState().setCategoryStockIds(one.id, ["2317"]);
+
+    expect(useStocksStore.getState().categories.find((item) => item.id === two.id)?.stockIds).toEqual(["2330"]);
+    expect(useStocksStore.getState().stocks.map((item) => item.id)).toEqual(["2330", "2317"]);
+  });
+
+  it("rejects unknown category or stock ids without committing", async () => {
+    await useStocksStore.getState().reload();
+    await useStocksStore.getState().addCategory("Tech");
+    const categoryId = useStocksStore.getState().categories[0].id;
+    save.mockClear();
+
+    await expect(useStocksStore.getState().setCategoryStockIds(categoryId, ["missing"])).rejects.toThrow("STOCK_NOT_FOUND");
+    await expect(useStocksStore.getState().setCategoryStockIds("missing-category", [])).rejects.toThrow("CATEGORY_NOT_FOUND");
+    expect(save).not.toHaveBeenCalled();
+    expect(useStocksStore.getState().categories[0].stockIds).toEqual([]);
+  });
+
   it("serializes concurrent tracking mutations so neither removal is lost", async () => {
     await useStocksStore.getState().reload();
     await useStocksStore.getState().addCategory("Watch");

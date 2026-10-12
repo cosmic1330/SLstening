@@ -14,6 +14,7 @@ import {
   createFilterOptions,
   Dialog,
   DialogContent,
+  DialogActions,
   DialogTitle,
   IconButton,
   InputAdornment,
@@ -183,10 +184,6 @@ function SortableStockRow({
   );
 }
 
-const sameOrder = (left: string[], right: string[]) =>
-  left.length === right.length &&
-  left.every((id, index) => id === right[index]);
-
 const CATALOG_PAGE_SIZE = 100;
 const CATALOG_SCROLL_THRESHOLD = 32;
 
@@ -201,13 +198,9 @@ export default function AddStockDialog({
   const categories = useStocksStore((state) => state.categories);
   const menu = useStocksStore((state) => state.menu);
   const stocks = useStocksStore((state) => state.stocks);
-  const addStockToCategory = useStocksStore(
-    (state) => state.addStockToCategory,
+  const setCategoryStockIds = useStocksStore(
+    (state) => state.setCategoryStockIds,
   );
-  const removeStockFromCategory = useStocksStore(
-    (state) => state.removeStockFromCategory,
-  );
-  const updateStockOrder = useStocksStore((state) => state.updateStockOrder);
   const { handleDownloadMenu, disable: catalogUpdating } = useDownloadStocks();
 
   const [draftIds, setDraftIds] = useState<string[]>([]);
@@ -217,7 +210,6 @@ export default function AddStockDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const draftIdsRef = useRef<string[]>([]);
-  const dragBeforeRef = useRef<string[] | null>(null);
   const pendingRef = useRef(false);
 
   const activeCategory = useMemo(
@@ -226,7 +218,9 @@ export default function AddStockDialog({
   );
   const stockById = useMemo(() => {
     const result = new Map<string, StockStoreType>();
-    [...menu, ...stocks].forEach((stock) => result.set(stock.id, stock));
+    [...menu, ...stocks].forEach((stock) => {
+      if (!result.has(stock.id)) result.set(stock.id, stock);
+    });
     return result;
   }, [menu, stocks]);
   const currentStockIds = activeCategory?.stockIds ?? [];
@@ -253,65 +247,20 @@ export default function AddStockDialog({
     setSearchInput("");
     setCatalogOptionLimit(CATALOG_PAGE_SIZE);
     setError("");
-    dragBeforeRef.current = null;
   }, [activeCategoryId, open]);
-
-  const startMutation = () => {
-    if (pendingRef.current) return false;
-    pendingRef.current = true;
-    setPending(true);
-    setError("");
-    return true;
-  };
-
-  const finishMutation = () => {
-    pendingRef.current = false;
-    setPending(false);
-  };
 
   const setDraft = (next: string[]) => {
     draftIdsRef.current = next;
     setDraftIds(next);
   };
 
-  const handleRemove = async (stockId: string) => {
-    if (!startMutation()) return;
-    const before = [...draftIdsRef.current];
-    setDraft(before.filter((id) => id !== stockId));
-    try {
-      await removeStockFromCategory(activeCategoryId, stockId);
-    } catch {
-      setDraft(before);
-      setError(t("watchlist.removeFailed"));
-    } finally {
-      finishMutation();
-    }
+  const handleRemove = (stockId: string) => {
+    if (pendingRef.current) return;
+    setDraft(draftIdsRef.current.filter((id) => id !== stockId));
   };
 
-  const persistOrder = async (before: string[], next: string[]) => {
-    if (!startMutation()) return;
-    try {
-      await updateStockOrder(activeCategoryId, next);
-    } catch {
-      setDraft(before);
-      setError(t("watchlist.orderSaveFailed"));
-    } finally {
-      finishMutation();
-    }
-  };
-
-  const handleDragStart = () => {
-    if (!pendingRef.current) dragBeforeRef.current = [...draftIdsRef.current];
-  };
-
-  const handleDragEnd = () => {
-    const before = dragBeforeRef.current;
-    dragBeforeRef.current = null;
-    if (!before) return;
-    const next = [...draftIdsRef.current];
-    if (sameOrder(before, next)) return;
-    void persistOrder(before, next);
-  };
+  const handleDragStart = () => undefined;
+  const handleDragEnd = () => undefined;
 
   const handleMove = (stockId: string, offset: -1 | 1) => {
     if (pendingRef.current) return;
@@ -322,38 +271,15 @@ export default function AddStockDialog({
     const next = [...before];
     [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
     setDraft(next);
-    void persistOrder(before, next);
   };
 
-  const handleStockSelect = async (stock: StockStoreType | null) => {
+  const handleStockSelect = (stock: StockStoreType | null) => {
     setSearchInput("");
     if (!stock || pendingRef.current) return;
 
     const before = [...draftIdsRef.current];
-    const alreadyInCategory = before.includes(stock.id);
-    if (alreadyInCategory && before[0] === stock.id) return;
-
-    const next = [stock.id, ...before.filter((id) => id !== stock.id)];
-    if (!startMutation()) return;
-    setDraft(next);
-    try {
-      if (alreadyInCategory) {
-        await updateStockOrder(activeCategoryId, next);
-      } else {
-        await addStockToCategory(activeCategoryId, stock.id);
-      }
-    } catch {
-      setDraft(before);
-      setError(
-        t(
-          alreadyInCategory
-            ? "watchlist.orderSaveFailed"
-            : "watchlist.addFailed",
-        ),
-      );
-    } finally {
-      finishMutation();
-    }
+    if (before[0] === stock.id) return;
+    setDraft([stock.id, ...before.filter((id) => id !== stock.id)]);
   };
 
   const handleCatalogInputChange = (
@@ -383,9 +309,28 @@ export default function AddStockDialog({
     if (pendingRef.current) return;
     setSearchInput("");
     setError("");
-    dragBeforeRef.current = null;
     onClose();
   };
+
+  const handleSave = async () => {
+    if (pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setError("");
+    try {
+      await setCategoryStockIds(activeCategoryId, [...draftIdsRef.current]);
+      onClose();
+    } catch {
+      setError(t("watchlist.saveFailed"));
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
+  };
+
+  const hasDraftChanges =
+    draftIds.length !== currentStockIds.length ||
+    draftIds.some((id, index) => id !== currentStockIds[index]);
 
   return (
     <Dialog
@@ -593,8 +538,8 @@ export default function AddStockDialog({
               </Typography>
               <Button
                 type="button"
-                disabled={catalogUpdating}
-                aria-busy={catalogUpdating}
+                disabled={pending || catalogUpdating}
+                aria-busy={pending || catalogUpdating}
                 onClick={() => void handleDownloadMenu()}
                 startIcon={
                   catalogUpdating ? (
@@ -622,7 +567,7 @@ export default function AddStockDialog({
               inputValue={searchInput}
               disabled={pending}
               onInputChange={handleCatalogInputChange}
-              onChange={(_, value) => void handleStockSelect(value)}
+              onChange={(_, value) => handleStockSelect(value)}
               getOptionLabel={(item) => `${item.id} ${item.name}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               noOptionsText={t("watchlist.noStockMatches")}
@@ -840,6 +785,34 @@ export default function AddStockDialog({
           </Box>
         </Box>
       </DialogContent>
+      <DialogActions
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pb: { xs: 2, sm: 2.5 },
+          pt: 1,
+          gap: 1,
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button
+          type="button"
+          disabled={pending}
+          onClick={resetAndClose}
+          sx={playfulButtonSx(playfulPalette.paper)}
+        >
+          {t("watchlist.cancel")}
+        </Button>
+        <Button
+          type="button"
+          disabled={pending || !hasDraftChanges}
+          aria-busy={pending}
+          onClick={() => void handleSave()}
+          startIcon={pending ? <CircularProgress size={16} color="inherit" aria-hidden="true" /> : undefined}
+          sx={playfulButtonSx(playfulPalette.yellow)}
+        >
+          {t("watchlist.save")}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }

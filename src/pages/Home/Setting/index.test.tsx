@@ -30,7 +30,9 @@ const mocks = vi.hoisted(() => ({
   setAlwaysOnTop: vi.fn(),
   openLogDirectory: vi.fn().mockResolvedValue(undefined),
   user: {
-    session: { user: { email: "person@example.com" } },
+    session: { user: { email: "person@example.com", id: "user-123456789" } } as {
+      user: { email?: string; id?: string };
+    },
     signOut: vi.fn().mockResolvedValue(undefined),
     isSigningOut: false,
     signOutError: null as string | null,
@@ -95,7 +97,7 @@ beforeEach(async () => {
   mocks.setAlwaysOnTop.mockReset();
   mocks.openLogDirectory.mockReset();
   mocks.openLogDirectory.mockResolvedValue(undefined);
-  mocks.user.session = { user: { email: "person@example.com" } };
+  mocks.user.session = { user: { email: "person@example.com", id: "user-123456789" } };
   mocks.user.signOut.mockReset();
   mocks.user.signOut.mockResolvedValue(undefined);
   mocks.user.isSigningOut = false;
@@ -249,10 +251,21 @@ describe("Settings page", () => {
 
     expect(screen.getByRole("heading", { name: "Account" })).toBeTruthy();
     expect(screen.getByText("person@example.com")).toBeTruthy();
+    expect(screen.getByText("User ID")).toBeTruthy();
+    expect(screen.getByText("user-123456789")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Log out" }));
 
     expect(mocks.user.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back safely when the session user has no id", () => {
+    mocks.user.session = { user: { email: "person@example.com" } };
+    renderSetting();
+
+    expect(screen.getByText("person@example.com")).toBeTruthy();
+    expect(screen.getByText("User ID")).toBeTruthy();
+    expect(screen.getByText("Unknown account")).toBeTruthy();
   });
 
   it("disables the logout action while sign-out is pending", () => {

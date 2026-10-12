@@ -771,6 +771,7 @@ interface StocksState {
   renameCategory: (id: string, name: string) => Promise<void>;
   addStockToCategory: (categoryId: string, stockId: string) => Promise<void>;
   removeStockFromCategory: (categoryId: string, stockId: string) => Promise<void>;
+  setCategoryStockIds: (categoryId: string, stockIds: string[]) => Promise<void>;
   setStockCategories: (stock: StockStoreType, categoryIds: string[]) => Promise<void>;
   updateStockOrder: (categoryId: string, stockIds: string[]) => Promise<void>;
   updateCategories: (categories: CategoryType[]) => Promise<void>;
@@ -1356,6 +1357,35 @@ const useStocksStore = create<StocksState>((set, get) => ({
     const categories = current.categories.map((category) => category.id === categoryId ? { ...category, stockIds: category.stockIds.filter((id) => id !== stockId) } : category);
     const memberships = new Set(categories.flatMap((category) => category.stockIds));
     const stocks = current.stocks.filter((stock) => memberships.has(stock.id));
+    await commitSnapshot(get, set, accountSnapshotFrom({ ...current, stocks, categories }));
+  }),
+  setCategoryStockIds: (categoryId, stockIds) => enqueueMutation(get, async () => {
+    const current = get();
+    const category = current.categories.find((item) => item.id === categoryId);
+    if (!category) throw new Error("CATEGORY_NOT_FOUND");
+
+    const ids = uniqueIds(stockIds);
+    const stockById = new Map<string, StockStoreType>();
+    [...current.menu, ...current.stocks].forEach((stock) => {
+      if (!stockById.has(stock.id)) stockById.set(stock.id, stock);
+    });
+    const resolved = ids.map((id) => stockById.get(id));
+    if (resolved.some((stock) => !stock)) throw new Error("STOCK_NOT_FOUND");
+
+    const categories = current.categories.map((item) =>
+      item.id === categoryId ? { ...item, stockIds: ids } : item,
+    );
+    const referenced = new Set(categories.flatMap((item) => item.stockIds));
+    const stocks = current.stocks
+      .map((stock) => stockById.get(stock.id) ?? stock)
+      .filter((stock) => referenced.has(stock.id));
+    const knownStockIds = new Set(stocks.map((stock) => stock.id));
+    for (const stock of resolved) {
+      if (stock && !knownStockIds.has(stock.id)) {
+        stocks.push(stock);
+        knownStockIds.add(stock.id);
+      }
+    }
     await commitSnapshot(get, set, accountSnapshotFrom({ ...current, stocks, categories }));
   }),
   setStockCategories: (stock, categoryIds) => enqueueMutation(get, async () => {

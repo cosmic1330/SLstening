@@ -259,6 +259,7 @@
     "account": "Account",
     "accountHint": "Manage the signed-in session on this device.",
     "accountEmail": "Signed in as",
+    "accountUserId": "User ID",
     "accountUnknown": "Unknown account",
     "logout": "Log out",
     "signingOut": "Signing out…",

@@ -1,6 +1,6 @@
 import { dateFormat } from "@ch20026103/anysis";
 import { Mode } from "@ch20026103/anysis/dist/esm/stockSkills/utils/dateFormat";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
@@ -18,9 +18,11 @@ const TICK_STALE_AFTER_MS = 30_000;
  * while avoiding one request per visible card on mount.
  */
 export const INITIAL_TICK_FALLBACK_DELAY_MS = 7_000;
-export const HISTORY_REFRESH_INTERVAL_MS = 60_000;
-export const HISTORY_DEDUPE_INTERVAL_OPEN_MS = 60_000;
-export const HISTORY_DEDUPE_INTERVAL_CLOSED_MS = 300_000;
+// Daily bars do not need minute-level polling. Keep the last response visible
+// and refresh at most every 15 minutes while the relevant market is open.
+export const HISTORY_REFRESH_INTERVAL_MS = 15 * 60_000;
+export const HISTORY_DEDUPE_INTERVAL_OPEN_MS = HISTORY_REFRESH_INTERVAL_MS;
+export const HISTORY_DEDUPE_INTERVAL_CLOSED_MS = HISTORY_REFRESH_INTERVAL_MS;
 export const CONDITIONAL_SWR_POLICY = {
   revalidateOnFocus: false,
   refreshWhenHidden: false,
@@ -37,7 +39,7 @@ export default function useConditionalDeals(
   id: string,
   enabled: boolean = true,
   isVisible: boolean = true,
-  options?: { fetchTick?: boolean; fetchHistory?: boolean }
+  options?: { fetchTick?: boolean; fetchHistory?: boolean; marketGroup?: string }
 ) {
   const fetchTick = options?.fetchTick ?? true;
   const fetchHistory = options?.fetchHistory ?? true;
@@ -61,7 +63,20 @@ export default function useConditionalDeals(
   const shouldFetch =
     enabled && debouncedIsVisible && documentVisible;
 
-  const marketSession = useMarketSession(id);
+  // SWR does not abort an in-flight IPC request when its key becomes null.
+  // Keep a stable token for the current eligible lifecycle so a response that
+  // resolves after the card is hidden, disabled, switched, or unmounted cannot
+  // recreate a tick that subscription cleanup already removed.
+  const tickWriteToken = useMemo(() => ({}), [id, shouldFetch, fetchTick]);
+  const tickWriteTokenRef = useRef<object | null>(null);
+  tickWriteTokenRef.current = shouldFetch && fetchTick ? tickWriteToken : null;
+  useEffect(() => () => {
+    if (tickWriteTokenRef.current === tickWriteToken) {
+      tickWriteTokenRef.current = null;
+    }
+  }, [tickWriteToken]);
+
+  const marketSession = useMarketSession(id, options?.marketGroup);
   const isMarketOpen = marketSession === "open";
   const shouldMonitorTick = shouldFetch && fetchTick && isMarketOpen;
   const tickDeals = useMarketDataStore((state) => state.getTick(id));
@@ -124,8 +139,9 @@ export default function useConditionalDeals(
     async () => {
       console.log(`📡 [SWR Fetch] 真正發送 IPC 請求拉取 [TICK] 報價: ${id}`);
       useDebugStore.getState().increment("conditional");
+      const requestToken = tickWriteTokenRef.current;
       const tick = await marketApi.getTickData(id);
-      if (tick) {
+      if (tick && requestToken !== null && tickWriteTokenRef.current === requestToken) {
         useMarketDataStore.getState().updateTick(tick);
       }
       return tick;
@@ -137,12 +153,13 @@ export default function useConditionalDeals(
       // A missing cold-start tick must not turn the fallback into an
       // interval retry loop. Once data exists, retain the existing bounded
       // open-market refresh behavior for stale recovery.
-      refreshInterval: isMarketOpen && Boolean(tickDeals) ? TICK_STALE_AFTER_MS : 0,
+      refreshInterval: shouldMonitorTick && Boolean(tickDeals) ? TICK_STALE_AFTER_MS : 0,
     },
   );
 
   // --- Daily 資料 (日 K 線與技術指標) ---
   const [historyUpdatedAt, setHistoryUpdatedAt] = useState<number>();
+  const [lastHistoryData, setLastHistoryData] = useState<Awaited<ReturnType<typeof marketApi.getHistoryData>>>();
   const historySWR = useSWR(
     shouldFetchHistory ? `market/history/${id}` : null,
     async () => {
@@ -154,11 +171,14 @@ export default function useConditionalDeals(
       ...CONDITIONAL_SWR_POLICY,
       revalidateIfStale: false, // 有快取時直接使用，無快取時正常 fetch
       dedupingInterval: isMarketOpen ? HISTORY_DEDUPE_INTERVAL_OPEN_MS : HISTORY_DEDUPE_INTERVAL_CLOSED_MS,
-      refreshInterval: isMarketOpen ? HISTORY_REFRESH_INTERVAL_MS : 0,
+      refreshInterval: shouldFetchHistory && isMarketOpen ? HISTORY_REFRESH_INTERVAL_MS : 0,
       onSuccess: () => setHistoryUpdatedAt(Date.now()),
     },
   );
-  const { data: historyData } = historySWR;
+  useEffect(() => {
+    if (historySWR.data !== undefined) setLastHistoryData(historySWR.data);
+  }, [historySWR.data]);
+  const historyData = historySWR.data ?? lastHistoryData;
 
   // 追蹤活躍執行個體 (Debug 用)
   useEffect(() => {

@@ -17,6 +17,9 @@ interface MarketDataState {
   
   // 取得特定股票的數據
   getTick: (id: string) => TickDealsType | undefined;
+
+  // 清除已沒有任何前端訂閱者的即時報價，避免長時間瀏覽累積。
+  clearTick: (id: string) => void;
 }
 
 const useMarketDataStore = create<MarketDataState>((set, get) => ({
@@ -48,6 +51,17 @@ const useMarketDataStore = create<MarketDataState>((set, get) => ({
 
   getTick: (id: string) => {
     return get().ticks.get(id);
+  },
+
+  clearTick: (id: string) => {
+    set((state) => {
+      if (!state.ticks.has(id) && !state.tickUpdatedAt.has(id)) return state;
+      const ticks = new Map(state.ticks);
+      const tickUpdatedAt = new Map(state.tickUpdatedAt);
+      ticks.delete(id);
+      tickUpdatedAt.delete(id);
+      return { ticks, tickUpdatedAt };
+    });
   },
 }));
 

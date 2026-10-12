@@ -85,7 +85,7 @@ export function normalizeAccountSnapshot(value: Partial<AccountSnapshot>): Accou
 
 export function inferMarketGroup(symbol: string): "TW" | "US" {
   const value = symbol.trim().toUpperCase();
-  return value.startsWith("TW:") || value.startsWith("TW-") || /^\d+$/.test(value) || value.endsWith(".TW") || value.endsWith(".TWO")
+  return value === "^TWII" || value === "^TWOII" || value.startsWith("TW:") || value.startsWith("TW-") || /^\d+$/.test(value) || value.endsWith(".TW") || value.endsWith(".TWO")
     ? "TW"
     : "US";
 }

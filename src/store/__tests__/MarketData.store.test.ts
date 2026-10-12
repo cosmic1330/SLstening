@@ -56,4 +56,14 @@ describe("MarketData.store", () => {
   it("returns undefined for an unknown symbol", () => {
     expect(useMarketDataStore.getState().getTick("missing")).toBeUndefined();
   });
+
+  it("clears a symbol only when the final subscriber releases it", () => {
+    const tick = createTick("2330", 100);
+    useMarketDataStore.getState().updateTick(tick);
+    expect(useMarketDataStore.getState().getTick("2330")).toEqual(tick);
+
+    useMarketDataStore.getState().clearTick("2330");
+    expect(useMarketDataStore.getState().getTick("2330")).toBeUndefined();
+    expect(useMarketDataStore.getState().tickUpdatedAt.has("2330")).toBe(false);
+  });
 });

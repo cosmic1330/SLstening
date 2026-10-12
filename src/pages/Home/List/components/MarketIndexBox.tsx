@@ -282,13 +282,14 @@ function MarketIndexWtxItem({
 function MarketIndexTickItem({
   id,
   name,
+  group,
   isVisible,
   openDetailWindow,
   containerRef,
 }: any) {
   useMarketSubscriber(id, true, isVisible);
   const { t } = useTranslation();
-  const { tickDeals, tickState, retryTick } = useConditionalDeals(id, true, isVisible, { fetchTick: true, fetchHistory: false });
+  const { tickDeals, tickState, retryTick } = useConditionalDeals(id, true, isVisible, { fetchTick: true, fetchHistory: false, marketGroup: group });
 
   const { price, percent, change, mainColor } = useMemo(() => {
     const p = tickDeals?.price ?? null;

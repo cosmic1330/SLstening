@@ -440,7 +440,8 @@ function Setting() {
   const [dataOpen, setDataOpen] = useState(false);
   const [logOpenError, setLogOpenError] = useState(false);
   const [indicatorOpen, setIndicatorOpen] = useState(false);
-  const accountEmail = session?.user.email?.trim() || t("settings.accountUnknown");
+  const accountEmail = session?.user?.email?.trim() || t("settings.accountUnknown");
+  const accountUserId = session?.user?.id?.trim() || t("settings.accountUnknown");
 
   const handleSignOut = useCallback(() => {
     void signOut().catch(() => undefined);
@@ -746,7 +747,10 @@ function Setting() {
                   <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.lavender }} aria-hidden="true">
                     <PersonIcon fontSize="small" />
                   </SectionIcon>
-                  <SettingRowText title={t("settings.accountEmail")} hint={accountEmail} />
+                  <Stack spacing={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                    <SettingRowText title={t("settings.accountEmail")} hint={accountEmail} />
+                    <SettingRowText title={t("settings.accountUserId")} hint={accountUserId} />
+                  </Stack>
                 </Stack>
                 <FocusableButton
                   type="button"

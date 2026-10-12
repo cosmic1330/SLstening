@@ -41,7 +41,7 @@ export default function StockBox({ stock, enabled = true, canDelete = true, onRe
     stock.id,
     enabled,
     isComponentVisible,
-    { fetchTick, fetchHistory },
+    { fetchTick, fetchHistory, marketGroup: stock.group },
   );
   const tickDeals = fetchTick ? storedTickDeals || null : null;
   const activeState = chartType === "tick" ? tickState : historyState;

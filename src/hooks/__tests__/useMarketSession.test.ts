@@ -11,6 +11,10 @@ describe("marketSessionForSymbol", () => {
     const date = new Date("2024-07-01T13:30:00Z");
     expect(marketSessionForSymbol(FutureIds.NASDAQ, date)).toBe("open");
     expect(marketSessionForSymbol("2330", date)).toBe("closed");
+    expect(marketSessionForSymbol("AAPL", date)).toBe("open");
+    expect(marketSessionForSymbol("AAPL", date, "TW")).toBe("closed");
+    expect(marketSessionForSymbol("2330", date, "US market")).toBe("open");
+    expect(marketSessionForSymbol(FutureIds.TWSE, date)).toBe("closed");
     expect(marketSessionForSymbol(FutureIds.WTX, new Date("2024-06-14T18:00:00Z"))).toBe("open");
   });
 

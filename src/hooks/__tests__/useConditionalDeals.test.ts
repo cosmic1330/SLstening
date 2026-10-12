@@ -83,8 +83,38 @@ describe("useConditionalDeals initial tick policy", () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(marketApiMock.getTickData).toHaveBeenCalledOnce();
+    expect(useMarketDataStore.getState().getTick("2330")).toEqual(tick);
 
     unmount();
+  });
+
+  it("does not restore a tick when the fallback resolves after unmount", async () => {
+    let resolveTick!: (value: typeof tick) => void;
+    marketApiMock.getTickData.mockReturnValue(new Promise((resolve) => {
+      resolveTick = resolve;
+    }));
+    const { unmount } = renderHook(() =>
+      useConditionalDeals("9999", true, true, {
+        fetchTick: true,
+        fetchHistory: false,
+      }),
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INITIAL_TICK_FALLBACK_DELAY_MS);
+    });
+    expect(marketApiMock.getTickData).toHaveBeenCalledOnce();
+
+    unmount();
+    await act(async () => {
+      resolveTick({ ...tick, id: "9999" });
+      await Promise.resolve();
+    });
+
+    expect(useMarketDataStore.getState().getTick("9999")).toBeUndefined();
   });
 
   it("allows manual retry to bypass the initial fallback timeout", async () => {

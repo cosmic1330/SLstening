@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { tauriFetcher } from "../api/http";
+import { marketApi } from "../api/marketApi";
 import useDebugStore from "../store/debug.store";
 import { DealTableType, FutureIds } from "../types";
-import { isNasdaqMarketOpen } from "../utils/marketUtils";
 import { deriveMarketResourceState } from "../utils/marketResourceState";
-import { useFreshnessNow, useMarketSession } from "./useMarketSession";
+import { useDocumentVisibility, useFreshnessNow, useMarketSession } from "./useMarketSession";
+import { MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, MARKET_OVERVIEW_SWR_POLICY } from "./marketOverviewPolicy";
+
+export { MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS } from "./marketOverviewPolicy";
 
 export const parseNasdaqDeals = (hourlyData: string) => {
   const data = JSON.parse(hourlyData);
@@ -25,42 +27,48 @@ export const parseNasdaqDeals = (hourlyData: string) => {
   return { data: res, price: Math.round(lastDeal.c), change: Math.round((lastDeal.c - prevDeal.c) * 100) / 100 };
 };
 
-export default function useNasdaqDeals(isVisible: boolean = true) {
+/** Convert the native MarketHistory contract into the compact overview shape. */
+export const normalizeNasdaqHistory = (history: {
+  data: Array<{ t: number; o: number; c: number; h: number; l: number; v: number }>;
+  price: number;
+  change: number | null;
+}) => {
+  const data: (Omit<DealTableType, "stock_id" | "t"> & { t: number })[] = history.data.map((point) => ({ ...point }));
+  const last = data[data.length - 1];
+  const previous = data[data.length - 2] ?? last;
+  return {
+    data,
+    price: data.length === 0 ? null : Number.isFinite(history.price) ? Math.round(history.price) : (last?.c ?? null),
+    change: history.change ?? (last && previous ? Math.round((last.c - previous.c) * 100) / 100 : null),
+  };
+};
 
+export default function useNasdaqDeals(isVisible: boolean = true) {
+  const documentVisible = useDocumentVisibility();
+  const shouldFetch = isVisible && documentVisible;
+  const marketSession = useMarketSession(FutureIds.NASDAQ);
 
   const {
     data: hourlyData,
-    mutate: mutateHourlyDeals,
     isValidating: isHourlyValidating, isLoading, error: requestError, mutate,
   } = useSWR(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${FutureIds.NASDAQ_FUTURE}?interval=1d&range=200d`,
-    async (url) => {
+    shouldFetch ? `market/history/${FutureIds.NASDAQ_FUTURE}` : null,
+    async () => {
       useDebugStore.getState().increment("nasdaq");
-      return parseNasdaqDeals(await tauriFetcher(url));
+      return normalizeNasdaqHistory(await marketApi.getHistoryData(FutureIds.NASDAQ_FUTURE, "d"));
     },
     {
-      isPaused: () => !isVisible || document.visibilityState !== "visible",
-      refreshInterval: () => (isNasdaqMarketOpen() ? 30000 : 0),
+      ...MARKET_OVERVIEW_SWR_POLICY,
+      refreshInterval: () => shouldFetch && marketSession === "open" ? MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS : 0,
+      dedupingInterval: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS,
       onSuccess: () => setUpdatedAt(Date.now()),
     },
   );
 
-  const hasFetched = useRef(false);
   const [updatedAt, setUpdatedAt] = useState<number>();
-  useEffect(() => {
-    if (isVisible && !hasFetched.current) {
-      if (!isHourlyValidating) mutateHourlyDeals();
-    }
-
-    if (hourlyData) {
-      hasFetched.current = true;
-    }
-  }, [isVisible, mutateHourlyDeals, hourlyData, isHourlyValidating]);
-
   const deals = hourlyData ?? null;
   const resourceError = requestError;
-  const marketSession = useMarketSession(FutureIds.NASDAQ);
-  const now = useFreshnessNow(updatedAt, 30_000, marketSession);
-  const state = useMemo(() => deriveMarketResourceState({ enabled: isVisible, hasData: Boolean(deals?.data.length), resolved: hourlyData !== undefined, isLoading, isValidating: isHourlyValidating, error: resourceError, updatedAt, marketSession, staleAfterMs: 30_000, now }), [isVisible, deals, hourlyData, isLoading, isHourlyValidating, resourceError, updatedAt, marketSession, now]);
+  const now = useFreshnessNow(updatedAt, MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, marketSession);
+  const state = useMemo(() => deriveMarketResourceState({ enabled: isVisible, hasData: Boolean(deals?.data.length), resolved: hourlyData !== undefined, isLoading, isValidating: isHourlyValidating, error: resourceError, updatedAt, marketSession, staleAfterMs: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, now }), [isVisible, deals, hourlyData, isLoading, isHourlyValidating, resourceError, updatedAt, marketSession, now]);
   return { deals, state, retry: mutate };
 }

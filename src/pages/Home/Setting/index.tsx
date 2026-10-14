@@ -15,6 +15,10 @@ import {
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
   Stack,
@@ -23,7 +27,7 @@ import {
   Typography,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { useUser } from "../../../context/UserContext";
@@ -411,12 +415,11 @@ function Setting() {
   const setStockBoxChartType = useUIStore((state) => state.setStockBoxChartType);
   const cloudBackupEnabled = useStocksStore((state) => state.cloudBackupEnabled);
   const cloudBackupLastSuccessAt = useStocksStore((state) => state.cloudBackupLastSuccessAt);
-  const cloudBackupChecking = useStocksStore((state) => state.cloudBackupChecking);
-  const cloudBackupConflict = useStocksStore((state) => state.cloudBackupConflict);
   const stocks = useStocksStore((state) => state.stocks);
   const categories = useStocksStore((state) => state.categories);
   const accountHydrated = useStocksStore((state) => state.hydrated);
   const setCloudBackupEnabled = useStocksStore((state) => state.setCloudBackupEnabled);
+  const restoreCloudBackup = useStocksStore((state) => state.restoreCloudBackup);
 
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
@@ -440,6 +443,10 @@ function Setting() {
   const [dataOpen, setDataOpen] = useState(false);
   const [logOpenError, setLogOpenError] = useState(false);
   const [indicatorOpen, setIndicatorOpen] = useState(false);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [restoreStatus, setRestoreStatus] = useState<"idle" | "loading" | "restored" | "not_found" | "error">("idle");
+  const restoreRequestInFlight = useRef(false);
+  const restoreRequestGeneration = useRef(0);
   const accountEmail = session?.user?.email?.trim() || t("settings.accountUnknown");
   const accountUserId = session?.user?.id?.trim() || t("settings.accountUnknown");
 
@@ -471,6 +478,35 @@ function Setting() {
   const handleCloudBackupChange = useCallback((checked: boolean) => {
     void setCloudBackupEnabled(checked).catch(() => undefined);
   }, [setCloudBackupEnabled]);
+
+  const handleRestoreDialogOpen = useCallback(() => {
+    setRestoreStatus("idle");
+    setRestoreDialogOpen(true);
+  }, []);
+
+  const handleRestoreDialogClose = useCallback(() => {
+    if (restoreStatus !== "loading") setRestoreDialogOpen(false);
+  }, [restoreStatus]);
+
+  const handleRestoreConfirm = useCallback(() => {
+    if (restoreStatus === "loading" || restoreRequestInFlight.current) return;
+    restoreRequestInFlight.current = true;
+    const requestGeneration = restoreRequestGeneration.current + 1;
+    restoreRequestGeneration.current = requestGeneration;
+    setRestoreStatus("loading");
+    void restoreCloudBackup()
+      .then((result) => {
+        if (restoreRequestGeneration.current === requestGeneration) setRestoreStatus(result);
+      })
+      .catch(() => {
+        if (restoreRequestGeneration.current === requestGeneration) setRestoreStatus("error");
+      })
+      .finally(() => {
+        if (restoreRequestGeneration.current !== requestGeneration) return;
+        restoreRequestInFlight.current = false;
+        setRestoreDialogOpen(false);
+      });
+  }, [restoreCloudBackup, restoreStatus]);
 
   const backupBytes = useMemo(
     () => cloudBackupPayloadBytes({ stocks, categories }),
@@ -699,18 +735,37 @@ function Setting() {
                       <BackupIcon fontSize="small" />
                     </SectionIcon>
                     <SettingRowText
-                      title={t("settings.cloudBackup")}
+                      title={t("settings.automaticCloudUpload")}
                       hint={t(cloudBackupEnabled ? "settings.cloudBackupEnabledHint" : "settings.cloudBackupDisabledHint", { lastBackup: lastBackupLabel })}
                     />
-                    {cloudBackupChecking ? <CircularProgress size={22} aria-label={t("settings.cloudBackupChecking")} /> : null}
                     <Switch
                       checked={cloudBackupEnabled}
-                      disabled={!accountHydrated || cloudBackupChecking || Boolean(cloudBackupConflict) || (backupOverLimit && !cloudBackupEnabled)}
+                      disabled={!accountHydrated || (backupOverLimit && !cloudBackupEnabled)}
                       onChange={(event) => handleCloudBackupChange(event.target.checked)}
-                      slotProps={{ input: { "aria-label": t("settings.cloudBackup") } }}
+                      slotProps={{ input: { "aria-label": t("settings.automaticCloudUpload") } }}
                       sx={SwitchStyles}
                     />
                   </SettingRow>
+                  <SettingRow sx={{ alignItems: { xs: "flex-start", sm: "center" }, flexDirection: { xs: "column", sm: "row" } }}>
+                    <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.lavender }} aria-hidden="true">
+                      <DownloadIcon fontSize="small" />
+                    </SectionIcon>
+                    <SettingRowText title={t("settings.restoreCloudBackup")} hint={t("settings.restoreCloudBackupHint")} />
+                    <FocusableButton
+                      type="button"
+                      onClick={handleRestoreDialogOpen}
+                      disabled={!accountHydrated || restoreStatus === "loading"}
+                      aria-busy={restoreStatus === "loading"}
+                      aria-label={t(restoreStatus === "loading" ? "settings.restoringCloudBackup" : "settings.restoreCloudBackup")}
+                      startIcon={restoreStatus === "loading" ? <CircularProgress size={16} color="inherit" aria-hidden="true" /> : <DownloadIcon fontSize="small" aria-hidden="true" />}
+                      sx={{ width: { xs: "100%", sm: "auto" }, backgroundColor: settingsPalette.lavender, "&:hover": { backgroundColor: "#BDB0EA" }, "&.Mui-disabled": { color: "rgba(25, 25, 25, 0.72)", backgroundColor: "#E2DCF5", borderColor: "rgba(25, 25, 25, 0.45)" } }}
+                    >
+                      {restoreStatus === "loading" ? t("settings.restoringCloudBackup") : t("settings.restoreCloudBackup")}
+                    </FocusableButton>
+                  </SettingRow>
+                  {restoreStatus === "restored" ? <Alert severity="success" role="status">{t("settings.restoreCloudBackupSuccess")}</Alert> : null}
+                  {restoreStatus === "not_found" ? <Alert severity="info" role="status">{t("settings.restoreCloudBackupNotFound")}</Alert> : null}
+                  {restoreStatus === "error" ? <Alert severity="error" role="alert">{t("settings.restoreCloudBackupFailed")}</Alert> : null}
                   {backupOverLimit ? (
                     <Alert severity="warning" role="alert">
                       {t("settings.cloudBackupSizeLimit", { bytes: backupBytes, limit: CLOUD_BACKUP_MAX_BYTES })}
@@ -719,6 +774,26 @@ function Setting() {
                 </Stack>
               </Stack>
             </DisclosureCard>
+
+            <Dialog
+              open={restoreDialogOpen}
+              onClose={handleRestoreDialogClose}
+              fullWidth
+              maxWidth="xs"
+              aria-labelledby="restore-cloud-backup-title"
+              aria-describedby="restore-cloud-backup-description"
+            >
+              <DialogTitle id="restore-cloud-backup-title">{t("settings.restoreCloudBackupConfirmTitle")}</DialogTitle>
+              <DialogContent dividers>
+                <Typography id="restore-cloud-backup-description">{t("settings.restoreCloudBackupConfirmMessage")}</Typography>
+              </DialogContent>
+              <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
+                <Button onClick={handleRestoreDialogClose} disabled={restoreStatus === "loading"}>{t("settings.cancel")}</Button>
+                <Button variant="contained" onClick={handleRestoreConfirm} disabled={restoreStatus === "loading"} aria-busy={restoreStatus === "loading"}>
+                  {restoreStatus === "loading" ? t("settings.restoringCloudBackup") : t("settings.confirmRestoreCloudBackup")}
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             <DisclosureCard
               id="technical-indicators"

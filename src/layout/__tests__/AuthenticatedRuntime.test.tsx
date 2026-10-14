@@ -14,7 +14,6 @@ const runtimeSpies = vi.hoisted(() => ({
   nativeRuntime: false,
   nativeSessionError: null as string | null,
   retryNativeSession: vi.fn(),
-  resolveCloudBackupConflict: vi.fn(),
   applyMcpAccountCommit: vi.fn(),
   accountStateListener: null as null | ((event: { payload: Record<string, unknown> }) => void),
   syncState: {
@@ -22,12 +21,6 @@ const runtimeSpies = vi.hoisted(() => ({
     syncError: null as string | null,
     legacySettingsPrompt: false,
     legacySettingsError: null as string | null,
-    cloudBackupConflict: null as null | {
-      cloudSnapshot: Record<string, unknown>;
-      cloudUpdatedAt: string | null;
-      localChangedAt: string | null;
-      source: "startup" | "enable";
-    },
   },
 }));
 
@@ -43,7 +36,6 @@ vi.mock("../../store/Stock.store", () => ({
     reload: runtimeSpies.reload,
     keepLegacySettings: runtimeSpies.keepLegacySettings,
     deleteLegacySettings: runtimeSpies.deleteLegacySettings,
-    resolveCloudBackupConflict: runtimeSpies.resolveCloudBackupConflict,
     applyMcpAccountCommit: runtimeSpies.applyMcpAccountCommit,
     applyIndicatorSettings: vi.fn(),
     accountUserId: null,
@@ -106,7 +98,6 @@ describe("AuthenticatedRuntime", () => {
     runtimeSpies.nativeRuntime = false;
     runtimeSpies.nativeSessionError = null;
     runtimeSpies.retryNativeSession.mockReset();
-    runtimeSpies.resolveCloudBackupConflict.mockReset().mockResolvedValue(undefined);
     runtimeSpies.applyMcpAccountCommit.mockReset().mockResolvedValue(undefined);
     runtimeSpies.accountStateListener = null;
     Object.assign(runtimeSpies.syncState, {
@@ -114,7 +105,6 @@ describe("AuthenticatedRuntime", () => {
       syncError: null,
       legacySettingsPrompt: false,
       legacySettingsError: null,
-      cloudBackupConflict: null,
     });
   });
 
@@ -171,24 +161,6 @@ describe("AuthenticatedRuntime", () => {
     expect(screen.queryByTestId("account-sync-inline-notice")).toBeNull();
     expect(runtimeSpies.reload).toHaveBeenCalledTimes(1);
     view.unmount();
-  });
-
-  it("blocks dismissal until the user chooses local or cloud data", async () => {
-    Object.assign(runtimeSpies.syncState, {
-      cloudBackupConflict: {
-        cloudSnapshot: {},
-        cloudUpdatedAt: "2026-10-11T02:00:00.000Z",
-        localChangedAt: "2026-10-11T01:00:00.000Z",
-        source: "startup",
-      },
-    });
-    renderRuntime();
-
-    const dialog = screen.getByRole("dialog");
-    fireEvent.keyDown(dialog, { key: "Escape" });
-    expect(screen.getByRole("dialog")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "accountSync.useLocalData" }));
-    await waitFor(() => expect(runtimeSpies.resolveCloudBackupConflict).toHaveBeenCalledWith("local"));
   });
 
   it("shows only a safe native session code and retries the native session", async () => {

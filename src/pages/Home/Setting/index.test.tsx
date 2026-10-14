@@ -16,11 +16,10 @@ const mocks = vi.hoisted(() => ({
     update_menu: vi.fn(),
     cloudBackupEnabled: false,
     cloudBackupLastSuccessAt: null as string | null,
-    cloudBackupChecking: false,
-    cloudBackupConflict: null,
     stocks: [] as StockStoreType[],
     categories: [] as CategoryType[],
     setCloudBackupEnabled: vi.fn().mockResolvedValue(undefined),
+    restoreCloudBackup: vi.fn().mockResolvedValue("restored"),
   },
   stockStore: vi.fn(),
   download: {
@@ -104,13 +103,13 @@ beforeEach(async () => {
   mocks.user.signOutError = null;
   mocks.stockState.cloudBackupEnabled = false;
   mocks.stockState.cloudBackupLastSuccessAt = null;
-  mocks.stockState.cloudBackupChecking = false;
-  mocks.stockState.cloudBackupConflict = null;
   mocks.stockState.stocks = [];
   mocks.stockState.categories = [];
   mocks.stockState.hydrated = true;
   mocks.stockState.setCloudBackupEnabled.mockReset();
   mocks.stockState.setCloudBackupEnabled.mockResolvedValue(undefined);
+  mocks.stockState.restoreCloudBackup.mockReset();
+  mocks.stockState.restoreCloudBackup.mockResolvedValue("restored");
   await i18n.changeLanguage("en");
 });
 
@@ -226,14 +225,64 @@ describe("Settings page", () => {
     expect(screen.queryByText(/raw-path/)).toBeNull();
   });
 
-  it("offers an account-scoped cloud backup switch with a localized last-backup state", () => {
+  it("offers automatic cloud upload and an independent restore action", () => {
     renderSetting();
     openDisclosure(/Data & diagnostics/);
 
-    expect(screen.getByLabelText("Cloud backup")).toBeTruthy();
+    expect(screen.getByLabelText("Automatic cloud upload")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Restore from cloud" })).toBeTruthy();
     expect(screen.getByText(/Never backed up/)).toBeTruthy();
-    fireEvent.click(screen.getByLabelText("Cloud backup"));
+    fireEvent.click(screen.getByLabelText("Automatic cloud upload"));
     expect(mocks.stockState.setCloudBackupEnabled).toHaveBeenCalledWith(true);
+  });
+
+  it("confirms restore before calling the store once and closes after success", async () => {
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore from cloud" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(mocks.stockState.restoreCloudBackup).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore from cloud" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(mocks.stockState.restoreCloudBackup).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("status").textContent).toContain("cloud watchlist was restored");
+  });
+
+  it("ignores a same-turn double click while restore is in flight", async () => {
+    let resolveRestore!: (value: "restored") => void;
+    const pendingRestore = new Promise<"restored">((resolve) => { resolveRestore = resolve; });
+    mocks.stockState.restoreCloudBackup.mockImplementationOnce(() => pendingRestore);
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Restore from cloud" }));
+    const confirm = screen.getByRole("button", { name: "Restore" });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect(mocks.stockState.restoreCloudBackup).toHaveBeenCalledTimes(1);
+
+    resolveRestore("restored");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("shows localized restore not-found and failure feedback without raw errors", async () => {
+    mocks.stockState.restoreCloudBackup.mockResolvedValueOnce("not_found");
+    renderSetting();
+    openDisclosure(/Data & diagnostics/);
+    fireEvent.click(screen.getByRole("button", { name: "Restore from cloud" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toContain("No cloud backup"));
+
+    mocks.stockState.restoreCloudBackup.mockRejectedValueOnce(new Error("/private/raw-path"));
+    fireEvent.click(screen.getByRole("button", { name: "Restore from cloud" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("could not be restored"));
+    expect(screen.queryByText(/raw-path/)).toBeNull();
   });
 
   it("keeps the capacity alert visible while the local backup is oversized", () => {
@@ -243,7 +292,7 @@ describe("Settings page", () => {
     openDisclosure(/Data & diagnostics/);
 
     expect(screen.getByRole("alert").textContent).toContain("45000");
-    expect((screen.getByLabelText("Cloud backup") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByLabelText("Automatic cloud upload") as HTMLInputElement).disabled).toBe(true);
   });
 
   it("shows the signed-in account and starts local sign-out", () => {

@@ -213,37 +213,49 @@ describe("AddStockDialog category stock management", () => {
     expect(update.getAttribute("aria-busy")).toBe("true");
   });
 
-  it("edits removals locally and commits once from Save", async () => {
-    renderDialog();
+  it("persists removals immediately and keeps the dialog open", async () => {
+    const onClose = vi.fn();
+    renderDialog(onClose);
 
     fireEvent.click(
       screen.getByRole("button", { name: "Remove Hon Hai from this category" }),
     );
 
-    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2330"]));
+    await waitFor(() =>
+      expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2330"]),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("1 stocks")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
     expect(screen.getByRole("heading", { name: "Manage category stocks" })).toBeTruthy();
   });
 
-  it("adds a searched stock to the draft and commits it once", async () => {
+  it("persists a searched stock immediately and keeps the dialog open", async () => {
     const onClose = vi.fn();
     renderDialog(onClose);
     await chooseStock("2454", /2454.*MediaTek.*Add to this category/);
 
-    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2454", "2330", "2317"]));
-    expect(onClose).toHaveBeenCalledOnce();
+    await waitFor(() =>
+      expect(storeState.setCategoryStockIds).toHaveBeenCalledWith(
+        "category-tech",
+        ["2454", "2330", "2317"],
+      ),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("3 stocks")).toBeTruthy();
   });
 
-  it("moves an existing searched stock locally and saves the final order", async () => {
+  it("moves an existing searched stock to the top and persists immediately", async () => {
     renderDialog();
     await chooseStock("2317", /2317.*Hon Hai.*Move to top/);
 
-    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2317", "2330"]));
+    await waitFor(() =>
+      expect(storeState.setCategoryStockIds).toHaveBeenCalledWith(
+        "category-tech",
+        ["2317", "2330"],
+      ),
+    );
   });
 
   it("does not write when the searched stock is already first", async () => {
@@ -251,28 +263,44 @@ describe("AddStockDialog category stock management", () => {
     await chooseStock("2330", /2330.*TSMC.*Move to top/);
 
     expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    expect((screen.getByRole("button", { name: "Save" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("persists one drag result on Save and keeps the draft on failure", async () => {
-    storeState.setCategoryStockIds.mockRejectedValueOnce(new Error("write failed"));
+  it("persists one final drag result at drag end", async () => {
     renderDialog();
 
     fireEvent.pointerDown(screen.getByRole("button", { name: "Reorder TSMC" }));
     act(() => reorderHandlers.onReorder?.(["2317", "2330"]));
+    act(() => reorderHandlers.onReorder?.(["2317", "2330"]));
+    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
     act(() => reorderHandlers.onDragEnd?.());
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(storeState.setCategoryStockIds).toHaveBeenCalledTimes(1));
+    expect(storeState.setCategoryStockIds).toHaveBeenCalledWith(
+      "category-tech",
+      ["2317", "2330"],
+    );
+  });
+
+  it("rolls back the order and keeps the dialog open when a write fails", async () => {
+    const onClose = vi.fn();
+    storeState.setCategoryStockIds.mockRejectedValueOnce(new Error("write failed"));
+    renderDialog(onClose);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove Hon Hai from this category" }),
+    );
 
     await waitFor(() => {
-      expect(storeState.setCategoryStockIds).toHaveBeenCalledTimes(1);
+      expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2330"]);
       expect(screen.getByRole("alert").textContent).toContain(
         "Changes could not be saved. Try again.",
       );
     });
+    expect(onClose).not.toHaveBeenCalled();
     const rows = within(screen.getByTestId("reorder-group")).getAllByRole("listitem");
     expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining("2317"),
       expect.stringContaining("2330"),
+      expect.stringContaining("2317"),
     ]);
   });
 
@@ -285,37 +313,39 @@ describe("AddStockDialog category stock management", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Move Hon Hai up" }));
 
-    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    await waitFor(() => expect(storeState.setCategoryStockIds).toHaveBeenCalledWith("category-tech", ["2317", "2330"]));
+    await waitFor(() =>
+      expect(storeState.setCategoryStockIds).toHaveBeenCalledWith(
+        "category-tech",
+        ["2317", "2330"],
+      ),
+    );
   });
 
-  it("discards a draft from Cancel without persisting it", async () => {
-    const onClose = vi.fn();
-    renderDialog(onClose);
-    await chooseStock("2454", /2454.*MediaTek.*Add to this category/);
-
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(storeState.setCategoryStockIds).not.toHaveBeenCalled();
-    expect(onClose).toHaveBeenCalledOnce();
-  });
-
-  it("keeps conflicting actions disabled while the single save is pending", async () => {
+  it("keeps conflicting actions and close disabled while a write is pending", async () => {
     let resolveSave!: () => void;
     storeState.setCategoryStockIds.mockImplementationOnce(
       () => new Promise<void>((resolve) => { resolveSave = resolve; }),
     );
-    renderDialog();
+    const onClose = vi.fn();
+    renderDialog(onClose);
     await chooseStock("2454", /2454.*MediaTek.*Add to this category/);
 
-    const save = screen.getByRole("button", { name: "Save" }) as HTMLButtonElement;
-    fireEvent.click(save);
-    fireEvent.click(save);
     expect(storeState.setCategoryStockIds).toHaveBeenCalledTimes(1);
-    expect(save.disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Cancel" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Close" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Remove TSMC from this category" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("combobox") as HTMLInputElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Reorder TSMC" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Remove TSMC from this category" }));
+    act(() => reorderHandlers.onReorder?.(["2317", "2330"]));
+    act(() => reorderHandlers.onDragEnd?.());
+    expect(storeState.setCategoryStockIds).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
 
     await act(async () => resolveSave());
+    await waitFor(() => expect((screen.getByRole("button", { name: "Close" }) as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

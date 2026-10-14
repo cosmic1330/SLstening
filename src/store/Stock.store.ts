@@ -183,9 +183,9 @@ const readCloudBackupMetadata = async (userId: string) => {
   const lastSuccess = await store.get(cloudBackupLastSuccessKey(userId));
   const localChanged = await store.get(cloudDataChangedKey(userId));
   return {
-    // Preserve the historical automatic-backup behavior until the user
-    // explicitly opts out on this account.
-    enabled: typeof storedEnabled === "boolean" ? storedEnabled : true,
+    // Automatic upload is an explicit per-account opt-in. Accounts created
+    // before this metadata existed remain local-only until the user enables it.
+    enabled: typeof storedEnabled === "boolean" ? storedEnabled : false,
     lastSuccessAt: typeof lastSuccess === "string" && !Number.isNaN(Date.parse(lastSuccess)) ? lastSuccess : null,
     localChangedAt: typeof localChanged === "string" && !Number.isNaN(Date.parse(localChanged)) ? localChanged : null,
   };
@@ -215,17 +215,19 @@ const writeCloudBackupMetadataNow = async (
     await store.save();
   } catch (error) {
     try {
-      await restoreStoreValue(store, enabledKey, previousEnabled);
-      await restoreStoreValue(store, successKey, previousSuccess);
-      await restoreStoreValue(store, changedKey, previousChanged);
+      // Only restore keys this operation attempted to change. Account-cache
+      // restore commits use a separate transaction and may legitimately have
+      // advanced the other metadata while this save was pending.
+      if (next.enabled !== undefined) await restoreStoreValue(store, enabledKey, previousEnabled);
+      if (next.lastSuccessAt !== undefined) await restoreStoreValue(store, successKey, previousSuccess);
+      if (next.localChangedAt !== undefined) await restoreStoreValue(store, changedKey, previousChanged);
     } catch { /* Preserve the original persistence error. */ }
     throw error;
   }
 };
 
-// Cloud comparisons run outside the local mutation queue. Serialize their
-// metadata commits separately so a later explicit OFF always wins over an
-// older comparison that was already awaiting Store.save().
+// Serialize metadata commits so a later explicit OFF always wins over an
+// older upload acknowledgement that was already awaiting Store.save().
 let cloudMetadataWriteQueue: Promise<void> = Promise.resolve();
 const writeCloudBackupMetadata = (
   userId: string,
@@ -313,6 +315,43 @@ const writeMcpAccountCommit = async (
   try {
     await store.set(snapshotKey, accountState);
     await store.set(dirtyKey, dirty);
+    await store.set(successKey, lastSuccessAt);
+    await store.set(changedKey, changedAt);
+    await store.save();
+  } catch (error) {
+    try {
+      await Promise.all([
+        restoreStoreValue(store, snapshotKey, previous[0]),
+        restoreStoreValue(store, dirtyKey, previous[1]),
+        restoreStoreValue(store, successKey, previous[2]),
+        restoreStoreValue(store, changedKey, previous[3]),
+      ]);
+    } catch { /* Preserve the original persistence error. */ }
+    throw error;
+  }
+};
+
+// Manual restore updates the durable account cache and its outbox metadata as
+// one Store transaction. Indicator/navigation preferences are intentionally
+// projected separately because they are local-only state.
+const writeRestoredAccount = async (
+  userId: string,
+  snapshot: AccountSnapshot,
+  lastSuccessAt: string,
+  changedAt: string,
+) => {
+  const store = await Store.load(ACCOUNT_STATE_FILE);
+  const snapshotKey = accountKey(userId);
+  const dirtyKey = accountDirtyKey(userId);
+  const successKey = cloudBackupLastSuccessKey(userId);
+  const changedKey = cloudDataChangedKey(userId);
+  const previous = await Promise.all([
+    store.get(snapshotKey), store.get(dirtyKey), store.get(successKey), store.get(changedKey),
+  ]);
+  const { indicatorSettings: _indicatorSettings, ...accountState } = snapshot;
+  try {
+    await store.set(snapshotKey, accountState);
+    await store.set(dirtyKey, false);
     await store.set(successKey, lastSuccessAt);
     await store.set(changedKey, changedAt);
     await store.save();
@@ -480,25 +519,56 @@ const markCloudCommit = (userId: string, epoch: number) => {
   committedCloudGenerations.set(key, next);
   return next;
 };
-export type CloudBackupConflict = {
-  cloudSnapshot: AccountSnapshot;
-  cloudUpdatedAt: string | null;
-  localChangedAt: string | null;
-  source: "startup" | "enable" | "mcp";
-};
 const cloudBackupAttemptAt = new Map<string, number>();
 const cloudBackupInFlight = new Set<string>();
-const cloudSnapshotGenerations = new Map<string, number>();
-const cloudComparisonGenerations = new Map<string, number>();
-const advanceCloudComparisonGeneration = (userId: string) => {
-  const generation = (cloudComparisonGenerations.get(userId) ?? 0) + 1;
-  cloudComparisonGenerations.set(userId, generation);
+const cloudBackupInFlightEpoch = new Map<string, number>();
+const cloudBackupInFlightPromises = new Map<string, Promise<void>>();
+// When an epoch refresh observes another epoch's request in flight, remember
+// only the newest epoch. The old request's finally block performs one bounded
+// retry for that pending outbox instead of spinning on every failure.
+const cloudBackupPendingEpoch = new Map<string, number>();
+const cloudRestoreGates = new Map<string, { holders: number; releaseGate: () => boolean }>();
+const cloudUploadAckGenerations = new Map<string, number>();
+const cloudRestoreGenerations = new Map<string, number>();
+const cloudBackupToggleGenerations = new Map<string, number>();
+const advanceCloudRestoreGeneration = (userId: string) => {
+  const generation = (cloudRestoreGenerations.get(userId) ?? 0) + 1;
+  cloudRestoreGenerations.set(userId, generation);
   return generation;
 };
-const markCloudSnapshotChanged = (userId: string) => {
-  const generation = (cloudSnapshotGenerations.get(userId) ?? 0) + 1;
-  cloudSnapshotGenerations.set(userId, generation);
+const advanceCloudBackupToggleGeneration = (userId: string) => {
+  const generation = (cloudBackupToggleGenerations.get(userId) ?? 0) + 1;
+  cloudBackupToggleGenerations.set(userId, generation);
   return generation;
+};
+const markCloudUploadAckChanged = (userId: string) => {
+  const generation = (cloudUploadAckGenerations.get(userId) ?? 0) + 1;
+  cloudUploadAckGenerations.set(userId, generation);
+  return generation;
+};
+const markCloudDataChanged = (userId: string) => {
+  markCloudUploadAckChanged(userId);
+  advanceCloudRestoreGeneration(userId);
+};
+
+const acquireCloudRestoreGate = (userId: string) => {
+  const existing = cloudRestoreGates.get(userId);
+  if (existing) {
+    existing.holders += 1;
+    return existing;
+  }
+  const gate: { holders: number; releaseGate: () => boolean } = {
+    holders: 1,
+    releaseGate: () => false,
+  };
+  gate.releaseGate = () => {
+    gate.holders -= 1;
+    const released = gate.holders <= 0 && cloudRestoreGates.get(userId) === gate;
+    if (released) cloudRestoreGates.delete(userId);
+    return released;
+  };
+  cloudRestoreGates.set(userId, gate);
+  return gate;
 };
 
 /** Test-only reset. App restarts intentionally reset the throttle. */
@@ -508,8 +578,13 @@ export const __resetStockStoreQueuesForTests = () => {
   cloudMetadataWriteQueue = Promise.resolve();
   cloudBackupAttemptAt.clear();
   cloudBackupInFlight.clear();
-  cloudSnapshotGenerations.clear();
-  cloudComparisonGenerations.clear();
+  cloudBackupInFlightEpoch.clear();
+  cloudBackupInFlightPromises.clear();
+  cloudBackupPendingEpoch.clear();
+  cloudRestoreGates.clear();
+  cloudUploadAckGenerations.clear();
+  cloudRestoreGenerations.clear();
+  cloudBackupToggleGenerations.clear();
   committedCloudGenerations.clear();
   mutationGeneration = 0;
   hydrationGeneration = 0;
@@ -520,30 +595,48 @@ const scheduleCloudWrite = (
   userId: string,
   epoch: number,
   snapshot: AccountSnapshot,
-  options: { bypassCooldown?: boolean } = {},
+  options: { bypassCooldown?: boolean; queueIfBusy?: boolean } = {},
 ) => {
   const current = get();
-  if (current.accountUserId !== userId || current.accountEpoch !== epoch || !current.cloudBackupEnabled || current.cloudBackupConflict) return false;
+  if (current.accountUserId !== userId || current.accountEpoch !== epoch || !current.cloudBackupEnabled) return false;
   if (cloudBackupPayloadBytes(snapshot) > CLOUD_BACKUP_MAX_BYTES) return false;
   // Throttle and in-flight ownership are per runtime account, not epoch: a
   // native epoch refresh must not bypass the 30-second endpoint protection.
   const key = userId;
-  const generation = markCloudSnapshotChanged(userId);
+  const generation = markCloudUploadAckChanged(userId);
   const lastAttemptAt = cloudBackupAttemptAt.get(key) ?? 0;
-  if (cloudBackupInFlight.has(key)) return false;
+  if (cloudRestoreGates.has(key)) {
+    cloudBackupPendingEpoch.set(key, epoch);
+    return false;
+  }
+  if (cloudBackupInFlight.has(key)) {
+    if (cloudBackupInFlightEpoch.get(key) !== epoch || options.queueIfBusy) cloudBackupPendingEpoch.set(key, epoch);
+    return false;
+  }
   if (!options.bypassCooldown && Date.now() - lastAttemptAt < CLOUD_BACKUP_MIN_INTERVAL_MS) return false;
 
   cloudBackupInFlight.add(key);
+  cloudBackupInFlightEpoch.set(key, epoch);
   cloudBackupAttemptAt.set(key, Date.now());
-  void (async () => {
+  let uploadTask!: Promise<void>;
+  uploadTask = (async () => {
       try {
         const result = await updateNativeAccountState(epoch, snapshot);
         const timestamp = typeof result.updatedAt === "string" && !Number.isNaN(Date.parse(result.updatedAt))
           ? result.updatedAt
           : new Date().toISOString();
         const clear = async () => {
+          // A local mutation or explicit restore may have superseded this
+          // response while the provider request was in flight. Do not let an
+          // old acknowledgement rewrite freshness metadata or clear it.
+          if (cloudUploadAckGenerations.get(key) !== generation) return;
+          const beforeClear = get();
+          if (beforeClear.accountUserId !== userId || beforeClear.accountEpoch !== epoch) return;
           await writeCloudBackupMetadata(userId, { lastSuccessAt: timestamp });
-          if (cloudSnapshotGenerations.get(key) === generation) {
+          const beforeDirtyClear = get();
+          if (cloudUploadAckGenerations.get(key) === generation
+            && beforeDirtyClear.accountUserId === userId
+            && beforeDirtyClear.accountEpoch === epoch) {
             markCloudCommit(userId, epoch);
             await clearAccountDirty(userId);
           }
@@ -553,7 +646,7 @@ const scheduleCloudWrite = (
         await queued;
         const after = get();
         if (after.accountUserId === userId && after.accountEpoch === epoch) {
-          set({ cloudBackupLastSuccessAt: timestamp, syncStatus: after.cloudBackupEnabled && cloudSnapshotGenerations.get(key) === generation ? "synced" : "local", syncError: null });
+          set({ cloudBackupLastSuccessAt: timestamp, syncStatus: after.cloudBackupEnabled && cloudUploadAckGenerations.get(key) === generation ? "synced" : "local", syncError: null });
         }
       } catch (error) {
         reportHandledError("cloud_backup_write", error, "CLOUD_BACKUP_WRITE_FAILED");
@@ -561,107 +654,82 @@ const scheduleCloudWrite = (
         if (after.accountUserId === userId && after.accountEpoch === epoch && after.cloudBackupEnabled) set({ syncStatus: "local", syncError: null });
       } finally {
         cloudBackupInFlight.delete(key);
+        cloudBackupInFlightEpoch.delete(key);
+        await flushPendingCloudBackup(get, set, userId);
+        if (cloudBackupInFlightPromises.get(key) === uploadTask) cloudBackupInFlightPromises.delete(key);
       }
   })();
+  cloudBackupInFlightPromises.set(key, uploadTask);
   return true;
+};
+
+const flushPendingCloudBackup = async (
+  get: () => StocksState,
+  set: (partial: Partial<StocksState>) => void,
+  userId: string,
+) => {
+  const pendingEpoch = cloudBackupPendingEpoch.get(userId);
+  cloudBackupPendingEpoch.delete(userId);
+  if (pendingEpoch === undefined) return;
+  const after = get();
+  if (after.accountUserId !== userId || after.accountEpoch !== pendingEpoch || !after.cloudBackupEnabled) return;
+  try {
+    if (!(await readAccountDirty(userId))) return;
+    const retryState = get();
+    if (retryState.accountUserId === userId
+      && retryState.accountEpoch === pendingEpoch
+      && retryState.cloudBackupEnabled) {
+      scheduleCloudWrite(get, set, userId, pendingEpoch, accountSnapshotFrom(retryState), { bypassCooldown: true, queueIfBusy: true });
+    }
+  } catch (retryError) {
+    reportHandledError("cloud_backup_retry", retryError, "CLOUD_BACKUP_WRITE_FAILED");
+  }
 };
 
 const validTimestamp = (value: unknown) =>
   typeof value === "string" && !Number.isNaN(Date.parse(value)) ? value : null;
 
-const beginCloudComparison = async (
-  get: () => StocksState,
-  set: (partial: Partial<StocksState>) => void,
-  userId: string,
-  epoch: number,
-  source: CloudBackupConflict["source"],
-  shouldContinue: () => boolean = () => true,
-) => {
-  const comparisonGeneration = advanceCloudComparisonGeneration(userId);
-  const comparisonIsCurrent = () => shouldContinue()
-    && cloudComparisonGenerations.get(userId) === comparisonGeneration;
-  set({ cloudBackupChecking: true, cloudBackupConflict: null, syncError: null });
-  try {
-    const result = await getNativeAccountState(epoch);
-    const current = get();
-    if (!comparisonIsCurrent() || !result || result.userId !== userId || result.epoch !== epoch || current.accountUserId !== userId || current.accountEpoch !== epoch) return;
-    const cloud = result.data ? normalizeAccountSnapshot(result.data) : emptyAccountSnapshot();
-    __validateSnapshotForLocal(cloud);
-    if (cloudBackupPayloadBytes(cloud) > CLOUD_BACKUP_MAX_BYTES) throw new Error("DATA_LIMIT_EXCEEDED");
-    // The fetch may outlive local-first mutations. Compare and upload the
-    // current projection, never the snapshot that existed before await.
-    const decisionState = get();
-    if (!comparisonIsCurrent() || decisionState.accountUserId !== userId || decisionState.accountEpoch !== epoch) return;
-    const local = accountSnapshotFrom(decisionState);
-    if (cloudBackupPayloadBytes(local) > CLOUD_BACKUP_MAX_BYTES) throw new CloudBackupSizeError(cloudBackupPayloadBytes(local));
-    const updatedAt = validTimestamp(result.updatedAt);
-    const cloudMissing = !updatedAt && cloud.stocks.length === 0 && cloud.categories.length === 0;
-    if (cloudMissing) {
-      await writeCloudBackupMetadata(userId, { enabled: true });
-      if (!comparisonIsCurrent()) return;
-      // Only the remote wait stays outside the mutation FIFO. Queue the final
-      // local commit behind any mutation whose durable write has started but
-      // whose projection is not published yet, then read the snapshot there.
-      await enqueueMutation(get, async () => {
-        const latest = get();
-        if (!comparisonIsCurrent() || latest.accountUserId !== userId || latest.accountEpoch !== epoch) return;
-        const latestLocal = accountSnapshotFrom(latest);
-        if (cloudBackupPayloadBytes(latestLocal) > CLOUD_BACKUP_MAX_BYTES) throw new CloudBackupSizeError(cloudBackupPayloadBytes(latestLocal));
-        await enqueueAccountCacheWrite(userId, latestLocal, () => {
-          const after = get();
-          return comparisonIsCurrent() && after.accountUserId === userId && after.accountEpoch === epoch;
-        }, true);
-        const after = get();
-        if (!comparisonIsCurrent() || after.accountUserId !== userId || after.accountEpoch !== epoch) return;
-        set({ cloudBackupEnabled: true, cloudBackupChecking: false, hydrated: true, syncStatus: "loading", syncError: null });
-        scheduleCloudWrite(get, set, userId, epoch, latestLocal, { bypassCooldown: true });
-      }, { invalidateHydration: false });
-      return;
-    }
-    if (sameCloudBackupData(local, cloud)) {
-      await writeCloudBackupMetadata(userId, { enabled: true, ...(updatedAt ? { lastSuccessAt: updatedAt } : {}) });
-      if (!comparisonIsCurrent()) return;
-      await enqueueMutation(get, async () => {
-        const latest = get();
-        if (!comparisonIsCurrent() || latest.accountUserId !== userId || latest.accountEpoch !== epoch) return;
-        if (!sameCloudBackupData(accountSnapshotFrom(latest), cloud)) {
-          // A local commit completed while metadata was saving. Keep backup
-          // disabled and ask using the now-current local projection.
-          await writeCloudBackupMetadata(userId, { enabled: false });
-          const afterPersistence = get();
-          if (!comparisonIsCurrent() || afterPersistence.accountUserId !== userId || afterPersistence.accountEpoch !== epoch) return;
-          set({
-            cloudBackupEnabled: false,
-            cloudBackupChecking: false,
-            cloudBackupConflict: { cloudSnapshot: cloud, cloudUpdatedAt: updatedAt, localChangedAt: get().cloudDataChangedAt, source },
-            hydrated: true,
-            syncStatus: "local",
-            syncError: null,
-          });
-          return;
-        }
-        set({ cloudBackupEnabled: true, cloudBackupChecking: false, cloudBackupLastSuccessAt: updatedAt ?? latest.cloudBackupLastSuccessAt, hydrated: true, syncStatus: "synced", syncError: null });
-      }, { invalidateHydration: false });
-      return;
-    }
-    set({
-      cloudBackupChecking: false,
-      cloudBackupConflict: { cloudSnapshot: cloud, cloudUpdatedAt: updatedAt, localChangedAt: get().cloudDataChangedAt, source },
-      hydrated: true,
-      syncStatus: "local",
-      syncError: null,
-    });
-  } catch (error) {
-    reportHandledError("cloud_backup_compare", error, "CLOUD_BACKUP_COMPARE_FAILED");
-    if (!comparisonIsCurrent()) return;
-    try { await writeCloudBackupMetadata(userId, { enabled: false }); } catch { /* keep the local projection usable */ }
-    const latest = get();
-    if (!comparisonIsCurrent()) return;
-    if (latest.accountUserId === userId && latest.accountEpoch === epoch) {
-      set({ cloudBackupEnabled: false, cloudBackupChecking: false, cloudBackupConflict: null, hydrated: true, syncStatus: "local", syncError: null });
-    }
-  }
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const validateCloudRestoreSnapshot = (value: unknown): AccountSnapshot => {
+  if (!isRecord(value)
+    || !Array.isArray(value.stocks)
+    || !Array.isArray(value.categories)
+    || typeof value.activeCategoryId !== "string"
+    || !Array.isArray(value.pinnedCategoryIds)
+    || !Array.isArray(value.recentCategoryIds)
+    || !isRecord(value.indicatorSettings)) throw new Error("INVALID_CLOUD_BACKUP");
+  const strings = (items: unknown) => Array.isArray(items) && items.every((item) => typeof item === "string");
+  if (!strings(value.pinnedCategoryIds) || !strings(value.recentCategoryIds)) throw new Error("INVALID_CLOUD_BACKUP");
+  const stocks = value.stocks.map((stock) => {
+    if (!isRecord(stock)
+      || typeof stock.id !== "string"
+      || typeof stock.name !== "string"
+      || typeof stock.group !== "string"
+      || typeof stock.type !== "string") throw new Error("INVALID_CLOUD_BACKUP");
+    return stock as unknown as StockStoreType;
+  });
+  const categories = value.categories.map((category) => {
+    if (!isRecord(category)
+      || typeof category.id !== "string"
+      || typeof category.name !== "string"
+      || !strings(category.stockIds)) throw new Error("INVALID_CLOUD_BACKUP");
+    return category as unknown as CategoryType;
+  });
+  const snapshot = normalizeAccountSnapshot({
+    stocks,
+    categories,
+    activeCategoryId: value.activeCategoryId,
+    pinnedCategoryIds: value.pinnedCategoryIds as string[],
+    recentCategoryIds: value.recentCategoryIds as string[],
+    indicatorSettings: value.indicatorSettings as unknown as IndicatorSettings,
+  });
+  __validateSnapshotForLocal(snapshot);
+  if (cloudBackupPayloadBytes(snapshot) > CLOUD_BACKUP_MAX_BYTES) throw new CloudBackupSizeError(cloudBackupPayloadBytes(snapshot));
+  return snapshot;
 };
+
 const invalidateMutationQueue = () => { mutationGeneration += 1; };
 const invalidateHydration = () => { hydrationGeneration += 1; };
 
@@ -674,8 +742,8 @@ const enqueueMutation = <T>(
   const captured = { generation: mutationGeneration, userId: get().accountUserId, epoch: get().accountEpoch };
   const guarded = async () => {
     // Invalidate at execution time, not enqueue time. A startup mutation can
-    // be queued behind the initial pull; invalidating immediately would cancel
-    // that pull and let the mutation overwrite unseen PhoneApp groups.
+    // be queued behind local hydration; invalidating immediately would cancel
+    // that hydration and let the mutation race the cache projection.
     if (shouldInvalidateHydration) invalidateHydration();
     const current = get();
     if (captured.generation !== mutationGeneration || current.accountUserId !== captured.userId || current.accountEpoch !== captured.epoch) throw new Error("SESSION_CHANGED");
@@ -734,8 +802,6 @@ interface StocksState {
   cloudBackupEnabled: boolean;
   cloudBackupLastSuccessAt: string | null;
   cloudDataChangedAt: string | null;
-  cloudBackupChecking: boolean;
-  cloudBackupConflict: CloudBackupConflict | null;
   syncStatus: "local" | "loading" | "synced" | "error";
   syncError: string | null;
   legacySettingsPrompt: boolean;
@@ -751,7 +817,7 @@ interface StocksState {
   clearAccountProjectionIfCurrentUser: (userId: string) => Promise<boolean>;
   setAccountSyncError: (message: string) => void;
   setCloudBackupEnabled: (enabled: boolean) => Promise<void>;
-  resolveCloudBackupConflict: (choice: "local" | "cloud") => Promise<void>;
+  restoreCloudBackup: () => Promise<"restored" | "not_found">;
   applyMcpAccountCommit: (event: AccountStateUpdatedEvent) => Promise<void>;
   syncCurrent: () => Promise<void>;
   updateIndicatorSettings: (settings: IndicatorSettings) => Promise<void>;
@@ -804,10 +870,10 @@ const commitSnapshot = async (
       await enqueueAccountCacheWrite(userId, normalized, isCurrent, true, changedAt);
       if (!isCurrent()) return;
       // This version advances for every cloud-represented local commit, even
-      // when backup is off, oversized, in conflict, or currently throttled.
+      // when upload is off, oversized, or currently throttled.
       // An older in-flight upload may finish, but it cannot acknowledge this
       // newer local snapshot as backed up.
-      markCloudSnapshotChanged(userId);
+      markCloudDataChanged(userId);
       const projected = localNavigation(normalized, get());
       let backupEnabled = get().cloudBackupEnabled;
       if (backupEnabled && cloudBackupPayloadBytes(normalized) > CLOUD_BACKUP_MAX_BYTES) {
@@ -817,8 +883,8 @@ const commitSnapshot = async (
         // different account. Never publish this stale projection afterward.
         if (!isCurrent()) return;
       }
-      set({ ...projected, accountUserId: userId, accountEpoch: epoch, cloudBackupEnabled: backupEnabled, cloudDataChangedAt: changedAt, cloudBackupChecking: false, hydrated: true, syncStatus: backupEnabled ? "loading" : "local", syncError: null });
-      if (backupEnabled) scheduleCloudWrite(get, set, userId, epoch, normalized);
+      set({ ...projected, accountUserId: userId, accountEpoch: epoch, cloudBackupEnabled: backupEnabled, cloudDataChangedAt: changedAt, hydrated: true, syncStatus: backupEnabled ? "loading" : "local", syncError: null });
+      if (backupEnabled) scheduleCloudWrite(get, set, userId, epoch, normalized, { queueIfBusy: true });
     } catch (error) {
       reportHandledError("account_commit", error, "ACCOUNT_COMMIT_FAILED");
       if (isCurrent()) set({ syncStatus: "error", syncError: safeSyncError(error) });
@@ -834,16 +900,15 @@ const useStocksStore = create<StocksState>((set, get) => ({
   stocks: [], menu: [], categories: [], activeCategoryId: EMPTY_CATEGORY_ID, hydrated: false,
   pinnedCategoryIds: [], recentCategoryIds: [], indicatorSettings: { ...DEFAULT_INDICATOR_SETTINGS },
   accountUserId: null, accountEpoch: null, cloudBackupEnabled: false, cloudBackupLastSuccessAt: null, syncStatus: "local", syncError: null,
-  cloudDataChangedAt: null, cloudBackupChecking: false, cloudBackupConflict: null,
+  cloudDataChangedAt: null,
   legacySettingsPrompt: false, legacySettingsError: null,
 
   reload: async () => {
     if (isNativeRuntime()) {
       const current = get();
       if (current.accountUserId && current.accountEpoch !== null) {
-        // Hydration launches cloud comparison in the background. The queue
-        // covers only the local setup phase; network latency never blocks a
-        // later local commit.
+        // Hydration covers only local setup; an enabled dirty outbox may upload
+        // in the background without blocking a later local commit.
         return enqueueMutation(get, async () => {
           const latest = get();
           if (!latest.accountUserId || latest.accountEpoch === null) return;
@@ -859,17 +924,16 @@ const useStocksStore = create<StocksState>((set, get) => ({
   },
 
   initializeAccount: (userId, epoch) => enqueueMutation(get, async () => {
-    // Cache priming exposes a usable projection before the network round-trip
-    // completes. Hydration launches that comparison without awaiting it, so
-    // the queue is released before local mutations resume.
+    // Cache priming exposes a usable projection before local hydration
+    // completes. Any dirty outbox upload is fire-and-forget, so the queue is
+    // released before local mutations resume.
     await get().primeAccountFromCache(userId, epoch);
     const current = get();
     if (current.accountUserId !== userId || current.accountEpoch !== epoch) return;
     try {
       await get().hydrateAccount(userId, epoch);
     } catch {
-      // The account remains usable from cache after a pull failure. The
-      // hydrate path already records the actionable sync error in the store.
+      // The account remains usable from cache after a local hydration failure.
     }
   }, { invalidateHydration: false }),
 
@@ -900,8 +964,6 @@ const useStocksStore = create<StocksState>((set, get) => ({
         cloudBackupEnabled: backup.enabled,
         cloudBackupLastSuccessAt: backup.lastSuccessAt,
         cloudDataChangedAt: backup.localChangedAt,
-        cloudBackupChecking: false,
-        cloudBackupConflict: null,
         hydrated: true,
         syncStatus: backup.enabled ? "loading" : "local",
         syncError: null,
@@ -943,40 +1005,45 @@ const useStocksStore = create<StocksState>((set, get) => ({
         }
       }
       if (!backup.enabled) {
-        set({ cloudBackupChecking: false, cloudBackupConflict: null, hydrated: true, syncStatus: "local", syncError: null });
+        set({ hydrated: true, syncStatus: "local", syncError: null });
         return;
       }
       if (dirty) {
         const cached = await dirtyCacheSnapshot(userId, isCurrentHydration);
-        if (!cached || !isCurrentHydration() || get().accountUserId !== userId || get().accountEpoch !== epoch) return;
+        if (!isCurrentHydration() || get().accountUserId !== userId || get().accountEpoch !== epoch) return;
+        if (!cached) {
+          // A dirty marker without its snapshot can be left by an interrupted
+          // or legacy write. Keep the marker for diagnosis/recovery, but do
+          // not strand the signed-in account in an unhydrated loading state.
+          set({ hydrated: true, syncStatus: "local", syncError: null });
+          return;
+        }
         // This cache is the authority while its outbox marker is dirty. Do
         // not overlay cleared/stale in-memory navigation onto it at restart.
         // Indicator preferences live outside this cache, so retain the
         // already-primed account-local value and reconcile it as on a clean
         // hydration.
         const indicatorFallback = { ...get().indicatorSettings };
-        let backupEnabled = true;
+        let backupEnabled: boolean = backup.enabled;
         if (cloudBackupPayloadBytes(cached) > CLOUD_BACKUP_MAX_BYTES) {
           await writeCloudBackupMetadata(userId, { enabled: false });
           if (!isCurrentHydration() || get().accountUserId !== userId || get().accountEpoch !== epoch) return;
           backupEnabled = false;
         }
-        set({ ...cached, indicatorSettings: indicatorFallback, menu, accountUserId: userId, accountEpoch: epoch, cloudBackupEnabled: backupEnabled, cloudBackupLastSuccessAt: backup.lastSuccessAt, cloudDataChangedAt: backup.localChangedAt, cloudBackupChecking: false, cloudBackupConflict: null, hydrated: true, syncStatus: backupEnabled ? "loading" : "local", syncError: null });
+        set({ ...cached, indicatorSettings: indicatorFallback, menu, accountUserId: userId, accountEpoch: epoch, cloudBackupEnabled: backupEnabled, cloudBackupLastSuccessAt: backup.lastSuccessAt, cloudDataChangedAt: backup.localChangedAt, hydrated: true, syncStatus: backupEnabled ? "loading" : "local", syncError: null });
         reconcileIndicatorSettings(get, set, userId, epoch, indicatorFallback);
-        if (backupEnabled) scheduleCloudWrite(get, set, userId, epoch, cached, { bypassCooldown: true });
+        if (backupEnabled) scheduleCloudWrite(get, set, userId, epoch, cached, { bypassCooldown: true, queueIfBusy: true });
         return;
       }
-      // Comparison is background-only: local mutations must not wait behind a
-      // slow cloud read, and their hydration generation invalidates stale
-      // comparison results.
-      void beginCloudComparison(get, set, userId, epoch, "startup", isCurrentHydration);
+      // Startup is local-only. Automatic upload may acknowledge a dirty
+      // outbox below, but it never reads or compares cloud state.
+      set({ hydrated: true, syncStatus: "local", syncError: null });
       await get().checkLegacySettings();
     } catch (error) {
       reportHandledError("account_cloud_hydrate", error, "ACCOUNT_CLOUD_HYDRATE_FAILED");
       const current = get();
       if (!isCurrentHydration() || current.accountUserId !== userId || current.accountEpoch !== epoch) return;
-      try { await writeCloudBackupMetadata(userId, { enabled: false }); } catch { /* remain local */ }
-      set({ cloudBackupEnabled: false, cloudBackupChecking: false, cloudBackupConflict: null, hydrated: true, syncStatus: "local", syncError: null });
+      set({ hydrated: true, syncStatus: "local", syncError: null });
     }
   },
 
@@ -1014,130 +1081,193 @@ const useStocksStore = create<StocksState>((set, get) => ({
 
   clearAccountProjection: async () => {
     const currentUserId = get().accountUserId;
-    if (currentUserId) advanceCloudComparisonGeneration(currentUserId);
+    if (currentUserId) advanceCloudRestoreGeneration(currentUserId);
     invalidateMutationQueue();
     invalidateHydration();
-    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudBackupEnabled: false, cloudBackupLastSuccessAt: null, cloudDataChangedAt: null, cloudBackupChecking: false, cloudBackupConflict: null, hydrated: false, syncStatus: "local", syncError: null });
+    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudBackupEnabled: false, cloudBackupLastSuccessAt: null, cloudDataChangedAt: null, hydrated: false, syncStatus: "local", syncError: null });
   },
   clearAccountProjectionIfCurrentUser: async (userId) => {
     // Keep this check and the state reset in one synchronous store action.
     // A stale native-session catch must not clear a newer account projection.
     const currentUserId = get().accountUserId;
     if (currentUserId !== null && currentUserId !== userId) return false;
-    advanceCloudComparisonGeneration(userId);
+    advanceCloudRestoreGeneration(userId);
     invalidateMutationQueue();
     invalidateHydration();
-    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudBackupEnabled: false, cloudBackupLastSuccessAt: null, cloudDataChangedAt: null, cloudBackupChecking: false, cloudBackupConflict: null, hydrated: false, syncStatus: "local", syncError: null });
+    set({ ...emptyAccountSnapshot(), accountUserId: null, accountEpoch: null, cloudBackupEnabled: false, cloudBackupLastSuccessAt: null, cloudDataChangedAt: null, hydrated: false, syncStatus: "local", syncError: null });
     return true;
   },
   setAccountSyncError: (message) => set({ hydrated: false, syncStatus: "error", syncError: message }),
   setCloudBackupEnabled: (enabled) => {
-    // Cancellation is synchronous with the user's OFF action. It must not
-    // wait behind a local write while an older comparison is preparing its
-    // final enable commit.
+    const initial = get();
+    const intentUserId = initial.accountUserId;
+    const intentGeneration = intentUserId
+      ? advanceCloudBackupToggleGeneration(intentUserId)
+      : null;
+    const isCurrentToggleIntent = (userId: string, epoch: number) => {
+      const latest = get();
+      return intentUserId === userId
+        && intentGeneration !== null
+        && cloudBackupToggleGenerations.get(userId) === intentGeneration
+        && latest.accountUserId === userId
+        && latest.accountEpoch === epoch;
+    };
     if (!enabled) {
-      const current = get();
-      if (current.accountUserId) advanceCloudComparisonGeneration(current.accountUserId);
-      set({ cloudBackupEnabled: false, cloudBackupChecking: false, cloudBackupConflict: null, syncStatus: "local", syncError: null });
+      // Cancellation is synchronous with the user's OFF action. It must not
+      // wait behind a local write or an older upload response.
+      set({ cloudBackupEnabled: false, syncStatus: "local", syncError: null });
     }
     return enqueueMutation(get, async () => {
+      const current = get();
+      let durableEnabledBefore: boolean | null = null;
+      try {
+        if (!isNativeRuntime() || !current.accountUserId || current.accountEpoch === null) throw new Error("ACCOUNT_REQUIRED");
+        const userId = current.accountUserId;
+        const epoch = current.accountEpoch;
+        // Read at execution time, after earlier queued mutations have settled.
+        // An enqueue-time snapshot can be stale when an oversized mutation
+        // auto-disables upload before this toggle operation runs.
+        durableEnabledBefore = (await readCloudBackupMetadata(userId)).enabled;
+        const snapshot = accountSnapshotFrom(current);
+        if (enabled) {
+          const bytes = cloudBackupPayloadBytes(snapshot);
+          if (bytes > CLOUD_BACKUP_MAX_BYTES) throw new CloudBackupSizeError(bytes);
+          const changedAt = current.cloudDataChangedAt ?? new Date().toISOString();
+          // Enabling is local-first: make the current snapshot a durable dirty
+          // outbox entry before the first background upload. No cloud read is
+          // performed here.
+          await enqueueAccountCacheWrite(userId, snapshot, () => {
+            const latest = get();
+            return latest.accountUserId === userId && latest.accountEpoch === epoch;
+          }, true, changedAt);
+          if (!isCurrentToggleIntent(userId, epoch)) return;
+          await writeCloudBackupMetadata(userId, { enabled: true, localChangedAt: changedAt });
+          if (!isCurrentToggleIntent(userId, epoch)) return;
+          const latest = get();
+          if (latest.accountUserId !== userId || latest.accountEpoch !== epoch) return;
+          set({ cloudBackupEnabled: true, cloudDataChangedAt: changedAt, syncStatus: "loading", syncError: null });
+          if (isCurrentToggleIntent(userId, epoch)) {
+            scheduleCloudWrite(get, set, userId, epoch, accountSnapshotFrom(get()), { bypassCooldown: true, queueIfBusy: true });
+          }
+          return;
+        }
+        if (!isCurrentToggleIntent(userId, epoch)) return;
+        await writeCloudBackupMetadata(userId, { enabled: false });
+        if (!isCurrentToggleIntent(userId, epoch)) return;
+        const latest = get();
+        if (latest.accountUserId === userId && latest.accountEpoch === epoch) {
+          set({ cloudBackupEnabled: false, syncStatus: "local", syncError: null });
+        }
+      } catch (error) {
+        const userId = current.accountUserId;
+        const epoch = current.accountEpoch;
+        if (userId && epoch !== null && isCurrentToggleIntent(userId, epoch)) {
+          set({
+            cloudBackupEnabled: durableEnabledBefore ?? initial.cloudBackupEnabled,
+            syncStatus: "local",
+            syncError: "CLOUD_BACKUP_METADATA_FAILED",
+          });
+        }
+        reportHandledError("cloud_backup_toggle", error, "CLOUD_BACKUP_METADATA_FAILED");
+        throw error;
+      }
+    });
+  },
+  restoreCloudBackup: async () => {
     const current = get();
     if (!isNativeRuntime() || !current.accountUserId || current.accountEpoch === null) throw new Error("ACCOUNT_REQUIRED");
     const userId = current.accountUserId;
     const epoch = current.accountEpoch;
-    const snapshot = accountSnapshotFrom(current);
-    if (enabled) {
-      const bytes = cloudBackupPayloadBytes(snapshot);
-      if (bytes > CLOUD_BACKUP_MAX_BYTES) throw new CloudBackupSizeError(bytes);
-      // Comparison is remote I/O. The local mutation queue must stay free so
-      // a user can continue editing or deleting while it is pending.
-      void beginCloudComparison(get, set, userId, epoch, "enable");
-      return;
-    }
-    await writeCloudBackupMetadata(userId, { enabled: false });
-    const latest = get();
-    if (latest.accountUserId === userId && latest.accountEpoch === epoch) {
-      set({ cloudBackupEnabled: false, cloudBackupChecking: false, cloudBackupConflict: null, syncStatus: "local", syncError: null });
-    }
-    });
-  },
-  resolveCloudBackupConflict: (choice) => enqueueMutation(get, async () => {
-    const current = get();
-    const conflict = current.cloudBackupConflict;
-    if (!isNativeRuntime() || !current.accountUserId || current.accountEpoch === null || !conflict) return;
-    const userId = current.accountUserId;
-    const epoch = current.accountEpoch;
+    const remoteGate = acquireCloudRestoreGate(userId);
+    const restoreGeneration = advanceCloudRestoreGeneration(userId);
     const isCurrent = () => {
       const latest = get();
-      return latest.accountUserId === userId && latest.accountEpoch === epoch;
+      return latest.accountUserId === userId
+        && latest.accountEpoch === epoch
+        && cloudRestoreGenerations.get(userId) === restoreGeneration;
     };
-
-    if (choice === "local") {
-      const snapshot = accountSnapshotFrom(current);
-      // A durable-cache failure must not trap the user in a non-dismissible
-      // conflict dialog. Keep the local projection authoritative and make a
-      // best-effort retry on the next backup trigger.
-      try {
-        await enqueueAccountCacheWrite(userId, snapshot, isCurrent, true);
-        await writeCloudBackupMetadata(userId, { enabled: true });
-      } catch { /* Local conflict choice remains usable. */ }
-      if (!isCurrent()) return;
-      set({ cloudBackupEnabled: true, cloudBackupChecking: false, cloudBackupConflict: null, syncStatus: "loading", syncError: null });
-      scheduleCloudWrite(get, set, userId, epoch, snapshot, { bypassCooldown: true });
-      return;
-    }
-
     try {
-      const applied = localNavigation(conflict.cloudSnapshot, current);
-      __validateSnapshotForLocal(applied);
-      if (cloudBackupPayloadBytes(applied) > CLOUD_BACKUP_MAX_BYTES) throw new Error("DATA_LIMIT_EXCEEDED");
-      const changedAt = conflict.cloudUpdatedAt ?? current.cloudDataChangedAt ?? new Date().toISOString();
-      const store = await Store.load(ACCOUNT_STATE_FILE);
-      const snapshotKey = accountKey(userId);
-      const dirtyKey = accountDirtyKey(userId);
-      const enabledKey = cloudBackupEnabledKey(userId);
-      const successKey = cloudBackupLastSuccessKey(userId);
-      const changedKey = cloudDataChangedKey(userId);
-      const previous = await Promise.all([
-        store.get(snapshotKey), store.get(dirtyKey), store.get(enabledKey),
-        store.get(successKey), store.get(changedKey),
-      ]);
-      try {
-        const { indicatorSettings: _indicatorSettings, ...accountState } = applied;
-        await store.set(snapshotKey, accountState);
-        await store.set(dirtyKey, false);
-        await store.set(enabledKey, true);
-        if (conflict.cloudUpdatedAt) await store.set(successKey, conflict.cloudUpdatedAt);
-        await store.set(changedKey, changedAt);
-        await store.save();
-      } catch (error) {
-        try {
-          await Promise.all([
-            restoreStoreValue(store, snapshotKey, previous[0]),
-            restoreStoreValue(store, dirtyKey, previous[1]),
-            restoreStoreValue(store, enabledKey, previous[2]),
-            restoreStoreValue(store, successKey, previous[3]),
-            restoreStoreValue(store, changedKey, previous[4]),
-          ]);
-        } catch { /* Preserve the apply failure. */ }
-        throw error;
+      // A restore must be ordered after an already-started upload. The gate
+      // prevents a new upload from starting while this await is pending.
+      const inFlightUpload = cloudBackupInFlightPromises.get(userId);
+      if (inFlightUpload) await inFlightUpload;
+      if (!isCurrent()) throw new Error("SESSION_CHANGED");
+      const result = await getNativeAccountState(epoch);
+      if (!isCurrent()) throw new Error("SESSION_CHANGED");
+      if (result === null) return "not_found";
+      if (!isRecord(result) || result.userId !== userId || result.epoch !== epoch || result.schemaVersion !== 1) {
+        throw new Error("INVALID_CLOUD_BACKUP");
       }
-      if (!isCurrent()) return;
-      set({
-        ...applied,
-        cloudBackupEnabled: true,
-        cloudBackupLastSuccessAt: conflict.cloudUpdatedAt ?? current.cloudBackupLastSuccessAt,
-        cloudDataChangedAt: changedAt,
-        cloudBackupChecking: false,
-        cloudBackupConflict: null,
-        syncStatus: "synced",
-        syncError: null,
+      const updatedAt = validTimestamp(result.updatedAt);
+      if (result.data === null) {
+        if (!updatedAt) return "not_found";
+        throw new Error("INVALID_CLOUD_BACKUP");
+      }
+      const cloudSnapshot = validateCloudRestoreSnapshot(result.data);
+      // Native account reads can represent a missing PhoneApp row as a valid
+      // empty snapshot with no timestamp. Treat that shape as not-found too;
+      // a genuinely saved empty watchlist carries its cloud updatedAt.
+      if (!updatedAt && cloudSnapshot.stocks.length === 0 && cloudSnapshot.categories.length === 0) return "not_found";
+      const changedAt = updatedAt ?? new Date().toISOString();
+      // Join the same mutation FIFO as local and MCP commits. Operations that
+      // arrived before this point finish first and invalidate this restore;
+      // operations arriving later observe the restored projection.
+      return await enqueueMutation(get, async () => {
+        if (!isCurrent()) throw new Error("SESSION_CHANGED");
+        const beforeWrite = get();
+        const applied = localNavigation(cloudSnapshot, beforeWrite);
+        __validateSnapshotForLocal(applied);
+        await enqueueAccountCacheOperation(async () => {
+          if (!isCurrent()) throw new Error("SESSION_CHANGED");
+          await writeRestoredAccount(userId, applied, changedAt, changedAt);
+        });
+        if (!isCurrent()) throw new Error("SESSION_CHANGED");
+        // Local-only navigation and indicator state can change immediately
+        // while Store.save() is pending. Rebase them after the durable cloud
+        // write, and persist a corrected navigation snapshot before publish.
+        const latestPreferences = get();
+        const refreshed = localNavigation(applied, latestPreferences);
+        const navigationChanged = refreshed.activeCategoryId !== applied.activeCategoryId
+          || !sameJson(refreshed.pinnedCategoryIds, applied.pinnedCategoryIds)
+          || !sameJson(refreshed.recentCategoryIds, applied.recentCategoryIds);
+        if (navigationChanged) {
+          await enqueueAccountCacheOperation(async () => {
+            if (!isCurrent()) throw new Error("SESSION_CHANGED");
+            await writeRestoredAccount(userId, refreshed, changedAt, changedAt);
+          });
+        }
+        if (!isCurrent()) throw new Error("SESSION_CHANGED");
+        markCloudCommit(userId, epoch);
+        const latest = get();
+        // No await occurs between this final rebase and publish, so a local
+        // preference changed during either save cannot be overwritten. Its
+        // already-queued persistLocal operation will then make the cache match.
+        const published = localNavigation(applied, latest);
+        set({
+          ...published,
+          accountUserId: userId,
+          accountEpoch: epoch,
+          cloudBackupEnabled: latest.cloudBackupEnabled,
+          cloudBackupLastSuccessAt: changedAt,
+          cloudDataChangedAt: changedAt,
+          hydrated: true,
+          syncStatus: "synced",
+          syncError: null,
+        });
+        return "restored" as const;
       });
-    } catch {
-      try { await writeCloudBackupMetadata(userId, { enabled: false }); } catch { /* Remain local. */ }
-      if (isCurrent()) set({ cloudBackupEnabled: false, cloudBackupChecking: false, cloudBackupConflict: null, syncStatus: "local", syncError: null });
+    } catch (error) {
+      if (isCurrent()) set({ syncStatus: "local", syncError: null });
+      if (error instanceof Error && (error.message === "SESSION_CHANGED" || error.message === "INVALID_CLOUD_BACKUP")) {
+        reportHandledError("cloud_backup_restore", error, "CLOUD_BACKUP_RESTORE_FAILED");
+      } else if (!(error instanceof Error && error.message === "ACCOUNT_REQUIRED")) {
+        reportHandledError("cloud_backup_restore", error, "CLOUD_BACKUP_RESTORE_FAILED");
+      }
+      throw error;
+    } finally {
+      if (remoteGate.releaseGate()) await flushPendingCloudBackup(get, set, userId);
     }
-  }),
+  },
   applyMcpAccountCommit: (event) => enqueueMutation(get, async () => {
     const current = get();
     if (!isNativeRuntime()
@@ -1163,9 +1293,6 @@ const useStocksStore = create<StocksState>((set, get) => ({
     }
     const latest = get();
     if (latest.accountUserId !== event.userId || latest.accountEpoch !== event.epoch) return;
-    // Cancel an older pull/compare only after the event is proven valid. A
-    // malformed local event must have no effect on a legitimate comparison.
-    advanceCloudComparisonGeneration(event.userId);
     const timestamp = validTimestamp(event.updatedAt) ?? new Date().toISOString();
     let cloudRepresented: AccountSnapshot;
     try {
@@ -1189,7 +1316,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
         // is durable. An ACK queued before us may clear the old dirty marker;
         // this transaction then writes the correct marker back. Any ACK queued
         // after us observes the new generation and cannot acknowledge it.
-        markCloudSnapshotChanged(event.userId);
+        markCloudDataChanged(event.userId);
         return true;
       });
       if (!committed) return;
@@ -1221,14 +1348,12 @@ const useStocksStore = create<StocksState>((set, get) => ({
       accountEpoch: event.epoch,
       cloudBackupLastSuccessAt: timestamp,
       cloudDataChangedAt: changedAt,
-      cloudBackupChecking: false,
-      cloudBackupConflict: null,
       hydrated: true,
       cloudBackupEnabled: backupEnabled,
       syncStatus: matchesCloud ? (backupEnabled ? "synced" : "local") : (backupEnabled ? "loading" : "local"),
       syncError: null,
     });
-    if (!matchesCloud && backupEnabled) scheduleCloudWrite(get, set, event.userId, event.epoch, projected);
+    if (!matchesCloud && backupEnabled) scheduleCloudWrite(get, set, event.userId, event.epoch, projected, { queueIfBusy: true });
   }),
   syncCurrent: () => enqueueMutation(get, async () => {
     const current = get();
@@ -1238,7 +1363,7 @@ const useStocksStore = create<StocksState>((set, get) => ({
       const latest = get();
       return latest.accountUserId === current.accountUserId && latest.accountEpoch === current.accountEpoch;
     }, true);
-    if (current.cloudBackupEnabled) scheduleCloudWrite(get, set, current.accountUserId, current.accountEpoch, snapshot);
+    if (current.cloudBackupEnabled) scheduleCloudWrite(get, set, current.accountUserId, current.accountEpoch, snapshot, { queueIfBusy: true });
   }),
 
   updateIndicatorSettings: (settings) => {

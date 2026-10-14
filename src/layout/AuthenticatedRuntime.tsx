@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Outlet } from "react-router";
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
@@ -60,47 +60,6 @@ function LegacySettingsDialog() {
   );
 }
 
-function CloudBackupConflictDialog() {
-  const { t, i18n } = useTranslation();
-  const conflict = useStocksStore((state) => state.cloudBackupConflict);
-  const resolve = useStocksStore((state) => state.resolveCloudBackupConflict);
-  const [resolving, setResolving] = useState<"local" | "cloud" | null>(null);
-  const locale = i18n.resolvedLanguage?.toLowerCase().startsWith("zh") ? "zh-TW" : "en";
-  const formatTime = (value: string | null | undefined) => {
-    if (!value || Number.isNaN(Date.parse(value))) return t("accountSync.backupTimeUnknown");
-    return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-  };
-  const choose = (choice: "local" | "cloud") => {
-    setResolving(choice);
-    void resolve(choice).catch(() => undefined).finally(() => setResolving(null));
-  };
-
-  return (
-    <Dialog
-      open={Boolean(conflict)}
-      fullWidth
-      maxWidth="xs"
-      disableEscapeKeyDown
-      onClose={() => undefined}
-      aria-labelledby="cloud-backup-conflict-title"
-      aria-describedby="cloud-backup-conflict-description"
-    >
-      <DialogTitle id="cloud-backup-conflict-title">{t("accountSync.cloudConflictTitle")}</DialogTitle>
-      <DialogContent dividers>
-        <Typography id="cloud-backup-conflict-description">{t("accountSync.cloudConflictMessage")}</Typography>
-        <Box sx={{ mt: 2, display: "grid", gap: 1 }}>
-          <Typography variant="body2">{t("accountSync.localChangedAt", { time: formatTime(conflict?.localChangedAt) })}</Typography>
-          <Typography variant="body2">{t("accountSync.cloudChangedAt", { time: formatTime(conflict?.cloudUpdatedAt) })}</Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions sx={{ p: 2, gap: 1, flexWrap: "wrap" }}>
-        <Button disabled={resolving !== null} onClick={() => choose("local")}>{t("accountSync.useLocalData")}</Button>
-        <Button disabled={resolving !== null} variant="contained" onClick={() => choose("cloud")}>{t("accountSync.useCloudData")}</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 export default function AuthenticatedRuntime() {
   const reload = useStocksStore((state) => state.reload);
   const applyMcpAccountCommit = useStocksStore((state) => state.applyMcpAccountCommit);
@@ -147,5 +106,5 @@ export default function AuthenticatedRuntime() {
     return () => { disposed = true; window.removeEventListener("keydown", handleKeyDown); unlisten?.(); };
   }, [reload, applyMcpAccountCommit]);
 
-  return <><AccountSyncNotice /><CloudBackupConflictDialog /><LegacySettingsDialog /><Outlet /><DebugInfo /></>;
+  return <><AccountSyncNotice /><LegacySettingsDialog /><Outlet /><DebugInfo /></>;
 }

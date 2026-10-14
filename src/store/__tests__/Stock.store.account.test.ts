@@ -33,6 +33,7 @@ vi.mock("@tauri-apps/plugin-store", () => ({
 
 import useStocksStore, { __resetStockStoreQueuesForTests, __validateSnapshotForLocal } from "../Stock.store";
 import { CLOUD_BACKUP_MAX_BYTES } from "../../account/cloudBackup";
+import { emptyAccountSnapshot } from "../../account/snapshot";
 
 const settings = {
   ma5: 5, ma10: 10, ma20: 30, ma60: 60, boll: 30, kd: 9, mfi: 14, rsi: 14,
@@ -74,7 +75,6 @@ const installDirtyProjection = (value: AccountSnapshot) => {
     accountEpoch: 1,
     hydrated: true,
     cloudBackupEnabled: false,
-    cloudBackupConflict: null,
     syncStatus: "local",
     syncError: null,
   });
@@ -123,7 +123,7 @@ function resetProjection() {
     pinnedCategoryIds: [], recentCategoryIds: [], indicatorSettings: { ...settings },
     accountUserId: null, accountEpoch: null, syncStatus: "local", syncError: null,
     cloudBackupEnabled: false, cloudBackupLastSuccessAt: null,
-    cloudDataChangedAt: null, cloudBackupChecking: false, cloudBackupConflict: null,
+    cloudDataChangedAt: null,
     legacySettingsPrompt: false, legacySettingsError: null,
   });
 }
@@ -223,12 +223,36 @@ describe("account-scoped stock projection", () => {
       indicatorSettings: expect.objectContaining({ ma20: 55 }),
       cloudBackupLastSuccessAt: "2026-10-11T08:00:00.000Z",
       cloudDataChangedAt: "2026-10-11T08:00:00.000Z",
-      cloudBackupConflict: null,
     });
     expect(persisted.get("account:user-a:dirty")).toBe(false);
     expect(persisted.get("account:user-a:snapshot")).toMatchObject({
       stocks: [expect.objectContaining({ id: "2454" })],
     });
+  });
+
+  it("ignores MCP commits for another user or epoch", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const beforeProjection = useStocksStore.getState();
+    const beforeCache = persisted.get("account:user-a:snapshot");
+    invoke.mockClear();
+    const event = {
+      userId: "user-b",
+      epoch: 2,
+      data: snapshot("2454"),
+      updatedAt: "2026-10-11T08:00:00.000Z",
+      operation: "add_stock",
+      mutation: { kind: "addStocks" as const, categoryId: "group-a", stockIds: ["2454"] },
+    };
+
+    await useStocksStore.getState().applyMcpAccountCommit(event);
+    await useStocksStore.getState().applyMcpAccountCommit({ ...event, userId: "user-a", epoch: 2 });
+
+    expect(useStocksStore.getState().stocks).toEqual(beforeProjection.stocks);
+    expect(useStocksStore.getState().categories).toEqual(beforeProjection.categories);
+    expect(useStocksStore.getState().accountUserId).toBe("user-a");
+    expect(useStocksStore.getState().accountEpoch).toBe(1);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(beforeCache);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
   });
 
   it("keeps the existing projection local when the clean MCP cache transaction fails", async () => {
@@ -270,7 +294,6 @@ describe("account-scoped stock projection", () => {
     expect(useStocksStore.getState().categories.map((category) => category.name)).toEqual(expect.arrayContaining(localNames));
     expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330", "2454"]);
     expect(useStocksStore.getState().categories.find((category) => category.id === "group-a")?.stockIds).toEqual(["2454", "2330"]);
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
     expect(persisted.get("account:user-a:dirty")).toBe(true);
   });
 
@@ -503,7 +526,6 @@ describe("account-scoped stock projection", () => {
 
     expect(useStocksStore.getState().categories).toEqual([]);
     expect(useStocksStore.getState().stocks).toEqual([]);
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
     expect(persisted.get("account:user-a:dirty")).toBe(true);
   });
 
@@ -533,7 +555,6 @@ describe("account-scoped stock projection", () => {
     });
 
     expect(useStocksStore.getState().categories.map((category) => category.id)).toEqual(["group-b"]);
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
   });
 
   it("lets an MCP rename win on its target while preserving unrelated local categories", async () => {
@@ -566,7 +587,6 @@ describe("account-scoped stock projection", () => {
       expect.objectContaining({ id: "group-a", name: "MCP A" }),
       expect.objectContaining({ id: "group-b", name: "Local B" }),
     ]));
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
   });
 
   it("restores an MCP-renamed target deleted locally without replacing unrelated local state", async () => {
@@ -634,7 +654,6 @@ describe("account-scoped stock projection", () => {
     ]));
     expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(expect.arrayContaining(["2454", "8299"]));
     expect(useStocksStore.getState().stocks.map((stock) => stock.id)).not.toContain("2330");
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
   });
 
   it("ignores an invalid MCP mutation descriptor without replacing clean local data", async () => {
@@ -673,293 +692,349 @@ describe("account-scoped stock projection", () => {
     });
   });
 
-  it("does not cancel a pending valid comparison when a malformed MCP event arrives", async () => {
+  it("defaults automatic upload off and never reads cloud during startup", async () => {
+    persisted.delete("account:user-a:cloud-backup-enabled");
+    await useStocksStore.getState().initializeAccount("user-a", 1);
+
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
+  });
+
+  it("enables automatic upload with a durable dirty outbox without reading cloud", async () => {
     persisted.set("account:user-a:cloud-backup-enabled", false);
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let resolvePull!: (value: unknown) => void;
-    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number; data?: unknown }) => {
-      if (command === "account_get_state") return pendingPull;
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T08:01:00.000Z" });
+    let resolveUpload!: (value: unknown) => void;
+    const pendingUpload = new Promise((resolve) => { resolveUpload = resolve; });
+    invoke.mockClear();
+    invoke.mockImplementation((command: string) => {
+      if (command === "account_update_state") return pendingUpload;
       if (command === "account_get_indicator_settings") return Promise.resolve(null);
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
       return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
     await useStocksStore.getState().setCloudBackupEnabled(true);
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupChecking).toBe(true));
-    await useStocksStore.getState().applyMcpAccountCommit({
-      userId: "user-a",
-      epoch: 1,
-      data: {} as AccountSnapshot,
-      updatedAt: "2026-10-11T08:00:00.000Z",
-      operation: "add_stock",
-      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2454"] },
-    });
-    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: null, updatedAt: null });
-
-    await vi.waitFor(() => expect(useStocksStore.getState()).toMatchObject({
-      cloudBackupChecking: false,
-      cloudBackupEnabled: true,
-    }));
-  });
-
-  it("ignores an MCP commit for another account or native epoch", async () => {
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    await useStocksStore.getState().applyMcpAccountCommit({
-      userId: "user-b",
-      epoch: 2,
-      data: snapshot("2454"),
-      updatedAt: "2026-10-11T08:00:00.000Z",
-      operation: "add_stock",
-      mutation: { kind: "addStocks", categoryId: "group-a", stockIds: ["2454"] },
-    });
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
-  });
-
-  it("defaults cloud backup on and uploads later local mutations", async () => {
-    persisted.delete("account:user-a:cloud-backup-enabled");
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    invoke.mockClear();
-
-    await useStocksStore.getState().addCategory("Local only");
-
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupEnabled).toBe(true));
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(true);
     expect(persisted.get("account:user-a:dirty")).toBe(true);
-    await vi.waitFor(() => expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(true));
+
+    resolveUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T01:02:03.000Z" });
+    await vi.waitFor(() => expect(persisted.get("account:user-a:dirty")).toBe(false));
   });
 
-  it("enables an in-capacity backup and records only its successful outgoing write", async () => {
+  it("keeps automatic upload enabled and dirty when the first upload fails", async () => {
     persisted.set("account:user-a:cloud-backup-enabled", false);
     await useStocksStore.getState().hydrateAccount("user-a", 1);
     invoke.mockClear();
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T01:02:03.000Z" });
+    invoke.mockImplementation((command: string) => {
+      if (command === "account_update_state") return Promise.reject(new Error("CLOUD_UNAVAILABLE"));
       if (command === "account_get_indicator_settings") return Promise.resolve(null);
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: null, updatedAt: null });
+      return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
     await useStocksStore.getState().setCloudBackupEnabled(true);
-
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupEnabled).toBe(true));
     await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupLastSuccessAt).toBe("2026-10-11T01:02:03.000Z"));
-    expect(persisted.get("account:user-a:cloud-backup-last-success-at")).toBe("2026-10-11T01:02:03.000Z");
+    await vi.waitFor(() => expect(useStocksStore.getState().syncStatus).toBe("local"));
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
   });
 
-  it("keeps manual enable comparison off the mutation queue and uploads the latest local snapshot", async () => {
+  it("does not let an immediate OFF cancelation publish or upload a queued enable", async () => {
     persisted.set("account:user-a:cloud-backup-enabled", false);
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let resolvePull!: (value: unknown) => void;
-    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
+    let releaseEnableSave!: () => void;
+    let signalEnableSave!: () => void;
+    const enableSave = new Promise<void>((resolve) => { releaseEnableSave = resolve; });
+    const enableSaveStarted = new Promise<void>((resolve) => { signalEnableSave = resolve; });
+    storeControl.saveGate = enableSave;
+    storeControl.saveStarted = signalEnableSave;
+    invoke.mockClear();
+
+    const enable = useStocksStore.getState().setCloudBackupEnabled(true);
+    await enableSaveStarted;
+    // Enabling is published only after the dirty cache and opt-in metadata
+    // are durable, so another mutation cannot upload under a transient flag.
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+
+    const disable = useStocksStore.getState().setCloudBackupEnabled(false);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    releaseEnableSave();
+    await expect(enable).resolves.toBeUndefined();
+    await expect(disable).resolves.toBeUndefined();
+
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("restores cloud tracked stocks while preserving local preferences and the upload toggle", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    useStocksStore.setState({
+      pinnedCategoryIds: ["group-a"],
+      recentCategoryIds: [],
+      indicatorSettings: { ...settings, ma20: 55 },
+    });
+    const cloud = snapshot("2317");
+    cloud.indicatorSettings = { ...settings, ma20: 99 };
+    invoke.mockClear();
+    invoke.mockImplementation(async (command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_get_state") return { userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: cloud, updatedAt: "2026-10-11T04:00:00.000Z" };
+      if (command === "account_get_indicator_settings") return null;
+      if (command === "legacy_settings_status") return { present: false, disposition: null, path: "" };
+      throw new Error(`unexpected invoke ${command}`);
+    });
+
+    await expect(useStocksStore.getState().restoreCloudBackup()).resolves.toBe("restored");
+
+    expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 });
+    expect(useStocksStore.getState()).toMatchObject({
+      cloudBackupEnabled: false,
+      pinnedCategoryIds: ["group-a"],
+      cloudBackupLastSuccessAt: "2026-10-11T04:00:00.000Z",
+      cloudDataChangedAt: "2026-10-11T04:00:00.000Z",
+    });
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
+    expect(useStocksStore.getState().indicatorSettings.ma20).toBe(55);
+    expect(persisted.get("account:user-a:dirty")).toBe(false);
+  });
+
+  it("orders manual restore after an in-flight upload", async () => {
+    let resolveUpload!: (value: unknown) => void;
+    const pendingUpload = new Promise((resolve) => { resolveUpload = resolve; });
+    const order: string[] = [];
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
     invoke.mockClear();
     invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return pendingPull;
       if (command === "account_update_state") {
-        return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T01:02:03.000Z" });
+        order.push(`write:${args.expectedEpoch}`);
+        return pendingUpload;
+      }
+      if (command === "account_get_state") {
+        order.push(`read:${args.expectedEpoch}`);
+        return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2317"), updatedAt: "2026-10-11T04:00:00.000Z" });
       }
       if (command === "account_get_indicator_settings") return Promise.resolve(null);
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
       return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
+    await useStocksStore.getState().addCategory("Before restore");
+    await vi.waitFor(() => expect(order).toEqual(["write:1"]));
+    const restore = useStocksStore.getState().restoreCloudBackup();
+    await Promise.resolve();
+    expect(order).toEqual(["write:1"]);
 
-    await useStocksStore.getState().addCategory("Created during manual enable");
-    expect(useStocksStore.getState().categories.some((category) => category.name === "Created during manual enable")).toBe(true);
-    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
-
-    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: null, updatedAt: null });
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.objectContaining({
-      data: expect.objectContaining({
-        categories: expect.arrayContaining([
-          expect.objectContaining({ name: "Created during manual enable" }),
-        ]),
-      }),
-    })));
-    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    resolveUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T03:00:00.000Z" });
+    await expect(restore).resolves.toBe("restored");
+    expect(order).toEqual(["write:1", "read:1"]);
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
   });
 
-  it("does not let a pending manual comparison re-enable backup after the user turns it off", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
+  it("rebases local-only preferences changed while the restore save is pending", async () => {
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let resolvePull!: (value: unknown) => void;
-    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
-    invoke.mockClear();
+    await vi.waitFor(() => expect(useStocksStore.getState().indicatorSettings.ma20).toBe(21));
+    let releaseFirstSave!: () => void;
+    let signalFirstSave!: () => void;
+    let releaseCorrectedSave!: () => void;
+    let signalCorrectedSave!: () => void;
+    const firstSave = new Promise<void>((resolve) => { releaseFirstSave = resolve; });
+    const firstSaveStarted = new Promise<void>((resolve) => { signalFirstSave = resolve; });
+    const correctedSave = new Promise<void>((resolve) => { releaseCorrectedSave = resolve; });
+    const correctedSaveStarted = new Promise<void>((resolve) => { signalCorrectedSave = resolve; });
+    storeControl.saveGates = [firstSave, correctedSave];
+    storeControl.saveStartedCallbacks = [signalFirstSave, signalCorrectedSave];
     invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return pendingPull;
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "account_get_state") return Promise.resolve({
+        userId: "user-a",
+        epoch: 1,
+        schemaVersion: 1,
+        data: snapshot("2317"),
+        updatedAt: "2026-10-11T04:00:00.000Z",
+      });
+      if (command === "account_update_indicator_settings") return Promise.resolve({ ...settings, ma20: 77 });
+      if (command === "account_get_indicator_settings") return Promise.resolve({ ...settings, ma20: 21 });
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
       return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
-    await useStocksStore.getState().setCloudBackupEnabled(true);
+    const restore = useStocksStore.getState().restoreCloudBackup();
+    await firstSaveStarted;
+    await useStocksStore.getState().togglePinnedCategory("group-a");
+    await useStocksStore.getState().updateIndicatorSetting("ma20", 77);
+    releaseFirstSave();
+    await correctedSaveStarted;
+    // Change the same local-only preferences again while the correction save
+    // is pending. Final publish must re-read this newest state synchronously.
+    await useStocksStore.getState().togglePinnedCategory("group-a");
+    await useStocksStore.getState().updateIndicatorSetting("ma20", 88);
+    releaseCorrectedSave();
+    await expect(restore).resolves.toBe("restored");
+
+    expect(useStocksStore.getState().pinnedCategoryIds).toEqual([]);
+    expect(useStocksStore.getState().indicatorSettings.ma20).toBe(88);
+    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      pinnedCategoryIds: [],
+    }));
+  });
+
+  it("serializes a local mutation behind the restore cache commit", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let releaseRestoreSave!: () => void;
+    let signalRestoreSave!: () => void;
+    const restoreSave = new Promise<void>((resolve) => { releaseRestoreSave = resolve; });
+    const restoreSaveStarted = new Promise<void>((resolve) => { signalRestoreSave = resolve; });
+    storeControl.saveGates = [restoreSave];
+    storeControl.saveStartedCallbacks = [signalRestoreSave];
+    invoke.mockResolvedValue({
+      userId: "user-a",
+      epoch: 1,
+      schemaVersion: 1,
+      data: snapshot("2317"),
+      updatedAt: "2026-10-11T04:00:00.000Z",
+    });
+
+    const restore = useStocksStore.getState().restoreCloudBackup();
+    await restoreSaveStarted;
+    const localMutation = useStocksStore.getState().addCategory("After restore");
+    await Promise.resolve();
+    expect(useStocksStore.getState().categories.some((category) => category.name === "After restore")).toBe(false);
+
+    releaseRestoreSave();
+    await expect(restore).resolves.toBe("restored");
+    await expect(localMutation).resolves.toBeUndefined();
+
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
+    expect(useStocksStore.getState().categories.some((category) => category.name === "After restore")).toBe(true);
+    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
+      stocks: [expect.objectContaining({ id: "2317" })],
+      categories: expect.arrayContaining([expect.objectContaining({ name: "After restore" })]),
+    });
+  });
+
+  it("does not cancel a pending restore when automatic upload is turned off", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let resolveRestore!: (value: unknown) => void;
+    const pendingRestore = new Promise((resolve) => { resolveRestore = resolve; });
+    invoke.mockClear();
+    invoke.mockImplementation((command: string) => {
+      if (command === "account_get_state") return pendingRestore;
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      if (command === "account_update_state") throw new Error("restore must not upload");
+      return Promise.reject(new Error(`unexpected invoke ${command}`));
+    });
+
+    const restore = useStocksStore.getState().restoreCloudBackup();
     await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
     await useStocksStore.getState().setCloudBackupEnabled(false);
-    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: null, updatedAt: null });
-    await Promise.resolve();
+    resolveRestore({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2317"), updatedAt: "2026-10-11T04:00:00.000Z" });
 
-    expect(useStocksStore.getState()).toMatchObject({ cloudBackupEnabled: false, cloudBackupChecking: false });
-    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+    await expect(restore).resolves.toBe("restored");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
     expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
   });
 
-  it("re-reads local data after delayed enable metadata before caching and uploading", async () => {
+  it("does not cancel a pending restore when automatic upload is turned on", async () => {
     persisted.set("account:user-a:cloud-backup-enabled", false);
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let releaseMetadata!: () => void;
-    const metadataGate = new Promise<void>((resolve) => { releaseMetadata = resolve; });
-    let metadataSaveStarted!: () => void;
-    const metadataStarted = new Promise<void>((resolve) => { metadataSaveStarted = resolve; });
-    storeControl.saveGates = [metadataGate, Promise.resolve(), Promise.resolve()];
-    storeControl.saveStartedCallbacks = [metadataSaveStarted];
+    let resolveRestore!: (value: unknown) => void;
+    const pendingRestore = new Promise((resolve) => { resolveRestore = resolve; });
     invoke.mockClear();
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: null, updatedAt: null });
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T01:02:03.000Z" });
+    invoke.mockImplementation((command: string) => {
+      if (command === "account_get_state") return pendingRestore;
       if (command === "account_get_indicator_settings") return Promise.resolve(null);
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      if (command === "account_update_state") throw new Error("restore should make the cloud snapshot authoritative");
       return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
+    const restore = useStocksStore.getState().restoreCloudBackup();
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
     await useStocksStore.getState().setCloudBackupEnabled(true);
-    await metadataStarted;
-    await useStocksStore.getState().addCategory("Created during metadata save");
-    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      categories: expect.arrayContaining([expect.objectContaining({ name: "Created during metadata save" })]),
-    });
+    resolveRestore({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2317"), updatedAt: "2026-10-11T04:00:00.000Z" });
 
-    releaseMetadata();
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.objectContaining({
-      data: expect.objectContaining({
-        categories: expect.arrayContaining([
-          expect.objectContaining({ name: "Created during metadata save" }),
-        ]),
-      }),
-    })));
-    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      categories: expect.arrayContaining([expect.objectContaining({ name: "Created during metadata save" })]),
-    }));
-  });
-
-  it("waits for an in-progress local cache commit before finalizing manual enable", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let releaseMetadata!: () => void;
-    let releaseMutation!: () => void;
-    const metadataGate = new Promise<void>((resolve) => { releaseMetadata = resolve; });
-    const mutationGate = new Promise<void>((resolve) => { releaseMutation = resolve; });
-    let metadataSaveStarted!: () => void;
-    let mutationSaveStarted!: () => void;
-    const metadataStarted = new Promise<void>((resolve) => { metadataSaveStarted = resolve; });
-    const mutationStarted = new Promise<void>((resolve) => { mutationSaveStarted = resolve; });
-    storeControl.saveGates = [metadataGate, mutationGate, Promise.resolve(), Promise.resolve()];
-    storeControl.saveStartedCallbacks = [metadataSaveStarted, mutationSaveStarted];
-    invoke.mockClear();
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: null, updatedAt: null });
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T01:02:03.000Z" });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.reject(new Error(`unexpected invoke ${command}`));
-    });
-
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await metadataStarted;
-    const mutation = useStocksStore.getState().addCategory("Committed behind metadata");
-    await mutationStarted;
-
-    releaseMetadata();
-    await Promise.resolve();
-    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
-    releaseMutation();
-    await mutation;
-
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.objectContaining({
-      data: expect.objectContaining({
-        categories: expect.arrayContaining([
-          expect.objectContaining({ name: "Committed behind metadata" }),
-        ]),
-      }),
-    })));
-    await vi.waitFor(() => expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      categories: expect.arrayContaining([expect.objectContaining({ name: "Committed behind metadata" })]),
-    }));
-  });
-
-  it("rechecks an equal cloud result after delayed metadata persistence", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let releaseMetadata!: () => void;
-    const metadataGate = new Promise<void>((resolve) => { releaseMetadata = resolve; });
-    let metadataSaveStarted!: () => void;
-    const metadataStarted = new Promise<void>((resolve) => { metadataSaveStarted = resolve; });
-    storeControl.saveGates = [metadataGate, Promise.resolve(), Promise.resolve()];
-    storeControl.saveStartedCallbacks = [metadataSaveStarted];
-    invoke.mockClear();
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: "2026-10-11T01:02:03.000Z" });
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.reject(new Error(`unexpected invoke ${command}`));
-    });
-
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await metadataStarted;
-    await useStocksStore.getState().addCategory("Changed after equal comparison");
-    releaseMetadata();
-
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupConflict).not.toBeNull());
-    expect(useStocksStore.getState()).toMatchObject({ cloudBackupEnabled: false, syncStatus: "local" });
-    await vi.waitFor(() => expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false));
+    await expect(restore).resolves.toBe("restored");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
     expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
   });
 
-  it("does not publish an equal-result conflict after the account projection is cleared", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
+  it("returns not_found without changing local state when no cloud backup exists", async () => {
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    let releaseEnableMetadata!: () => void;
-    let releaseDisableMetadata!: () => void;
-    const enableMetadataGate = new Promise<void>((resolve) => { releaseEnableMetadata = resolve; });
-    const disableMetadataGate = new Promise<void>((resolve) => { releaseDisableMetadata = resolve; });
-    let enableSaveStarted!: () => void;
-    let disableSaveStarted!: () => void;
-    const enableStarted = new Promise<void>((resolve) => { enableSaveStarted = resolve; });
-    const disableStarted = new Promise<void>((resolve) => { disableSaveStarted = resolve; });
-    storeControl.saveGates = [enableMetadataGate, Promise.resolve(), disableMetadataGate];
-    storeControl.saveStartedCallbacks = [enableSaveStarted, () => undefined, disableSaveStarted];
+    const before = useStocksStore.getState().stocks.map((stock) => stock.id);
     invoke.mockClear();
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: "2026-10-11T01:02:03.000Z" });
+    invoke.mockResolvedValue({ userId: "user-a", epoch: 1, schemaVersion: 1, data: null, updatedAt: null });
+
+    await expect(useStocksStore.getState().restoreCloudBackup()).resolves.toBe("not_found");
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(before);
+    expect(persisted.get("account:user-a:dirty")).not.toBe(false);
+  });
+
+  it("treats the native empty snapshot with no timestamp as not_found", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const before = useStocksStore.getState().stocks.map((stock) => stock.id);
+    const beforeCache = persisted.get("account:user-a:snapshot");
+    invoke.mockResolvedValue({ userId: "user-a", epoch: 1, schemaVersion: 1, data: emptyAccountSnapshot(), updatedAt: null });
+
+    await expect(useStocksStore.getState().restoreCloudBackup()).resolves.toBe("not_found");
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(before);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(beforeCache);
+  });
+
+  it("restores a genuinely saved empty cloud watchlist when it has a timestamp", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    invoke.mockResolvedValue({
+      userId: "user-a",
+      epoch: 1,
+      schemaVersion: 1,
+      data: emptyAccountSnapshot(),
+      updatedAt: "2026-10-11T04:00:00.000Z",
+    });
+
+    await expect(useStocksStore.getState().restoreCloudBackup()).resolves.toBe("restored");
+    expect(useStocksStore.getState().stocks).toEqual([]);
+    expect(useStocksStore.getState().categories).toEqual([]);
+    expect(useStocksStore.getState().cloudBackupLastSuccessAt).toBe("2026-10-11T04:00:00.000Z");
+    expect(persisted.get("account:user-a:dirty")).toBe(false);
+  });
+
+  it("rejects malformed cloud restore data without changing the local projection", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const before = useStocksStore.getState().stocks.map((stock) => stock.id);
+    invoke.mockResolvedValue({ userId: "user-a", epoch: 1, schemaVersion: 1, data: {}, updatedAt: "2026-10-11T04:00:00.000Z" });
+
+    await expect(useStocksStore.getState().restoreCloudBackup()).rejects.toThrow("INVALID_CLOUD_BACKUP");
+    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(before);
+  });
+
+  it("does not publish a delayed restore response after an account switch", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let resolveRestore!: (value: unknown) => void;
+    const pendingRestore = new Promise((resolve) => { resolveRestore = resolve; });
+    invoke.mockImplementation((command: string) => {
+      if (command === "account_get_state") return pendingRestore;
       if (command === "account_get_indicator_settings") return Promise.resolve(null);
       if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
       return Promise.reject(new Error(`unexpected invoke ${command}`));
     });
 
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await enableStarted;
-    await useStocksStore.getState().addCategory("Changed before logout");
-    releaseEnableMetadata();
-    await disableStarted;
-
+    const restore = useStocksStore.getState().restoreCloudBackup();
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
     await useStocksStore.getState().clearAccountProjection();
-    useStocksStore.getState().setAccountSyncError("SESSION_LOCK");
-    releaseDisableMetadata();
-    await Promise.resolve();
-    await Promise.resolve();
+    await useStocksStore.getState().hydrateAccount("user-b", 2);
+    resolveRestore({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2317"), updatedAt: "2026-10-11T04:00:00.000Z" });
 
-    expect(useStocksStore.getState()).toMatchObject({
-      accountUserId: null,
-      accountEpoch: null,
-      hydrated: false,
-      cloudBackupConflict: null,
-      syncStatus: "error",
-      syncError: "SESSION_LOCK",
-    });
+    await expect(restore).rejects.toThrow("SESSION_CHANGED");
+    expect(useStocksStore.getState().accountUserId).toBe("user-b");
+    expect(useStocksStore.getState().stocks).toEqual([]);
   });
 
   it("performs no cloud read or write when the stored backup switch is off", async () => {
@@ -970,66 +1045,6 @@ describe("account-scoped stock projection", () => {
     expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
     expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
     expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
-  });
-
-  it("asks on different cloud data and preserves valid local-only preferences when cloud wins", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    useStocksStore.setState({
-      pinnedCategoryIds: ["group-a"],
-      recentCategoryIds: [],
-      indicatorSettings: { ...settings, ma20: 55 },
-    });
-    const cloud = snapshot("2317");
-    cloud.indicatorSettings = { ...settings, ma20: 99 };
-    invoke.mockImplementation(async (command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return { userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: cloud, updatedAt: "2026-10-11T04:00:00.000Z" };
-      if (command === "legacy_settings_status") return { present: false, disposition: null, path: "" };
-      if (command === "account_get_indicator_settings") return null;
-      throw new Error(`unexpected invoke ${command}`);
-    });
-
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupConflict).not.toBeNull());
-    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
-
-    await useStocksStore.getState().resolveCloudBackupConflict("cloud");
-
-    expect(useStocksStore.getState()).toMatchObject({
-      cloudBackupEnabled: true,
-      cloudBackupConflict: null,
-      pinnedCategoryIds: ["group-a"],
-      activeCategoryId: "group-a",
-      cloudBackupLastSuccessAt: "2026-10-11T04:00:00.000Z",
-    });
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2317"]);
-    expect(useStocksStore.getState().indicatorSettings.ma20).toBe(55);
-    expect(persisted.get("account:user-a:dirty")).toBe(false);
-  });
-
-  it("closes the blocking conflict and keeps local data when local-choice persistence fails", async () => {
-    persisted.set("account:user-a:cloud-backup-enabled", false);
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    invoke.mockImplementation(async (command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return { userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2317"), updatedAt: "2026-10-11T04:00:00.000Z" };
-      if (command === "account_update_state") throw new Error("CLOUD_UNAVAILABLE");
-      if (command === "legacy_settings_status") return { present: false, disposition: null, path: "" };
-      if (command === "account_get_indicator_settings") return null;
-      throw new Error(`unexpected invoke ${command}`);
-    });
-    await useStocksStore.getState().setCloudBackupEnabled(true);
-    await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupConflict).not.toBeNull());
-    storeControl.saveError = new Error("DISK_FULL");
-
-    await expect(useStocksStore.getState().resolveCloudBackupConflict("local")).resolves.toBeUndefined();
-
-    expect(useStocksStore.getState()).toMatchObject({
-      cloudBackupEnabled: true,
-      cloudBackupConflict: null,
-    });
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
-    storeControl.saveError = null;
   });
 
   it("updates the cloud-data timestamp only for cloud-represented mutations", async () => {
@@ -1051,7 +1066,7 @@ describe("account-scoped stock projection", () => {
     }
   });
 
-  it("drops triggers within 30 seconds and waits for a later mutation", async () => {
+  it("coalesces edits made during an upload into one bounded follow-up", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-11T00:00:00.000Z"));
     let resolveFirst!: (value: unknown) => void;
@@ -1077,16 +1092,18 @@ describe("account-scoped stock projection", () => {
       expect(writes).toBe(1);
 
       resolveFirst({ userId: "user-a", epoch: 1, updatedAt: null });
-      await Promise.resolve();
+      await vi.waitFor(() => expect(writes).toBe(2));
+      const second = invoke.mock.calls.filter(([command]) => command === "account_update_state")[1]?.[1] as { data: AccountSnapshot };
+      expect(second.data.categories.some((category) => category.name === "Third")).toBe(true);
       await vi.advanceTimersByTimeAsync(29_999);
-      expect(writes).toBe(1);
+      expect(writes).toBe(2);
       await vi.advanceTimersByTimeAsync(1);
-      expect(writes).toBe(1);
+      expect(writes).toBe(2);
       await useStocksStore.getState().addCategory("Fourth");
       await vi.advanceTimersByTimeAsync(0);
-      expect(writes).toBe(2);
-      const second = invoke.mock.calls.filter(([command]) => command === "account_update_state")[1]?.[1] as { data: AccountSnapshot };
-      expect(second.data.categories.some((category) => category.name === "Fourth")).toBe(true);
+      expect(writes).toBe(3);
+      const third = invoke.mock.calls.filter(([command]) => command === "account_update_state")[2]?.[1] as { data: AccountSnapshot };
+      expect(third.data.categories.some((category) => category.name === "Fourth")).toBe(true);
     } finally {
       vi.useRealTimers();
     }
@@ -1122,6 +1139,40 @@ describe("account-scoped stock projection", () => {
     }
   });
 
+  it("retries a dirty current epoch after an older epoch upload settles", async () => {
+    let resolveOldUpload!: (value: unknown) => void;
+    const oldUpload = new Promise((resolve) => { resolveOldUpload = resolve; });
+    let writes = 0;
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") {
+        writes += 1;
+        return writes === 1
+          ? oldUpload
+          : Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T00:00:02.000Z" });
+      }
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.reject(new Error(`unexpected invoke ${command}`));
+    });
+
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    await useStocksStore.getState().addCategory("Epoch one");
+    await vi.waitFor(() => expect(writes).toBe(1));
+
+    await useStocksStore.getState().clearAccountProjection();
+    await useStocksStore.getState().primeAccountFromCache("user-a", 2);
+    await useStocksStore.getState().hydrateAccount("user-a", 2);
+    expect(useStocksStore.getState()).toMatchObject({ accountUserId: "user-a", accountEpoch: 2, syncStatus: "loading" });
+    expect(writes).toBe(1);
+
+    resolveOldUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T00:00:01.000Z" });
+    await vi.waitFor(() => expect(writes).toBe(2));
+    const retry = invoke.mock.calls.filter(([command]) => command === "account_update_state")[1]?.[1] as { expectedEpoch: number };
+    expect(retry.expectedEpoch).toBe(2);
+    await vi.waitFor(() => expect(persisted.get("account:user-a:dirty")).toBe(false));
+    expect(useStocksStore.getState().syncStatus).toBe("synced");
+  });
+
   it("does not let an older upload acknowledge a newer edit made while backup is off", async () => {
     let resolveUpload!: (value: unknown) => void;
     const pendingUpload = new Promise((resolve) => { resolveUpload = resolve; });
@@ -1142,6 +1193,163 @@ describe("account-scoped stock projection", () => {
     resolveUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T00:00:10.000Z" });
     await vi.waitFor(() => expect(useStocksStore.getState().cloudBackupLastSuccessAt).toBe("2026-10-11T00:00:10.000Z"));
     expect(persisted.get("account:user-a:dirty")).toBe(true);
+  });
+
+  it("queues a fresh upload for same-epoch OFF then ON without dropping it", async () => {
+    let resolveFirst!: (value: unknown) => void;
+    let resolveSecond!: (value: unknown) => void;
+    const firstUpload = new Promise((resolve) => { resolveFirst = resolve; });
+    const secondUpload = new Promise((resolve) => { resolveSecond = resolve; });
+    let writes = 0;
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") {
+        writes += 1;
+        return writes === 1
+          ? firstUpload
+          : secondUpload;
+      }
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+    });
+
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    await useStocksStore.getState().addCategory("Upload A");
+    await vi.waitFor(() => expect(writes).toBe(1));
+    await useStocksStore.getState().setCloudBackupEnabled(false);
+    const enable = useStocksStore.getState().setCloudBackupEnabled(true);
+    await enable;
+    expect(writes).toBe(1);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    resolveFirst({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T05:00:01.000Z" });
+    await vi.waitFor(() => expect(writes).toBe(2));
+    resolveSecond({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T05:00:02.000Z" });
+    await vi.waitFor(() => expect(persisted.get("account:user-a:dirty")).toBe(false));
+    expect(writes).toBe(2);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+  });
+
+  it("rolls back an optimistic enable when the durable cache save fails", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    const beforeDirty = persisted.get("account:user-a:dirty");
+    storeControl.saveError = new Error("DISK_FULL");
+    invoke.mockClear();
+
+    await expect(useStocksStore.getState().setCloudBackupEnabled(true)).rejects.toThrow("DISK_FULL");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(useStocksStore.getState().syncError).toBe("CLOUD_BACKUP_METADATA_FAILED");
+    expect(persisted.get("account:user-a:dirty")).toBe(beforeDirty);
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("keeps enable off and dirty when metadata persistence fails", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    storeControl.saveStartedCallbacks = [
+      () => undefined,
+      () => { storeControl.saveError = new Error("METADATA_DISK_FULL"); },
+    ];
+    invoke.mockClear();
+
+    await expect(useStocksStore.getState().setCloudBackupEnabled(true)).rejects.toThrow("METADATA_DISK_FULL");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(useStocksStore.getState().syncError).toBe("CLOUD_BACKUP_METADATA_FAILED");
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("does not upload a queued local mutation before enable metadata is durable", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let releaseLocalSave!: () => void;
+    let signalLocalSave!: () => void;
+    const localSave = new Promise<void>((resolve) => { releaseLocalSave = resolve; });
+    const localSaveStarted = new Promise<void>((resolve) => { signalLocalSave = resolve; });
+    storeControl.saveGates = [localSave, Promise.resolve(), Promise.resolve()];
+    storeControl.saveStartedCallbacks = [
+      signalLocalSave,
+      () => undefined,
+      () => { storeControl.saveError = new Error("METADATA_DISK_FULL"); },
+    ];
+    invoke.mockClear();
+
+    const localMutation = useStocksStore.getState().addCategory("Before opt in");
+    await localSaveStarted;
+    const enable = useStocksStore.getState().setCloudBackupEnabled(true);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    releaseLocalSave();
+    await expect(localMutation).resolves.toBeUndefined();
+    await expect(enable).rejects.toThrow("METADATA_DISK_FULL");
+
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("rolls back a failed OFF to the durable state at execution time", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let releaseEarlierSave!: () => void;
+    let signalEarlierSave!: () => void;
+    const earlierSave = new Promise<void>((resolve) => { releaseEarlierSave = resolve; });
+    const earlierSaveStarted = new Promise<void>((resolve) => { signalEarlierSave = resolve; });
+    storeControl.saveGates = [earlierSave, Promise.resolve()];
+    storeControl.saveStartedCallbacks = [
+      signalEarlierSave,
+      () => { storeControl.saveError = new Error("METADATA_DISK_FULL"); },
+    ];
+
+    const earlierMutation = useStocksStore.getState().addCategory("Earlier");
+    await earlierSaveStarted;
+    const disable = useStocksStore.getState().setCloudBackupEnabled(false);
+    // Model the durable auto-disable performed by the earlier queued work.
+    persisted.set("account:user-a:cloud-backup-enabled", false);
+    releaseEarlierSave();
+    await expect(earlierMutation).resolves.toBeUndefined();
+    await expect(disable).rejects.toThrow("METADATA_DISK_FULL");
+
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(false);
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(false);
+  });
+
+  it("restores the enabled toggle when disabling metadata persistence fails", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    storeControl.saveError = new Error("METADATA_DISK_FULL");
+    invoke.mockClear();
+
+    await expect(useStocksStore.getState().setCloudBackupEnabled(false)).rejects.toThrow("METADATA_DISK_FULL");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(useStocksStore.getState().syncError).toBe("CLOUD_BACKUP_METADATA_FAILED");
+    expect(persisted.get("account:user-a:cloud-backup-enabled")).toBe(true);
+    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
+  });
+
+  it("lets a successful in-flight upload acknowledge after OFF persistence fails", async () => {
+    await useStocksStore.getState().hydrateAccount("user-a", 1);
+    let resolveUpload!: (value: unknown) => void;
+    const pendingUpload = new Promise((resolve) => { resolveUpload = resolve; });
+    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
+      if (command === "account_update_state") return pendingUpload;
+      if (command === "account_get_indicator_settings") return Promise.resolve(null);
+      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
+      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
+    });
+
+    await useStocksStore.getState().addCategory("Uploading");
+    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
+    storeControl.saveError = new Error("METADATA_DISK_FULL");
+    await expect(useStocksStore.getState().setCloudBackupEnabled(false)).rejects.toThrow("METADATA_DISK_FULL");
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+
+    storeControl.saveError = null;
+    resolveUpload({ userId: "user-a", epoch: 1, updatedAt: "2026-10-11T06:00:00.000Z" });
+    await vi.waitFor(() => expect(persisted.get("account:user-a:dirty")).toBe(false));
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
   });
 
   it("cancels a cooldown backup when the account disables cloud backup", async () => {
@@ -1273,6 +1481,24 @@ describe("account-scoped stock projection", () => {
     expect(useStocksStore.getState()).toMatchObject({ activeCategoryId: "group-a", pinnedCategoryIds: ["group-a"] });
     await vi.waitFor(() => expect(useStocksStore.getState().indicatorSettings.ma20).toBe(21));
     expect(useStocksStore.getState().pinnedCategoryIds).toEqual(["group-a"]);
+  });
+
+  it("finishes hydration locally when a dirty marker has no cache snapshot", async () => {
+    persisted.delete("account:user-a:snapshot");
+    persisted.set("account:user-a:dirty", true);
+    invoke.mockClear();
+
+    await useStocksStore.getState().initializeAccount("user-a", 1);
+
+    expect(useStocksStore.getState()).toMatchObject({
+      accountUserId: "user-a",
+      accountEpoch: 1,
+      hydrated: true,
+      syncStatus: "local",
+      syncError: null,
+    });
+    expect(persisted.get("account:user-a:dirty")).toBe(true);
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state" || command === "account_update_state")).toBe(false);
   });
 
   it("repairs dirty cached orphans before publishing or retrying the cloud snapshot", async () => {
@@ -1585,86 +1811,14 @@ describe("account-scoped stock projection", () => {
     expect(useStocksStore.getState().stocks).toEqual([]);
   });
 
-  it("lets a local mutation finish while the startup comparison is pending", async () => {
-    let resolvePull!: (value: unknown) => void;
-    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return pendingPull;
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      if (command === "account_update_indicator_settings") return Promise.resolve(settings);
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.reject(new Error(`unexpected invoke ${command}`));
-    });
+  it("keeps startup local-only even when automatic upload is enabled", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", true);
+    const initial = persisted.get("account:user-a:snapshot");
+    await useStocksStore.getState().initializeAccount("user-a", 1);
 
-    await useStocksStore.getState().primeAccountFromCache("user-a", 1);
-    const initialReload = useStocksStore.getState().reload();
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
-
-    const mutation = useStocksStore.getState().addCategory("Created after startup");
-    await initialReload;
-    await mutation;
-
-    const write = invoke.mock.calls.find(([command]) => command === "account_update_state");
-    expect(write?.[1]).toMatchObject({
-      data: {
-        categories: [
-          expect.objectContaining({ id: "group-a" }),
-          expect.objectContaining({ name: "Created after startup" }),
-        ],
-        stocks: [expect.objectContaining({ id: "2330" })],
-      },
-    });
-    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2317"), updatedAt: null });
-    await Promise.resolve();
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
-    expect(useStocksStore.getState().cloudBackupChecking).toBe(false);
-    expect(useStocksStore.getState().categories.some((category) => category.name === "Created after startup")).toBe(true);
-  });
-
-  it("does not use startup comparison as a mutation queue barrier", async () => {
-    let resolveLegacyCheck!: (value: unknown) => void;
-    let resolvePull!: (value: unknown) => void;
-    const pendingLegacyCheck = new Promise((resolve) => { resolveLegacyCheck = resolve; });
-    const pendingPull = new Promise((resolve) => { resolvePull = resolve; });
-    persisted.set("account:user-a:snapshot", snapshot("2317"));
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "legacy_settings_status") return pendingLegacyCheck;
-      if (command === "account_get_state") return pendingPull;
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      if (command === "account_update_indicator_settings") return Promise.resolve(settings);
-      return Promise.reject(new Error(`unexpected invoke ${command}`));
-    });
-
-    const initialization = useStocksStore.getState().initializeAccount("user-a", 1);
-    await vi.waitFor(() => expect(useStocksStore.getState()).toMatchObject({ hydrated: true, syncStatus: "loading" }));
-
-    const mutation = useStocksStore.getState().addCategory("Created during cache prime");
     expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
-    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(false);
-
-    resolveLegacyCheck({ present: false, disposition: null, path: "" });
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
-    await mutation;
-    expect(invoke.mock.calls.some(([command]) => command === "account_update_state")).toBe(true);
-
-    resolvePull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-    await initialization;
-
-    const write = invoke.mock.calls.find(([command]) => command === "account_update_state");
-    expect(write?.[1]).toMatchObject({
-      data: {
-        categories: [
-          expect.objectContaining({ id: "group-a" }),
-          expect.objectContaining({ name: "Created during cache prime" }),
-        ],
-        stocks: [expect.objectContaining({ id: "2317" })],
-      },
-    });
-    await Promise.resolve();
-    expect(useStocksStore.getState().cloudBackupConflict).toBeNull();
-    expect(useStocksStore.getState().cloudBackupChecking).toBe(false);
+    expect(useStocksStore.getState().cloudBackupEnabled).toBe(true);
+    expect(persisted.get("account:user-a:snapshot")).toEqual(initial);
   });
 
   it("does not duplicate indicator preferences in the native account cache", async () => {
@@ -1673,125 +1827,12 @@ describe("account-scoped stock projection", () => {
     expect(persisted.get("account:user-a:snapshot")).not.toHaveProperty("indicatorSettings");
   });
 
-  it("does not let an old same-account pull overwrite a newer mutation or cache", async () => {
-    let resolveOldPull!: (value: unknown) => void;
-    const oldPull = new Promise((resolve) => { resolveOldPull = resolve; });
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number; data?: unknown }) => {
-      if (command === "account_get_state") return oldPull;
-      if (command === "account_update_state") return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.resolve(null);
-    });
-
-    const staleHydration = useStocksStore.getState().hydrateAccount("user-a", 1);
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_get_state", { expectedEpoch: 1 }));
-
-    await useStocksStore.getState().addCategory("Created while pull was pending");
-    const newer = useStocksStore.getState();
-    expect(newer.categories).toHaveLength(2);
-    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      categories: expect.arrayContaining([expect.objectContaining({ name: "Created while pull was pending" })]),
-    });
-
-    resolveOldPull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-    await staleHydration;
-
-    expect(useStocksStore.getState().categories).toHaveLength(2);
-    expect(useStocksStore.getState().categories.some((category) => category.name === "Created while pull was pending")).toBe(true);
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
-    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      categories: expect.arrayContaining([expect.objectContaining({ name: "Created while pull was pending" })]),
-      stocks: [expect.objectContaining({ id: "2330" })],
-    });
-  });
-
-  it("rejects a pull that starts during an in-flight sync after the sync commits", async () => {
-    let pullCount = 0;
-    let resolveSync!: (value: unknown) => void;
-    let resolveOldPull!: (value: unknown) => void;
-    const pendingSync = new Promise((resolve) => { resolveSync = resolve; });
-    const pendingOldPull = new Promise((resolve) => { resolveOldPull = resolve; });
-    invoke.mockImplementation((command: string, _args: { expectedEpoch?: number; data?: unknown }) => {
-      if (command === "account_get_state") {
-        pullCount += 1;
-        if (pullCount === 1) return Promise.resolve({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-        return pendingOldPull;
-      }
-      if (command === "account_update_state") return pendingSync;
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      return Promise.resolve(null);
-    });
-
+  it("does not read cloud during a clean startup with an enabled switch", async () => {
+    persisted.set("account:user-a:cloud-backup-enabled", true);
     await useStocksStore.getState().hydrateAccount("user-a", 1);
-    const mutation = useStocksStore.getState().addStocks([{ id: "2317", name: "Stock 2317", group: "TW", type: "stock" }]);
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
 
-    const staleHydration = useStocksStore.getState().hydrateAccount("user-a", 1);
-    // A dirty local projection schedules a push rather than pulling stale cloud data.
-    expect(pullCount).toBe(1);
-
-    resolveSync({ userId: "user-a", epoch: 1, updatedAt: null });
-    await mutation;
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toContain("2317");
-    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      stocks: expect.arrayContaining([expect.objectContaining({ id: "2317" })]),
-    });
-
-    resolveOldPull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-    await staleHydration;
-
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toContain("2317");
-    expect(persisted.get("account:user-a:snapshot")).toMatchObject({
-      stocks: expect.arrayContaining([expect.objectContaining({ id: "2317" })]),
-    });
-  });
-
-  it("does not let a concurrent pull hide a failed sync", async () => {
-    let pullCount = 0;
-    let rejectSync!: (error: Error) => void;
-    let resolveConcurrentPull!: (value: unknown) => void;
-    const pendingSync = new Promise((_resolve, reject) => { rejectSync = reject; });
-    const pendingPull = new Promise((resolve) => { resolveConcurrentPull = resolve; });
-    invoke.mockImplementation((command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") {
-        pullCount += 1;
-        if (pullCount === 1) return Promise.resolve({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-        return pendingPull;
-      }
-      if (command === "account_update_state") return pendingSync;
-      if (command === "account_get_indicator_settings") return Promise.resolve(null);
-      if (command === "legacy_settings_status") return Promise.resolve({ present: false, disposition: null, path: "" });
-      return Promise.resolve({ userId: "user-a", epoch: args.expectedEpoch, updatedAt: null });
-    });
-
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    const mutation = useStocksStore.getState().addStocks([{ id: "2317", name: "Stock 2317", group: "TW", type: "stock" }]);
-    await vi.waitFor(() => expect(invoke).toHaveBeenCalledWith("account_update_state", expect.anything()));
-    const concurrentHydration = useStocksStore.getState().hydrateAccount("user-a", 1);
-    expect(pullCount).toBe(1);
-
-    rejectSync(new Error("CLOUD_WRITE_FAILED"));
-    await expect(mutation).resolves.toBeUndefined();
-    resolveConcurrentPull({ userId: "user-a", epoch: 1, schemaVersion: 1, data: snapshot("2330"), updatedAt: null });
-    await concurrentHydration;
-
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toContain("2317");
-  });
-
-  it("keeps local data and immediately uploads when PhoneApp has no backup", async () => {
-    invoke.mockImplementation(async (command: string, args: { expectedEpoch?: number }) => {
-      if (command === "account_get_state") return { userId: "user-a", epoch: args.expectedEpoch, schemaVersion: 1, data: null, updatedAt: null };
-      if (command === "account_update_state") return { userId: "user-a", epoch: args.expectedEpoch, updatedAt: "2026-10-11T03:00:00.000Z" };
-      if (command === "account_get_indicator_settings") return null;
-      if (command === "legacy_settings_status") return { present: false, disposition: null, path: "" };
-      throw new Error(`unexpected invoke ${command}`);
-    });
-
-    await useStocksStore.getState().hydrateAccount("user-a", 1);
-    await vi.waitFor(() => expect(useStocksStore.getState().syncStatus).toBe("synced"));
-    expect(useStocksStore.getState()).toMatchObject({ hydrated: true, activeCategoryId: "group-a" });
-    expect(useStocksStore.getState().stocks.map((stock) => stock.id)).toEqual(["2330"]);
+    expect(invoke.mock.calls.some(([command]) => command === "account_get_state")).toBe(false);
+    expect(useStocksStore.getState().syncStatus).toBe("local");
   });
 
   it("does not publish a delayed A write into B", async () => {

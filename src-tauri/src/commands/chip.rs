@@ -1,6 +1,7 @@
 use chrono::{Duration as ChronoDuration, Local};
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
@@ -38,7 +39,7 @@ pub struct ChipDaily {
     pub trust: i64,
     pub dealer: i64,
     pub institutional_total: i64,
-    pub margin_balance: i64,
+    pub margin_balance: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -87,7 +88,7 @@ struct FinMindResponse<T> {
     status: u16,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct InstitutionalRow {
     date: String,
     name: String,
@@ -95,7 +96,7 @@ struct InstitutionalRow {
     sell: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[allow(non_snake_case)]
 struct MarginRow {
     date: String,
@@ -103,20 +104,20 @@ struct MarginRow {
     ShortSaleTodayBalance: i64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct PriceRow {
     date: String,
     close: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[allow(non_snake_case)]
 struct ShareholdingRow {
     date: String,
     ForeignInvestmentSharesRatio: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct SecuritiesLendingRow {
     date: String,
     volume: i64,
@@ -261,7 +262,7 @@ fn build_history(
             trust: 0,
             dealer: 0,
             institutional_total: 0,
-            margin_balance: 0,
+            margin_balance: None,
         });
         let net = row.buy - row.sell;
         day.institutional_total += net;
@@ -274,15 +275,21 @@ fn build_history(
     }
     for row in margin_rows {
         if let Some(day) = days.get_mut(&row.date) {
-            day.margin_balance = row.MarginPurchaseTodayBalance;
+            day.margin_balance = Some(row.MarginPurchaseTodayBalance);
         }
     }
     for row in price_rows {
         if let Some(day) = days.get_mut(&row.date) {
+            if !row.close.is_finite() || row.close <= 0.0 {
+                continue;
+            }
             day.close = row.close;
         }
     }
-    let mut history: Vec<ChipDaily> = days.into_values().filter(|day| day.close > 0.0).collect();
+    let mut history: Vec<ChipDaily> = days
+        .into_values()
+        .filter(|day| day.close.is_finite() && day.close > 0.0)
+        .collect();
     if history.len() > 20 {
         history.drain(0..history.len() - 20);
     }
@@ -298,10 +305,15 @@ fn detect_signals(history: &[ChipDaily]) -> Vec<String> {
     let end = recent.last().unwrap();
     let institutional: i64 = recent.iter().map(|day| day.institutional_total).sum();
     let price_change = (end.close - start.close) / start.close * 100.0;
-    let margin_change = if start.margin_balance == 0 {
-        0.0
+    let margin_change = if recent.iter().all(|day| day.margin_balance.is_some()) {
+        match (start.margin_balance, end.margin_balance) {
+            (Some(start_balance), Some(end_balance)) if start_balance > 0 => {
+                Some((end_balance - start_balance) as f64 / start_balance as f64 * 100.0)
+            }
+            _ => None,
+        }
     } else {
-        (end.margin_balance - start.margin_balance) as f64 / start.margin_balance as f64 * 100.0
+        None
     };
     let mut signals = Vec::new();
     if price_change < -2.0 && institutional > 0 {
@@ -310,7 +322,7 @@ fn detect_signals(history: &[ChipDaily]) -> Vec<String> {
     if price_change > 2.0 && institutional < 0 {
         signals.push("price_up_institution_sell".to_string());
     }
-    if price_change > 2.0 && margin_change > 5.0 {
+    if price_change > 2.0 && margin_change.is_some_and(|change| change > 5.0) {
         signals.push("margin_chasing".to_string());
     }
     if recent.iter().rev().take(3).all(|day| day.trust > 0) {
@@ -477,6 +489,106 @@ fn calculate_verdict(
     )
 }
 
+fn valid_price_date(row: &PriceRow) -> bool {
+    row.close.is_finite() && row.close > 0.0
+}
+
+fn latest_common_date(
+    institutional_rows: &[InstitutionalRow],
+    margin_rows: &[MarginRow],
+    price_rows: &[PriceRow],
+) -> Option<String> {
+    let institutional_dates: BTreeSet<String> = institutional_rows
+        .iter()
+        .map(|row| row.date.clone())
+        .collect();
+    let margin_dates: BTreeSet<String> = margin_rows.iter().map(|row| row.date.clone()).collect();
+    let price_dates: BTreeSet<String> = price_rows
+        .iter()
+        .filter(|row| valid_price_date(row))
+        .map(|row| row.date.clone())
+        .collect();
+
+    institutional_dates
+        .intersection(&margin_dates)
+        .filter(|date| price_dates.contains(*date))
+        .max()
+        .cloned()
+}
+
+fn assemble_chip_data(
+    symbol: String,
+    institutional_rows: &[InstitutionalRow],
+    margin_rows: &[MarginRow],
+    price_rows: &[PriceRow],
+    shareholding_rows: &[ShareholdingRow],
+    lending_rows: &[SecuritiesLendingRow],
+) -> Result<ChipData, String> {
+    let as_of = latest_common_date(institutional_rows, margin_rows, price_rows)
+        .ok_or_else(|| "CHIP_NO_COMMON_DATE".to_string())?;
+
+    let institutional_rows: Vec<InstitutionalRow> = institutional_rows
+        .iter()
+        .filter(|row| row.date.as_str() <= as_of.as_str())
+        .cloned()
+        .collect();
+    let margin_rows: Vec<MarginRow> = margin_rows
+        .iter()
+        .filter(|row| row.date.as_str() <= as_of.as_str())
+        .cloned()
+        .collect();
+    let price_rows: Vec<PriceRow> = price_rows
+        .iter()
+        .filter(|row| row.date.as_str() <= as_of.as_str() && valid_price_date(row))
+        .cloned()
+        .collect();
+    let shareholding_rows: Vec<ShareholdingRow> = shareholding_rows
+        .iter()
+        .filter(|row| row.date.as_str() <= as_of.as_str())
+        .cloned()
+        .collect();
+    let lending_rows: Vec<SecuritiesLendingRow> = lending_rows
+        .iter()
+        .filter(|row| row.date.as_str() <= as_of.as_str())
+        .cloned()
+        .collect();
+
+    let shareholding_for_lights: &[ShareholdingRow] =
+        if shareholding_rows.iter().any(|row| row.date == as_of) {
+            &shareholding_rows
+        } else {
+            &[]
+        };
+    let lending_for_lights: &[SecuritiesLendingRow] =
+        if lending_rows.iter().any(|row| row.date == as_of) {
+            &lending_rows
+        } else {
+            &[]
+        };
+
+    let (institutional, _) = summarize_institutional(&institutional_rows)?;
+    let (margin, _) = summarize_margin(&margin_rows)?;
+    let history = build_history(&institutional_rows, &margin_rows, &price_rows);
+    let signals = detect_signals(&history);
+    let (score, verdict, confidence, score_breakdown) = calculate_verdict(&institutional, &margin);
+    let lights = build_lights(&institutional, shareholding_for_lights, lending_for_lights);
+
+    Ok(ChipData {
+        symbol,
+        as_of,
+        score,
+        verdict,
+        confidence,
+        institutional,
+        margin,
+        history,
+        signals,
+        score_breakdown,
+        lights,
+        source: "FinMind".to_string(),
+    })
+}
+
 #[tauri::command]
 pub async fn get_chip_data(symbol: String) -> Result<ChipData, String> {
     if !symbol.chars().all(|char| char.is_ascii_digit()) {
@@ -523,27 +635,14 @@ pub async fn get_chip_data(symbol: String) -> Result<ChipData, String> {
     let price_rows = price_result?;
     let shareholding_rows = shareholding_result.unwrap_or_default();
     let lending_rows = lending_result.unwrap_or_default();
-    let (institutional, institutional_date) = summarize_institutional(&institutional_rows)?;
-    let (margin, margin_date) = summarize_margin(&margin_rows)?;
-    let as_of = std::cmp::min(institutional_date, margin_date);
-    let history = build_history(&institutional_rows, &margin_rows, &price_rows);
-    let signals = detect_signals(&history);
-    let (score, verdict, confidence, score_breakdown) = calculate_verdict(&institutional, &margin);
-    let lights = build_lights(&institutional, &shareholding_rows, &lending_rows);
-    let data = ChipData {
-        symbol: symbol.clone(),
-        as_of,
-        score,
-        verdict,
-        confidence,
-        institutional,
-        margin,
-        history,
-        signals,
-        score_breakdown,
-        lights,
-        source: "FinMind".to_string(),
-    };
+    let data = assemble_chip_data(
+        symbol.clone(),
+        &institutional_rows,
+        &margin_rows,
+        &price_rows,
+        &shareholding_rows,
+        &lending_rows,
+    )?;
     cache.insert(symbol, (data.clone(), Instant::now()));
     Ok(data)
 }
@@ -551,6 +650,30 @@ pub async fn get_chip_data(symbol: String) -> Result<ChipData, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn institutional_row(date: &str, net: i64) -> InstitutionalRow {
+        InstitutionalRow {
+            date: date.to_string(),
+            name: "Foreign_Investor".to_string(),
+            buy: net.max(0),
+            sell: (-net).max(0),
+        }
+    }
+
+    fn margin_row(date: &str, balance: i64) -> MarginRow {
+        MarginRow {
+            date: date.to_string(),
+            MarginPurchaseTodayBalance: balance,
+            ShortSaleTodayBalance: 10,
+        }
+    }
+
+    fn price_row(date: &str, close: f64) -> PriceRow {
+        PriceRow {
+            date: date.to_string(),
+            close,
+        }
+    }
 
     #[test]
     fn verdict_detects_retail_crowding() {
@@ -608,11 +731,202 @@ mod tests {
                 trust: 1_000,
                 dealer: 0,
                 institutional_total: 3_000,
-                margin_balance: 10_000,
+                margin_balance: Some(10_000),
             })
             .collect();
 
         assert!(detect_signals(&history).contains(&"price_down_institution_buy".to_string()));
+    }
+
+    #[test]
+    fn history_serializes_missing_margin_as_null_and_preserves_zero() {
+        let institutional = vec![
+            institutional_row("2026-07-10", 10),
+            institutional_row("2026-07-11", 10),
+        ];
+        let margin = vec![margin_row("2026-07-11", 0)];
+        let prices = vec![
+            price_row("2026-07-10", 100.0),
+            price_row("2026-07-11", 101.0),
+        ];
+
+        let history = build_history(&institutional, &margin, &prices);
+        assert_eq!(history[0].margin_balance, None);
+        assert_eq!(history[1].margin_balance, Some(0));
+
+        let serialized = serde_json::to_value(&history).unwrap();
+        assert_eq!(serialized[0]["marginBalance"], serde_json::Value::Null);
+        assert_eq!(serialized[1]["marginBalance"], 0);
+    }
+
+    #[test]
+    fn margin_chasing_requires_complete_recent_margin_history() {
+        let history: Vec<ChipDaily> = (0..6)
+            .map(|index| ChipDaily {
+                date: format!("2026-07-{}", 10 + index),
+                close: 100.0 + index as f64,
+                foreign: -2_000,
+                trust: 1_000,
+                dealer: 0,
+                institutional_total: -2_000,
+                margin_balance: if index == 3 {
+                    None
+                } else {
+                    Some(100 + index as i64 * 10)
+                },
+            })
+            .collect();
+
+        let signals = detect_signals(&history);
+        assert!(signals.contains(&"price_up_institution_sell".to_string()));
+        assert!(signals.contains(&"trust_streak".to_string()));
+        assert!(!signals.contains(&"margin_chasing".to_string()));
+
+        let complete_history: Vec<ChipDaily> = history
+            .iter()
+            .enumerate()
+            .map(|(index, day)| ChipDaily {
+                margin_balance: Some(100 + index as i64 * 10),
+                ..day.clone()
+            })
+            .collect();
+        assert!(detect_signals(&complete_history).contains(&"margin_chasing".to_string()));
+
+        let zero_start_history: Vec<ChipDaily> = complete_history
+            .iter()
+            .enumerate()
+            .map(|(index, day)| ChipDaily {
+                margin_balance: Some(if index == 1 {
+                    0
+                } else {
+                    100 + index as i64 * 10
+                }),
+                ..day.clone()
+            })
+            .collect();
+        assert!(!detect_signals(&zero_start_history).contains(&"margin_chasing".to_string()));
+    }
+
+    #[test]
+    fn assembly_uses_latest_common_core_date_and_excludes_future_outliers() {
+        let mut institutional = (1..=5)
+            .map(|day| institutional_row(&format!("2026-07-{day:02}"), 10))
+            .collect::<Vec<_>>();
+        institutional.push(institutional_row("2026-07-06", 1_000_000));
+
+        let mut margin = (1..=5)
+            .map(|day| margin_row(&format!("2026-07-{day:02}"), 100))
+            .collect::<Vec<_>>();
+        margin.push(margin_row("2026-07-07", 1_000_000));
+
+        let mut prices = (1..=5)
+            .map(|day| price_row(&format!("2026-07-{day:02}"), 100.0))
+            .collect::<Vec<_>>();
+        prices.push(price_row("2026-07-08", 9_999.0));
+
+        let shareholding = vec![
+            ShareholdingRow {
+                date: "2026-07-08".to_string(),
+                ForeignInvestmentSharesRatio: 99.0,
+            },
+            ShareholdingRow {
+                date: "2026-07-05".to_string(),
+                ForeignInvestmentSharesRatio: 40.0,
+            },
+        ];
+        let lending = vec![
+            SecuritiesLendingRow {
+                date: "2026-07-08".to_string(),
+                volume: 99_999,
+            },
+            SecuritiesLendingRow {
+                date: "2026-07-05".to_string(),
+                volume: 10,
+            },
+        ];
+
+        institutional.reverse();
+        margin.reverse();
+        prices.reverse();
+
+        let data = assemble_chip_data(
+            "2330".to_string(),
+            &institutional,
+            &margin,
+            &prices,
+            &shareholding,
+            &lending,
+        )
+        .unwrap();
+
+        assert_eq!(data.as_of, "2026-07-05");
+        assert_eq!(data.institutional.total_5d, 50);
+        assert_eq!(data.institutional.total_20d, 50);
+        assert_eq!(data.margin.margin_balance, 100);
+        assert_eq!(
+            data.history.last().map(|day| day.date.as_str()),
+            Some("2026-07-05")
+        );
+        assert!(data
+            .history
+            .iter()
+            .all(|day| day.date.as_str() <= "2026-07-05"));
+        assert_eq!(data.lights.foreign_ratio, Some(40.0));
+        assert_eq!(data.lights.lending_volume_5d, 10);
+    }
+
+    #[test]
+    fn assembly_reports_no_common_core_date() {
+        let institutional = vec![institutional_row("2026-07-01", 10)];
+        let margin = vec![margin_row("2026-07-02", 100)];
+        let prices = vec![price_row("2026-07-03", 100.0)];
+
+        let error = assemble_chip_data(
+            "2330".to_string(),
+            &institutional,
+            &margin,
+            &prices,
+            &[],
+            &[],
+        )
+        .unwrap_err();
+        assert_eq!(error, "CHIP_NO_COMMON_DATE");
+    }
+
+    #[test]
+    fn optional_lagged_datasets_make_lights_unavailable() {
+        let institutional = (1..=5)
+            .map(|day| institutional_row(&format!("2026-07-{day:02}"), 10))
+            .collect::<Vec<_>>();
+        let margin = (1..=5)
+            .map(|day| margin_row(&format!("2026-07-{day:02}"), 100))
+            .collect::<Vec<_>>();
+        let prices = (1..=5)
+            .map(|day| price_row(&format!("2026-07-{day:02}"), 100.0))
+            .collect::<Vec<_>>();
+        let shareholding = vec![ShareholdingRow {
+            date: "2026-07-04".to_string(),
+            ForeignInvestmentSharesRatio: 40.0,
+        }];
+        let lending = vec![SecuritiesLendingRow {
+            date: "2026-07-04".to_string(),
+            volume: 10,
+        }];
+
+        let data = assemble_chip_data(
+            "2330".to_string(),
+            &institutional,
+            &margin,
+            &prices,
+            &shareholding,
+            &lending,
+        )
+        .unwrap();
+
+        assert_eq!(data.lights.foreign_holding, "unavailable");
+        assert_eq!(data.lights.foreign_ratio, None);
+        assert_eq!(data.lights.lending_pressure, "unavailable");
+        assert_eq!(data.lights.lending_volume_5d, 0);
     }
 
     #[test]

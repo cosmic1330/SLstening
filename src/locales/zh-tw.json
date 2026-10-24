@@ -131,6 +131,33 @@
       "cnn": "CNN 恐懼貪婪",
       "mm": "台灣恐懼貪婪",
       "margin": "台股融資維持率"
+    },
+    "cnnSentiment": {
+      "title": "CNN 恐懼貪婪指數",
+      "source": "市場情緒",
+      "loading": "正在載入情緒資料…",
+      "empty": "目前沒有 CNN 情緒資料。",
+      "error": "無法載入 CNN 情緒資料。",
+      "retry": "重試",
+      "scaleLabel": "CNN 恐懼貪婪分數，範圍 0 到 100",
+      "scaleMin": "極度恐懼 · 0",
+      "scaleMax": "極度貪婪 · 100",
+      "asOf": "觀測日期：{{date}}",
+      "dateUnavailable": "無法取得觀測日期",
+      "trendTitle": "近 30 日趨勢",
+      "trendAria": "CNN 恐懼貪婪趨勢，共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
+      "trendSummary": "{{count}} 筆觀測 · {{start}} {{startScore}} → {{end}} {{endScore}}（0–100）",
+      "trendInsufficient": "有效觀測不足，無法顯示趨勢。",
+      "trendUnavailable": "觀測資料無效，無法顯示趨勢。",
+      "refreshingError": "更新失敗，顯示上次可用的數值。",
+      "ratings": {
+        "extremeFear": "極度恐懼",
+        "fear": "恐懼",
+        "neutral": "中性",
+        "greed": "貪婪",
+        "extremeGreed": "極度貪婪",
+        "unknown": "未分類"
+      }
     }
   },
   "watchlist": {
@@ -453,9 +480,10 @@
         "recentMonth": "近 {{count}} 月",
         "noFinancialData": "暫無財務數據。",
         "tdcc": {
-          "title": "大戶人數變動",
+          "title": "集保戶數變動",
           "dataPeriod": "資料期間：{{current}}（前期：{{previous}}）",
           "dataDate": "資料日期：{{date}}",
+          "holders100": "≤100 張",
           "holders400": "400 張以上",
           "holders1000": "1,000 張以上",
           "currentHolders": "目前 {{value}} 人",

@@ -895,7 +895,11 @@ fn execute_tool(
                     envelope_with_warnings(
                         configuration_epoch,
                         json!({"symbol":symbol,"state":"error","data":Value::Null}),
-                        json!([{"symbol":symbol,"code":"CHIP_PROVIDER_UNAVAILABLE","message":message,"retryable":true}]),
+                        json!([chip_error_warning(
+                            &symbol,
+                            &message,
+                            "CHIP_PROVIDER_UNAVAILABLE",
+                        )]),
                     ),
                 )),
             }
@@ -1487,6 +1491,20 @@ fn stable_market_error_code(message: &str, fallback: &'static str) -> &'static s
     }
 }
 
+fn chip_error_warning(symbol: &str, message: &str, fallback_code: &str) -> Value {
+    let code = if message == "CHIP_NO_COMMON_DATE" {
+        "CHIP_NO_COMMON_DATE"
+    } else {
+        fallback_code
+    };
+    json!({
+        "symbol": symbol,
+        "code": code,
+        "message": message,
+        "retryable": code != "CHIP_NO_COMMON_DATE"
+    })
+}
+
 /// Fetch bounded quote requests concurrently and stop collecting at the
 /// overall deadline. Each request still goes through MarketManager's global
 /// provider gate, while the MCP call can return a partial result instead of
@@ -1871,7 +1889,9 @@ fn analysis_item(
                 match chip_result {
                     Ok(value) => serde_json::to_value(value).ok(),
                     Err(message) => {
-                        warnings.push(json!({"symbol":symbol,"code":stable_market_error_code(&message, "CHIP_PROVIDER_UNAVAILABLE"),"message":message,"retryable":true}));
+                        let fallback_code =
+                            stable_market_error_code(&message, "CHIP_PROVIDER_UNAVAILABLE");
+                        warnings.push(chip_error_warning(&symbol, &message, fallback_code));
                         None
                     }
                 }
@@ -2829,6 +2849,33 @@ mod tests {
             sanitize_gateway_error("AGENT_BRIDGE_UNAVAILABLE: /private/build/path"),
             "AGENT_BRIDGE_UNAVAILABLE"
         );
+    }
+
+    #[test]
+    fn chip_error_warning_preserves_no_common_date_for_both_gateway_paths() {
+        let direct_path =
+            chip_error_warning("2330", "CHIP_NO_COMMON_DATE", "CHIP_PROVIDER_UNAVAILABLE");
+        let snapshot_fallback =
+            stable_market_error_code("CHIP_NO_COMMON_DATE", "CHIP_PROVIDER_UNAVAILABLE");
+        let snapshot_path = chip_error_warning("2330", "CHIP_NO_COMMON_DATE", snapshot_fallback);
+
+        for warning in [direct_path, snapshot_path] {
+            assert_eq!(warning["code"], "CHIP_NO_COMMON_DATE");
+            assert_eq!(warning["retryable"], false);
+        }
+
+        let provider_error =
+            chip_error_warning("2330", "FinMind HTTP 503", "CHIP_PROVIDER_UNAVAILABLE");
+        assert_eq!(provider_error["code"], "CHIP_PROVIDER_UNAVAILABLE");
+        assert_eq!(provider_error["retryable"], true);
+
+        let deadline_error = chip_error_warning(
+            "2330",
+            "DEADLINE_EXCEEDED",
+            stable_market_error_code("DEADLINE_EXCEEDED", "CHIP_PROVIDER_UNAVAILABLE"),
+        );
+        assert_eq!(deadline_error["code"], "DEADLINE_EXCEEDED");
+        assert_eq!(deadline_error["retryable"], true);
     }
 
     #[test]

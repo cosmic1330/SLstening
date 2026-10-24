@@ -48,7 +48,7 @@ export interface ChipData {
     trust: number;
     dealer: number;
     institutionalTotal: number;
-    marginBalance: number;
+    marginBalance: number | null;
   }>;
   signals: Array<
     | "price_down_institution_buy"

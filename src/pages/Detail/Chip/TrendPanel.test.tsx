@@ -35,7 +35,7 @@ const history = [
     trust: -700,
     dealer: -300,
     institutionalTotal: -2500,
-    marginBalance: 11,
+    marginBalance: null,
   },
   {
     date: "2026-09-03",
@@ -95,6 +95,7 @@ describe("buildTrendData", () => {
 
     expect(result.map((day) => day.institutionalLots)).toEqual([1, -2.5, 0.5]);
     expect(result.map((day) => day.institutionalCumulativeLots)).toEqual([1, -1.5, -1]);
+    expect(result.map((day) => day.marginBalance)).toEqual([10, null, 12]);
     expect(input).toEqual(inputSnapshot);
     expect(result[0]).not.toBe(input[0]);
   });

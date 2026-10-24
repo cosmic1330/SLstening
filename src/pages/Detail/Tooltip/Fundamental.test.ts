@@ -30,6 +30,8 @@ const tdccData = {
   stock_id: 2330,
   data_date: "2026-09-01T00:00:00Z",
   previous_date: "2026-08-25T00:00:00",
+  holders_100: 2400,
+  previous_holders_100: 2300,
   holders_400: 1200,
   previous_holders_400: 1180,
   holders_1000: 80,
@@ -94,7 +96,10 @@ describe("TDCC holder changes", () => {
     configureSupabase({ financial_metric: noData, recent_fundamental: noData, tdcc_holder: { data: tdccData, error: null } });
     renderFundamental();
 
-    expect(await screen.findByText("Large-holder headcount change")).toBeTruthy();
+    expect(await screen.findByText("TDCC holder count changes")).toBeTruthy();
+    expect(screen.getByText("≤100 lots")).toBeTruthy();
+    expect(screen.getByText("Current 2,400 people")).toBeTruthy();
+    expect(screen.getByText("+100 people increase")).toBeTruthy();
     expect(screen.getByText("400 lots or more")).toBeTruthy();
     expect(screen.getByText("Current 1,200 people")).toBeTruthy();
     expect(screen.getByText("+20 people increase")).toBeTruthy();
@@ -103,6 +108,7 @@ describe("TDCC holder changes", () => {
     expect(screen.getByText("-20 people decrease")).toBeTruthy();
     expect(document.querySelector('[data-testid="ArrowUpwardRoundedIcon"]')).toBeTruthy();
     expect(document.querySelector('[data-testid="ArrowDownwardRoundedIcon"]')).toBeTruthy();
+    expect(screen.getAllByTestId("tdcc-holder-card")).toHaveLength(3);
     expect(supabaseState.calls).toContainEqual({ table: "tdcc_holder", column: "stock_id", value: 2330 });
   });
 
@@ -178,7 +184,7 @@ describe("TDCC holder changes", () => {
     expect(screen.getByTestId("fundamental-section-revenue")).toBeTruthy();
     expect(screen.getByTestId("fundamental-section-tdcc")).toBeTruthy();
     expect(getComputedStyle(screen.getByTestId("tdcc-holder-cards")).minWidth).toBe("0px");
-    expect(screen.getAllByTestId("tdcc-holder-card")).toHaveLength(2);
+    expect(screen.getAllByTestId("tdcc-holder-card")).toHaveLength(3);
     screen.getAllByTestId("tdcc-holder-card").forEach((card) => {
       expect(getComputedStyle(card).minWidth).toBe("0px");
     });

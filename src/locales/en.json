@@ -131,6 +131,33 @@
       "cnn": "CNN Fear & Greed",
       "mm": "Taiwan Fear & Greed",
       "margin": "Taiwan margin maintenance ratio"
+    },
+    "cnnSentiment": {
+      "title": "CNN Fear & Greed",
+      "source": "Market sentiment",
+      "loading": "Loading sentiment data…",
+      "empty": "No CNN sentiment data is available.",
+      "error": "Could not load CNN sentiment data.",
+      "retry": "Retry",
+      "scaleLabel": "CNN Fear & Greed score from 0 to 100",
+      "scaleMin": "Extreme fear · 0",
+      "scaleMax": "Extreme greed · 100",
+      "asOf": "Observation date: {{date}}",
+      "dateUnavailable": "Observation date unavailable",
+      "trendTitle": "30-day trend",
+      "trendAria": "CNN Fear & Greed trend with {{count}} observations from {{start}} to {{end}}",
+      "trendSummary": "{{count}} observations · {{start}} {{startScore}} → {{end}} {{endScore}} (0–100)",
+      "trendInsufficient": "Not enough valid observations to show a trend.",
+      "trendUnavailable": "Trend unavailable because the observations are invalid.",
+      "refreshingError": "Refresh failed; showing the last available value.",
+      "ratings": {
+        "extremeFear": "Extreme fear",
+        "fear": "Fear",
+        "neutral": "Neutral",
+        "greed": "Greed",
+        "extremeGreed": "Extreme greed",
+        "unknown": "Unclassified"
+      }
     }
   },
   "watchlist": {
@@ -453,9 +480,10 @@
         "recentMonth": "Last {{count}} mo.",
         "noFinancialData": "No financial data is available.",
         "tdcc": {
-          "title": "Large-holder headcount change",
+          "title": "TDCC holder count changes",
           "dataPeriod": "Data period: {{current}} (previous: {{previous}})",
           "dataDate": "Data date: {{date}}",
+          "holders100": "≤100 lots",
           "holders400": "400 lots or more",
           "holders1000": "1,000 lots or more",
           "currentHolders": "Current {{value}} people",

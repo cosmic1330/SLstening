@@ -433,7 +433,12 @@ export default function Fundamental({ id }: { id: string | undefined }) {
                     date: formatDate(tdccHolder.data_date),
                   })}
             </Typography>
-            <Box data-testid="tdcc-holder-cards" sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 0.65, minWidth: 0, "@media (max-width: 340px)": { gridTemplateColumns: "minmax(0, 1fr)" } }}>
+            <Box data-testid="tdcc-holder-cards" sx={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 0.65, minWidth: 0, "@media (max-width: 340px)": { gridTemplateColumns: "minmax(0, 1fr)" } }}>
+              <HolderChangeItem
+                label={t("Pages.Detail.tooltip.tdcc.holders100")}
+                current={tdccHolder.holders_100}
+                previous={tdccHolder.previous_holders_100}
+              />
               <HolderChangeItem
                 label={t("Pages.Detail.tooltip.tdcc.holders400")}
                 current={tdccHolder.holders_400}

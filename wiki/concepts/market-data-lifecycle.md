@@ -19,6 +19,7 @@ status: stable
 
 - `subscribe_stock`, `unsubscribe_stock`, `get_market_data`, `get_chip_data`, `market-update`, and `api-blocked` are cross-language contracts.
 - Validate stock identity, finite numeric values, aligned history arrays, and timestamp/freshness meaning at boundaries.
+- Chip analysis uses one common `asOf`: the latest date present in institutional, margin, and valid positive finite price datasets. Every core and optional dataset is filtered to that cutoff before summaries, history, signals, score, or lights are assembled; optional shareholding/lending lights are unavailable when their latest usable date does not equal `asOf`. Historical `marginBalance` is nullable (`null` means no margin row for that date; `0` remains an actual zero), while the summary margin remains numeric. The existing summaries and signals retain their sample-based 5/20-observation windows after cutoff rather than forward-filling missing observations.
 - Preserve Taiwan market semantics: red means rising and green means falling, with a non-color cue for direction.
 - Taiwan trading-session checks and intraday progress use the `Asia/Taipei` wall clock, independent of the host or CI time zone.
 

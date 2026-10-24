@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
 import { analysisTheme, semanticTokens } from "../../../theme";
 import { FutureIds } from "../../../types";
+import CnnFearGreedBox from "./CnnFearGreedBox";
 import MarketIndexBox from "../List/components/MarketIndexBox";
 import MarketLinkBox from "../List/components/MarketLinkBox";
 
@@ -30,6 +31,9 @@ export default function Market() {
     <Container maxWidth="xl" sx={{ py: 2, pb: 12 }}>
       <Stack direction="row" spacing={1} alignItems="center" mb={2}><DashboardIcon color="primary" /><Typography fontWeight={900}>{t("home.marketOverview")}</Typography></Stack>
       <Grid container spacing={1.5}>{indices.map((index) => <Grid key={index.id} size={{ xs: 12, sm: 6, md: 3 }}><MarketIndexBox {...index} /></Grid>)}</Grid>
+      <Box sx={{ mt: 1.5, display: "flex", width: "100%" }}>
+        <CnnFearGreedBox />
+      </Box>
       {links.length > 0 && (
         <Box
           component="section"

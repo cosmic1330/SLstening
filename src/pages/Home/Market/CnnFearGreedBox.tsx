@@ -17,6 +17,7 @@ import { primitiveTokens, semanticTokens } from "../../../theme";
 
 const SENTIMENT_KEY = "market-sentiment/cnn-fear-and-greed";
 
+export const CNN_SENTIMENT_REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 export const CNN_SENTIMENT_THRESHOLDS = [20, 80] as const;
 export const CNN_SENTIMENT_Y_TICKS = [0, 20, 50, 80, 100];
 export const CNN_SENTIMENT_Y_AXIS_INTERVAL = 0;
@@ -153,7 +154,7 @@ function LoadingCard({ title, source, loadingText }: { title: string; source: st
 export default function CnnFearGreedBox() {
   const { t, i18n } = useTranslation();
   const { data, error, isLoading, mutate } = useSWR<MarketSentimentRow[]>(SENTIMENT_KEY, getCnnFearAndGreedHistory, {
-    refreshInterval: 15 * 60 * 1000,
+    refreshInterval: CNN_SENTIMENT_REFRESH_INTERVAL_MS,
     dedupingInterval: 60 * 1000,
     revalidateOnFocus: false,
   });

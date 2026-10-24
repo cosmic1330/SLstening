@@ -14,6 +14,7 @@ import CnnFearGreedBox, {
   buildCnnTrendData,
   clampSentimentScore,
   classifySentimentScore,
+  CNN_SENTIMENT_REFRESH_INTERVAL_MS,
   CNN_SENTIMENT_THRESHOLDS,
   CNN_SENTIMENT_Y_AXIS_INTERVAL,
   CNN_SENTIMENT_Y_TICKS,
@@ -75,6 +76,16 @@ describe("CNN Fear & Greed box", () => {
     expect(CNN_SENTIMENT_THRESHOLDS).toEqual([20, 80]);
     expect(CNN_SENTIMENT_Y_TICKS).toEqual([0, 20, 50, 80, 100]);
     expect(CNN_SENTIMENT_Y_AXIS_INTERVAL).toBe(0);
+  });
+
+  it("refreshes the persisted sentiment history once per hour", () => {
+    swr.useSWR.mockReturnValue({ data: [], error: undefined, isLoading: false, mutate: vi.fn() });
+    render(<CnnFearGreedBox />);
+
+    const options = swr.useSWR.mock.calls[0][2] as { refreshInterval: number; revalidateOnFocus: boolean };
+    expect(CNN_SENTIMENT_REFRESH_INTERVAL_MS).toBe(60 * 60 * 1000);
+    expect(options.refreshInterval).toBe(3_600_000);
+    expect(options.revalidateOnFocus).toBe(false);
   });
 
   it("renders a score-derived Fear label for 20.98 despite a persisted extreme-fear rating", () => {

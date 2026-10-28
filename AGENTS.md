@@ -1,99 +1,41 @@
-# SLstening agent guidance
+# AGENTS.md
 
-## Product
+## 專案背景
 
-SLstening is a Tauri 2 desktop application for real-time Taiwan/US stock monitoring and technical analysis. The frontend uses React 18, TypeScript, Vite, MUI/Emotion, Zustand, Framer Motion, Recharts, react-window, SWR, React Router, and i18next. The Tauri backend is Rust.
+SLstening 是台股／美股監控與技術分析桌面應用。`src/` 使用 React 18、TypeScript、Vite、MUI、Zustand；`src-tauri/` 使用 Tauri 2 與 Rust，負責原生整合及市場資料排程。Supabase 提供認證，帳號資料採本機持久化與選用的 Google Sheet 備份。
 
-## Frontend conventions
+## 開發與驗證
 
-- Preserve the compact 375x675 initial window experience; also verify 768px and a wide desktop viewport.
-- Follow the visual language of the affected surface. Analysis pages are dark and glass-like; authentication pages intentionally use a separate light illustrated theme.
-- Use MUI and Emotion patterns already present. Prefer semantic theme tokens for new work without expanding a scoped change into a full redesign.
-- Preserve Taiwan market semantics: red means rising and green means falling. Pair color with text, sign, shape, or icon so meaning never depends on hue alone.
-- Keep numeric market data legible and stable. Use tabular or monospace figures where columns or live values would otherwise jump.
-- Add user-visible copy to both `src/locales/zh-tw.json` and `src/locales/en.json`.
-- Give icon-only controls accessible names. Maintain keyboard focus visibility and honor `prefers-reduced-motion`.
-- Protect live-data performance: keep Zustand selectors narrow, preserve stable list keys, virtualize long lists, and measure before adding memoization.
-- For charts, label units, interval, freshness, and states; provide visible values outside hover-only tooltips and non-color cues for trends/signals.
+- 使用 pnpm；CI 使用 Node.js 22、pnpm 10 與 stable Rust。指令以 [package.json](package.json) 與 [CI](.github/workflows/ci.yml) 為準；README 的 `build_app` 已不存在。
+- 依變更範圍選擇驗證；純文件變更檢查內容與連結即可。
 
-## Verification
+| 用途 | 在專案根目錄執行 |
+| --- | --- |
+| 安裝依賴 | `pnpm install --frozen-lockfile` |
+| 桌面開發 | `pnpm app`；`pnpm dev` 僅啟動前端 |
+| 前端靜態檢查 | `pnpm lint`、`pnpm typecheck` |
+| 前端測試 | `pnpm test:frontend`；指定檔案可在後面加路徑 |
+| Rust 測試 | `cargo test --locked --manifest-path src-tauri/Cargo.toml` |
+| MCP bridge／PhoneApp 同步測試 | `pnpm test:bridge`／`pnpm test:phoneapp` |
+| 前端建置 | `pnpm build` |
+| 桌面封裝 | `pnpm package` |
 
-- Run `npm run test:frontend` for frontend behavior changes.
-- Run `npm run build` for material frontend or TypeScript changes.
-- Run `npm run test:all` when a change affects Tauri commands, persistence, shared contracts, or backend-visible behavior.
-- Visually inspect affected routes at 375x675, 768px wide, and a representative wide desktop size. Check populated, loading, empty, and error states when applicable.
-- Verify keyboard-only operation, visible focus, reduced motion, and both supported locales for changed copy.
+- `pnpm test` 為 watch 模式；單次驗證使用 `test:frontend`。`test:all` 包含前端、Rust、PhoneApp 測試，但不包含 `test:bridge`。
+- Tauri command／event 契約變更需同步檢查 TypeScript 與 Rust 兩端。`src-tauri/bindings/` 由 ts-rs 產生；修改 Rust 型別並透過 Rust 測試重新產生，不直接手改產物。
 
-When the personal `slstening-frontend-design` and `ui-ux-pro-max` Skills are available, use the former for project-specific workflow and the latter for general UI/UX or chart research. Repository code and this file override generic recommendations.
+## 按需閱讀
 
-## Knowledge Management
+僅讀取與任務相關的文件；實作、測試與設定優先於文件中的過時描述。
 
-- Treat [`wiki/index.md`](wiki/index.md) as the entry point for durable project knowledge. Read it before large or cross-cutting changes.
-- From the index, read only the architecture, concept, and decision pages relevant to the task.
-- Source code, tests, configuration, and migrations are the final truth. If the wiki conflicts with them, follow the repository and correct the relevant wiki page as part of the change.
-- Do not update the wiki for every small refactor, isolated bug fix, copy change, or component edit.
-- Update the wiki when a change affects architecture, dependency or framework strategy, an API contract (including Tauri commands or events), state-management or persistence strategy, authentication or authorization, routing architecture, build/release/deployment flow, or another durable technical decision that a future agent is likely to need.
-- Keep pages concise and explain constraints, boundaries, and reasons. Link to authoritative source files instead of reproducing the README or narrating implementation details that are obvious from code.
-- Keep the wiki as OKF v0.2-compatible Markdown with YAML frontmatter and ordinary relative links. Do not introduce runtime tooling, a database, a vector store, RAG, or another service for knowledge management.
+- [知識庫入口](wiki/index.md)：依 UI、認證、追蹤清單、市場資料等任務導向架構與決策文件。
+- [建置與發佈](wiki/architecture/build-and-release.md)：CI、桌面封裝、更新器與環境設定。
+- [Agent 整合](docs/agent-setup.md)：本機 MCP gateway、bridge 與用戶端設定。
+- [PhoneApp 同步](docs/phoneapp-sync.md)：Google Apps Script 部署與雲端資料契約。
 
-## Sol -> Terra -> Sol workflow
+## 實作原則
 
-Apply this workflow to material changes to source code, configuration, tests,
-database behavior, APIs, persistence, or deployment behavior. Skip it for
-read-only questions, diagnostics that do not request a fix, and trivial copy or
-comment edits.
-
-### Phase 1 - Sol planning
-
-The main thread acts as the orchestrator using Sol with high reasoning.
-
-Before delegating implementation:
-
-1. Read the applicable repository instructions and inspect the affected code.
-2. Identify dependencies, ambiguities, compatibility constraints, and risks.
-3. Create an implementation contract containing:
-   - Objective
-   - Current and expected behavior
-   - Acceptance criteria
-   - In-scope files or components
-   - Explicit non-goals
-   - Technical, API, persistence, and compatibility constraints
-   - Implementation steps
-   - Required tests and validation commands
-   - Risks and rollback considerations
-
-Do not delegate until the contract is precise enough to execute without
-guessing.
-
-### Phase 2 - Terra implementation
-
-Delegate the complete implementation contract to `terra_implementer`. Use a
-single implementation agent unless the contract contains independent,
-non-overlapping workstreams. Wait for implementation and validation to finish.
-
-### Phase 3 - Sol review
-
-Delegate an independent review to `sol_reviewer`. Give it the original request,
-implementation contract, actual diff, surrounding execution paths, and test
-results. The reviewer remains read-only.
-
-### Phase 4 - Correction loop
-
-When the verdict is `CHANGES_REQUIRED`:
-
-1. Return verified actionable findings to the same `terra_implementer`.
-2. Require correction of all P0 and P1 findings.
-3. Require an explicit disposition for every P2 finding.
-4. Re-run affected validation.
-5. Ask `sol_reviewer` to inspect the updated final diff.
-
-Allow at most two normal correction rounds. Escalate implementation to the main
-Sol thread when a P0 or P1 remains, the plan contains a wrong architectural
-assumption, a major redesign is required, or security, authentication,
-persistence migration, or irreversible data behavior remains uncertain.
-
-### Phase 5 - Final response
-
-Report the outcome, changed files, validation executed and results, reviewer
-verdict, remaining risks, and any manual verification still required. Never
-claim success for validation that was not executed.
+- Keep things in one function unless composable or reusable
+- Validate unknown values once at the boundary that owns them. Pass typed values inward instead of repeating typeof value === "object" and property-existence checks. Do not defensively revalidate values already guaranteed by a schema, constructor, or internal type.
+- Do not extract single-use helpers preemptively. Inline the logic at the call site unless the helper is reused, hides a genuinely complex boundary, or has a clear independent name that improves the caller.
+- Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
+- Avoid try / catch where possible

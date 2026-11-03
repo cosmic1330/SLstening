@@ -70,9 +70,6 @@ export default function TwMarginMaintenanceBox() {
                 sx={{ fontWeight: 800, fontSize: 12, color: changeColor, fontVariantNumeric: "tabular-nums" }}>
                 {change === null ? "—" : `${change > 0 ? "+" : ""}${number.format(change)}`}
               </Typography>
-              {change !== null && previous && <Typography component="span" variant="caption" sx={{ fontSize: 10, color: semanticTokens.analysis.textMuted }}>
-                {t("home.marginMaintenance.comparisonDate", { date: previous.date.slice(5).replace("-", "/") })}
-              </Typography>}
             </Stack>
             <Typography variant="caption" sx={{ display: "block", mt: 0.8, color: semanticTokens.analysis.textMuted, fontSize: 10 }}>
               {t("home.cnnSentiment.asOf", { date: latest.date })}

@@ -113,7 +113,7 @@
     "marketOverview": "市場脈動",
     "watchlist": "我的選股清單",
     "trackedCount": "已追蹤 {{count}} 檔",
-    "macro": "宏觀指標",
+    "macro": "外網資料",
     "emptyWatchlist": "尚未追蹤任何股票，請使用加入按鈕建立自選清單。",
     "yahooRateLimited": "Yahoo API 暫時限制連線（冷卻中），請稍候再試。",
     "indices": {
@@ -141,7 +141,7 @@
       "trendTitle": "近 10 個交易日",
       "trendAria": "融資維持率估算趨勢（百分比），共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
       "valueLabel": "融資維持率",
-      "comparisonDate": "前日 {{date}}",
+      "comparisonDate": " {{date}}",
       "change": {
         "up": "上升 {{value}} 個百分點",
         "down": "下降 {{value}} 個百分點",
@@ -160,7 +160,7 @@
       "scaleLabel": "CNN 恐懼貪婪分數，範圍 0 到 100",
       "scaleMin": "極度恐懼 · 0",
       "scaleMax": "極度貪婪 · 100",
-      "asOf": "觀測日期：{{date}}",
+      "asOf": "資料日期：{{date}}",
       "dateUnavailable": "無法取得觀測日期",
       "trendTitle": "近 10 日趨勢",
       "trendAria": "CNN 恐懼貪婪趨勢，共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",

@@ -2,8 +2,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../i18n";
+import { cloneElement, type ReactElement } from "react";
 const swr = vi.hoisted(() => ({ useSWR: vi.fn() }));
 vi.mock("swr", () => ({ default: swr.useSWR }));
+vi.mock("recharts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("recharts")>()),
+  ResponsiveContainer: ({ children }: { children: ReactElement<{ width: number; height: number }> }) =>
+    cloneElement(children, { width: 184, height: 130 }),
+}));
 import TwMarginMaintenanceBox from "./TwMarginMaintenanceBox";
 
 beforeEach(async () => {
@@ -14,6 +20,23 @@ beforeEach(async () => {
 afterAll(() => vi.unstubAllGlobals());
 
 describe("Taiwan margin maintenance", () => {
+  it.each([
+    [139.99, "Liquidation pressure"], [140, "Liquidation pressure"], [140.01, null],
+    [169.99, null], [170, "Bullish / warm"], [179.99, "Bullish / warm"],
+    [180, "Overheated"], [180.01, "Overheated"], [null, null],
+  ])("classifies the headline at %s percent", (percent, label) => {
+    swr.useSWR.mockReturnValue({ data: [{ date: "2026-11-02", percent }], mutate: vi.fn() });
+    render(<TwMarginMaintenanceBox />);
+    if (label) expect(screen.getByText(label)).toBeTruthy();
+    else expect(screen.queryByText(/^(Liquidation pressure|Bullish \/ warm|Overheated)$/)).toBeNull();
+  });
+
+  it("shows all three boundaries even when observations stay in one band", () => {
+    swr.useSWR.mockReturnValue({ data: [{ date: "2026-10-30", percent: 170.57 }, { date: "2026-11-02", percent: 170.6 }], mutate: vi.fn() });
+    const { container } = render(<TwMarginMaintenanceBox />);
+    for (const tick of ["140%", "170%", "180%"]) expect(screen.getByText(tick, { selector: "tspan" })).toBeTruthy();
+    expect(container.querySelectorAll(".recharts-reference-line-line")).toHaveLength(3);
+  });
   it.each([
     [170.6, 170.57, "+0.03"],
     [170.57, 170.6, "-0.03"],
@@ -30,9 +53,9 @@ describe("Taiwan margin maintenance", () => {
     render(<TwMarginMaintenanceBox />);
     expect(screen.getByTestId("margin-maintenance-change").textContent).toBe(expected);
     if (latest !== null && previous !== null) {
-      expect(screen.getByText("vs 10/30")).toBeTruthy();
+      expect(screen.getByTestId("margin-maintenance-change").title).toContain("vs 10/30");
     } else {
-      expect(screen.queryByText(/^vs /)).toBeNull();
+      expect(screen.getByTestId("margin-maintenance-change").title).not.toContain("vs ");
     }
   });
 

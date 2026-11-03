@@ -1,11 +1,18 @@
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { Box, Button, Link, Skeleton, Stack, Typography } from "@mui/material";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { getTwMarginMaintenanceHistory } from "../../../api/marketSentimentApi";
 import { normalizeLanguage } from "../../../i18n";
 import { primitiveTokens, semanticTokens } from "../../../theme";
+
+// Supabase stores percentages (180 means 1.8×).
+const pressure = { percent: 140, key: "pressure", color: "#CE93D8" } as const;
+const warm = { percent: 170, key: "warm", color: semanticTokens.market.warning } as const;
+const hot = { percent: 180, key: "hot", color: "#FF8A80" } as const;
+const boundaries = [pressure, warm, hot];
+const boundaryTicks = boundaries.map(({ percent }) => percent);
 
 export default function TwMarginMaintenanceBox() {
   const { t, i18n } = useTranslation();
@@ -17,6 +24,9 @@ export default function TwMarginMaintenanceBox() {
   const locale = normalizeLanguage(i18n.resolvedLanguage);
   const number = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const latest = data?.[data.length - 1];
+  const percent = latest?.percent;
+  const band = percent == null ? null : percent >= hot.percent ? hot : percent >= warm.percent ? warm : percent <= pressure.percent ? pressure : null;
+  const valueColor = band?.color ?? (percent == null ? semanticTokens.analysis.textMuted : semanticTokens.analysis.focus);
   const previous = data?.[data.length - 2];
   // Compare adjacent observations at the same precision as the displayed percentage.
   const change = latest?.percent != null && previous?.percent != null
@@ -60,13 +70,17 @@ export default function TwMarginMaintenanceBox() {
       ) : (
         <Box data-testid="margin-maintenance-columns" sx={{ display: "grid", gridTemplateColumns: "minmax(112px, 0.38fr) minmax(0, 0.62fr)", gap: 1.25, mt: 1.2, minWidth: 0 }}>
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ color: semanticTokens.analysis.focus, fontFamily: primitiveTokens.font.numeric, fontSize: 28, fontWeight: 900, lineHeight: 1.15, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+            <Typography sx={{ color: valueColor, fontFamily: primitiveTokens.font.numeric, fontSize: 28, fontWeight: 900, lineHeight: 1.15, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
               {latest.percent === null ? "—" : number.format(latest.percent)}
               <Typography component="span" sx={{ fontSize: 12, ml: 0.25 }}>%</Typography>
             </Typography>
+            {band && <Typography variant="caption" sx={{ display: "block", color: valueColor, fontWeight: 700 }}>
+              {t(`home.marginMaintenance.bands.${band.key}`)}
+            </Typography>}
             <Stack direction="row" alignItems="baseline" flexWrap="wrap" gap={0.5} sx={{ mt: 0.75 }}>
               <Typography data-testid="margin-maintenance-change" component="span" variant="caption"
-                title={t(`home.marginMaintenance.change.${direction}`, { value: change === null ? "" : number.format(Math.abs(change)) })}
+                title={[t(`home.marginMaintenance.change.${direction}`, { value: change === null ? "" : number.format(Math.abs(change)) }),
+                  change !== null && previous && t("home.marginMaintenance.comparisonDate", { date: previous.date.slice(5).replace("-", "/") })].filter(Boolean).join(" · ")}
                 sx={{ fontWeight: 800, fontSize: 12, color: changeColor, fontVariantNumeric: "tabular-nums" }}>
                 {change === null ? "—" : `${change > 0 ? "+" : ""}${number.format(change)}`}
               </Typography>
@@ -83,9 +97,11 @@ export default function TwMarginMaintenanceBox() {
                 <Box role="img" aria-label={t("home.marginMaintenance.trendAria", { count: validPoints.length, start: validPoints[0].date, end: validPoints[validPoints.length - 1].date })} sx={{ height: 130, width: "100%", mt: 0.5 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trend} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                      <CartesianGrid stroke={semanticTokens.analysis.dividerSubtle} strokeDasharray="2 3" vertical={false} />
                       <XAxis dataKey="date" interval={0} tickFormatter={(date: string) => date.slice(5).replace("-", "/")} angle={-90} textAnchor="end" height={42} tickMargin={6} padding={{ left: 3, right: 3 }} tick={{ fill: semanticTokens.analysis.textMuted, fontSize: 9 }} tickLine={false} axisLine={false} />
-                      <YAxis domain={[(min: number) => Math.floor((min - 5) / 10) * 10, (max: number) => Math.ceil((max + 5) / 10) * 10]} tickCount={3} tick={{ fill: semanticTokens.analysis.textMuted, fontSize: 9 }} tickLine={false} axisLine={false} width={30} />
+                      <YAxis domain={[(min: number) => Math.min(min, pressure.percent) - 5, (max: number) => Math.max(max, hot.percent) + 5]} ticks={boundaryTicks} interval={0} tickFormatter={(value: number) => `${value}%`} tick={{ fill: semanticTokens.analysis.textMuted, fontSize: 9 }} tickLine={false} axisLine={false} width={32} />
+                      {boundaries.map(({ percent: y, color }) => (
+                        <ReferenceLine key={y} y={y} stroke={color} strokeOpacity={0.8} strokeDasharray="3 3" />
+                      ))}
                       <Tooltip formatter={(value: number) => [`${number.format(value)}%`, t("home.marginMaintenance.valueLabel")]} contentStyle={{ background: semanticTokens.analysis.canvas, borderColor: semanticTokens.analysis.borderSubtle, borderRadius: 8, fontSize: 11 }} />
                       <Line type="monotone" dataKey="percent" stroke={semanticTokens.analysis.focus} strokeWidth={2} dot={{ r: 2, fill: semanticTokens.analysis.focus, strokeWidth: 0 }} isAnimationActive={false} connectNulls={false} />
                     </LineChart>

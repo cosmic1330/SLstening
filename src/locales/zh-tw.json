@@ -141,6 +141,7 @@
       "trendTitle": "近 10 個交易日",
       "trendAria": "融資維持率估算趨勢（百分比），共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
       "valueLabel": "融資維持率",
+      "bands": { "hot": "過熱", "warm": "偏多偏熱", "pressure": "斷頭壓力帶" },
       "comparisonDate": " {{date}}",
       "change": {
         "up": "上升 {{value}} 個百分點",

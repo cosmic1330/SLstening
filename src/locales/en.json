@@ -141,6 +141,7 @@
       "trendTitle": "10-trading-day trend",
       "trendAria": "Estimated margin maintenance trend (%), {{count}} observations from {{start}} to {{end}}",
       "valueLabel": "Maintenance ratio",
+      "bands": { "hot": "Overheated", "warm": "Bullish / warm", "pressure": "Liquidation pressure" },
       "comparisonDate": "vs {{date}}",
       "change": {
         "up": "Up {{value}} pp",

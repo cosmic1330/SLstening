@@ -10,6 +10,7 @@ import { useShowMarketInfo } from "../../../hooks/useShowMarketInfo";
 import { analysisTheme, semanticTokens } from "../../../theme";
 import { FutureIds } from "../../../types";
 import CnnFearGreedBox from "./CnnFearGreedBox";
+import TwMarginMaintenanceBox from "./TwMarginMaintenanceBox";
 import MarketIndexBox from "../List/components/MarketIndexBox";
 import MarketLinkBox from "../List/components/MarketLinkBox";
 
@@ -33,6 +34,9 @@ export default function Market() {
       <Grid container spacing={1.5}>{indices.map((index) => <Grid key={index.id} size={{ xs: 12, sm: 6, md: 3 }}><MarketIndexBox {...index} /></Grid>)}</Grid>
       <Box sx={{ mt: 1.5, display: "flex", width: "100%" }}>
         <CnnFearGreedBox />
+      </Box>
+      <Box sx={{ mt: 1.5, width: "100%" }}>
+        <TwMarginMaintenanceBox />
       </Box>
       {links.length > 0 && (
         <Box

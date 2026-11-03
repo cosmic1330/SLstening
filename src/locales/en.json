@@ -132,6 +132,24 @@
       "mm": "Taiwan Fear & Greed",
       "margin": "Taiwan margin maintenance ratio"
     },
+    "marginMaintenance": {
+      "title": "Taiwan margin maintenance (est.)",
+      "loading": "Loading margin data…",
+      "error": "Could not load margin maintenance data.",
+      "empty": "No margin maintenance data is available.",
+      "invalid": "Latest value unavailable.",
+      "trendTitle": "10-trading-day trend",
+      "trendAria": "Estimated margin maintenance trend (%), {{count}} observations from {{start}} to {{end}}",
+      "valueLabel": "Maintenance ratio",
+      "comparisonDate": "vs {{date}}",
+      "change": {
+        "up": "Up {{value}} pp",
+        "down": "Down {{value}} pp",
+        "unchanged": "Unchanged (0.00 pp)",
+        "unavailable": "Daily change unavailable"
+      },
+      "summary": "{{count}} observations · {{start}}% → {{end}}%"
+    },
     "cnnSentiment": {
       "title": "CNN Fear & Greed",
       "source": "Market sentiment",
@@ -144,7 +162,7 @@
       "scaleMax": "Extreme greed · 100",
       "asOf": "Observation date: {{date}}",
       "dateUnavailable": "Observation date unavailable",
-      "trendTitle": "30-day trend",
+      "trendTitle": "10-day trend",
       "trendAria": "CNN Fear & Greed trend with {{count}} observations from {{start}} to {{end}}",
       "trendSummary": "{{count}} observations · {{start}} {{startScore}} → {{end}} {{endScore}} (0–100)",
       "trendInsufficient": "Not enough valid observations to show a trend.",

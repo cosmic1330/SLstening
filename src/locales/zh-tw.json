@@ -132,6 +132,24 @@
       "mm": "台灣恐懼貪婪",
       "margin": "台股融資維持率"
     },
+    "marginMaintenance": {
+      "title": "台股融資維持率（估算）",
+      "loading": "正在載入融資資料…",
+      "error": "無法載入融資維持率資料。",
+      "empty": "目前沒有融資維持率資料。",
+      "invalid": "最新數值無法使用。",
+      "trendTitle": "近 10 個交易日",
+      "trendAria": "融資維持率估算趨勢（百分比），共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
+      "valueLabel": "融資維持率",
+      "comparisonDate": "前日 {{date}}",
+      "change": {
+        "up": "上升 {{value}} 個百分點",
+        "down": "下降 {{value}} 個百分點",
+        "unchanged": "持平（0.00 個百分點）",
+        "unavailable": "無法比較前一交易日"
+      },
+      "summary": "{{count}} 筆觀測 · {{start}}% → {{end}}%"
+    },
     "cnnSentiment": {
       "title": "CNN 恐懼貪婪指數",
       "source": "市場情緒",
@@ -144,7 +162,7 @@
       "scaleMax": "極度貪婪 · 100",
       "asOf": "觀測日期：{{date}}",
       "dateUnavailable": "無法取得觀測日期",
-      "trendTitle": "近 30 日趨勢",
+      "trendTitle": "近 10 日趨勢",
       "trendAria": "CNN 恐懼貪婪趨勢，共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
       "trendSummary": "{{count}} 筆觀測 · {{start}} {{startScore}} → {{end}} {{endScore}}（0–100）",
       "trendInsufficient": "有效觀測不足，無法顯示趨勢。",

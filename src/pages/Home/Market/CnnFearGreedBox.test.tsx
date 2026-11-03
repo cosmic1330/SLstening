@@ -106,14 +106,14 @@ describe("CNN Fear & Greed box", () => {
     expect(screen.getByRole("progressbar", { name: "CNN Fear & Greed score from 0 to 100" }).getAttribute("aria-valuenow")).toBe("20.98");
   });
 
-  it("renders the valid history oldest-to-newest with a visible 30-day summary", () => {
+  it("renders the valid history oldest-to-newest with a visible 10-day summary", () => {
     const history = [row("2026-10-23", 20.98), row("2026-10-22", 19.2), row("2026-10-01", 32)];
     swr.useSWR.mockReturnValue({ data: history, error: undefined, isLoading: false, mutate: vi.fn() });
 
     expect(buildCnnTrendData(history, "en").map((point) => point.dateLabel)).toEqual(["Oct 1", "Oct 22", "Oct 23"]);
     render(<CnnFearGreedBox />);
 
-    expect(screen.getByText("30-day trend")).toBeTruthy();
+    expect(screen.getByText("10-day trend")).toBeTruthy();
     expect(screen.getByRole("img", { name: "CNN Fear & Greed trend with 3 observations from Oct 1 to Oct 23" })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toContain("3 observations · Oct 1 32.0 → Oct 23 21.0 (0–100)");
 
@@ -124,7 +124,7 @@ describe("CNN Fear & Greed box", () => {
     expect(current.parentElement).toBe(columns);
     expect(trend.parentElement).toBe(columns);
     expect(current.contains(screen.getByText("21.0"))).toBe(true);
-    expect(trend.contains(screen.getByText("30-day trend"))).toBe(true);
+    expect(trend.contains(screen.getByText("10-day trend"))).toBe(true);
   });
 
   it("keeps the latest observation as the headline when its score is invalid", () => {

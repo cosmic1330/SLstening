@@ -132,6 +132,13 @@
       "mm": "台灣恐懼貪婪",
       "margin": "台股融資維持率"
     },
+    "marketAnalysis": {
+      "title": "台指期近一 · 日線",
+      "timeline": "近 10 個交易日市場狀態時間線",
+      "transitions": "近期市場狀態切換",
+      "states": { "bull": "多頭", "bear": "空頭", "range": "震盪", "insufficient": "資料不足" },
+      "short": { "bull": "多頭", "bear": "空頭", "range": "震盪", "insufficient": "—" }
+    },
     "marginMaintenance": {
       "title": "台股融資維持率（估算）",
       "loading": "正在載入融資資料…",

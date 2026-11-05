@@ -12,6 +12,7 @@ import { FutureIds } from "../../../types";
 import MarketIndexBox from "../List/components/MarketIndexBox";
 import MarketLinkBox from "../List/components/MarketLinkBox";
 import CnnFearGreedBox from "./CnnFearGreedBox";
+import MarketAnalysisBox from "./MarketAnalysisBox";
 import TwMarginMaintenanceBox from "./TwMarginMaintenanceBox";
 
 export default function Market() {
@@ -86,6 +87,9 @@ export default function Market() {
             <DashboardIcon color="primary" />
             <Typography fontWeight={900}>{t("home.marketOverview")}</Typography>
           </Stack>
+          <Box sx={{ mt: 1.5, width: "100%" }}>
+            <MarketAnalysisBox />
+          </Box>
           <Box sx={{ mt: 1.5, display: "flex", width: "100%" }}>
             <CnnFearGreedBox />
           </Box>

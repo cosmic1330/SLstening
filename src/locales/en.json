@@ -132,6 +132,13 @@
       "mm": "Taiwan Fear & Greed",
       "margin": "Taiwan margin maintenance ratio"
     },
+    "marketAnalysis": {
+      "title": "Taiwan index futures · Daily",
+      "timeline": "Market states over the latest 10 trading days",
+      "transitions": "Recent market state changes",
+      "states": { "bull": "Bullish", "bear": "Bearish", "range": "Sideways", "insufficient": "Insufficient data" },
+      "short": { "bull": "Bull", "bear": "Bear", "range": "Flat", "insufficient": "—" }
+    },
     "marginMaintenance": {
       "title": "Taiwan margin maintenance (est.)",
       "loading": "Loading margin data…",

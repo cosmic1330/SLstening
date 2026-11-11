@@ -1,9 +1,12 @@
 import { Box, Skeleton, Typography } from "@mui/material";
+import { alpha } from "@mui/material/styles";
 import ArrowDownwardRounded from "@mui/icons-material/ArrowDownwardRounded";
 import ArrowUpwardRounded from "@mui/icons-material/ArrowUpwardRounded";
 import RemoveRounded from "@mui/icons-material/RemoveRounded";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import useSWR from "swr";
+import { marketApi } from "../../../api/marketApi";
 import { normalizeLanguage } from "../../../i18n";
 import { reportHandledError } from "../../../diagnostics";
 import { supabase } from "../../../supabase";
@@ -38,6 +41,16 @@ export const getTdccHolderChange = (
 
 export default function Fundamental({ id }: { id: string | undefined }) {
   const { t, i18n } = useTranslation();
+  const isTaiwanStock = isTdccStockId(id);
+  const { data: peRiver, isLoading: medianLoading } = useSWR(
+    isTaiwanStock ? ["pe-river", id] : null,
+    () => marketApi.getPeRiverData(id!),
+    {
+      dedupingInterval: 3_600_000,
+      refreshInterval: 3_600_000,
+      onError: (error) => reportHandledError("fundamental_pe_river_fetch", error, "FUNDAMENTAL_PE_RIVER_FETCH_FAILED"),
+    },
+  );
   const [financialMetrics, setFinancialMetrics] =
     useState<FinancialMetricTableType | null>(null);
   const [recentFundamental, setRecentFundamental] =
@@ -314,9 +327,84 @@ export default function Fundamental({ id }: { id: string | undefined }) {
     </Box>
   );
 
+  const quarterlyEps = recentFundamental && [
+    recentFundamental.eps_recent_q1,
+    recentFundamental.eps_recent_q2,
+    recentFundamental.eps_recent_q3,
+    recentFundamental.eps_recent_q4,
+  ];
+  const trailingEps = quarterlyEps && quarterlyEps.every((value) => value !== null && Number.isFinite(value))
+    ? quarterlyEps.reduce<number>((sum, value) => sum + (value ?? 0), 0)
+    : null;
+  const latestAnnualEps = recentFundamental?.eps_recent_y1;
+  const referenceEps = trailingEps !== null && trailingEps > 0
+    ? trailingEps
+    : latestAnnualEps !== null && latestAnnualEps !== undefined && Number.isFinite(latestAnnualEps) && latestAnnualEps > 0
+      ? latestAnnualEps
+      : null;
+  const referencePe = isTaiwanStock
+    ? peRiver?.medianPer ?? null
+    : financialMetrics?.pe !== null && financialMetrics?.pe !== undefined && Number.isFinite(financialMetrics.pe) && financialMetrics.pe > 0
+      ? financialMetrics.pe
+      : null;
+  const valuationScenarios = [
+    { key: "pessimistic", epsFactor: 13 / 18, color: semanticTokens.market.loss },
+    { key: "conservative", epsFactor: 15 / 18, color: semanticTokens.market.warning },
+    { key: "neutral", epsFactor: 1, color: semanticTokens.analysis.focus },
+    { key: "optimistic", epsFactor: 21 / 18, color: semanticTokens.market.gain },
+  ] as const;
+
   return (
     <Box sx={{ p: 1, minWidth: 0 }}>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 0.65, minWidth: 0 }}>
+        {(financialMetrics || recentFundamental) && (
+          <Section testId="fundamental-section-fair-value" title={t("Pages.Detail.tooltip.fairValue.title")} color="primary.main">
+            {referenceEps !== null && referencePe !== null ? (
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 0.5 }}>
+                {valuationScenarios.map(({ key, epsFactor, color }) => {
+                  const estimatedEps = referenceEps * epsFactor;
+                  return <Box key={key} data-testid={`fair-value-${key}`} sx={{ minWidth: 0, p: 0.65, borderRadius: "6px", bgcolor: alpha(color, 0.16), border: `1px solid ${alpha(color, 0.36)}` }}>
+                    <Typography sx={{ fontSize: 11, fontWeight: 700, color }}>{t(`Pages.Detail.tooltip.fairValue.${key}`)}</Typography>
+                    <Typography sx={{ fontSize: 15, lineHeight: 1.3, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
+                      {formatSingleValue(estimatedEps * referencePe, t("Pages.Detail.tooltip.currency"), 0)}
+                    </Typography>
+                    <Typography sx={{ fontSize: 10.5, lineHeight: 1.3, color: "text.secondary", fontVariantNumeric: "tabular-nums" }}>
+                      {t("Pages.Detail.tooltip.fairValue.epsLabel")} {formatSingleValue(estimatedEps)}
+                    </Typography>
+                    <Typography sx={{ fontSize: 10.5, lineHeight: 1.3, color: "text.secondary", fontVariantNumeric: "tabular-nums" }}>
+                      {t(`Pages.Detail.tooltip.fairValue.${isTaiwanStock ? "medianPeLabel" : "peLabel"}`)} {formatSingleValue(referencePe, t("Pages.Detail.tooltip.times"))}
+                    </Typography>
+                  </Box>;
+                })}
+              </Box>
+            ) : <Typography variant="caption" sx={{ color: "text.secondary" }}>{t(`Pages.Detail.tooltip.fairValue.${isTaiwanStock && medianLoading ? "loadingMedian" : "unavailable"}`)}</Typography>}
+          </Section>
+        )}
+
+        {/* 近期EPS */}
+        {recentFundamental && (
+          <Section testId="fundamental-section-eps" title={t("Pages.Detail.tooltip.recentEps")} color="info.main">
+            <Box>
+              {[1, 2, 3, 4].map((quarter) => (
+                <MetricItem
+                  key={`quarter-${quarter}`}
+                  label={recentFundamental[`eps_recent_q${quarter}_name` as keyof RecentFundamentalTableType] as string || t("Pages.Detail.tooltip.recentQuarter", { count: quarter })}
+                  value={recentFundamental[`eps_recent_q${quarter}` as keyof RecentFundamentalTableType]}
+                  suffix={t("Pages.Detail.tooltip.currency")}
+                />
+              ))}
+              {[1, 2, 3, 4].map((year) => (
+                <MetricItem
+                  key={`year-${year}`}
+                  label={recentFundamental[`eps_recent_y${year}_name` as keyof RecentFundamentalTableType] as string || t("Pages.Detail.tooltip.recentYear", { count: year })}
+                  value={recentFundamental[`eps_recent_y${year}` as keyof RecentFundamentalTableType]}
+                  suffix={t("Pages.Detail.tooltip.currency")}
+                />
+              ))}
+            </Box>
+          </Section>
+        )}
+
         {/* 估值指標 */}
         {financialMetrics && (
           <Section testId="fundamental-section-valuation" title={t("Pages.Detail.tooltip.valuation")} color="primary.main">
@@ -345,58 +433,9 @@ export default function Fundamental({ id }: { id: string | undefined }) {
           </Section>
         )}
 
-        {/* 近期EPS */}
-        {recentFundamental && (
-          <Section testId="fundamental-section-eps" title={t("Pages.Detail.tooltip.recentEps")} color="info.main">
-            <Box>
-              <MetricItem
-                label={recentFundamental.eps_recent_q1_name || t("Pages.Detail.tooltip.recentQuarter", { count: 1 })}
-                value={recentFundamental.eps_recent_q1}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_q2_name || t("Pages.Detail.tooltip.recentQuarter", { count: 2 })}
-                value={recentFundamental.eps_recent_q2}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_q3_name || t("Pages.Detail.tooltip.recentQuarter", { count: 3 })}
-                value={recentFundamental.eps_recent_q3}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_q4_name || t("Pages.Detail.tooltip.recentQuarter", { count: 4 })}
-                value={recentFundamental.eps_recent_q4}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_y1_name || t("Pages.Detail.tooltip.recentYear", { count: 1 })}
-                value={recentFundamental.eps_recent_y1}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_y2_name || t("Pages.Detail.tooltip.recentYear", { count: 2 })}
-                value={recentFundamental.eps_recent_y2}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-              <MetricItem
-                label={recentFundamental.eps_recent_y3_name || t("Pages.Detail.tooltip.recentYear", { count: 3 })}
-                value={recentFundamental.eps_recent_y3}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-
-              <MetricItem
-                label={recentFundamental.eps_recent_y4_name || t("Pages.Detail.tooltip.recentYear", { count: 4 })}
-                value={recentFundamental.eps_recent_y4}
-                suffix={t("Pages.Detail.tooltip.currency")}
-              />
-            </Box>
-          </Section>
-        )}
-
         {/* 近期營收 */}
         {recentFundamental && (
-          <Section fullWidth testId="fundamental-section-revenue" title={t("Pages.Detail.tooltip.revenue")} color="warning.main">
+          <Section testId="fundamental-section-revenue" title={t("Pages.Detail.tooltip.revenue")} color="warning.main">
             <Box>
               {[1, 2, 3, 4].map((month) => {
                 const momKey =

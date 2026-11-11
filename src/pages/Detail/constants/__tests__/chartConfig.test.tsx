@@ -25,6 +25,7 @@ describe("CHART_CONFIG", () => {
       "kd",
       "mfi",
       "chip",
+      "pe_river",
       "ichimoku_cloud",
     ]);
     expect(new Set(ids).size).toBe(ids.length);

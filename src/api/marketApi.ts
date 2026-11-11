@@ -78,7 +78,27 @@ export interface ChipData {
   source: string;
 }
 
+export interface PeRiverData {
+  symbol: string;
+  asOf: string;
+  currentPer: number;
+  medianPer: number;
+  percentile: number;
+  points: Array<{
+    date: string;
+    close: number;
+    per: number;
+    p10: number;
+    p30: number;
+    p50: number;
+    p70: number;
+    p90: number;
+  }>;
+}
+
 export const marketApi = {
+  getPeRiverData: async (symbol: string) =>
+    await invoke<PeRiverData>("get_pe_river_data", { symbol }),
   getChipData: async (symbol: string) =>
     await invoke<ChipData>("get_chip_data", { symbol }),
   /**

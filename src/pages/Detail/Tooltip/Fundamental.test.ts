@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { createElement } from "react";
+import { SWRConfig } from "swr";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../../i18n";
 
@@ -11,10 +12,12 @@ const supabaseState = vi.hoisted(() => ({
   results: {} as Record<string, QueryResult>,
   from: vi.fn(),
 }));
+const marketApiState = vi.hoisted(() => ({ getPeRiverData: vi.fn() }));
 
 vi.mock("../../../supabase", () => ({
   supabase: { from: supabaseState.from },
 }));
+vi.mock("../../../api/marketApi", () => ({ marketApi: marketApiState }));
 
 import Fundamental, { getTdccHolderChange, isTdccStockId } from "./Fundamental";
 
@@ -56,10 +59,12 @@ const configureSupabase = (results: Record<string, QueryResult>) => {
 };
 
 const renderFundamental = (id = "2330") =>
-  render(createElement(Fundamental, { id }));
+  render(createElement(SWRConfig, { value: { provider: () => new Map() } }, createElement(Fundamental, { id })));
 
 beforeEach(async () => {
   await i18n.changeLanguage("en");
+  marketApiState.getPeRiverData.mockReset();
+  marketApiState.getPeRiverData.mockResolvedValue({ medianPer: 13 });
   configureSupabase({
     financial_metric: noData,
     recent_fundamental: noData,
@@ -188,5 +193,38 @@ describe("TDCC holder changes", () => {
     screen.getAllByTestId("tdcc-holder-card").forEach((card) => {
       expect(getComputedStyle(card).minWidth).toBe("0px");
     });
+  });
+});
+
+describe("read-only scenario valuation", () => {
+  it("calculates four prices from trailing EPS and one historical median P/E", async () => {
+    configureSupabase({
+      financial_metric: { data: { ...financialData, pe: 20 }, error: null },
+      recent_fundamental: { data: { eps_recent_q1: 5, eps_recent_q2: 4.5, eps_recent_q3: 4.5, eps_recent_q4: 4, eps_recent_y1: 15 }, error: null },
+      tdcc_holder: noData,
+    });
+    renderFundamental();
+
+    const valuation = await screen.findByTestId("fundamental-section-fair-value");
+    expect(valuation.compareDocumentPosition(screen.getByTestId("fundamental-section-eps")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByTestId("fundamental-section-valuation").compareDocumentPosition(screen.getByTestId("fundamental-section-revenue")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const [scenario, price] of [["pessimistic", "169NTD"], ["conservative", "195NTD"], ["neutral", "234NTD"], ["optimistic", "273NTD"]]) {
+      const card = within(await screen.findByTestId(`fair-value-${scenario}`));
+      expect(card.getByText(price)).toBeTruthy();
+      expect(card.getByText(/3Y median P\/E 13.00x/)).toBeTruthy();
+    }
+    expect(marketApiState.getPeRiverData).toHaveBeenCalledWith("2330");
+    expect(within(valuation).queryByRole("textbox")).toBeNull();
+  });
+
+  it("uses the latest annual EPS when four quarters are incomplete", async () => {
+    configureSupabase({
+      financial_metric: { data: { ...financialData, pe: 13 }, error: null },
+      recent_fundamental: { data: { eps_recent_q1: 5, eps_recent_q2: null, eps_recent_q3: 4.5, eps_recent_q4: 4, eps_recent_y1: 18 }, error: null },
+      tdcc_holder: noData,
+    });
+    renderFundamental();
+    await screen.findByTestId("fundamental-section-fair-value");
+    expect(within(await screen.findByTestId("fair-value-neutral")).getByText("234NTD")).toBeTruthy();
   });
 });

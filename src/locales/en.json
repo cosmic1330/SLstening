@@ -459,6 +459,7 @@
         "kd": "KD is time-sensitive. Weekly and daily charts offer stronger swing references; short intervals should be filtered with a trend indicator such as MA20.",
         "mfi": "MFI is steadier on daily charts and reacts quickly on hourly charts. An oversold entry should still align with the daily uptrend.",
         "chip": "Positioning data updates after market close and uses institutional, margin, and short data to assess direction.",
+        "pe_river": "Compare the price with its three-year historical P/E bands.",
         "ichimoku_cloud": "Ichimoku works best on daily and weekly charts. On short intervals, use it with care because indicator noise can dominate."
       },
       "charts": {
@@ -474,7 +475,21 @@
         "kd": { "label": "KD", "title": "KD stochastic indicator" },
         "mfi": { "label": "MFI", "title": "MFI money flow" },
         "chip": { "label": "Positioning", "title": "Positioning" },
+        "pe_river": { "label": "P/E River", "title": "P/E River Chart" },
         "ichimoku_cloud": { "label": "Ichimoku", "title": "Ichimoku Cloud" }
+      },
+      "peRiver": {
+        "title": "P/E River Chart",
+        "loading": "Loading P/E river chart",
+        "twOnly": "The P/E river chart currently supports Taiwan stocks only.",
+        "unavailable": "Not enough historical P/E data is available.",
+        "price": "Price",
+        "currentPer": "Current P/E",
+        "medianPer": "Three-year median",
+        "medianBand": "Median valuation line",
+        "percentile": "Historical percentile {{value}}",
+        "position": { "low": "Relatively low", "middle": "Historical middle", "high": "Relatively high" },
+        "note": "Bands show prices at the 10th–90th percentiles of three-year P/E. White line is the actual price. Historical comparison only."
       },
       "summary": {
         "latest": ", latest O {{open}}, H {{high}}, L {{low}}, C {{close}}",
@@ -505,6 +520,18 @@
         "recentYear": "Last {{count}} yr.",
         "recentMonth": "Last {{count}} mo.",
         "noFinancialData": "No financial data is available.",
+        "fairValue": {
+          "title": "Scenario valuation",
+          "epsLabel": "EPS",
+          "peLabel": "P/E",
+          "medianPeLabel": "3Y median P/E",
+          "loadingMedian": "Loading historical P/E…",
+          "pessimistic": "Pessimistic",
+          "conservative": "Conservative",
+          "neutral": "Neutral",
+          "optimistic": "Optimistic",
+          "unavailable": "A positive EPS and historical P/E are needed for valuation."
+        },
         "tdcc": {
           "title": "TDCC holder count changes",
           "dataPeriod": "Data period: {{current}} (previous: {{previous}})",

@@ -14,6 +14,7 @@ const Bollean = lazy(() => import("../Bollean/Bollean"));
 const AvgMaKbar = lazy(() => import("../Ema/EmaKbar"));
 const VolumeProfileChart = lazy(() => import("../VolumeProfile/VolumeProfileChart"));
 const Chip = lazy(() => import("../Chip/Chip"));
+const PeRiver = lazy(() => import("../PeRiver/PeRiver"));
 
 // Import doc assets
 import atrDoc from "../ATR/ATR.md?raw";
@@ -30,6 +31,7 @@ import mrDoc from "../Mr/MR.md?raw";
 import obvDoc from "../Obv/Obv.md?raw";
 import volumeProfileDoc from "../VolumeProfile/VolumeProfile.md?raw";
 import chipDoc from "../Chip/Chip.md?raw";
+import peRiverDoc from "../PeRiver/PeRiver.md?raw";
 
 export interface ChartDefinition {
   id: string;
@@ -158,6 +160,14 @@ export const CHART_CONFIG: ChartDefinition[] = [
     timezoneAdvice:
       "籌碼資料為盤後更新，以免費的三大法人與融資融券資料判斷方向。",
     component: () => <Chip />,
+  },
+  {
+    id: "pe_river",
+    label: "河流",
+    title: "本益比河流圖",
+    docContent: peRiverDoc,
+    timezoneAdvice: "以近三年本益比估值區間觀察目前股價的相對位置。",
+    component: () => <PeRiver />,
   },
   {
     id: "ichimoku_cloud",

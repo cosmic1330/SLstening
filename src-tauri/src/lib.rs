@@ -101,7 +101,8 @@ pub fn run() {
             commands::market::subscribe_stock,
             commands::market::unsubscribe_stock,
             commands::market::get_market_data,
-            commands::chip::get_chip_data
+            commands::chip::get_chip_data,
+            commands::valuation::get_pe_river_data
         ])
         .run(tauri::generate_context!())
     {

@@ -53,6 +53,15 @@ export const isNasdaqMarketOpen = (date = new Date()): boolean => {
   return weekday(now.day) && atOrAfter(now.hour, now.minute, 9, 30) && before(now.hour, now.minute, 16, 0);
 };
 
+/** Nasdaq futures trade Sunday 18:00 to Friday 17:00 ET, pausing daily at 17:00–18:00. */
+export const isNasdaqFuturesMarketOpen = (date = new Date()): boolean => {
+  const { day, hour } = zonedParts(date, "America/New_York");
+  if (day === "Sat") return false;
+  if (day === "Sun") return hour >= 18;
+  if (day === "Fri") return hour < 17;
+  return hour < 17 || hour >= 18;
+};
+
 /**
  * 解析 Yahoo Finance 的 Tick 資料結構
  */

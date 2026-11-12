@@ -27,6 +27,13 @@ describe("marketSessionForSymbol", () => {
     expect(result.current).toBe("open");
   });
 
+  it("keeps Nasdaq futures open outside the Nasdaq cash session", () => {
+    expect(marketSessionForSymbol(FutureIds.NASDAQ_FUTURE, new Date("2024-07-01T08:00:00Z"))).toBe("open");
+    expect(marketSessionForSymbol(FutureIds.NASDAQ, new Date("2024-07-01T08:00:00Z"))).toBe("closed");
+    expect(marketSessionForSymbol(FutureIds.NASDAQ_FUTURE, new Date("2024-07-01T21:00:00Z"))).toBe("closed");
+    expect(marketSessionForSymbol(FutureIds.NASDAQ_FUTURE, new Date("2024-07-01T22:00:00Z"))).toBe("open");
+  });
+
   it("rerenders at the exact freshness threshold", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_000);

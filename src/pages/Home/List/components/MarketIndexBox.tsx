@@ -200,16 +200,19 @@ function MarketIndexNasdaqItem({
   containerRef,
 }: any) {
   const { deals, state, retry } = useNasdaqDeals(isVisible);
+  useMarketSubscriber(FutureIds.NASDAQ_FUTURE, true, isVisible);
+  const { tickDeals } = useConditionalDeals(FutureIds.NASDAQ_FUTURE, true, isVisible, { fetchTick: true, fetchHistory: false });
   const { t } = useTranslation();
 
   const { price, percent, change, mainColor } = useMemo(() => {
-    const p = deals?.price ?? null;
-    const c = deals?.change ?? null;
+    const hasTick = tickDeals !== undefined && tickDeals.price > 0;
+    const p = hasTick ? tickDeals.price : (deals?.price ?? null);
+    const c = hasTick && tickDeals.previousClose > 0 ? tickDeals.price - tickDeals.previousClose : (deals?.change ?? null);
     const prevPrice = p !== null && c !== null ? p - c : null;
     const pct = prevPrice ? (c! / prevPrice) * 100 : null;
     const color = (c ?? 0) > 0 ? "#FF5252" : (c ?? 0) < 0 ? "#69F0AE" : "#94A3B8";
     return { price: p, percent: pct, change: c, mainColor: color };
-  }, [deals]);
+  }, [deals, tickDeals]);
 
   return (
     <MarketIndexItemLayout
@@ -243,16 +246,19 @@ function MarketIndexWtxItem({
   containerRef,
 }: any) {
   const { deals, state, retry } = useWtxDeals(isVisible);
+  useMarketSubscriber(FutureIds.WTX, true, isVisible);
+  const { tickDeals } = useConditionalDeals(FutureIds.WTX, true, isVisible, { fetchTick: true, fetchHistory: false });
   const { t } = useTranslation();
 
   const { price, percent, change, mainColor } = useMemo(() => {
-    const p = deals?.price ?? null;
-    const c = deals?.change ?? null;
+    const hasTick = tickDeals !== undefined && tickDeals.price > 0;
+    const p = hasTick ? tickDeals.price : (deals?.price ?? null);
+    const c = hasTick && tickDeals.previousClose > 0 ? tickDeals.price - tickDeals.previousClose : (deals?.change ?? null);
     const prevPrice = p !== null && c !== null ? p - c : null;
     const pct = prevPrice ? (c! / prevPrice) * 100 : null;
     const color = (c ?? 0) > 0 ? "#FF5252" : (c ?? 0) < 0 ? "#69F0AE" : "#94A3B8";
     return { price: p, percent: pct, change: c, mainColor: color };
-  }, [deals]);
+  }, [deals, tickDeals]);
 
   return (
     <MarketIndexItemLayout

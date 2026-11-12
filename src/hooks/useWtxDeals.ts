@@ -11,6 +11,7 @@ export default function useWtxDeals(isVisible: boolean = true) {
   const documentVisible = useDocumentVisibility();
   const shouldFetch = isVisible && documentVisible;
   const marketSession = useMarketSession(FutureIds.WTX);
+  const [requestBlocked, setRequestBlocked] = useState(false);
   const {
     data: historyData,
     isValidating: isHourlyValidating, isLoading, error, mutate,
@@ -22,9 +23,10 @@ export default function useWtxDeals(isVisible: boolean = true) {
     },
     {
       ...MARKET_OVERVIEW_SWR_POLICY,
-      refreshInterval: () => shouldFetch && marketSession === "open" ? MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS : 0,
+      refreshInterval: () => shouldFetch && marketSession === "open" && !requestBlocked ? MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS : 0,
       dedupingInterval: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS,
-      onSuccess: () => setUpdatedAt(Date.now()),
+      onSuccess: () => { setRequestBlocked(false); setUpdatedAt(Date.now()); },
+      onError: () => setRequestBlocked(true),
     },
   );
 

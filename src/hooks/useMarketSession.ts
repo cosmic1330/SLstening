@@ -1,12 +1,13 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { inferMarketGroup } from "../account/snapshot";
 import { FutureIds } from "../types";
-import { isNasdaqMarketOpen, isTaiwanMarketOpen, isWtxMarketOpen } from "../utils/marketUtils";
+import { isNasdaqFuturesMarketOpen, isNasdaqMarketOpen, isTaiwanMarketOpen, isWtxMarketOpen } from "../utils/marketUtils";
 import { MarketSession } from "../utils/marketResourceState";
 
 export const marketSessionForSymbol = (symbol: string, date = new Date(), marketGroup?: string): MarketSession => {
   if (symbol === FutureIds.WTX) return isWtxMarketOpen(date) ? "open" : "closed";
-  if (symbol === FutureIds.NASDAQ || symbol === FutureIds.NASDAQ_FUTURE) return isNasdaqMarketOpen(date) ? "open" : "closed";
+  if (symbol === FutureIds.NASDAQ_FUTURE) return isNasdaqFuturesMarketOpen(date) ? "open" : "closed";
+  if (symbol === FutureIds.NASDAQ) return isNasdaqMarketOpen(date) ? "open" : "closed";
   const group = marketGroup?.trim().toUpperCase();
   const explicitTaiwan = group === "TW" || group === "TAIWAN" || group?.includes("TAIWAN") || group?.includes("台灣");
   const explicitUs = group === "US" || group === "USA" || group?.includes("US MARKET") || group?.includes("美股");

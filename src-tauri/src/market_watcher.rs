@@ -552,7 +552,7 @@ impl MarketManager {
         self.evict_oldest_tick_cache();
     }
 
-    /// 從快取中獲取歷史資料 (盤中 60 秒有效，盤後 300 秒有效)
+    /// 從快取中獲取歷史資料 (台指期與納指期貨盤中 15 秒、其他盤中 60 秒，盤後 300 秒)
     pub fn get_history_from_cache(&self, symbol: &str, period: &str) -> Option<MarketHistory> {
         self.get_history_from_cache_with_fetched_at(symbol, period)
             .map(|(history, _)| history)
@@ -566,7 +566,9 @@ impl MarketManager {
         let key = (symbol.to_string(), period.to_string());
         let item = self.history_cache.get(&key)?;
         let is_open = is_any_market_open_for_symbol(symbol);
-        let lifetime = if is_open {
+        let lifetime = if is_open && (symbol == "WTX%26.TW" || symbol == "NQ=F") {
+            Duration::from_secs(15)
+        } else if is_open {
             Duration::from_secs(60)
         } else {
             Duration::from_secs(300)

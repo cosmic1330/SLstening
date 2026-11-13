@@ -4,6 +4,7 @@ export type MarketInfoSettings = {
   cnn: boolean;
   mm: boolean;
   nasdaq: boolean;
+  sox: boolean;
   twse: boolean;
   otc: boolean;
   wtx: boolean;
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: MarketInfoSettings = {
   cnn: true,
   mm: true,
   nasdaq: true,
+  sox: true,
   twse: true,
   otc: true,
   wtx: true,
@@ -40,6 +42,7 @@ export function useShowMarketInfo() {
         cnn: isVisible,
         mm: isVisible,
         nasdaq: isVisible,
+        sox: isVisible,
         twse: isVisible,
         otc: isVisible,
         wtx: isVisible,
@@ -53,7 +56,7 @@ export function useShowMarketInfo() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
         try {
-          setSettings(JSON.parse(e.newValue));
+          setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(e.newValue) });
         } catch (err) {
           // ignore
         }
@@ -66,7 +69,7 @@ export function useShowMarketInfo() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          const parsed = JSON.parse(saved);
+          const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
           if (JSON.stringify(parsed) !== JSON.stringify(settings)) {
             setSettings(parsed);
           }

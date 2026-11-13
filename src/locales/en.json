@@ -120,6 +120,7 @@
       "twse": "TAIEX",
       "otc": "TPEx",
       "nasdaq": "NASDAQ",
+      "sox": "PHLX Semiconductor",
       "wtx": "TAIEX futures"
     },
     "groups": {
@@ -342,6 +343,7 @@
       "cnn": "CNN Fear & Greed",
       "mm": "MacroMicro",
       "nasdaq": "NASDAQ",
+      "sox": "PHLX Semiconductor Index",
       "twse": "TAIEX",
       "otc": "TPEx",
       "wtx": "TAIEX futures",

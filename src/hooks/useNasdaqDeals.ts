@@ -43,19 +43,23 @@ export const normalizeNasdaqHistory = (history: {
   };
 };
 
-export default function useNasdaqDeals(isVisible: boolean = true) {
+export function useYahooHistoryDeals(
+  symbol: FutureIds.NASDAQ_FUTURE | FutureIds.SOX,
+  debugKey: "nasdaq" | "conditional",
+  isVisible: boolean = true,
+) {
   const documentVisible = useDocumentVisibility();
   const shouldFetch = isVisible && documentVisible;
-  const marketSession = useMarketSession(FutureIds.NASDAQ_FUTURE);
+  const marketSession = useMarketSession(symbol);
 
   const {
     data: hourlyData,
     isValidating: isHourlyValidating, isLoading, error: requestError, mutate,
   } = useSWR(
-    shouldFetch ? `market/history/${FutureIds.NASDAQ_FUTURE}` : null,
+    shouldFetch ? `market/history/${symbol}` : null,
     async () => {
-      useDebugStore.getState().increment("nasdaq");
-      return normalizeNasdaqHistory(await marketApi.getHistoryData(FutureIds.NASDAQ_FUTURE, "d"));
+      useDebugStore.getState().increment(debugKey);
+      return normalizeNasdaqHistory(await marketApi.getHistoryData(symbol, "d"));
     },
     {
       ...MARKET_OVERVIEW_SWR_POLICY,
@@ -71,4 +75,8 @@ export default function useNasdaqDeals(isVisible: boolean = true) {
   const now = useFreshnessNow(updatedAt, MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, marketSession);
   const state = useMemo(() => deriveMarketResourceState({ enabled: isVisible, hasData: Boolean(deals?.data.length), resolved: hourlyData !== undefined, isLoading, isValidating: isHourlyValidating, error: resourceError, updatedAt, marketSession, staleAfterMs: MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS, now }), [isVisible, deals, hourlyData, isLoading, isHourlyValidating, resourceError, updatedAt, marketSession, now]);
   return { deals, state, retry: mutate };
+}
+
+export default function useNasdaqDeals(isVisible: boolean = true) {
+  return useYahooHistoryDeals(FutureIds.NASDAQ_FUTURE, "nasdaq", isVisible);
 }

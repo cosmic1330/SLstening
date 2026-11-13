@@ -220,6 +220,7 @@ export enum FutureIds {
   WTX = "WTX%26.TW", // 台指期近一
   TWSE = "^TWII", // 台灣加權指數
   NASDAQ = "^IXIC", // 納斯達克指數
+  SOX = "^SOX", // 費城半導體指數
   NASDAQ_FUTURE = "NQ=F", // 納斯達克期貨
   OTC = "^TWOII", // OTC
 }

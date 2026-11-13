@@ -1742,6 +1742,7 @@ mod tests {
         assert!(!is_global_symbol("^TWII"));
         assert!(is_global_symbol("AAPL"));
         assert!(is_global_symbol("^IXIC"));
+        assert!(is_global_symbol("^SOX"));
         assert!(is_global_symbol("NQ=F"));
         assert_eq!(
             classify_warmup_symbols(&["AAPL".into()]).global,

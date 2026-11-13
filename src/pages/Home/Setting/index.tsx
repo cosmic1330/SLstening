@@ -62,6 +62,7 @@ type MarketVisibilityKey =
   | "cnn"
   | "mm"
   | "nasdaq"
+  | "sox"
   | "twse"
   | "otc"
   | "wtx"
@@ -73,6 +74,7 @@ const MARKET_VISIBILITY_KEYS: readonly MarketVisibilityKey[] = [
   "cnn",
   "mm",
   "nasdaq",
+  "sox",
   "twse",
   "otc",
   "wtx",
@@ -83,6 +85,7 @@ const DEFAULT_MARKET_VISIBILITY: MarketVisibility = {
   cnn: true,
   mm: true,
   nasdaq: true,
+  sox: true,
   twse: true,
   otc: true,
   wtx: true,
@@ -254,6 +257,7 @@ const marketVisibilityItems: Array<{ key: MarketVisibilityKey; labelKey: string 
   { key: "cnn", labelKey: "cnn" },
   { key: "mm", labelKey: "mm" },
   { key: "nasdaq", labelKey: "nasdaq" },
+  { key: "sox", labelKey: "sox" },
   { key: "twse", labelKey: "twse" },
   { key: "otc", labelKey: "otc" },
   { key: "wtx", labelKey: "wtx" },

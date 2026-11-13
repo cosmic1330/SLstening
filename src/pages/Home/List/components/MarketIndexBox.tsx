@@ -5,7 +5,7 @@ import { normalizeLanguage } from "../../../../i18n";
 import useDetailWebviewWindow from "../../../../hooks/useDetailWebviewWindow";
 import { useIsVisible } from "../../../../hooks/useIsVisible";
 import useMarketSubscriber from "../../../../hooks/useMarketSubscriber";
-import useNasdaqDeals from "../../../../hooks/useNasdaqDeals";
+import { useYahooHistoryDeals } from "../../../../hooks/useNasdaqDeals";
 import useWtxDeals from "../../../../hooks/useWtxDeals";
 import { FutureIds } from "../../../../types";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
@@ -194,14 +194,20 @@ export const MarketIndexItemLayout = ({
  * 處理 NASDAQ 市場指標
  */
 function MarketIndexNasdaqItem({
+  id,
   name,
   isVisible,
   openDetailWindow,
   containerRef,
 }: any) {
-  const { deals, state, retry } = useNasdaqDeals(isVisible);
-  useMarketSubscriber(FutureIds.NASDAQ_FUTURE, true, isVisible);
-  const { tickDeals } = useConditionalDeals(FutureIds.NASDAQ_FUTURE, true, isVisible, { fetchTick: true, fetchHistory: false });
+  const dataSymbol = id === FutureIds.SOX ? FutureIds.SOX : FutureIds.NASDAQ_FUTURE;
+  const { deals, state, retry } = useYahooHistoryDeals(
+    dataSymbol,
+    id === FutureIds.SOX ? "conditional" : "nasdaq",
+    isVisible,
+  );
+  useMarketSubscriber(dataSymbol, true, isVisible);
+  const { tickDeals } = useConditionalDeals(dataSymbol, true, isVisible, { fetchTick: true, fetchHistory: false });
   const { t } = useTranslation();
 
   const { price, percent, change, mainColor } = useMemo(() => {
@@ -343,7 +349,7 @@ export default function MarketIndexBox({
 
   const props = { id, name, group, isVisible, openDetailWindow, containerRef };
 
-  if (id === FutureIds.NASDAQ) {
+  if (id === FutureIds.NASDAQ || id === FutureIds.SOX) {
     return <MarketIndexNasdaqItem {...props} />;
   }
 

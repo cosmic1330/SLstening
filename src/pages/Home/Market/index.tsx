@@ -40,6 +40,12 @@ export default function Market() {
           visible: visibility.nasdaq,
         },
         {
+          id: FutureIds.SOX,
+          name: t("home.indices.sox"),
+          group: t("home.groups.us"),
+          visible: visibility.sox,
+        },
+        {
           id: FutureIds.WTX,
           name: t("home.indices.wtx"),
           group: t("home.groups.futures"),

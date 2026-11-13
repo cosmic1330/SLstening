@@ -3,8 +3,9 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { SWRConfig } from "swr";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import useNasdaqDeals from "./useNasdaqDeals";
+import useNasdaqDeals, { useYahooHistoryDeals } from "./useNasdaqDeals";
 import useWtxDeals from "./useWtxDeals";
+import { FutureIds } from "../types";
 
 const marketApiMock = vi.hoisted(() => ({
   getHistoryData: vi.fn(),
@@ -40,6 +41,24 @@ describe("market overview hook retries", () => {
   beforeEach(() => {
     marketApiMock.getHistoryData.mockReset();
     marketApiMock.getHistoryData.mockRejectedValue(new Error("API_BLOCKED"));
+  });
+
+  it("loads SOX history for the semiconductor chart", async () => {
+    marketApiMock.getHistoryData.mockResolvedValue({
+      id: FutureIds.SOX,
+      name: "PHLX Semiconductor",
+      data: [{ t: 1, o: 1, h: 2, l: 1, c: 2, v: 0 }],
+      price: 2,
+      change: 1,
+    });
+
+    const { unmount } = renderHook(
+      () => useYahooHistoryDeals(FutureIds.SOX, "conditional", true),
+      { wrapper },
+    );
+
+    await waitFor(() => expect(marketApiMock.getHistoryData).toHaveBeenCalledWith(FutureIds.SOX, "d"));
+    unmount();
   });
 
   it.each([

@@ -152,7 +152,7 @@ describe("Settings page", () => {
     expect(mocks.setAlwaysOnTop).toHaveBeenCalledWith(true);
   });
 
-  it("falls back to all seven market modules when stored visibility is malformed", () => {
+  it("falls back to all eight market modules when stored visibility is malformed", () => {
     localStorage.setItem("slitenting-market-info-visibility", "{not-json");
     renderSetting();
     openDisclosure(/Show market information/);
@@ -161,6 +161,7 @@ describe("Settings page", () => {
       "CNN Fear & Greed",
       "MacroMicro",
       "NASDAQ",
+      "PHLX Semiconductor Index",
       "TAIEX",
       "TPEx",
       "TAIEX futures",
@@ -170,14 +171,14 @@ describe("Settings page", () => {
     });
   });
 
-  it("persists market visibility with the existing seven-key JSON shape", () => {
+  it("persists market visibility with the eight-key JSON shape", () => {
     renderSetting();
     openDisclosure(/Show market information/);
 
     fireEvent.click(screen.getByLabelText("NASDAQ"));
 
     const saved = JSON.parse(localStorage.getItem("slitenting-market-info-visibility") ?? "{}");
-    expect(Object.keys(saved).sort()).toEqual(["cnn", "margin", "mm", "nasdaq", "otc", "twse", "wtx"]);
+    expect(Object.keys(saved).sort()).toEqual(["cnn", "margin", "mm", "nasdaq", "otc", "sox", "twse", "wtx"]);
     expect(saved.nasdaq).toBe(false);
   });
 

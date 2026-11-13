@@ -10,6 +10,7 @@ const baseProps = {
   percent: 1,
   change: 200,
   mainColor: "#ff5252",
+  marketSession: "open" as const,
   ariaLabel: "Open TAIEX",
   containerRef: createRef<HTMLDivElement>(),
 };
@@ -53,5 +54,34 @@ describe("MarketIndexItemLayout", () => {
 
     expect(screen.queryByRole("button", { name: "Open TAIEX" })).toBeNull();
     expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
+  });
+
+  it("shows a closed badge before the market name only while the market is closed", () => {
+    const view = render(
+      <MarketIndexItemLayout
+        {...baseProps}
+        marketSession="closed"
+        onClick={vi.fn()}
+        primaryActionEnabled
+      >
+        <div />
+      </MarketIndexItemLayout>,
+    );
+
+    const badge = screen.getByText("Closed");
+    const name = screen.getByText("TAIEX");
+    expect(badge.compareDocumentPosition(name) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    view.rerender(
+      <MarketIndexItemLayout
+        {...baseProps}
+        marketSession="open"
+        onClick={vi.fn()}
+        primaryActionEnabled
+      >
+        <div />
+      </MarketIndexItemLayout>,
+    );
+    expect(screen.queryByText("Closed")).toBeNull();
   });
 });

@@ -388,6 +388,7 @@
     "stale": "Showing the last available data.",
     "staleError": "Update failed. Showing the last available data.",
     "closed": "Market closed",
+    "closedShort": "Closed",
     "updated": "Updated {{time}}",
     "insufficient": "Insufficient data",
     "unavailable": "Unavailable"

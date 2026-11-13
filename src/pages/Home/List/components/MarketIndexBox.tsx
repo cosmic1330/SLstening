@@ -10,6 +10,7 @@ import useWtxDeals from "../../../../hooks/useWtxDeals";
 import { FutureIds } from "../../../../types";
 import useConditionalDeals from "../../../../hooks/useConditionalDeals";
 import MarketDataStatus from "../../../../components/MarketDataStatus";
+import type { MarketSession } from "../../../../utils/marketResourceState";
 
 const MakChart = lazy(() => import("../../../../components/CommonChart/MakChart"));
 const StockTickChart = lazy(() => import("../../../../components/StockBox/StockTickChart"));
@@ -70,6 +71,7 @@ export const MarketIndexItemLayout = ({
   percent,
   change,
   mainColor,
+  marketSession,
   children,
   onClick,
   ariaLabel,
@@ -81,13 +83,14 @@ export const MarketIndexItemLayout = ({
   percent: number | null;
   change: number | null;
   mainColor: string;
+  marketSession: MarketSession;
   children: React.ReactNode;
   onClick: () => void;
   ariaLabel: string;
   primaryActionEnabled: boolean;
   containerRef: React.RefObject<HTMLDivElement>;
 }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const locale = normalizeLanguage(i18n.resolvedLanguage);
   const safePrice = Number.isFinite(price) ? Number(price) : null;
   const safePercent = Number.isFinite(percent) ? Number(percent) : null;
@@ -126,17 +129,39 @@ export const MarketIndexItemLayout = ({
         sx={{ position: "relative", zIndex: 1, mb: 1 }}
       >
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography
-            sx={{
-              color: "rgba(255,255,255,0.7)",
-              fontWeight: 900,
-              fontSize: "10px",
-              textTransform: "uppercase",
-              mb: 0.2,
-            }}
-          >
-            {name}
-          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mb: 0.2 }}>
+            {marketSession === "closed" ? (
+              <Box
+                component="span"
+                sx={{
+                  flexShrink: 0,
+                  borderRadius: 0.75,
+                  bgcolor: "rgba(148, 163, 184, 0.18)",
+                  border: "1px solid rgba(148, 163, 184, 0.38)",
+                  color: "rgba(226, 232, 240, 0.78)",
+                  px: 0.45,
+                  py: 0.05,
+                  fontSize: "8px",
+                  fontWeight: 900,
+                  lineHeight: 1.3,
+                }}
+              >
+                {t("marketData.closedShort")}
+              </Box>
+            ) : null}
+            <Typography
+              sx={{
+                minWidth: 0,
+                color: "rgba(255,255,255,0.7)",
+                fontWeight: 900,
+                fontSize: "10px",
+                lineHeight: 1.3,
+                textTransform: "uppercase",
+              }}
+            >
+              {name}
+            </Typography>
+          </Stack>
           <Typography
             sx={{
               fontWeight: 900,
@@ -227,6 +252,7 @@ function MarketIndexNasdaqItem({
       percent={percent}
       change={change}
       mainColor={mainColor}
+      marketSession={state.marketSession}
       onClick={openDetailWindow}
       ariaLabel={t("a11y.openMarket", { name })}
       primaryActionEnabled={state.phase === "ready"}
@@ -273,6 +299,7 @@ function MarketIndexWtxItem({
       percent={percent}
       change={change}
       mainColor={mainColor}
+      marketSession={state.marketSession}
       onClick={openDetailWindow}
       ariaLabel={t("a11y.openMarket", { name })}
       primaryActionEnabled={state.phase === "ready"}
@@ -318,6 +345,7 @@ function MarketIndexTickItem({
       percent={percent}
       change={change}
       mainColor={mainColor}
+      marketSession={tickState.marketSession}
       onClick={openDetailWindow}
       ariaLabel={t("a11y.openMarket", { name })}
       primaryActionEnabled={tickState.phase === "ready"}

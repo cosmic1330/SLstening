@@ -388,6 +388,7 @@
     "stale": "顯示最後可用資料。",
     "staleError": "更新失敗，顯示最後可用資料。",
     "closed": "市場已收盤",
+    "closedShort": "休市",
     "updated": "更新於 {{time}}",
     "insufficient": "資料不足",
     "unavailable": "無法取得"

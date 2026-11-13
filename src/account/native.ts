@@ -120,3 +120,13 @@ export async function openNativeLogDirectory(): Promise<void> {
   if (!isNativeRuntime()) throw new Error("LOG_DIR_UNAVAILABLE");
   await invoke("diagnostics_open_log_dir");
 }
+
+export async function getAutoUpdateEnabled(): Promise<boolean> {
+  if (!isNativeRuntime()) return true;
+  return invoke<boolean>("get_auto_update_enabled");
+}
+
+export async function setAutoUpdateEnabled(enabled: boolean): Promise<void> {
+  if (!isNativeRuntime()) return;
+  await invoke("set_auto_update_enabled", { enabled });
+}

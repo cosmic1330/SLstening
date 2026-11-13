@@ -27,7 +27,7 @@ import {
   Typography,
 } from "@mui/material";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { useUser } from "../../../context/UserContext";
@@ -36,7 +36,7 @@ import useDebugStore from "../../../store/debug.store";
 import useUIStore from "../../../store/UI.store";
 import useStocksStore from "../../../store/Stock.store";
 import { CLOUD_BACKUP_MAX_BYTES, cloudBackupPayloadBytes } from "../../../account/cloudBackup";
-import { openNativeLogDirectory } from "../../../account/native";
+import { getAutoUpdateEnabled, openNativeLogDirectory, setAutoUpdateEnabled } from "../../../account/native";
 import IndicatorSettingsSection from "./IndicatorSettingsSection";
 // Important: Make sure this path is correct or hardcode the version
 import pkg from "../../../../package.json";
@@ -44,17 +44,17 @@ import pkg from "../../../../package.json";
 const VERSION = pkg.version || "0.1.0";
 
 const settingsPalette = {
-  canvas: "#FFF8F3",
-  paper: "#FFFDF8",
-  ink: "#171717",
-  muted: "#6D625D",
-  outline: "#191919",
-  blue: "#6BB7E8",
-  blueDark: "#246D9B",
-  pink: "#F4B5D0",
-  yellow: "#F3D36D",
-  green: "#A8D8B8",
-  lavender: "#C9BDF2",
+  canvas: "#F4F7FA",
+  paper: "#FFFFFF",
+  ink: "#172033",
+  muted: "#667085",
+  outline: "#D8E0EA",
+  blue: "#DCEEFF",
+  blueDark: "#1769AA",
+  pink: "#FDE7F0",
+  yellow: "#FFF1C2",
+  green: "#DFF3E8",
+  lavender: "#EBE5FF",
   white: "#FFFFFF",
 } as const;
 
@@ -119,11 +119,6 @@ const PageContainer = styled(Box)({
   overflowX: "hidden",
   overflowY: "auto",
   backgroundColor: settingsPalette.canvas,
-  backgroundImage: `
-    radial-gradient(circle at 7% 9%, rgba(244, 181, 208, 0.42) 0 44px, transparent 45px),
-    radial-gradient(circle at 95% 42%, rgba(107, 183, 232, 0.24) 0 64px, transparent 65px),
-    linear-gradient(135deg, rgba(243, 211, 109, 0.14), transparent 38%),
-    linear-gradient(315deg, rgba(168, 216, 184, 0.16), transparent 44%)`,
   color: settingsPalette.ink,
   paddingBottom: "calc(108px + env(safe-area-inset-bottom, 0px))",
   "@media (prefers-reduced-motion: reduce)": {
@@ -132,33 +127,15 @@ const PageContainer = styled(Box)({
 });
 
 const MainCard = styled(Paper)({
-  position: "relative",
-  overflow: "visible",
-  backgroundColor: settingsPalette.paper,
-  border: `3px solid ${settingsPalette.outline}`,
-  borderRadius: 28,
-  boxShadow: `7px 8px 0 ${settingsPalette.outline}`,
-  padding: 16,
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: -10,
-    left: 28,
-    width: 82,
-    height: 22,
-    borderRadius: 5,
-    backgroundColor: "rgba(244, 181, 208, 0.86)",
-    border: `2px solid ${settingsPalette.outline}`,
-    transform: "rotate(-3deg)",
-    pointerEvents: "none",
-  },
+  backgroundColor: "transparent",
+  boxShadow: "none",
 });
 
 const SectionCard = styled("section")({
   backgroundColor: settingsPalette.paper,
-  border: `2px solid ${settingsPalette.outline}`,
-  borderRadius: 22,
-  boxShadow: "4px 5px 0 rgba(25, 25, 25, 0.92)",
+  border: `1px solid ${settingsPalette.outline}`,
+  borderRadius: 16,
+  boxShadow: "0 1px 3px rgba(23, 32, 51, 0.06)",
   overflow: "hidden",
 });
 
@@ -167,15 +144,14 @@ const SettingRow = styled(Box)({
   alignItems: "center",
   gap: 12,
   minWidth: 0,
-  minHeight: 72,
-  padding: "12px 14px",
-  border: "2px solid rgba(25, 25, 25, 0.16)",
-  borderRadius: 18,
-  backgroundColor: "rgba(255, 255, 255, 0.66)",
-  transition: "background-color 200ms ease, transform 200ms ease",
+  minHeight: 64,
+  padding: "10px 12px",
+  border: `1px solid ${settingsPalette.outline}`,
+  borderRadius: 12,
+  backgroundColor: "#F8FAFC",
+  transition: "background-color 150ms ease",
   "&:hover": {
-    backgroundColor: "rgba(255, 255, 255, 0.94)",
-    transform: "translateY(-1px)",
+    backgroundColor: "#F1F5F9",
   },
   "@media (prefers-reduced-motion: reduce)": {
     transition: "none",
@@ -184,17 +160,16 @@ const SettingRow = styled(Box)({
 
 const FocusableButton = styled(Button)({
   minHeight: 44,
-  borderRadius: 14,
-  border: `2px solid ${settingsPalette.outline}`,
-  boxShadow: "3px 3px 0 rgba(25, 25, 25, 0.92)",
+  borderRadius: 10,
+  border: `1px solid ${settingsPalette.outline}`,
+  boxShadow: "none",
   color: settingsPalette.ink,
   fontWeight: 900,
   lineHeight: 1.15,
   textTransform: "none",
-  transition: "transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease",
+  transition: "background-color 150ms ease",
   "&:hover": {
-    boxShadow: "2px 2px 0 rgba(25, 25, 25, 0.92)",
-    transform: "translate(1px, 1px)",
+    boxShadow: "none",
   },
   "&:focus-visible": {
     outline: `3px solid ${settingsPalette.blueDark}`,
@@ -228,10 +203,8 @@ const SectionIcon = styled(Box)({
   flex: "0 0 auto",
   width: 42,
   height: 42,
-  border: `2px solid ${settingsPalette.outline}`,
-  borderRadius: 14,
+  borderRadius: 12,
   color: settingsPalette.ink,
-  boxShadow: "2px 2px 0 rgba(25, 25, 25, 0.9)",
 });
 
 const SwitchStyles = {
@@ -253,16 +226,26 @@ const SwitchStyles = {
   },
 };
 
-const marketVisibilityItems: Array<{ key: MarketVisibilityKey; labelKey: string }> = [
-  { key: "cnn", labelKey: "cnn" },
-  { key: "mm", labelKey: "mm" },
-  { key: "nasdaq", labelKey: "nasdaq" },
-  { key: "sox", labelKey: "sox" },
-  { key: "twse", labelKey: "twse" },
-  { key: "otc", labelKey: "otc" },
-  { key: "wtx", labelKey: "wtx" },
-  { key: "margin", labelKey: "margin" },
-];
+const marketVisibilityGroups: Array<{
+  labelKey: "indices" | "signals";
+  items: Array<{ key: MarketVisibilityKey; labelKey: string }>;
+}> = [{
+  labelKey: "indices",
+  items: [
+    { key: "twse", labelKey: "twse" },
+    { key: "otc", labelKey: "otc" },
+    { key: "wtx", labelKey: "wtx" },
+    { key: "nasdaq", labelKey: "nasdaq" },
+    { key: "sox", labelKey: "sox" },
+  ],
+}, {
+  labelKey: "signals",
+  items: [
+    { key: "cnn", labelKey: "cnn" },
+    { key: "mm", labelKey: "mm" },
+    { key: "margin", labelKey: "margin" },
+  ],
+}];
 
 function SettingRowText({
   title,
@@ -428,6 +411,8 @@ function Setting() {
   const [alwaysOnTop, setAlwaysOnTop] = useState(
     localStorage.getItem("slitenting-alwaysOnTop") === "true",
   );
+  const [autoUpdateEnabled, setAutoUpdateEnabledState] = useState(true);
+  const [autoUpdateLoaded, setAutoUpdateLoaded] = useState(false);
   // Keep debug subscriptions narrow; the fallback keeps lightweight test doubles
   // that return the store object compatible with this page.
   const debugModeValue = useDebugStore((state) => state.isVisible) as unknown;
@@ -443,7 +428,6 @@ function Setting() {
     (debugModeValue as { toggleVisibility?: () => void } | null)?.toggleVisibility?.();
   }, [debugModeValue, toggleVisibilityValue]);
   const [marketVisibility, setMarketVisibility] = useState<MarketVisibility>(readMarketVisibility);
-  const [marketInfoOpen, setMarketInfoOpen] = useState(false);
   const [dataOpen, setDataOpen] = useState(false);
   const [logOpenError, setLogOpenError] = useState(false);
   const [indicatorOpen, setIndicatorOpen] = useState(false);
@@ -468,6 +452,24 @@ function Setting() {
     [],
   );
 
+  useEffect(() => {
+    let active = true;
+    void getAutoUpdateEnabled().then((enabled) => {
+      if (!active) return;
+      setAutoUpdateEnabledState(enabled);
+      setAutoUpdateLoaded(true);
+    }).catch(() => {
+      if (active) setAutoUpdateLoaded(true);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const handleAutoUpdateChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setAutoUpdateEnabledState(enabled);
+    void setAutoUpdateEnabled(enabled).catch(() => setAutoUpdateEnabledState(!enabled));
+  }, []);
+
   const handleMarketVisibilityChange = useCallback(
     (key: MarketVisibilityKey, checked: boolean) => {
       setMarketVisibility((previous) => {
@@ -478,6 +480,15 @@ function Setting() {
     },
     [],
   );
+
+  const handleAllMarketVisibility = useCallback((visible: boolean) => {
+    const next = MARKET_VISIBILITY_KEYS.reduce<MarketVisibility>((settings, key) => {
+      settings[key] = visible;
+      return settings;
+    }, { ...DEFAULT_MARKET_VISIBILITY });
+    localStorage.setItem("slitenting-market-info-visibility", JSON.stringify(next));
+    setMarketVisibility(next);
+  }, []);
 
   const handleCloudBackupChange = useCallback((checked: boolean) => {
     void setCloudBackupEnabled(checked).catch(() => undefined);
@@ -523,16 +534,10 @@ function Setting() {
     : t("settings.cloudBackupNever");
 
   const activeLanguage = i18n.resolvedLanguage?.toLowerCase().startsWith("zh") ? "zh-TW" : "en";
+  const visibleMarketCount = Object.values(marketVisibility).filter(Boolean).length;
 
   return (
     <PageContainer>
-      <Box aria-hidden="true" sx={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
-        <Box sx={{ position: "absolute", top: 132, right: "8%", width: 22, height: 22, border: `3px solid ${settingsPalette.outline}`, borderRadius: "50%", backgroundColor: settingsPalette.yellow }} />
-        <Box sx={{ position: "absolute", top: 196, left: "5%", width: 60, height: 12, borderRadius: 99, backgroundColor: settingsPalette.blue, transform: "rotate(-12deg)" }} />
-        <Box sx={{ position: "absolute", top: 205, left: "7%", width: 34, height: 7, borderRadius: 99, backgroundColor: settingsPalette.pink, transform: "rotate(-12deg)" }} />
-        <Box sx={{ position: "absolute", bottom: 170, right: "5%", width: 42, height: 42, border: `3px solid ${settingsPalette.outline}`, borderRadius: "48% 52% 46% 54%", backgroundColor: settingsPalette.green, transform: "rotate(18deg)" }} />
-      </Box>
-
       <Container
         component="main"
         maxWidth="md"
@@ -540,7 +545,7 @@ function Setting() {
           position: "relative",
           width: "100%",
           px: { xs: 1.25, sm: 3, md: 4 },
-          pt: { xs: 2, sm: 3.5 },
+          pt: { xs: 1.5, sm: 2.5 },
           pb: 3,
         }}
       >
@@ -555,11 +560,11 @@ function Setting() {
                 height: 44,
                 mt: 0.35,
                 color: settingsPalette.ink,
-                backgroundColor: settingsPalette.yellow,
-                border: `2px solid ${settingsPalette.outline}`,
-                borderRadius: 14,
-                boxShadow: "3px 3px 0 rgba(25, 25, 25, 0.92)",
-                "&:hover": { backgroundColor: settingsPalette.yellow, transform: "translate(1px, 1px)", boxShadow: "2px 2px 0 rgba(25, 25, 25, 0.92)" },
+                backgroundColor: settingsPalette.paper,
+                border: `1px solid ${settingsPalette.outline}`,
+                borderRadius: 12,
+                boxShadow: "0 1px 2px rgba(23, 32, 51, 0.08)",
+                "&:hover": { backgroundColor: "#F8FAFC" },
                 "&:focus-visible": { outline: `3px solid ${settingsPalette.blueDark}`, outlineOffset: 3 },
                 "@media (prefers-reduced-motion: reduce)": { transition: "none" },
               }}
@@ -567,10 +572,10 @@ function Setting() {
               <ArrowBackIcon fontSize="small" />
             </IconButton>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography component="p" sx={{ color: settingsPalette.blueDark, fontSize: "0.72rem", fontWeight: 950, letterSpacing: "0.12em", textTransform: "uppercase" }}>
+              <Typography component="p" sx={{ color: settingsPalette.blueDark, fontSize: "0.7rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                 {t("settings.eyebrow")}
               </Typography>
-              <Typography component="h1" sx={{ mt: 0.3, color: settingsPalette.ink, fontSize: { xs: "1.85rem", sm: "2.35rem" }, fontWeight: 950, letterSpacing: "-0.04em", lineHeight: 1 }}>
+              <Typography component="h1" sx={{ mt: 0.25, color: settingsPalette.ink, fontSize: { xs: "1.65rem", sm: "2rem" }, fontWeight: 850, letterSpacing: "-0.03em", lineHeight: 1.1 }}>
                 {t("settings.title")}
               </Typography>
               <Typography component="p" sx={{ mt: 0.75, color: settingsPalette.muted, fontSize: { xs: "0.8rem", sm: "0.88rem" }, fontWeight: 650, lineHeight: 1.45, maxWidth: 560 }}>
@@ -596,7 +601,7 @@ function Setting() {
                       flex: 1,
                       maxWidth: 190,
                       backgroundColor: selected ? settingsPalette.blue : settingsPalette.white,
-                      "&:hover": { backgroundColor: selected ? settingsPalette.blue : "#F4F0EA" },
+                      "&:hover": { backgroundColor: selected ? settingsPalette.blue : "#F1F5F9" },
                     }}
                   >
                     {t(`language.${language}`)}
@@ -608,7 +613,88 @@ function Setting() {
         </Stack>
 
         <MainCard elevation={0}>
-          <SectionCard aria-labelledby="settings-application-heading" sx={{ mb: 2.25 }}>
+          <SectionCard aria-labelledby="settings-market-heading" sx={{ mb: 1.5 }}>
+            <SectionHeading
+              headingId="settings-market-heading"
+              icon={<SettingsIcon fontSize="small" />}
+              title={t("settings.marketInfo")}
+              hint={t("settings.marketInfoSectionHint")}
+              accent={settingsPalette.blue}
+            />
+            <Stack spacing={1.5} sx={{ px: { xs: 1, sm: 1.5 }, pb: 1.5 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                <Typography sx={{ color: settingsPalette.muted, fontSize: "0.76rem", fontWeight: 750 }}>
+                  {t("settings.marketVisibleCount", { visible: visibleMarketCount, total: MARKET_VISIBILITY_KEYS.length })}
+                </Typography>
+                <Stack direction="row" spacing={0.75}>
+                  <FocusableButton
+                    type="button"
+                    onClick={() => handleAllMarketVisibility(true)}
+                    disabled={visibleMarketCount === MARKET_VISIBILITY_KEYS.length}
+                    sx={{ minHeight: 32, px: 1.1, py: 0.25, fontSize: "0.72rem", backgroundColor: settingsPalette.white }}
+                  >
+                    {t("settings.showAllMarkets")}
+                  </FocusableButton>
+                  <FocusableButton
+                    type="button"
+                    onClick={() => handleAllMarketVisibility(false)}
+                    disabled={visibleMarketCount === 0}
+                    sx={{ minHeight: 32, px: 1.1, py: 0.25, fontSize: "0.72rem", backgroundColor: settingsPalette.white }}
+                  >
+                    {t("settings.hideAllMarkets")}
+                  </FocusableButton>
+                </Stack>
+              </Stack>
+
+              {marketVisibilityGroups.map((group) => (
+                <Box key={group.labelKey}>
+                  <Typography component="h3" sx={{ mb: 0.65, color: settingsPalette.ink, fontSize: "0.78rem", fontWeight: 850 }}>
+                    {t(`settings.marketGroups.${group.labelKey}`)}
+                  </Typography>
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: "repeat(3, minmax(0, 1fr))" }, gap: 0.75 }}>
+                    {group.items.map(({ key, labelKey }) => {
+                      const label = t(`settings.marketLabels.${labelKey}`);
+                      const checked = marketVisibility[key];
+                      return (
+                        <Box
+                          component="label"
+                          key={key}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: 0.5,
+                            minWidth: 0,
+                            minHeight: 48,
+                            px: 1,
+                            py: 0.4,
+                            border: "1px solid",
+                            borderColor: checked ? "#90CAF9" : settingsPalette.outline,
+                            borderRadius: 2.5,
+                            backgroundColor: checked ? "#F0F7FF" : "#F8FAFC",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <Typography component="span" sx={{ minWidth: 0, color: settingsPalette.ink, fontSize: "0.75rem", fontWeight: 750, lineHeight: 1.25, overflowWrap: "anywhere" }}>
+                            {label}
+                          </Typography>
+                          <Switch
+                            size="small"
+                            checked={checked}
+                            onChange={(event) => handleMarketVisibilityChange(key, event.target.checked)}
+                            slotProps={{ input: { "aria-label": label } }}
+                            sx={SwitchStyles}
+                          />
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          </SectionCard>
+
+          <SectionCard aria-labelledby="settings-application-heading" sx={{ mb: 1.5 }}>
             <SectionHeading
               headingId="settings-application-heading"
               icon={<TopIcon fontSize="small" />}
@@ -630,6 +716,20 @@ function Setting() {
                 />
               </SettingRow>
 
+              <SettingRow>
+                <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.lavender }} aria-hidden="true">
+                  <DownloadIcon fontSize="small" />
+                </SectionIcon>
+                <SettingRowText title={t("settings.autoUpdate")} hint={t("settings.autoUpdateHint")} />
+                <Switch
+                  checked={autoUpdateEnabled}
+                  disabled={!autoUpdateLoaded}
+                  onChange={handleAutoUpdateChange}
+                  slotProps={{ input: { "aria-label": t("settings.autoUpdate") } }}
+                  sx={SwitchStyles}
+                />
+              </SettingRow>
+
               <SettingRow sx={{ alignItems: { xs: "stretch", sm: "center" }, flexDirection: { xs: "column", sm: "row" } }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
                   <SectionIcon sx={{ width: 38, height: 38, borderRadius: 12, backgroundColor: settingsPalette.blue }} aria-hidden="true">
@@ -642,7 +742,7 @@ function Setting() {
                     type="button"
                     onClick={() => setStockBoxChartType("tick")}
                     aria-pressed={stockBoxChartType === "tick"}
-                    sx={{ flex: 1, minWidth: { xs: 0, sm: 80 }, backgroundColor: stockBoxChartType === "tick" ? settingsPalette.blue : settingsPalette.white, "&:hover": { backgroundColor: stockBoxChartType === "tick" ? settingsPalette.blue : "#F4F0EA" } }}
+                    sx={{ flex: 1, minWidth: { xs: 0, sm: 80 }, backgroundColor: stockBoxChartType === "tick" ? settingsPalette.blue : settingsPalette.white, "&:hover": { backgroundColor: stockBoxChartType === "tick" ? settingsPalette.blue : "#F1F5F9" } }}
                   >
                     {t("settings.live")}
                   </FocusableButton>
@@ -650,7 +750,7 @@ function Setting() {
                     type="button"
                     onClick={() => setStockBoxChartType("mak")}
                     aria-pressed={stockBoxChartType === "mak"}
-                    sx={{ flex: 1, minWidth: { xs: 0, sm: 104 }, backgroundColor: stockBoxChartType === "mak" ? settingsPalette.blue : settingsPalette.white, "&:hover": { backgroundColor: stockBoxChartType === "mak" ? settingsPalette.blue : "#F4F0EA" } }}
+                    sx={{ flex: 1, minWidth: { xs: 0, sm: 104 }, backgroundColor: stockBoxChartType === "mak" ? settingsPalette.blue : settingsPalette.white, "&:hover": { backgroundColor: stockBoxChartType === "mak" ? settingsPalette.blue : "#F1F5F9" } }}
                   >
                     {t("settings.candle")}
                   </FocusableButton>
@@ -659,36 +759,7 @@ function Setting() {
             </Stack>
           </SectionCard>
 
-          <Stack spacing={2.25}>
-            <DisclosureCard
-              id="market-information"
-              title={t("settings.marketInfo")}
-              hint={t("settings.marketInfoSectionHint")}
-              icon={<SettingsIcon fontSize="small" />}
-              accent={settingsPalette.pink}
-              open={marketInfoOpen}
-              onToggle={() => setMarketInfoOpen((current) => !current)}
-            >
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))" }, gap: 1 }}>
-                {marketVisibilityItems.map(({ key, labelKey }) => {
-                  const label = t(`settings.marketLabels.${labelKey}`);
-                  return (
-                    <Box key={key} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1, minHeight: 56, px: 1.25, py: 0.65, border: "2px solid rgba(25, 25, 25, 0.14)", borderRadius: 15, backgroundColor: "rgba(244, 181, 208, 0.18)" }}>
-                      <Typography component="span" sx={{ minWidth: 0, color: settingsPalette.ink, fontSize: "0.78rem", fontWeight: 850, lineHeight: 1.25, overflowWrap: "anywhere" }}>
-                        {label}
-                      </Typography>
-                      <Switch
-                        checked={marketVisibility[key]}
-                        onChange={(event) => handleMarketVisibilityChange(key, event.target.checked)}
-                        slotProps={{ input: { "aria-label": label } }}
-                        sx={SwitchStyles}
-                      />
-                    </Box>
-                  );
-                })}
-              </Box>
-            </DisclosureCard>
-
+          <Stack spacing={1.5}>
             <DisclosureCard
               id="data-diagnostics"
               title={t("settings.dataDiagnostics")}

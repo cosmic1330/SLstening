@@ -28,6 +28,8 @@ const mocks = vi.hoisted(() => ({
   },
   setAlwaysOnTop: vi.fn(),
   openLogDirectory: vi.fn().mockResolvedValue(undefined),
+  getAutoUpdateEnabled: vi.fn().mockResolvedValue(true),
+  setAutoUpdateEnabled: vi.fn().mockResolvedValue(undefined),
   user: {
     session: { user: { email: "person@example.com", id: "user-123456789" } } as {
       user: { email?: string; id?: string };
@@ -67,6 +69,8 @@ vi.mock("../../../account/native", () => ({
   invalidateNativeSession: vi.fn(),
   isNativeRuntime: vi.fn(() => false),
   openNativeLogDirectory: mocks.openLogDirectory,
+  getAutoUpdateEnabled: mocks.getAutoUpdateEnabled,
+  setAutoUpdateEnabled: mocks.setAutoUpdateEnabled,
 }));
 
 vi.mock("@tauri-apps/api/window", () => ({
@@ -96,6 +100,10 @@ beforeEach(async () => {
   mocks.setAlwaysOnTop.mockReset();
   mocks.openLogDirectory.mockReset();
   mocks.openLogDirectory.mockResolvedValue(undefined);
+  mocks.getAutoUpdateEnabled.mockReset();
+  mocks.getAutoUpdateEnabled.mockResolvedValue(true);
+  mocks.setAutoUpdateEnabled.mockReset();
+  mocks.setAutoUpdateEnabled.mockResolvedValue(undefined);
   mocks.user.session = { user: { email: "person@example.com", id: "user-123456789" } };
   mocks.user.signOut.mockReset();
   mocks.user.signOut.mockResolvedValue(undefined);
@@ -119,16 +127,17 @@ afterEach(async () => {
 });
 
 describe("Settings page", () => {
-  it("renders a calm hierarchy with accessible controls and collapsed sections", () => {
+  it("keeps market controls visible and advanced sections collapsed", () => {
     renderSetting();
 
     expect(screen.getByRole("heading", { name: "Preferences" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Market display" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Application" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Show market information/ }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByRole("button", { name: "Data & diagnostics" }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByRole("button", { name: /Technical indicator settings/ }).getAttribute("aria-expanded")).toBe("false");
     expect(screen.getByLabelText("Always on top")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "CNN Fear & Greed" })).toBeNull();
+    expect(screen.getByLabelText("CNN Fear & Greed")).toBeTruthy();
+    expect(screen.getByText("Showing 8 of 8")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Live" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Candlestick" }).getAttribute("aria-pressed")).toBe("false");
   });
@@ -152,10 +161,22 @@ describe("Settings page", () => {
     expect(mocks.setAlwaysOnTop).toHaveBeenCalledWith(true);
   });
 
+  it("enables automatic updates by default and persists the user's choice", async () => {
+    renderSetting();
+
+    const automaticUpdates = screen.getByLabelText("Automatic updates") as HTMLInputElement;
+    await waitFor(() => expect(automaticUpdates.disabled).toBe(false));
+    expect(automaticUpdates.checked).toBe(true);
+
+    fireEvent.click(automaticUpdates);
+
+    expect(automaticUpdates.checked).toBe(false);
+    expect(mocks.setAutoUpdateEnabled).toHaveBeenCalledWith(false);
+  });
+
   it("falls back to all eight market modules when stored visibility is malformed", () => {
     localStorage.setItem("slitenting-market-info-visibility", "{not-json");
     renderSetting();
-    openDisclosure(/Show market information/);
 
     [
       "CNN Fear & Greed",
@@ -173,13 +194,24 @@ describe("Settings page", () => {
 
   it("persists market visibility with the eight-key JSON shape", () => {
     renderSetting();
-    openDisclosure(/Show market information/);
 
     fireEvent.click(screen.getByLabelText("NASDAQ"));
 
     const saved = JSON.parse(localStorage.getItem("slitenting-market-info-visibility") ?? "{}");
     expect(Object.keys(saved).sort()).toEqual(["cnn", "margin", "mm", "nasdaq", "otc", "sox", "twse", "wtx"]);
     expect(saved.nasdaq).toBe(false);
+  });
+
+  it("can hide and restore every market from the top-level controls", () => {
+    renderSetting();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide all" }));
+    expect(screen.getByText("Showing 0 of 8")).toBeTruthy();
+    expect((screen.getByLabelText("PHLX Semiconductor Index") as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+    expect(screen.getByText("Showing 8 of 8")).toBeTruthy();
+    expect((screen.getByLabelText("PHLX Semiconductor Index") as HTMLInputElement).checked).toBe(true);
   });
 
   it("edits and resets an indicator without using the obsolete settings key", () => {

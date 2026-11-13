@@ -47,12 +47,15 @@ pub fn run() {
             app.manage(local_preferences.clone());
             app.manage(legacy_settings::LegacySettingsManager::new(handle.clone()));
 
-            // 監聽更新
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = updater::update(handle).await {
-                    log::warn!("Update check failed: {:?}", e);
-                }
-            });
+            if updater::auto_update_enabled(&handle) {
+                tauri::async_runtime::spawn(async move {
+                    if let Err(e) = updater::update(handle).await {
+                        log::warn!("Update check failed: {:?}", e);
+                    }
+                });
+            } else {
+                log::info!("Automatic update check disabled by local preference");
+            }
 
             // 初始化市場觀察者 (Market Watcher)
             let market_manager = market_watcher::init(app.handle().clone());
@@ -83,6 +86,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::common::greet,
+            commands::common::get_auto_update_enabled,
+            commands::common::set_auto_update_enabled,
             commands::account::account_set_session,
             commands::account::account_clear_session,
             commands::account::account_invalidate_session,

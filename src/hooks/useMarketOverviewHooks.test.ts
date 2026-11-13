@@ -11,6 +11,16 @@ const marketApiMock = vi.hoisted(() => ({
 }));
 
 vi.mock("../api/marketApi", () => ({ marketApi: marketApiMock }));
+vi.mock("./marketOverviewPolicy", () => ({
+  MARKET_OVERVIEW_HISTORY_REFRESH_INTERVAL_MS: 100,
+  MARKET_OVERVIEW_SWR_POLICY: {
+    revalidateOnFocus: false,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
+    shouldRetryOnError: true,
+    errorRetryInterval: 100,
+  },
+}));
 vi.mock("../store/debug.store", () => ({
   default: { getState: () => ({ increment: vi.fn() }) },
 }));
@@ -35,7 +45,7 @@ describe("market overview hook retries", () => {
   it.each([
     ["NASDAQ", useNasdaqDeals],
     ["WTX", useWtxDeals],
-  ])("does not automatically retry a failed %s initial request", async (_, useOverview) => {
+  ])("does not immediately retry a failed %s initial request", async (_, useOverview) => {
     const { rerender, unmount } = renderHook(() => useOverview(true), { wrapper });
 
     await waitFor(() => expect(marketApiMock.getHistoryData).toHaveBeenCalledTimes(1));
@@ -45,6 +55,19 @@ describe("market overview hook retries", () => {
     rerender();
 
     expect(marketApiMock.getHistoryData).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it.each([
+    ["NASDAQ", useNasdaqDeals],
+    ["WTX", useWtxDeals],
+  ])("recovers %s on the next market interval after a transient error", async (_, useOverview) => {
+    marketApiMock.getHistoryData.mockReset();
+    marketApiMock.getHistoryData
+      .mockRejectedValueOnce(new Error("TEMPORARY_FAILURE"))
+      .mockResolvedValue({ id: "test", name: null, data: [{ t: 1, o: 1, h: 1, l: 1, c: 1, v: 1 }], price: 1, change: 0 });
+    const { unmount } = renderHook(() => useOverview(true), { wrapper });
+    await waitFor(() => expect(marketApiMock.getHistoryData).toHaveBeenCalledTimes(2));
     unmount();
   });
 });

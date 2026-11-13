@@ -44,12 +44,13 @@ describe("normalizeNasdaqHistory", () => {
 });
 
 describe("market overview request policy", () => {
-  it("does not retry provider failures implicitly", () => {
+  it("retries transient provider failures on a bounded interval", () => {
     expect(MARKET_OVERVIEW_SWR_POLICY).toMatchObject({
       revalidateOnFocus: false,
       refreshWhenHidden: false,
       refreshWhenOffline: false,
-      shouldRetryOnError: false,
+      shouldRetryOnError: true,
+      errorRetryInterval: 30_000,
     });
   });
 });

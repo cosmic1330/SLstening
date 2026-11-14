@@ -14,6 +14,7 @@ import {
   ComposedChart,
   Customized,
   Line,
+  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   Tooltip,
@@ -163,7 +164,19 @@ export default function ATR({
 
     // Locally calculate Supertrend crossover signals for ATR display
     return basePoints.map((d, i) => {
-      if (i === 0) return { ...d, buySignal: null, exitSignal: null };
+      const macdSignal = d.dif !== null && d.osc !== null ? d.dif - d.osc : null;
+      const positiveOsc = d.osc !== null && d.osc > 0 ? d.osc : 0;
+      const negativeOsc = d.osc !== null && d.osc < 0 ? d.osc : 0;
+      if (i === 0) {
+        return {
+          ...d,
+          buySignal: null,
+          exitSignal: null,
+          macdSignal,
+          positiveOsc,
+          negativeOsc,
+        };
+      }
       const prev = basePoints[i - 1];
       let buySignal = null;
       let exitSignal = null;
@@ -183,6 +196,9 @@ export default function ATR({
         ...d,
         buySignal,
         exitSignal,
+        macdSignal,
+        positiveOsc,
+        negativeOsc,
       };
     });
   }, [deals, settings]);
@@ -293,9 +309,10 @@ export default function ATR({
         ref={chartContainerRef}
         sx={{ flexGrow: 1, minHeight: 0, width: "100%" }}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="70%">
           <ComposedChart
             data={chartData}
+            syncId="atrSync"
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -314,15 +331,6 @@ export default function ATR({
                 })
               }
             />
-            <YAxis
-              yAxisId="volume"
-              orientation="right"
-              domain={[0, (dataMax: number) => dataMax * 5]}
-              width={0}
-              tick={false}
-              axisLine={false}
-            />
-
             <Tooltip
               content={
                 <ChartTooltip
@@ -374,14 +382,6 @@ export default function ATR({
             />
             <Customized component={BaseCandlestickRectangle} />
 
-            <Bar
-              dataKey="v"
-              yAxisId="volume"
-              fill="rgba(144, 202, 249, 0.2)"
-              name="成交量"
-              barSize={8}
-            />
-
             <Line
               dataKey="supertrend"
               stroke="#589bf3"
@@ -400,6 +400,56 @@ export default function ATR({
               dataKey="exitSignal"
               shape={<ExitArrow />}
               legendType="none"
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+
+        <ResponsiveContainer width="100%" height="30%">
+          <ComposedChart
+            data={chartData}
+            syncId="atrSync"
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+            <XAxis dataKey="t" hide />
+            <YAxis
+              width={48}
+              domain={([dataMin, dataMax]) => {
+                const absMax = Math.max(Math.abs(dataMin), Math.abs(dataMax));
+                return absMax === 0 ? [-1, 1] : [-absMax, absMax];
+              }}
+              stroke="#888"
+              fontSize={10}
+            />
+            <Tooltip content={<ChartTooltip />} offset={50} />
+            <ReferenceLine y={0} stroke="#666" opacity={0.5} />
+            <Bar
+              dataKey="positiveOsc"
+              fill="#f44336"
+              barSize={3}
+              name="OSC +"
+            />
+            <Bar
+              dataKey="negativeOsc"
+              fill="#4caf50"
+              barSize={3}
+              name="OSC -"
+            />
+            <Line
+              dataKey="dif"
+              stroke="#2196f3"
+              strokeWidth={1.6}
+              dot={false}
+              activeDot={false}
+              name="DIF"
+            />
+            <Line
+              dataKey="macdSignal"
+              stroke="#ff9800"
+              strokeWidth={1.6}
+              dot={false}
+              activeDot={false}
+              name="MACD"
             />
           </ComposedChart>
         </ResponsiveContainer>

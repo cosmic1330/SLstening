@@ -177,7 +177,7 @@ fn default_indicator_settings() -> IndicatorSettings {
         cmf: 21.0,
         cmf_ema: 5.0,
         atr_len: 10.0,
-        atr_mult: 3.0,
+        atr_mult: 2.5,
         donchian: 20.0,
         cci: 26.0,
     }

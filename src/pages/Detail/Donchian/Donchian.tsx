@@ -19,6 +19,7 @@ import {
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
+  Bar,
   CartesianGrid,
   ComposedChart,
   Customized,
@@ -41,6 +42,7 @@ import {
   EnhancedDealData,
 } from "../../../utils/indicatorUtils";
 import useToolbarSettings from "../GlassBar/useToolbarSettings";
+import ChartTooltip from "../Tooltip/ChartTooltip";
 
 interface DonchianChartData extends EnhancedDealData {
   buySignal: number | null;
@@ -50,6 +52,9 @@ interface DonchianChartData extends EnhancedDealData {
   channelUb?: number | null;
   channelLb?: number | null;
   donchianRange?: [number, number] | null;
+  macdSignal: number | null;
+  positiveOsc: number;
+  negativeOsc: number;
 }
 
 const BuyArrow = (props: any) => {
@@ -228,8 +233,19 @@ export default function Donchian({
     let lastSignalState: "buy" | "neutral" = "neutral";
 
     return baseData.map((d, i) => {
-      if (i === 0)
-        return { ...d, buySignal: null, exitSignal: null } as DonchianChartData;
+      const macdSignal = d.dif !== null && d.osc !== null ? d.dif - d.osc : null;
+      const positiveOsc = d.osc !== null && d.osc > 0 ? d.osc : 0;
+      const negativeOsc = d.osc !== null && d.osc < 0 ? d.osc : 0;
+      if (i === 0) {
+        return {
+          ...d,
+          buySignal: null,
+          exitSignal: null,
+          macdSignal,
+          positiveOsc,
+          negativeOsc,
+        } as DonchianChartData;
+      }
       const prev = baseData[i - 1];
       const price = d.c;
 
@@ -279,6 +295,9 @@ export default function Donchian({
         buyReason,
         exitReason,
         donchianRange,
+        macdSignal,
+        positiveOsc,
+        negativeOsc,
       } as DonchianChartData;
     });
   }, [deals, settings]);
@@ -551,46 +570,6 @@ export default function Donchian({
     }
     return null;
   };
-
-  const maDeductionPoints = useMemo(() => {
-    if (chartData.length === 0) return [];
-    const latest = chartData[chartData.length - 1];
-    const points: {
-      t: number | string;
-      price: number;
-      label: string;
-      color: string;
-      period: number;
-    }[] = [];
-
-    const maConfigs = [
-      { key: "deduction5", color: "#2196f3", period: settings.ma5 },
-      { key: "deduction10", color: "#ffeb3b", period: settings.ma10 },
-      { key: "deduction20", color: "#ff9800", period: settings.ma20 },
-      { key: "deduction60", color: "#f44336", period: settings.ma60 },
-      { key: "deduction120", color: "#4caf50", period: settings.ma120 },
-      { key: "deduction240", color: "#cc00ff", period: settings.ma240 },
-    ];
-
-    maConfigs.forEach((config) => {
-      const t = (latest as any)[config.key];
-      if (t) {
-        const fullData = calculateIndicators(deals, settings);
-        const target = fullData.find((d) => d.t === t);
-        if (target) {
-          points.push({
-            t,
-            price: target.c,
-            label: `MA${config.period}扣抵`,
-            color: config.color,
-            period: config.period,
-          });
-        }
-      }
-    });
-
-    return points;
-  }, [chartData, deals, settings]);
 
   if (chartData.length === 0) {
     return (
@@ -929,9 +908,10 @@ export default function Donchian({
         ref={chartContainerRef}
         sx={{ flexGrow: 1, minHeight: 0, height: "100%", width: "100%" }}
       >
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height="70%">
           <ComposedChart
             data={finalChartData}
+            syncId="donchianSync"
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
@@ -1085,47 +1065,55 @@ export default function Donchian({
               legendType="none"
             />
 
-            {/* Deduction Markers */}
-            {maDeductionPoints.map((p) => (
-              <ReferenceLine
-                key={`${p.label}-${p.t}`}
-                x={p.t}
-                stroke={p.color}
-                strokeDasharray="3 3"
-                opacity={0.4}
-                isFront={false}
-                label={(props: any) => {
-                  const { viewBox } = props;
-                  if (!viewBox) return <g />;
-                  const { x } = viewBox;
-                  return (
-                    <g>
-                      <rect
-                        x={x - 15}
-                        y={5}
-                        width={30}
-                        height={18}
-                        fill="#1a1a1a"
-                        rx={4}
-                        stroke={p.color}
-                        strokeWidth={1}
-                        opacity={0.8}
-                      />
-                      <text
-                        x={x}
-                        y={18}
-                        textAnchor="middle"
-                        fill={p.color}
-                        fontSize={10}
-                        fontWeight="bold"
-                      >
-                        {p.period}
-                      </text>
-                    </g>
-                  );
-                }}
-              />
-            ))}
+          </ComposedChart>
+        </ResponsiveContainer>
+
+        <ResponsiveContainer width="100%" height="30%">
+          <ComposedChart
+            data={finalChartData}
+            syncId="donchianSync"
+            margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+            <XAxis dataKey="t" hide />
+            <YAxis
+              domain={([dataMin, dataMax]) => {
+                const absMax = Math.max(Math.abs(dataMin), Math.abs(dataMax));
+                return absMax === 0 ? [-1, 1] : [-absMax, absMax];
+              }}
+              stroke="#888"
+              fontSize={10}
+            />
+            <Tooltip content={<ChartTooltip />} offset={50} />
+            <ReferenceLine y={0} stroke="#666" opacity={0.6} />
+            <Bar
+              dataKey="positiveOsc"
+              fill="#f44336"
+              barSize={3}
+              name="OSC +"
+            />
+            <Bar
+              dataKey="negativeOsc"
+              fill="#4caf50"
+              barSize={3}
+              name="OSC -"
+            />
+            <Line
+              dataKey="dif"
+              stroke="#2196f3"
+              strokeWidth={1.6}
+              dot={false}
+              activeDot={false}
+              name="DIF"
+            />
+            <Line
+              dataKey="macdSignal"
+              stroke="#ff9800"
+              strokeWidth={1.6}
+              dot={false}
+              activeDot={false}
+              name="MACD"
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

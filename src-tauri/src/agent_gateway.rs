@@ -2607,7 +2607,7 @@ fn default_indicator_settings() -> IndicatorSettings {
         cmf: 21.0,
         cmf_ema: 5.0,
         atr_len: 10.0,
-        atr_mult: 3.0,
+        atr_mult: 2.5,
         donchian: 20.0,
         cci: 26.0,
     }
@@ -3363,7 +3363,7 @@ mod tests {
             ("osc", 1.08),
             ("dif", 3.22),
             ("atr", 5.0573070881789315),
-            ("supertrend", 119.02885306937137),
+            ("supertrend", 121.55750661346083),
             ("donchianUb", 136.82577433390813),
             ("donchianLb", 115.0821260870131),
             ("donchianMa", 125.95395021046062),

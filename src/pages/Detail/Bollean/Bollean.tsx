@@ -24,7 +24,6 @@ import {
   Customized,
   Line,
   ReferenceArea,
-  ReferenceLine,
   ResponsiveContainer,
   Scatter,
   Tooltip,
@@ -396,46 +395,6 @@ export default function Bollean({
 
 
 
-  const maDeductionPoints = useMemo(() => {
-    if (chartData.length === 0) return [];
-    const latest = chartData[chartData.length - 1];
-    const points: {
-      t: number | string;
-      price: number;
-      label: string;
-      color: string;
-      period: number;
-    }[] = [];
-
-    const maConfigs = [
-      { key: "deduction5", color: "#2196f3", period: settings.ma5 },
-      { key: "deduction10", color: "#ffeb3b", period: settings.ma10 },
-      { key: "deduction20", color: "#ff9800", period: settings.ma20 },
-      { key: "deduction60", color: "#f44336", period: settings.ma60 },
-      { key: "deduction120", color: "#4caf50", period: settings.ma120 },
-      { key: "deduction240", color: "#cc00ff", period: settings.ma240 },
-    ];
-
-    maConfigs.forEach((config) => {
-      const t = (latest as any)[config.key];
-      if (t) {
-        const fullData = calculateIndicators(deals, settings);
-        const target = fullData.find((d) => d.t === t);
-        if (target) {
-          points.push({
-            t,
-            price: target.c,
-            label: `MA${config.period}扣抵`,
-            color: config.color,
-            period: config.period,
-          });
-        }
-      }
-    });
-
-    return points;
-  }, [chartData, deals, settings]);
-
   if (chartData.length === 0) {
     return (
       <Box
@@ -717,47 +676,6 @@ export default function Bollean({
               legendType="none"
             />
 
-            {/* Deduction Markers */}
-            {maDeductionPoints.map((p) => (
-              <ReferenceLine
-                key={`${p.label}-${p.t}`}
-                x={p.t}
-                stroke={p.color}
-                strokeDasharray="3 3"
-                opacity={0.4}
-                isFront={false}
-                label={(props: any) => {
-                  const { viewBox } = props;
-                  if (!viewBox) return <g />;
-                  const { x } = viewBox;
-                  return (
-                    <g>
-                      <rect
-                        x={x - 15}
-                        y={5}
-                        width={30}
-                        height={18}
-                        fill="#1a1a1a"
-                        rx={4}
-                        stroke={p.color}
-                        strokeWidth={1}
-                        opacity={0.8}
-                      />
-                      <text
-                        x={x}
-                        y={18}
-                        textAnchor="middle"
-                        fill={p.color}
-                        fontSize={10}
-                        fontWeight="bold"
-                      >
-                        {p.period}
-                      </text>
-                    </g>
-                  );
-                }}
-              />
-            ))}
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

@@ -104,10 +104,10 @@ export default function Ichimoku({ perd }: { perd: UrlTaPerdOptions }) {
 
   const timeframeLabel = useMemo(() => {
     switch (perd) {
-      case UrlTaPerdOptions.Day: return "未來一月";
-      case UrlTaPerdOptions.Hour: return "下週趨勢";
-      case UrlTaPerdOptions.Week: return "未來半年";
-      default: return "未來26期";
+      case UrlTaPerdOptions.Day: return "26 個交易日後";
+      case UrlTaPerdOptions.Hour: return "26 根小時 K 後";
+      case UrlTaPerdOptions.Week: return "26 週後";
+      default: return "26 期後";
     }
   }, [perd]);
 

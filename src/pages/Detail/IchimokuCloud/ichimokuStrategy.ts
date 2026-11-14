@@ -1,4 +1,8 @@
 import { StepCheck } from "../../../types";
+import {
+  classifyCloudThickness,
+  summarizeProjectedCloud,
+} from "./projectedCloud";
 
 // Types derived from what we expect in the data hook
 export interface IchimokuCombinedData {
@@ -17,6 +21,7 @@ export interface IchimokuCombinedData {
   cmf: number | null; // CMF
   cmfPrev: number | null;
   cmfEma5: number | null; // CMF EMA5
+  atr14: number | null;
 }
 
 export interface SignalResult {
@@ -52,92 +57,56 @@ export const analyzeIchimokuAtPoint = (
     dateStr.length === 8
       ? `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`
       : dateStr;
-  const price = current.c || 0;
-  if (price === 0) {
-    // If it's a future bar with no price, find the last real price for current context
-    let lastRealIdx = index;
+  let contextIndex = index;
+  if (current.c === null || current.c === 0) {
+    contextIndex = index;
     while (
-      lastRealIdx >= 0 &&
-      (data[lastRealIdx].c === null || data[lastRealIdx].c === 0)
+      contextIndex >= 0 &&
+      (data[contextIndex].c === null || data[contextIndex].c === 0)
     ) {
-      lastRealIdx--;
+      contextIndex--;
     }
-    // If we're analyzing a future bar, we might want to return a special state or analyze based on the last known price vs future cloud
-    // For now, let's just use the last real index if current is empty
-    if (lastRealIdx === -1)
+    if (contextIndex === -1)
       return { steps: [], score: 0, recommendation: "No Price Data" };
-    // But we want to analyze the cloud AT the requested index
   }
 
-  // 1. Current State
-  const cloudTop =
-    current.senkouA !== null && current.senkouB !== null
-      ? Math.max(current.senkouA, current.senkouB)
-      : 0;
-  const isAboveCloud = price > cloudTop;
-  const cloudThickness = Math.abs(
-    (current.senkouA || 0) - (current.senkouB || 0),
-  );
-  const isThickCloud = cloudThickness > price * 0.005;
+  const marketContext = data[contextIndex];
+  const price = marketContext.c as number;
+  const hasCurrentCloud =
+    current.senkouA !== null && current.senkouB !== null;
+  const cloudTop = hasCurrentCloud
+    ? Math.max(current.senkouA as number, current.senkouB as number)
+    : null;
+  const isAboveCloud = cloudTop !== null && price > cloudTop;
+  const cloudThickness = hasCurrentCloud
+    ? Math.abs((current.senkouA as number) - (current.senkouB as number))
+    : 0;
+  const atr14 = marketContext.atr14 || 0;
+  const cloudAtrRatio = atr14 > 0 ? cloudThickness / atr14 : null;
+  const cloudAtrText =
+    cloudAtrRatio === null ? "ATR 資料不足" : `${cloudAtrRatio.toFixed(2)} 倍 ATR`;
+  const currentThickness = hasCurrentCloud
+    ? classifyCloudThickness(cloudThickness, atr14)
+    : null;
 
-  const cmf = current.cmf || 0;
-  const cmfEma5 = current.cmfEma5 || 0;
-  const prevCmfEma5 = index > 0 ? data[index - 1].cmfEma5 || 0 : 0;
+  const cmf = marketContext.cmf || 0;
+  const cmfEma5 = marketContext.cmfEma5 || 0;
+  const prevCmfEma5 =
+    contextIndex > 0 ? data[contextIndex - 1].cmfEma5 || 0 : 0;
   const isCmfSlopeUp = cmfEma5 > prevCmfEma5;
 
   const isTkGold =
-    current.tenkan !== null &&
-    current.kijun !== null &&
-    current.tenkan > current.kijun;
+    marketContext.tenkan !== null &&
+    marketContext.kijun !== null &&
+    marketContext.tenkan > marketContext.kijun;
 
   // 2. Future State (Next 26 Bars relative to index)
   const futureData = data.slice(index + 1, index + 27);
-  let futureBullCount = 0;
-  let hasTwist = false;
-  let twistIdx = -1;
-  let maxFutureThickness = 0;
-  let firstFutureThickness = 0;
-  let lastFutureThickness = 0;
-
-  let isSpanBFlat = false;
-  let flatCount = 0;
-
-  if (futureData.length > 0) {
-    futureData.forEach((d, idx) => {
-      if (d.senkouA !== null && d.senkouB !== null) {
-        const isBull = d.senkouA > d.senkouB;
-        if (isBull) futureBullCount++;
-
-        const thickness = Math.abs(d.senkouA - d.senkouB);
-        if (idx === 0) firstFutureThickness = thickness;
-        if (idx === futureData.length - 1) lastFutureThickness = thickness;
-        if (thickness > maxFutureThickness) maxFutureThickness = thickness;
-
-        // Twist detection
-        if (idx > 0) {
-          const prev = futureData[idx - 1];
-          if (prev.senkouA !== null && prev.senkouB !== null) {
-            const prevBull = prev.senkouA > prev.senkouB;
-            if (isBull !== prevBull) {
-              hasTwist = true;
-              twistIdx = idx;
-            }
-            // Flat B detection
-            if (d.senkouB === prev.senkouB) {
-              flatCount++;
-            } else {
-              flatCount = 0;
-            }
-            if (flatCount >= 5) isSpanBFlat = true;
-          }
-        }
-      }
-    });
-  }
-
-  const isFutureBullish = futureBullCount > futureData.length / 2;
-  const isCloudExpanding = lastFutureThickness > firstFutureThickness * 1.1;
-  const isCloudContracting = lastFutureThickness < firstFutureThickness * 0.9;
+  const projectedCloud = summarizeProjectedCloud(futureData, atr14);
+  const isCloudExpanding =
+    projectedCloud?.thicknessTrend === "expanding";
+  const isCloudContracting =
+    projectedCloud?.thicknessTrend === "contracting";
 
   // Matrix Logic Refinement
   let rec = "觀望 (Wait)";
@@ -148,12 +117,6 @@ export const analyzeIchimokuAtPoint = (
   if (isTkGold) score += 20;
   if (cmf > 0.1) score += 20;
   if (isCmfSlopeUp) score += 10;
-
-  // Future Bias Weight (Max 20)
-  if (isFutureBullish) score += 10;
-  if (isCloudExpanding && isFutureBullish) score += 10;
-  if (hasTwist && isFutureBullish) score -= 5;
-  if (hasTwist && !isFutureBullish) score += 5;
 
   score = Math.max(0, Math.min(100, score));
 
@@ -177,8 +140,15 @@ export const analyzeIchimokuAtPoint = (
           status: isTkGold ? "pass" : "fail",
         },
         {
-          label: isThickCloud ? "厚雲支撐 (結構穩固)" : "薄雲預警 (易於突破)",
-          status: isThickCloud ? "pass" : "manual",
+          label:
+            currentThickness === "thick"
+              ? `雲層較厚（${cloudAtrText}），價格通常較難一次穿越`
+              : currentThickness === "thin"
+                ? `雲層很薄（${cloudAtrText}），較容易被價格穿越`
+                : currentThickness === "normal"
+                  ? `雲層厚度一般（${cloudAtrText}）`
+                  : "目前沒有可判讀的雲層",
+          status: currentThickness === "thick" ? "pass" : "manual",
         },
       ],
     },
@@ -201,38 +171,24 @@ export const analyzeIchimokuAtPoint = (
       ],
     },
     {
-      label: "III. 未來 26 期展望",
-      description: "投影雲：分析未來 26 期趨勢格局",
+      label: "III. 26 期後雲層參考",
+      description: "把目前算出的雲層向右移 26 期；這不是價格預測",
       checks: [
         {
-          label: isFutureBullish
-            ? "投影：陽雲 (多頭格局)"
-            : "投影：陰雲 (空頭格局)",
-          status: isFutureBullish ? "pass" : "fail",
-        },
-        {
-          label: hasTwist
-            ? `預警：第 ${twistIdx + 1} 期發生變盤 (Kumo Twist)`
-            : "趨勢：格局穩定，無翻轉預兆",
-          status: hasTwist ? "manual" : "pass",
+          label: "只觀察雲層區間與厚度，不以 A／B 排列判斷多空",
+          status: "manual",
         },
         {
           label: isCloudExpanding
-            ? "動能：開口擴張 (趨勢強化)"
+            ? "厚度：雲層逐漸變厚，通常較難一次穿越"
             : isCloudContracting
-              ? "動能：縮口收斂 (趨勢轉弱)"
-              : "動能：平行延伸 (區間整理)",
+              ? "厚度：雲層逐漸變薄，較容易被價格穿越"
+              : "厚度：變化不大",
           status: isCloudExpanding
             ? "pass"
             : isCloudContracting
               ? "fail"
               : "manual",
-        },
-        {
-          label: isSpanBFlat
-            ? "防線：先行 B 走平 (強防禦區)"
-            : "防線：動態支撐/阻力",
-          status: isSpanBFlat ? "pass" : "manual",
         },
       ],
     },

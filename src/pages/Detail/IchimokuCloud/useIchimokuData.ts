@@ -97,6 +97,7 @@ export const useIchimokuData = (
     let ichimokuState = ichimokuTool.init(deals[0]);
     let macdState = macdTool.init(deals[0]);
     let cmfState = cmfTool.init(deals[0]); // CMF state initialization may need adjustment if it caches params, but usually it stores accumulation.
+    let atr14 = 0;
     // Assuming cmfTool.init doesn't depend on period, only .next does.
     // If it does, we assume defaults or re-initialization if key changes (but this runs in useMemo dependent on settings)
 
@@ -115,6 +116,22 @@ export const useIchimokuData = (
       // CMF
       if (i > 0) cmfState = cmfTool.next(d, cmfState, cmfPeriod, cmfEmaPeriod);
 
+      const previousClose = i > 0 ? Number(deals[i - 1].c) : null;
+      const trueRange =
+        previousClose === null || !Number.isFinite(previousClose)
+          ? Number(d.h) - Number(d.l)
+          : Math.max(
+              Number(d.h) - Number(d.l),
+              Math.abs(Number(d.h) - previousClose),
+              Math.abs(Number(d.l) - previousClose),
+            );
+      atr14 =
+        i === 0
+          ? trueRange
+          : i < 14
+            ? (atr14 * i + trueRange) / (i + 1)
+            : (atr14 * 13 + trueRange) / 14;
+
       enrichedDataTemp.push({
         ...d,
         tenkan: ichimokuState.ichimoku.tenkan,
@@ -125,6 +142,7 @@ export const useIchimokuData = (
         osc: macdState.osc,
         cmf: cmfState.cmf,
         cmfEma5: cmfState.ema,
+        atr14: Number.isFinite(atr14) && atr14 > 0 ? atr14 : null,
       });
     });
     const enrichedData = enrichedDataTemp;
@@ -214,6 +232,7 @@ export const useIchimokuData = (
           cmf: null,
           cmfPrev: null,
           cmfEma5: null,
+          atr14: lastData.atr14,
         });
       }
     }

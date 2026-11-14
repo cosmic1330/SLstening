@@ -171,7 +171,7 @@ export const CHART_CONFIG: ChartDefinition[] = [
     horizon: "mediumLong",
     docContent: ichimokuDoc,
     timezoneAdvice:
-      "一目均衡表在日線 (D1) 與週線 (W1) 最有效。如果在 15 分鐘 or 1 小時圖使用，CMF 的噪音會淹沒所有訊號。",
+      "一目均衡表在日線與週線通常較穩定；小時線的交叉與 TK 距離變化較頻繁，應搭配雲層位置及 CMF 方向確認。",
     component: (props) => <IchimokuCloud perd={props.perd} />,
   },
   {

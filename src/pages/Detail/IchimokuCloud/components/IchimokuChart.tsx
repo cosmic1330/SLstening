@@ -19,6 +19,10 @@ import {
 import BaseCandlestickRectangle from "../../../../components/RechartCustoms/BaseCandlestickRectangle";
 import ChartTooltip from "../../Tooltip/ChartTooltip";
 import { IchimokuCombinedData, SignalResult } from "../ichimokuStrategy";
+import {
+  classifyCloudThickness,
+  summarizeProjectedCloud,
+} from "../projectedCloud";
 
 interface IchimokuChartProps {
   data: IchimokuCombinedData[];
@@ -36,27 +40,18 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
       [signals],
     );
 
-    // Calculate baseline avgPrice once for thickness comparison
-    const avgPrice = useMemo(() => {
-      let sum = 0;
-      let count = 0;
-      data.forEach((d) => {
-        if (d.c) {
-          sum += d.c;
-          count++;
-        }
-      });
-      return sum / (count || 1);
+    const lastRealAtr = useMemo(() => {
+      for (let i = data.length - 1; i >= 0; i--) {
+        if (data[i].c !== null && data[i].atr14 !== null)
+          return data[i].atr14 as number;
+      }
+      return 0;
     }, [data]);
 
     // Merge signals and calculate per-bar future analysis
     const mergedData = useMemo(() => {
-      return data.map((d) => {
+      return data.map((d, index) => {
         const sig = signalMap.get(String(d.t));
-        const isBull =
-          d.senkouA !== null && d.senkouB !== null && d.senkouA > d.senkouB;
-        const isBear =
-          d.senkouA !== null && d.senkouB !== null && d.senkouB > d.senkouA;
 
         // Future Analysis & Current Status
         const isFuture = d.c === null;
@@ -64,42 +59,88 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
         let futureReason = "";
         let currentStatus = "";
         let thicknessStatus = "";
+        let cloudAtrRatio: number | null = null;
+        let cloudThicknessTrend = "stable";
+        const tkDistanceAtr =
+          d.tenkan !== null &&
+          d.kijun !== null &&
+          d.atr14 !== null &&
+          d.atr14 > 0
+            ? (d.tenkan - d.kijun) / d.atr14
+            : null;
+        const previous = index > 0 ? data[index - 1] : null;
+        const previousTkDistanceAtr =
+          previous?.tenkan !== null &&
+          previous?.tenkan !== undefined &&
+          previous.kijun !== null &&
+          previous.kijun !== undefined &&
+          previous.atr14 !== null &&
+          previous.atr14 !== undefined &&
+          previous.atr14 > 0
+            ? (previous.tenkan - previous.kijun) / previous.atr14
+            : null;
+        const tkDistanceTrend =
+          tkDistanceAtr === null || previousTkDistanceAtr === null
+            ? "stable"
+            : Math.abs(tkDistanceAtr) >
+                Math.abs(previousTkDistanceAtr) + 0.05
+              ? "expanding"
+              : Math.abs(tkDistanceAtr) <
+                    Math.abs(previousTkDistanceAtr) - 0.05
+                ? "contracting"
+                : "stable";
 
         if (d.senkouA !== null && d.senkouB !== null) {
           const thickness = Math.abs(d.senkouA - d.senkouB);
-          const ratio = thickness / (avgPrice || 1);
+          const atr14 = d.atr14 ?? lastRealAtr;
+          cloudAtrRatio = atr14 > 0 ? thickness / atr14 : null;
+          const atrText =
+            cloudAtrRatio === null
+              ? "ATR 資料不足"
+              : `${cloudAtrRatio.toFixed(2)} 倍 ATR`;
+          const thicknessLevel = classifyCloudThickness(
+            thickness,
+            atr14,
+          );
+          const previousThickness =
+            previous?.senkouA !== null &&
+            previous?.senkouA !== undefined &&
+            previous.senkouB !== null &&
+            previous.senkouB !== undefined
+              ? Math.abs(previous.senkouA - previous.senkouB)
+              : null;
+          cloudThicknessTrend =
+            previousThickness === null || previousThickness === 0
+              ? "stable"
+              : thickness > previousThickness * 1.1
+                ? "expanding"
+                : thickness < previousThickness * 0.9
+                  ? "contracting"
+                  : "stable";
           const cloudTop = Math.max(d.senkouA, d.senkouB);
           const cloudBottom = Math.min(d.senkouA, d.senkouB);
 
           thicknessStatus =
-            ratio > 0.03 ? "厚雲位 (強支撐/阻力)" : "薄雲位 (易突破)";
+            thicknessLevel === "thick"
+              ? `雲層較厚（${atrText}），價格通常較難一次穿越`
+              : thicknessLevel === "thin"
+                ? `雲層很薄（${atrText}），較容易被價格穿越`
+                : `雲層厚度一般（${atrText}），請搭配價格與成交量判斷`;
 
           if (isFuture) {
-            futureTrend = isBull
-              ? "未來趨勢：多頭趨勢 (陽雲)"
-              : "未來趨勢：空頭趨勢 (陰雲)";
-            if (ratio > 0.03) {
-              futureReason = isBull
-                ? "先行雲厚實：未來強大支撐"
-                : "先行雲厚實：未來強大阻力";
-            } else if (ratio > 0.01) {
-              futureReason = "預計未來波動性增加";
+            futureTrend = "26 期後雲層區間";
+            if (thicknessLevel === "thick") {
+              futureReason = `雲層較厚（${atrText}），這個區間通常較難一次穿越`;
+            } else if (thicknessLevel === "thin") {
+              futureReason = `雲層很薄（${atrText}），較容易被價格穿越`;
             } else {
-              const isTwistNext = ratio < 0.002;
-              futureReason = isTwistNext
-                ? "預計未來發生 Kumo Twist 趨勢轉向"
-                : "先行雲薄弱：預計未來支撐下降";
+              futureReason = `雲層厚度一般（${atrText}），請搭配價格位置判斷`;
             }
           } else if (d.c !== null) {
-            // Historical Logic
             if (d.c > cloudTop) {
-              currentStatus = isBear
-                ? "突破陰雲：看多 (空轉多訊號)"
-                : "位於陽雲上方：偏多強勢";
+              currentStatus = "價格位於雲層上方：整體結構偏多";
             } else if (d.c < cloudBottom) {
-              currentStatus = isBull
-                ? "跌破陽雲：看空 (多轉空訊號)"
-                : "位於陰雲下方：偏空弱勢";
+              currentStatus = "價格位於雲層下方：整體結構偏空";
             } else {
               currentStatus = "位於雲層內：行情整理中";
             }
@@ -123,10 +164,20 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
           ...d,
           signalReason: sig ? sig.reason : undefined,
           signalType: sig ? sig.type : undefined,
-          bullCloud:
-            isBull || d.senkouA === d.senkouB ? [d.senkouB, d.senkouA] : null,
-          bearCloud:
-            isBear || d.senkouA === d.senkouB ? [d.senkouA, d.senkouB] : null,
+          historicalCloudRange:
+            !isFuture && d.senkouA !== null && d.senkouB !== null
+              ? [
+                  Math.min(d.senkouA, d.senkouB),
+                  Math.max(d.senkouA, d.senkouB),
+                ]
+              : null,
+          futureCloudRange:
+            isFuture && d.senkouA !== null && d.senkouB !== null
+              ? [
+                  Math.min(d.senkouA, d.senkouB),
+                  Math.max(d.senkouA, d.senkouB),
+                ]
+              : null,
           cmfBull,
           cmfBear,
           isFuture,
@@ -134,9 +185,13 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
           futureReason,
           currentStatus,
           thicknessStatus,
+          cloudAtrRatio,
+          cloudThicknessTrend,
+          tkDistanceAtr,
+          tkDistanceTrend,
         };
       });
-    }, [data, signalMap, avgPrice]);
+    }, [data, signalMap, lastRealAtr]);
 
     // Find the transition point to future cloud
     const todayBarT = useMemo(() => {
@@ -154,69 +209,26 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
       const futureData = mergedData.slice(todayIdx + 1);
       if (futureData.length === 0) return null;
 
-      let hasTwist = false;
-      let twistIdx = -1;
-      let maxThickness = 0;
-      let firstThickness = 0;
-      let lastThickness = 0;
-
-      for (let i = 0; i < futureData.length; i++) {
-        const d = futureData[i];
-        if (d.senkouA === null || d.senkouB === null) continue;
-
-        const currentBull = d.senkouA > d.senkouB;
-        const thickness = Math.abs(d.senkouA - d.senkouB);
-
-        if (i === 0) firstThickness = thickness;
-        if (i === futureData.length - 1) lastThickness = thickness;
-        if (thickness > maxThickness) maxThickness = thickness;
-
-        // 檢查翻轉 (Kumo Twist)
-        if (i > 0) {
-          const prev = futureData[i - 1];
-          if (prev.senkouA !== null && prev.senkouB !== null) {
-            const prevBull = prev.senkouA > prev.senkouB;
-            if (currentBull !== prevBull) {
-              hasTwist = true;
-              twistIdx = i;
-            }
-          }
-        }
-      }
-
       const lastBar = futureData[futureData.length - 1];
       if (!lastBar || lastBar.senkouA === null || lastBar.senkouB === null)
         return null;
 
-      const isLastBull = lastBar.senkouA > lastBar.senkouB;
-      const isExpanding = lastThickness > firstThickness * 1.1;
+      const summary = summarizeProjectedCloud(futureData, lastRealAtr);
+      if (!summary) return null;
 
-      // 計算預期壓力/支撐點位 (取最後一期的邊界)
       const cloudTop = Math.max(lastBar.senkouA, lastBar.senkouB);
       const cloudBottom = Math.min(lastBar.senkouA, lastBar.senkouB);
-      const targetPrice = isLastBull ? cloudBottom : cloudTop;
-      const priceLabel = isLastBull ? "支撐位" : "壓力位";
+      let structureStr =
+        `雲層區間: ${cloudBottom.toFixed(2)}–${cloudTop.toFixed(2)}`;
 
-      // 專業術語判定 (精簡版)
-      let trendStatus = isLastBull ? "多方主導 (支撐)" : "空方主導 (壓力)";
-      let structureStr = `${priceLabel}: ${targetPrice.toFixed(2)}`;
-
-      if (isExpanding) structureStr += " | 力道強化";
-      else if (lastThickness < firstThickness * 0.9)
-        structureStr += " | 趨勢轉弱";
-      else structureStr += " | 走勢穩";
-
-      if (hasTwist && twistIdx !== -1) {
-        structureStr = `★ 第 ${twistIdx} 期預期轉向 | ${structureStr}`;
-      } else if (hasTwist) {
-        structureStr = `★ 預期轉向 | ${structureStr}`;
-      }
+      if (summary.thicknessTrend === "expanding")
+        structureStr += " | 雲層變厚";
+      else if (summary.thicknessTrend === "contracting")
+        structureStr += " | 雲層變薄";
+      else structureStr += " | 厚度穩定";
 
       return {
-        isBull: isLastBull,
-        trendSymbol: trendStatus,
         structureSymbol: structureStr,
-        targetPrice,
         lastBarT: lastBar.t,
         midBarT: futureData[Math.floor(futureData.length / 2)]?.t || lastBar.t,
         midBarY:
@@ -226,7 +238,7 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
         futureStart: futureData[0].t,
         futureEnd: lastBar.t,
       };
-    }, [mergedData, todayBarT, avgPrice, timeframeLabel]);
+    }, [mergedData, todayBarT, lastRealAtr]);
 
     // Calculate max absolute value for CMF y-axis to center 0
     const cmfDomain = useMemo(() => {
@@ -259,7 +271,8 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
         }}
       >
         {/* 1. Main Chart: Price + Ichimoku (75%) */}
-        <ResponsiveContainer width="100%" height="75%">
+        <Box sx={{ position: "relative", width: "100%", height: "75%", minHeight: 0 }}>
+        <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={mergedData}
             margin={{ top: 5, right: 0, left: 0, bottom: 5 }}
@@ -323,53 +336,47 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             {/* Ichimoku Lines */}
             <Line
               dataKey="tenkan"
-              stroke="#0496ff"
+              stroke="#4FC3F7"
               strokeWidth={1}
+              opacity={0.85}
               dot={false}
               name="轉換線"
             />
             <Line
               dataKey="kijun"
-              stroke="#991515"
-              strokeWidth={1}
+              stroke="#FFD166"
+              strokeWidth={1.8}
+              opacity={0.95}
               dot={false}
               name="基準線"
             />
-            <Line
-              dataKey="chikou"
-              stroke="#f0942cff"
-              strokeWidth={2}
+            {/* Historical cloud: neutral but clearly visible behind price. */}
+            <Area
+              dataKey="historicalCloudRange"
+              fill="#90A4AE"
+              fillOpacity={0.22}
+              stroke="#CFD8DC"
+              strokeOpacity={0.65}
+              strokeWidth={0.8}
               dot={false}
-              name="遲行線"
-              strokeDasharray="3 3"
-              opacity={0.6}
+              activeDot={false}
               connectNulls={false}
+              name="目前／歷史雲層"
             />
 
-            {/* Cloud (Senkou A/B) - Using standard Area with fills */}
+            {/* Future cloud: lighter and dashed to distinguish projection. */}
             <Area
-              dataKey="bullCloud"
-              fill="#ff4d4f"
-              fillOpacity={0.2}
-              stroke="#ff4d4f"
-              strokeWidth={0.5}
-              strokeDasharray="2 2"
+              dataKey="futureCloudRange"
+              fill="#90A4AE"
+              fillOpacity={0.12}
+              stroke="#B0BEC5"
+              strokeOpacity={0.45}
+              strokeWidth={0.7}
+              strokeDasharray="3 3"
               dot={false}
               activeDot={false}
               connectNulls={false}
-              name="先行雲(陽)"
-            />
-            <Area
-              dataKey="bearCloud"
-              fill="#52c41a"
-              fillOpacity={0.2}
-              stroke="#52c41a"
-              strokeWidth={0.5}
-              strokeDasharray="2 2"
-              dot={false}
-              activeDot={false}
-              connectNulls={false}
-              name="先行雲(陰)"
+              name="26 期後雲層"
             />
 
             {/* 1. Future Projection Area Highlight */}
@@ -392,24 +399,13 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                 strokeDasharray="3 3"
               >
                 <Label
-                  value={`歷史 | ${timeframeLabel}預測`}
+                  value={`歷史 | ${timeframeLabel}雲層`}
                   position="top"
                   fill={semanticTokens.analysis.focus}
                   fontSize={10}
                   offset={10}
                 />
               </ReferenceLine>
-            )}
-
-            {/* 2.5 Support/Resistance Target Line */}
-            {futureAnalysis && (
-              <ReferenceLine
-                y={futureAnalysis.targetPrice}
-                stroke={futureAnalysis.isBull ? "#4caf50" : "#f44336"}
-                strokeDasharray="3 3"
-                strokeOpacity={0.6}
-                strokeWidth={1}
-              />
             )}
 
             {/* 3. Future Trend Analysis Labels */}
@@ -441,28 +437,15 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                           fontSize={11}
                           fontWeight="bold"
                         >
-                          {`[ ${timeframeLabel}展望 ]`}
+                          {`[ ${timeframeLabel}雲層參考 ]`}
                         </text>
 
-                        {/* 2. 趨勢狀態 */}
-                        <text
-                          x={cx}
-                          y={cy}
-                          dy={-25}
-                          textAnchor="middle"
-                          fill="#fff"
-                          fontSize={13}
-                          fontWeight="bold"
-                        >
-                          {futureAnalysis.trendSymbol}
-                        </text>
-
-                        {/* 3. 結構與力道 (行1) */}
+                        {/* 2. 結構與厚度 (行1) */}
                         {structureParts.length > 1 && (
                           <text
                             x={cx}
                             y={cy}
-                            dy={-5}
+                            dy={-20}
                             textAnchor="middle"
                             fill="#ffeb3b"
                             fontSize={11}
@@ -471,11 +454,11 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                           </text>
                         )}
 
-                        {/* 4. 結構與力道 (行2) */}
+                        {/* 3. 結構與厚度 (行2) */}
                         <text
                           x={cx}
                           y={cy}
-                          dy={structureParts.length > 1 ? 12 : -5}
+                          dy={structureParts.length > 1 ? 0 : -10}
                           textAnchor="middle"
                           fill="#ffeb3b"
                           fontSize={11}
@@ -487,12 +470,12 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
                         <text
                           x={cx}
                           y={cy}
-                          dy={25}
+                          dy={20}
                           textAnchor="middle"
                           fill="rgba(255,255,255,0.4)"
                           fontSize={10}
                         >
-                          {`- ${timeframeLabel}格局預估 -`}
+                          - 由目前資料計算，並非價格預測 -
                         </text>
                       </g>
                     );
@@ -587,6 +570,43 @@ const IchimokuChart = forwardRef<HTMLDivElement, IchimokuChartProps>(
             })}
           </ComposedChart>
         </ResponsiveContainer>
+
+          <Box
+            aria-label="一目雲判讀順序"
+            sx={{
+              position: "absolute",
+              right: 12,
+              bottom: 10,
+              zIndex: 2,
+              pointerEvents: "none",
+              px: 1.25,
+              py: 0.8,
+              borderRadius: 1.5,
+              border: "1px solid rgba(207, 216, 220, 0.28)",
+              backgroundColor: "rgba(15, 23, 32, 0.78)",
+              backdropFilter: "blur(4px)",
+              boxShadow: "0 3px 12px rgba(0, 0, 0, 0.28)",
+              color: "rgba(255, 255, 255, 0.82)",
+              fontSize: 10,
+              lineHeight: 1.55,
+            }}
+          >
+            <Box
+              sx={{
+                mb: 0.25,
+                color: semanticTokens.analysis.focus,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+              }}
+            >
+              判讀順序
+            </Box>
+            <Box>1　價格相對雲層</Box>
+            <Box>2　價格相對基準線</Box>
+            <Box>3　TK 距離變化</Box>
+            <Box>4　雲層厚度</Box>
+          </Box>
+        </Box>
 
         {/* 2. CMF Chart (25%) */}
         <ResponsiveContainer width="100%" height="25%">

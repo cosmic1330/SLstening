@@ -24,9 +24,9 @@ describe("CHART_CONFIG", () => {
       "mr",
       "kd",
       "mfi",
+      "ichimoku_cloud",
       "chip",
       "pe_river",
-      "ichimoku_cloud",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -70,8 +70,19 @@ describe("CHART_CONFIG", () => {
 
   it("has chart-specific English guidance rather than a shared fallback", () => {
     const t = (key: string) => key.split(".").reduce<any>((value, segment) => value?.[segment], en);
-    expect(getChartAdvice(CHART_CONFIG[0], t as any)).toContain("Bollinger");
-    expect(getChartAdvice(CHART_CONFIG[6], t as any)).toContain("Volume Profile");
-    expect(getChartAdvice(CHART_CONFIG[11], t as any)).toContain("Positioning");
+    expect(getChartAdvice(CHART_CONFIG.find((chart) => chart.id === "bollean"), t as any)).toContain("Bollinger");
+    expect(getChartAdvice(CHART_CONFIG.find((chart) => chart.id === "volume_profile"), t as any)).toContain("Volume Profile");
+    expect(getChartAdvice(CHART_CONFIG.find((chart) => chart.id === "chip"), t as any)).toContain("Positioning");
+  });
+
+  it("keeps positioning and valuation charts at the bottom", () => {
+    expect(CHART_CONFIG.slice(-2).map((chart) => chart.id)).toEqual(["chip", "pe_river"]);
+  });
+
+  it("classifies every chart by trading horizon", () => {
+    expect(CHART_CONFIG.every((chart) => ["short", "mediumLong"].includes(chart.horizon))).toBe(true);
+    expect(
+      CHART_CONFIG.filter((chart) => chart.horizon === "short").map((chart) => chart.id),
+    ).toEqual(expect.arrayContaining(["mfi", "mr", "kd", "obv"]));
   });
 });

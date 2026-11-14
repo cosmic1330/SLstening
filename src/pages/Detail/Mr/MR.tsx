@@ -23,6 +23,8 @@ import detectRsiDivergence from "../../../utils/detectRsiDivergence";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 
+const MR_RSI_PERIOD = 10;
+
 interface Signal {
   t: number;
   type: string;
@@ -38,6 +40,7 @@ interface MrChartData extends Partial<{
   v: number | null;
 }> {
   rsi: number | null;
+  rsiCrossColor: string | null;
   osc: number | null;
   bollMa: number | null;
   bollUb: number | null;
@@ -140,18 +143,36 @@ export default function MR({
   }, [deals.length, visibleCount, rightOffset]);
 
   const chartData = useMemo((): MrChartData[] => {
-    const data = calculateIndicators(deals, settings);
+    const data = calculateIndicators(deals, { ...settings, rsi: MR_RSI_PERIOD });
+    const isHourly = perd === UrlTaPerdOptions.Hour;
+    let oversoldStreak = 0;
 
     return data
-      .map((item) => {
+      .map((item, index) => {
         const { rsi: rsiVal, osc } = item;
+        const previousRsi = index > 0 ? data[index - 1].rsi : null;
+        const previousOsc = index > 0 ? data[index - 1].osc : null;
+        const earlierOsc = index > 1 ? data[index - 2].osc : null;
+        const oscDecreasing =
+          earlierOsc !== null && previousOsc !== null && osc !== null &&
+          earlierOsc > previousOsc && previousOsc > osc;
+        let rsiCrossColor: string | null = null;
+        if (perd !== UrlTaPerdOptions.Day && previousRsi !== null && rsiVal !== null) {
+          if (previousRsi > 75 && rsiVal < 75 && (!isHourly || oscDecreasing)) {
+            rsiCrossColor = "#4caf50";
+          } else if (previousRsi < 25 && rsiVal > 25 && (!isHourly || oversoldStreak >= 3)) {
+            rsiCrossColor = "#f44336";
+          }
+        }
+        // Check the preceding oversold run before counting the current candle.
+        oversoldStreak = rsiVal !== null && rsiVal < 25 ? oversoldStreak + 1 : 0;
 
-        // Overbought/Oversold Zones for reference
-        const isOverbought = (rsiVal || 0) >= 70;
-        const isOversold = (rsiVal || 0) <= 30;
+        const isOverbought = rsiVal !== null && rsiVal >= 70;
+        const isOversold = rsiVal !== null && rsiVal <= 30;
 
         return {
           ...item,
+          rsiCrossColor,
           overboughtZone: isOverbought ? rsiVal : null,
           oversoldZone: isOversold ? rsiVal : null,
           positiveOsc: (osc || 0) > 0 ? osc : 0,
@@ -162,7 +183,7 @@ export default function MR({
         -(visibleCount + rightOffset),
         rightOffset === 0 ? undefined : -rightOffset,
       );
-  }, [deals, visibleCount, rightOffset, settings]);
+  }, [deals, visibleCount, rightOffset, settings, perd]);
 
   // Calculate Entry Signals (RSI Divergence + MACD Divergence + Weekly Oversold)
   const signals = useMemo(() => {
@@ -623,8 +644,21 @@ export default function MR({
               stroke="#2196f3"
               dot={false}
               strokeWidth={2}
-              name={`RSI (${settings.rsi})`}
+              name={`RSI (${MR_RSI_PERIOD})`}
             />
+            {chartData.map((point) =>
+              point.rsiCrossColor && point.t !== undefined && point.rsi !== null ? (
+                <ReferenceDot
+                  key={point.t}
+                  x={point.t}
+                  y={point.rsi}
+                  yAxisId="left"
+                  r={4}
+                  fill={point.rsiCrossColor}
+                  stroke="none"
+                />
+              ) : null,
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </Box>

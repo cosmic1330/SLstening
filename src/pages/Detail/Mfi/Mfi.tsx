@@ -356,21 +356,21 @@ export default function Mfi({
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="t" hide />
 
-            {/* Left Axis: MACD Osc */}
+            {/* Left Axis: MFI */}
             <YAxis
               yAxisId="left"
               orientation="left"
-              stroke="#666"
+              domain={[0, 100]}
+              ticks={[0, 20, 50, 80, 100]}
+              stroke="#2196f3"
               fontSize={10}
             />
 
-            {/* Right Axis: MFI */}
+            {/* Right Axis: MACD Osc */}
             <YAxis
               yAxisId="right"
               orientation="right"
-              domain={[0, 100]}
-              ticks={[20, 50, 80]}
-              stroke="#2196f3"
+              stroke="#666"
               fontSize={10}
               width={0}
             />
@@ -379,7 +379,7 @@ export default function Mfi({
 
             <ReferenceLine
               y={80}
-              yAxisId="right"
+              yAxisId="left"
               stroke="#f44336"
               strokeDasharray="3 3"
               label={{
@@ -391,7 +391,7 @@ export default function Mfi({
             />
             <ReferenceLine
               y={20}
-              yAxisId="right"
+              yAxisId="left"
               stroke="#4caf50"
               strokeDasharray="3 3"
               label={{
@@ -403,16 +403,16 @@ export default function Mfi({
             />
             <ReferenceLine
               y={50}
-              yAxisId="right"
+              yAxisId="left"
               stroke="#666"
               strokeDasharray="3 3"
             />
-            <ReferenceLine y={0} yAxisId="left" stroke="#666" opacity={0.5} />
+            <ReferenceLine y={0} yAxisId="right" stroke="#666" opacity={0.5} />
 
-            {/* MACD Bars (Left Axis) */}
+            {/* MACD Bars (Right Axis) */}
             <Bar
               dataKey="macdOsc"
-              yAxisId="left"
+              yAxisId="right"
               name="Osc"
               fill="#ffeb3b"
               barSize={3}
@@ -426,10 +426,10 @@ export default function Mfi({
               ))}
             </Bar>
 
-            {/* MFI Line (Right Axis) */}
+            {/* MFI Line (Left Axis) */}
             <Line
               dataKey="mfi"
-              yAxisId="right"
+              yAxisId="left"
               stroke="#2196f3"
               dot={false}
               activeDot={false}

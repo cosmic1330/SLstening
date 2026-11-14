@@ -91,7 +91,7 @@ const GlassBar: React.FC<GlassBarProps> = ({
           </IconButton>
         </Tooltip>
 
-        <ChartMenu current={current} goToSlide={goToSlide} />
+        <ChartMenu current={current} goToSlide={goToSlide} perd={perd} />
 
         <Tooltip title={t("Pages.Detail.GlassBar.next")}>
           <IconButton

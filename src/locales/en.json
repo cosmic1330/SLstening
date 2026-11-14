@@ -571,6 +571,7 @@
         "hourShort": "H",
         "dayShort": "D",
         "weekShort": "W",
+        "recommended": "Recommended",
         "help": "View current chart guide",
         "details": "Chart details; click for full guide",
         "settings": "Adjust chart parameters"

@@ -571,6 +571,7 @@
         "hourShort": "時",
         "dayShort": "日",
         "weekShort": "週",
+        "recommended": "推薦",
         "help": "查看目前圖表說明",
         "details": "圖表資訊；點擊查看完整說明",
         "settings": "調整圖表參數"

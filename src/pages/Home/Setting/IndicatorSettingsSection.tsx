@@ -111,6 +111,8 @@ export default function IndicatorSettingsSection() {
     "cmf",
     "cmfEma",
     "cci",
+    "atrMultHourly",
+    "atrMult",
   ] as const;
 
   return (
@@ -162,11 +164,12 @@ export default function IndicatorSettingsSection() {
               id={`indicator-${item}`}
               type="number"
               value={settings[item]}
-              onChange={(event) => updateSetting(item, parseInt(event.target.value, 10) || 0)}
+              step={item === "atrMultHourly" || item === "atrMult" ? 0.1 : 1}
+              onChange={(event) => updateSetting(item, parseFloat(event.target.value) || 0)}
               onWheel={(event) => (event.target as HTMLInputElement).blur()}
               aria-label={t(`settings.indicator.${item}`)}
               aria-describedby="indicator-settings-help"
-              inputMode="numeric"
+              inputMode={item === "atrMultHourly" || item === "atrMult" ? "decimal" : "numeric"}
             />
           </SettingGridItem>
         ))}

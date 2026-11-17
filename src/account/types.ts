@@ -16,6 +16,7 @@ export interface IndicatorSettings {
   cmf: number;
   cmfEma: number;
   atrLen: number;
+  atrMultHourly: number;
   atrMult: number;
   donchian: number;
   cci: number;

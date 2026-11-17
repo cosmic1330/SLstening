@@ -833,8 +833,11 @@ fn execute_tool(
             .map_err(internal_error)?;
             match get_history(context, symbol, period, deadline) {
                 Ok(history_result) => {
-                    let indicators =
-                        calculate_indicators(&history_result.data, &data.indicator_settings);
+                    let indicators = calculate_indicators_for_period(
+                        &history_result.data,
+                        &data.indicator_settings,
+                        period,
+                    );
                     Ok((
                         vec![],
                         envelope(
@@ -1844,7 +1847,7 @@ fn analysis_item(
     };
     let indicators = history_result
         .as_ref()
-        .map(|value| calculate_indicators(&value.data, settings));
+        .map(|value| calculate_indicators_for_period(&value.data, settings, period));
     let history = history_result.as_ref().map(|value| {
         let bars = trim_history(value.data.clone(), 120);
         let observed_at = bars.last().map(|bar| bar.t);
@@ -2016,6 +2019,19 @@ fn trim_history(mut history: Vec<HistoryPoint>, bars: usize) -> Vec<HistoryPoint
         history.drain(0..history.len() - bars);
     }
     history
+}
+
+fn calculate_indicators_for_period(
+    history: &[HistoryPoint],
+    settings: &IndicatorSettings,
+    period: &str,
+) -> Value {
+    if period != "60m" {
+        return calculate_indicators(history, settings);
+    }
+    let mut hourly_settings = settings.clone();
+    hourly_settings.atr_mult = settings.atr_mult_hourly;
+    calculate_indicators(history, &hourly_settings)
 }
 
 fn calculate_indicators(history: &[HistoryPoint], settings: &IndicatorSettings) -> Value {
@@ -2607,6 +2623,7 @@ fn default_indicator_settings() -> IndicatorSettings {
         cmf: 21.0,
         cmf_ema: 5.0,
         atr_len: 10.0,
+        atr_mult_hourly: 1.4,
         atr_mult: 2.5,
         donchian: 20.0,
         cci: 26.0,
@@ -2925,6 +2942,7 @@ mod tests {
             cmf: 21.0,
             cmf_ema: 5.0,
             atr_len: 10.0,
+            atr_mult_hourly: 2.5,
             atr_mult: 3.0,
             donchian: 20.0,
             cci: 26.0,
@@ -2949,6 +2967,11 @@ mod tests {
         }
         assert_eq!(result["bars"], 80);
         assert!(result["ma5"].as_f64().is_some());
+
+        let hourly = calculate_indicators_for_period(&history, &settings, "60m");
+        let daily = calculate_indicators_for_period(&history, &settings, "d");
+        assert_ne!(hourly["supertrend"], daily["supertrend"]);
+        assert_eq!(daily["supertrend"], result["supertrend"]);
     }
 
     #[test]

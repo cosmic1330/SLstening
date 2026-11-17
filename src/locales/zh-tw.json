@@ -311,9 +311,9 @@
     "developerHint": "顯示內部除錯資訊（可使用 Ctrl + Shift + D 切換）",
     "indicators": "技術指標設定",
     "indicatorSectionHint": "調整回看期數，維持主畫面清爽易讀。",
-    "indicatorControls": "回看期數",
+    "indicatorControls": "技術指標參數",
     "resetIndicators": "回復初始值",
-    "indicatorHelp": "設定各技術指標使用的回看期數。",
+    "indicatorHelp": "設定各技術指標使用的回看期數與倍數。",
     "marketInfoSectionHint": "開啟常看的市場；關閉後只會隱藏卡片，不會刪除資料。",
     "marketVisibleCount": "已顯示 {{visible}} / {{total}}",
     "showAllMarkets": "全部顯示",
@@ -346,7 +346,9 @@
       "mfi": "MFI（14）",
       "cmf": "CMF（21）",
       "cmfEma": "CMF EMA（5）",
-      "cci": "CCI（26）"
+      "cci": "CCI（26）",
+      "atrMultHourly": "ATR 倍數（小時線）",
+      "atrMult": "ATR 倍數（日／週線）"
     },
     "marketLabels": {
       "cnn": "CNN 恐懼貪婪",

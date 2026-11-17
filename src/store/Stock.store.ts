@@ -440,8 +440,8 @@ export const __validateSnapshotForLocal = (snapshot: AccountSnapshot) => {
   if (snapshot.pinnedCategoryIds.length > 5 || snapshot.recentCategoryIds.length > 3) throw new Error("CATEGORY_LIMIT_EXCEEDED");
   if (snapshot.pinnedCategoryIds.some((id) => snapshot.recentCategoryIds.includes(id))) throw new Error("CATEGORY_REFERENCE_OVERLAP");
   const settings = snapshot.indicatorSettings;
-  const indicatorValues = [settings.ma5, settings.ma10, settings.ma20, settings.ma60, settings.boll, settings.kd, settings.mfi, settings.rsi, settings.ma120, settings.ma240, settings.emaShort, settings.emaLong, settings.cmf, settings.cmfEma, settings.atrLen, settings.atrMult, settings.donchian, settings.cci];
-  if (indicatorValues.some((value) => !Number.isFinite(value) || value <= 0 || value > 1000) || settings.atrMult > 20) throw new Error("INVALID_INDICATOR_SETTINGS");
+  const indicatorValues = [settings.ma5, settings.ma10, settings.ma20, settings.ma60, settings.boll, settings.kd, settings.mfi, settings.rsi, settings.ma120, settings.ma240, settings.emaShort, settings.emaLong, settings.cmf, settings.cmfEma, settings.atrLen, settings.atrMultHourly, settings.atrMult, settings.donchian, settings.cci];
+  if (indicatorValues.some((value) => !Number.isFinite(value) || value <= 0 || value > 1000) || settings.atrMultHourly > 20 || settings.atrMult > 20) throw new Error("INVALID_INDICATOR_SETTINGS");
 };
 
 const pruneUnreferencedStocks = (snapshot: AccountSnapshot) => {

@@ -19,6 +19,7 @@ const mockSettings: IndicatorSettings = {
   cmf: 21,
   cmfEma: 5,
   atrLen: 14,
+  atrMultHourly: 2.5,
   atrMult: 2.5,
   donchian: 20,
   cci: 26

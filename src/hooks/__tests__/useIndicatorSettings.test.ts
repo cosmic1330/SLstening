@@ -35,7 +35,7 @@ describe("useIndicatorSettings", () => {
     const { result } = renderHook(() => useIndicatorSettings());
     expect(result.current.settings.ma5).toBe(5);
     expect(result.current.settings.ma20).toBe(30);
-    expect(result.current.settings.atrMult).toBe(2.5);
+    expect(result.current.settings.atrMultHourly).toBe(1.4);
     expect(result.current.settings.atrMult).toBe(2.5);
   });
 

@@ -87,7 +87,7 @@ export const APP_CANONICAL_INDICATOR_EXPECTED = {
   osc: 1.08,
   dif: 3.22,
   atr: 5.0573070881789315,
-  supertrend: 119.02885306937137,
+  supertrend: 121.55750661346083,
   donchianUb: 136.82577433390813,
   donchianLb: 115.0821260870131,
   donchianMa: 125.95395021046062,

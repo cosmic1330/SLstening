@@ -27,4 +27,17 @@ describe("current account snapshot", () => {
     expect(snapshot.pinnedCategoryIds).toEqual(["group-a"]);
     expect(snapshot.recentCategoryIds).toEqual([]);
   });
+
+  it("adds the hourly ATR multiplier to settings saved by older versions", () => {
+    const legacySettings: Partial<ReturnType<typeof emptyAccountSnapshot>["indicatorSettings"]> = {
+      ...emptyAccountSnapshot().indicatorSettings,
+    };
+    delete legacySettings.atrMultHourly;
+
+    const snapshot = normalizeAccountSnapshot({
+      indicatorSettings: legacySettings as ReturnType<typeof emptyAccountSnapshot>["indicatorSettings"],
+    });
+
+    expect(snapshot.indicatorSettings.atrMultHourly).toBe(1.4);
+  });
 });

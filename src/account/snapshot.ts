@@ -19,6 +19,7 @@ export const DEFAULT_INDICATOR_SETTINGS: IndicatorSettings = {
   cmf: 21,
   cmfEma: 5,
   atrLen: 10,
+  atrMultHourly: 1.4,
   atrMult: 2.5,
   donchian: 20,
   cci: 26,

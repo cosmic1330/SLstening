@@ -24,6 +24,7 @@ import {
 import BaseCandlestickRectangle from "../../../components/RechartCustoms/BaseCandlestickRectangle";
 import { DealsContext } from "../../../context/DealsContext";
 import useIndicatorSettings from "../../../hooks/useIndicatorSettings";
+import { UrlTaPerdOptions } from "../../../types";
 import { calculateIndicators } from "../../../utils/indicatorUtils";
 import ChartTooltip from "../Tooltip/ChartTooltip";
 import useToolbarSettings from "../GlassBar/useToolbarSettings";
@@ -75,11 +76,13 @@ const ExitArrow = (props: any) => {
 };
 
 export default function ATR({
+  perd,
   visibleCount,
   setVisibleCount,
   rightOffset,
   setRightOffset,
 }: {
+  perd?: UrlTaPerdOptions;
   visibleCount: number;
   setVisibleCount: React.Dispatch<React.SetStateAction<number>>;
   rightOffset: number;
@@ -160,7 +163,13 @@ export default function ATR({
 
   const allPoints = useMemo(() => {
     if (!deals || deals.length === 0) return [];
-    const basePoints = calculateIndicators(deals, settings);
+    const basePoints = calculateIndicators(deals, {
+      ...settings,
+      atrMult:
+        perd === UrlTaPerdOptions.Hour
+          ? settings.atrMultHourly
+          : settings.atrMult,
+    });
 
     // Locally calculate Supertrend crossover signals for ATR display
     return basePoints.map((d, i) => {
@@ -201,7 +210,7 @@ export default function ATR({
         negativeOsc,
       };
     });
-  }, [deals, settings]);
+  }, [deals, settings, perd]);
 
   const chartData = useMemo(() => {
     return allPoints.slice(
@@ -278,20 +287,6 @@ export default function ATR({
               step={1}
               onChange={(_, v) => updateSetting("atrLen", v as number)}
               size="small"
-            />
-          </Box>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" color="text.secondary">
-              ATR 倍數: {settings.atrMult.toFixed(1)}
-            </Typography>
-            <Slider
-              value={settings.atrMult}
-              min={0.5}
-              max={10.0}
-              step={0.1}
-              onChange={(_, v) => updateSetting("atrMult", v as number)}
-              size="small"
-              color="primary"
             />
           </Box>
           <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>

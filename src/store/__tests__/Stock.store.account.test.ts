@@ -38,7 +38,7 @@ import { emptyAccountSnapshot } from "../../account/snapshot";
 const settings = {
   ma5: 5, ma10: 10, ma20: 30, ma60: 60, boll: 30, kd: 9, mfi: 14, rsi: 14,
   ma120: 120, ma240: 240, emaShort: 5, emaLong: 10, cmf: 21, cmfEma: 5,
-  atrLen: 10, atrMult: 3, donchian: 20, cci: 26,
+  atrLen: 10, atrMultHourly: 2.5, atrMult: 3, donchian: 20, cci: 26,
 };
 const snapshot = (id: string): AccountSnapshot => ({
   stocks: [{ id, name: `Stock ${id}`, group: "TW", type: "stock" }],
@@ -1649,6 +1649,10 @@ describe("account-scoped stock projection", () => {
     const invalidRange = snapshot("2330");
     invalidRange.indicatorSettings = { ...settings, ma5: 1000.01 };
     expect(() => __validateSnapshotForLocal(invalidRange)).toThrow("INVALID_INDICATOR_SETTINGS");
+
+    const invalidHourlyAtr = snapshot("2330");
+    invalidHourlyAtr.indicatorSettings = { ...settings, atrMultHourly: 20.01 };
+    expect(() => __validateSnapshotForLocal(invalidHourlyAtr)).toThrow("INVALID_INDICATOR_SETTINGS");
 
     const invalidFinite = snapshot("2330");
     invalidFinite.indicatorSettings = { ...settings, rsi: Number.NaN };

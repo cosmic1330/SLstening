@@ -16,6 +16,10 @@ pub const MAX_STOCKS: usize = 300;
 pub const MAX_CATEGORIES: usize = 100;
 pub const CLIENT_TYPE: &str = "Desktop";
 
+fn default_atr_mult_hourly() -> f64 {
+    1.4
+}
+
 fn pull_request_body(uuid: &str, email: &str) -> Value {
     json!({"action":"pull", "uuid":uuid, "email":email, "type":CLIENT_TYPE})
 }
@@ -42,6 +46,8 @@ pub struct IndicatorSettings {
     pub cmf: f64,
     pub cmf_ema: f64,
     pub atr_len: f64,
+    #[serde(default = "default_atr_mult_hourly")]
+    pub atr_mult_hourly: f64,
     pub atr_mult: f64,
     pub donchian: f64,
     pub cci: f64,
@@ -661,6 +667,7 @@ pub fn default_indicator_settings() -> IndicatorSettings {
         cmf: 21.0,
         cmf_ema: 5.0,
         atr_len: 10.0,
+        atr_mult_hourly: 1.4,
         atr_mult: 2.5,
         donchian: 20.0,
         cci: 26.0,
@@ -766,6 +773,7 @@ pub fn validate_indicator_settings(settings: &IndicatorSettings) -> Result<(), S
         settings.cmf,
         settings.cmf_ema,
         settings.atr_len,
+        settings.atr_mult_hourly,
         settings.atr_mult,
         settings.donchian,
         settings.cci,
@@ -773,6 +781,7 @@ pub fn validate_indicator_settings(settings: &IndicatorSettings) -> Result<(), S
     if values
         .iter()
         .any(|value| !value.is_finite() || *value <= 0.0 || *value > 1000.0)
+        || settings.atr_mult_hourly > 20.0
         || settings.atr_mult > 20.0
     {
         return Err("INVALID_INDICATOR_SETTINGS".to_string());
@@ -797,6 +806,17 @@ mod tests {
             "name": "追蹤",
             "stocks": [{"symbol":"3010","name":"華立","price":"---","change":"0.0","isPositive":true}]
         }])
+    }
+
+    #[test]
+    fn legacy_indicator_settings_receive_the_hourly_atr_default() {
+        let mut value = serde_json::to_value(default_indicator_settings()).expect("settings");
+        value
+            .as_object_mut()
+            .expect("settings object")
+            .remove("atrMultHourly");
+        let settings: IndicatorSettings = serde_json::from_value(value).expect("legacy settings");
+        assert_eq!(settings.atr_mult_hourly, 1.4);
     }
 
     #[test]

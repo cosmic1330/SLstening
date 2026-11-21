@@ -159,6 +159,32 @@
       },
       "summary": "{{count}} observations · {{start}}% → {{end}}%"
     },
+    "exchangeRate": {
+      "title": "TWD exchange rate",
+      "source": "Supabase · CBC",
+      "loading": "Loading exchange-rate data…",
+      "error": "Could not load the TWD exchange rate.",
+      "empty": "No TWD exchange-rate data is available.",
+      "rateLabel": "New Taiwan dollars per US dollar",
+      "periodChangeLabel": "14-session change",
+      "changeUnavailable": "Insufficient data",
+      "trendTitle": "14-trading-day trend",
+      "trendAria": "USD/TWD trend with {{count}} observations from {{start}} to {{end}}",
+      "valueLabel": "USD/TWD",
+      "asOf": "Observation date: {{date}}",
+      "summary": "{{count}} trading days · {{start}} → {{end}}",
+      "refreshingError": "Refresh failed; showing the last available exchange rate.",
+      "trends": {
+        "twd_depreciating": "TWD depreciation",
+        "twd_appreciating": "TWD appreciation",
+        "twd_flat": "TWD unchanged"
+      },
+      "impacts": {
+        "bearish": "Bearish for the Taiwan market",
+        "bullish": "Bullish for the Taiwan market",
+        "neutral": "Neutral for the Taiwan market"
+      }
+    },
     "cnnSentiment": {
       "title": "CNN Fear & Greed",
       "source": "Market sentiment",

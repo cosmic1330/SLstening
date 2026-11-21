@@ -159,6 +159,32 @@
       },
       "summary": "{{count}} 筆觀測 · {{start}}% → {{end}}%"
     },
+    "exchangeRate": {
+      "title": "台幣匯率",
+      "source": "Supabase · 央行",
+      "loading": "正在載入匯率資料…",
+      "error": "無法載入台幣匯率資料。",
+      "empty": "目前沒有台幣匯率資料。",
+      "rateLabel": "1 美元可兌換的新台幣",
+      "periodChangeLabel": "14 日升貶幅",
+      "changeUnavailable": "資料不足",
+      "trendTitle": "近 14 個交易日",
+      "trendAria": "美元兌台幣匯率趨勢，共 {{count}} 筆觀測，從 {{start}} 到 {{end}}",
+      "valueLabel": "USD/TWD",
+      "asOf": "資料日期：{{date}}",
+      "summary": "{{count}} 個交易日 · {{start}} → {{end}}",
+      "refreshingError": "更新失敗，顯示上次可用的匯率。",
+      "trends": {
+        "twd_depreciating": "台幣貶值",
+        "twd_appreciating": "台幣升值",
+        "twd_flat": "台幣持平"
+      },
+      "impacts": {
+        "bearish": "台股大盤偏利空",
+        "bullish": "台股大盤偏利多",
+        "neutral": "台股大盤影響中性"
+      }
+    },
     "cnnSentiment": {
       "title": "CNN 恐懼貪婪指數",
       "source": "市場情緒",

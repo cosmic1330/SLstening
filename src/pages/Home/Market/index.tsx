@@ -14,6 +14,7 @@ import MarketLinkBox from "../List/components/MarketLinkBox";
 import CnnFearGreedBox from "./CnnFearGreedBox";
 import MarketAnalysisBox from "./MarketAnalysisBox";
 import TwMarginMaintenanceBox from "./TwMarginMaintenanceBox";
+import TwdExchangeRateBox from "./TwdExchangeRateBox";
 
 export default function Market() {
   const { t } = useTranslation();
@@ -101,6 +102,9 @@ export default function Market() {
           </Box>
           <Box sx={{ mt: 1.5, width: "100%" }}>
             <TwMarginMaintenanceBox />
+          </Box>
+          <Box sx={{ mt: 1.5, width: "100%" }}>
+            <TwdExchangeRateBox />
           </Box>
           <Grid container spacing={1.5}>
             {indices.map((index) => (

@@ -26,6 +26,9 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 const ANALYSIS_DEADLINE: Duration = Duration::from_secs(25);
 const AGENT_MAX_WORKERS: usize = 8;
 const MCP_PROTOCOL_VERSION: &str = "2025-06-18";
+const SUPABASE_MARKET_SENTIMENT_URL: &str =
+    "https://zifjsqcvahkpytcklzed.supabase.co/rest/v1/market_sentiment";
+const SUPABASE_PUBLISHABLE_KEY: &str = "sb_publishable_3zxE5vieYY_1OKCWAfPlAw_SSlSUqv8";
 
 pub struct AgentGateway {
     pub endpoint: String,
@@ -101,6 +104,7 @@ struct GatewayContext {
     account: AccountManager,
     local_preferences: LocalPreferencesManager,
     market: Arc<MarketManager>,
+    http: reqwest::Client,
     app: AppHandle,
     rate: Arc<Mutex<RateLimit>>,
     last_client_activity_at: Arc<AtomicU64>,
@@ -173,6 +177,18 @@ struct HistoryResult {
 }
 
 #[derive(Debug, Deserialize)]
+struct PersistedMarketSentimentRow {
+    source: String,
+    data_date: String,
+    score: Value,
+    rating: Option<String>,
+    #[serde(default)]
+    indicators: Value,
+    #[serde(default)]
+    raw_data: Value,
+}
+
+#[derive(Debug, Deserialize)]
 struct RpcRequest {
     jsonrpc: Option<String>,
     id: Option<Value>,
@@ -221,6 +237,7 @@ pub fn start(
         account,
         local_preferences,
         market,
+        http: reqwest::Client::new(),
         app: app.clone(),
         rate: Arc::new(Mutex::new(RateLimit {
             window_started: Instant::now(),
@@ -632,6 +649,11 @@ fn tool_definitions() -> Vec<Value> {
             json!({"type":"object","properties":{"symbols":{"type":"array","items":{"type":"string"},"maxItems":20},"period":{"type":"string"},"includeHistory":{"type":"boolean"},"includeChip":{"type":"boolean"}},"additionalProperties":false}),
         ),
         tool(
+            "get_market_overview",
+            "Get persisted market overview data: CNN Fear & Greed, Taiwan margin maintenance, and the 14-session USD/TWD trend and Taiwan-market impact.",
+            json!({"type":"object","properties":{},"additionalProperties":false}),
+        ),
+        tool(
             "add_stock",
             "Add a stock to a specified category, or the active category and then the first category when categoryId is omitted. Returns CATEGORY_REQUIRED when the account has no categories.",
             json!({"type":"object","properties":{"stock":stock_record_schema(),"categoryId":{"type":"string","minLength":1}},"required":["stock"],"additionalProperties":false}),
@@ -959,6 +981,25 @@ fn execute_tool(
                 ),
             ))
         }
+        "get_market_overview" => {
+            let remaining = remaining_time(deadline).map_err(internal_error)?;
+            let fetched = tauri::async_runtime::block_on(async {
+                tokio::time::timeout(remaining, fetch_market_overview(&context.http))
+                    .await
+                    .map_err(|_| "DEADLINE_EXCEEDED".to_string())?
+            });
+            match fetched {
+                Ok(data) => Ok((vec![], envelope(session.epoch, data))),
+                Err(message) => Ok((
+                    vec![],
+                    envelope_with_warnings(
+                        session.epoch,
+                        json!({"state":"error","source":"Supabase market_sentiment","cnn_fear_and_greed":Value::Null,"tw_margin_maintenance":Value::Null,"usd_twd_exchange_rate":Value::Null}),
+                        json!([{"code":"MARKET_OVERVIEW_UNAVAILABLE","message":message,"retryable":true}]),
+                    ),
+                )),
+            }
+        }
         "add_stock" => {
             let stock_value = args
                 .get("stock")
@@ -1240,6 +1281,105 @@ fn envelope(epoch: u64, value: Value) -> Value {
 
 fn envelope_with_warnings(epoch: u64, value: Value, warnings: Value) -> Value {
     json!({"schema_version":1,"snapshot_id":format!("snapshot-epoch-{epoch}"),"generated_at":unix_millis(),"configuration_epoch":epoch,"data":value,"warnings":warnings})
+}
+
+async fn fetch_market_overview(client: &reqwest::Client) -> Result<Value, String> {
+    let response = client
+        .get(SUPABASE_MARKET_SENTIMENT_URL)
+        .header("apikey", SUPABASE_PUBLISHABLE_KEY)
+        .header("Accept", "application/json")
+        .query(&[
+            (
+                "select",
+                "source,data_date,score,rating,indicators,raw_data",
+            ),
+            (
+                "source",
+                "in.(cnn_fear_and_greed,finlab_tw_margin_maintenance,twd_usd_exchange_rate)",
+            ),
+            ("order", "data_date.asc"),
+            ("limit", "100"),
+        ])
+        .send()
+        .await
+        .map_err(|error| format!("market overview request failed: {error}"))?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("market overview request failed: HTTP {status}"));
+    }
+    let rows = response
+        .json::<Vec<PersistedMarketSentimentRow>>()
+        .await
+        .map_err(|error| format!("invalid market overview response: {error}"))?;
+    Ok(market_overview_from_rows(&rows))
+}
+
+fn market_overview_from_rows(rows: &[PersistedMarketSentimentRow]) -> Value {
+    let mut cnn = rows
+        .iter()
+        .filter(|row| row.source == "cnn_fear_and_greed")
+        .collect::<Vec<_>>();
+    let mut margin = rows
+        .iter()
+        .filter(|row| row.source == "finlab_tw_margin_maintenance")
+        .collect::<Vec<_>>();
+    let mut exchange = rows
+        .iter()
+        .filter(|row| row.source == "twd_usd_exchange_rate")
+        .collect::<Vec<_>>();
+    cnn.sort_by(|left, right| left.data_date.cmp(&right.data_date));
+    margin.sort_by(|left, right| left.data_date.cmp(&right.data_date));
+    exchange.sort_by(|left, right| left.data_date.cmp(&right.data_date));
+    if cnn.len() > 10 {
+        cnn = cnn.split_off(cnn.len() - 10);
+    }
+    if margin.len() > 10 {
+        margin = margin.split_off(margin.len() - 10);
+    }
+    if exchange.len() > 14 {
+        exchange = exchange.split_off(exchange.len() - 14);
+    }
+
+    let cnn_history = cnn
+        .iter()
+        .map(|row| json!({"date":row.data_date,"score":row.score,"rating":row.rating}))
+        .collect::<Vec<_>>();
+    let margin_history = margin
+        .iter()
+        .map(|row| json!({"date":row.data_date,"percent":row.score}))
+        .collect::<Vec<_>>();
+    let exchange_history = exchange
+        .iter()
+        .map(|row| json!({"date":row.data_date,"rate":row.score}))
+        .collect::<Vec<_>>();
+    let cnn_latest = cnn
+        .last()
+        .map(|row| json!({"date":row.data_date,"score":row.score,"rating":row.rating}));
+    let margin_latest = margin
+        .last()
+        .map(|row| json!({"date":row.data_date,"percent":row.score}));
+    let exchange_latest = exchange.last().map(|row| {
+        json!({
+            "date":row.data_date,
+            "rate":row.score,
+            "rating":row.rating,
+            "window_days":row.indicators.get("trend_window_days").cloned().unwrap_or(Value::Null),
+            "trend":row.indicators.get("trend").cloned().unwrap_or(Value::Null),
+            "trend_label":row.indicators.get("trend_label").cloned().unwrap_or(Value::Null),
+            "stock_market_impact":row.indicators.get("stock_market_impact").cloned().unwrap_or(Value::Null),
+            "stock_market_impact_label":row.indicators.get("stock_market_impact_label").cloned().unwrap_or(Value::Null),
+            "change":row.raw_data.get("fourteen_day_change").cloned().unwrap_or(Value::Null),
+            "change_percent":row.raw_data.get("fourteen_day_change_percent").cloned().unwrap_or(Value::Null),
+        })
+    });
+
+    json!({
+        "state":"available",
+        "source":"Supabase market_sentiment",
+        "cnn_fear_and_greed":{"latest":cnn_latest,"history":cnn_history,"observation_count":cnn.len()},
+        "tw_margin_maintenance":{"latest":margin_latest,"history":margin_history,"observation_count":margin.len()},
+        "usd_twd_exchange_rate":{"latest":exchange_latest,"history":exchange_history,"observation_count":exchange.len()},
+    })
 }
 
 fn empty_account_snapshot() -> AccountSnapshot {
@@ -3056,7 +3196,7 @@ mod tests {
     #[test]
     fn add_stock_schemas_expose_an_optional_category_and_bounded_batch() {
         let tools = tool_definitions();
-        assert_eq!(tools.len(), 17);
+        assert_eq!(tools.len(), 18);
         let add_stock = tools
             .iter()
             .find(|tool| tool["name"] == "add_stock")
@@ -3087,6 +3227,49 @@ mod tests {
         assert_eq!(
             add_stocks["inputSchema"]["properties"]["stocks"]["items"]["additionalProperties"],
             false
+        );
+    }
+
+    #[test]
+    fn market_overview_tool_is_read_only_and_assembles_bounded_persisted_series() {
+        let tools = tool_definitions();
+        let market_overview = tools
+            .iter()
+            .find(|tool| tool["name"] == "get_market_overview")
+            .expect("market overview schema");
+        assert_eq!(market_overview["inputSchema"]["properties"], json!({}));
+        assert_eq!(
+            market_overview["inputSchema"]["additionalProperties"],
+            false
+        );
+
+        let rows: Vec<PersistedMarketSentimentRow> = serde_json::from_value(json!([
+            {"source":"cnn_fear_and_greed","data_date":"2026-11-20","score":24.5,"rating":"fear","indicators":{},"raw_data":{}},
+            {"source":"finlab_tw_margin_maintenance","data_date":"2026-11-20","score":171.2,"rating":null,"indicators":{},"raw_data":{}},
+            {"source":"twd_usd_exchange_rate","data_date":"2026-11-19","score":32.942,"rating":"USD/TWD","indicators":{"trend_window_days":14,"trend":"twd_depreciating","stock_market_impact":"bearish"},"raw_data":{"fourteen_day_change_percent":0.5372}},
+            {"source":"twd_usd_exchange_rate","data_date":"2026-11-20","score":32.936,"rating":"台股偏利空","indicators":{"trend_window_days":14,"trend":"twd_depreciating","trend_label":"台幣貶值","stock_market_impact":"bearish","stock_market_impact_label":"台股偏利空"},"raw_data":{"fourteen_day_change":0.176,"fourteen_day_change_percent":0.5372}}
+        ])).expect("market rows");
+        let overview = market_overview_from_rows(&rows);
+
+        assert_eq!(overview["state"], "available");
+        assert_eq!(overview["cnn_fear_and_greed"]["latest"]["score"], 24.5);
+        assert_eq!(
+            overview["tw_margin_maintenance"]["latest"]["percent"],
+            171.2
+        );
+        assert_eq!(overview["usd_twd_exchange_rate"]["observation_count"], 2);
+        assert_eq!(overview["usd_twd_exchange_rate"]["latest"]["rate"], 32.936);
+        assert_eq!(
+            overview["usd_twd_exchange_rate"]["latest"]["window_days"],
+            14
+        );
+        assert_eq!(
+            overview["usd_twd_exchange_rate"]["latest"]["change_percent"],
+            0.5372
+        );
+        assert_eq!(
+            overview["usd_twd_exchange_rate"]["latest"]["stock_market_impact"],
+            "bearish"
         );
     }
 

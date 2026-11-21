@@ -60,7 +60,7 @@ describe("MCP setup page", () => {
     const readTools = MCP_TOOL_GROUPS.find((group) => group.id === "read")?.tools;
     const manageTools = MCP_TOOL_GROUPS.find((group) => group.id === "manage")?.tools;
     const allTools = [...(readTools ?? []), ...(manageTools ?? [])];
-    expect(readTools).toHaveLength(7);
+    expect(readTools).toHaveLength(8);
     expect(manageTools).toHaveLength(10);
     expect(allTools).toEqual([
       "get_context",
@@ -70,6 +70,7 @@ describe("MCP setup page", () => {
       "get_technical_indicators",
       "get_chip_analysis",
       "get_analysis_snapshot",
+      "get_market_overview",
       "add_stock",
       "add_stocks",
       "remove_stock",
@@ -85,7 +86,7 @@ describe("MCP setup page", () => {
     expect(screen.getByRole("heading", { level: 3, name: "mcp.tools.read.title" })).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3, name: "mcp.tools.manage.title" })).toBeTruthy();
     for (const tool of allTools) expect(screen.getByText(tool)).toBeTruthy();
-    expect(screen.getByText("mcp.tools.read.count:7")).toBeTruthy();
+    expect(screen.getByText("mcp.tools.read.count:8")).toBeTruthy();
     expect(screen.getByText("mcp.tools.manage.count:10")).toBeTruthy();
   });
 

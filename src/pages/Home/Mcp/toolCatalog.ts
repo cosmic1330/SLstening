@@ -9,6 +9,7 @@ export const MCP_TOOL_GROUPS = [
       "get_technical_indicators",
       "get_chip_analysis",
       "get_analysis_snapshot",
+      "get_market_overview",
     ],
   },
   {

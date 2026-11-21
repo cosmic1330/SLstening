@@ -26,7 +26,7 @@ codex mcp list
 
 Codex 桌面版、CLI 與 IDE 共用這份設定。新增後請重新啟動 Codex，並在 App 已開啟且登入時用 `/mcp` 確認 `slstening` 已連線。若日後移動 repository 或改用封裝版 App，請移除舊設定後以 discovery file 的 `bridgePath` 重新註冊。
 
-MCP 工具包含清單、報價、K 線、技術指標、籌碼分析，以及新增／刪除股票、建立／改名／刪除分類、調整成員與順序、更新／重設指標參數。寫入直接執行，雲端採 PhoneApp 的 last-write-wins `sync`，不使用 revision 或 operation ID。全新帳號可以是零分類；新增股票前必須先建立實際分類。
+MCP 工具包含清單、報價、K 線、技術指標、籌碼分析、市場資訊，以及新增／刪除股票、建立／改名／刪除分類、調整成員與順序、更新／重設指標參數。`get_market_overview` 會從 Supabase `market_sentiment` 回傳 CNN 恐懼貪婪、台股融資維持率，以及 14 個交易日 USD/TWD 趨勢與台股大盤影響。寫入直接執行，雲端採 PhoneApp 的 last-write-wins `sync`，不使用 revision 或 operation ID。全新帳號可以是零分類；新增股票前必須先建立實際分類。
 
 本版本不讀取或匯入舊版 `settings.json`，也不會複製其中的 stocks、分類或指標設定。若精確的 App data `settings.json` 仍存在，App 只顯示一次說明資料不再使用的對話框；使用者可選擇保留檔案作備份，或明確選擇刪除整個檔案。選擇與刪除結果會寫入新的 `account-state.json`，刪除失敗時對話框保留並可重試。
 
